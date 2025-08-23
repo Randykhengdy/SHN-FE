@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="google" content="notranslate"/>
+  <link rel="stylesheet" href="../styles/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/x-icon" href="../assets/logo.ico">
+  <title>SURYA LOGAM JAYA | PT. SURYA HARSA NAGARA</title>
+</head>
+<body class="workshop-page">
+  <div class="header-bar">
+    <div class="header-left">
+      <img src="../assets/logo.png" alt="Logo" class="header-logo">
+      <div class="header-title">
+        <span>SURYA</span>
+        <span>LOGAM</span>
+        <span>JAYA</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="header-user">Admin</div>
+      <div class="header-version">v1.0.0</div>
+    </div>
+  </div>
+  <div class="content">
+    <button class="config-toggle-btn" id="configToggleBtn" title="Toggle Workshop Config">⚙️</button>
+    <div id="configBox">
+      <div class="config-drag-handle">⚙️ Workshop Config</div>
+      <form id="workshopForm">
+        <div class="row-2col">
+          <div><label for="baseWidth">Base Width (cm):</label><input type="number" id="baseWidth" value="300" required class="input-short"></div>
+          <div class="height-field"><label for="baseHeight">Base Height (cm):</label><input type="number" id="baseHeight" value="150" required class="input-short"></div>
+          <div><label for="baseWeight">Base Weight (kg):</label><input type="number" id="baseWeight" value="0" min="0" step="any" required class="input-short"></div>
+          <div><label for="baseColor">Base Color:</label><input type="color" id="baseColor" value="#555555" class="input-short"></div>
+        </div>
+        <div class="info-action-row">
+          <div class="info-row-merged">
+            <span class="info-block"><span class="info-label">Remaining Weight</span><span class="info-value-unit"><span id="remainingWeight">0</span><span class="info-unit">kg</span></span></span>
+          </div>
+          <div class="form-actions"><button type="button" id="setBase">Create Base Plate</button></div>
+        </div>
+      </form>
+      <form id="cutForm">
+        <div class="row-2col">
+          <div><label for="cutWidth">Cut Width (cm):</label><input type="number" id="cutWidth" value="20" required class="input-short"></div>
+          <div class="height-field"><label for="cutHeight">Cut Height (cm):</label><input type="number" id="cutHeight" value="30" required class="input-short"></div>
+          <div><label for="cutColor">Cut Color:</label><input type="color" id="cutColor" value="#ff9900" class="input-short"></div>
+          <div class="form-actions"><button type="button" id="addCutAuto">Add Cut (Auto)</button></div>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="addCutHorizontalBtn" style="background:#2c3e50; color:#fff; width:100%; margin-bottom:8px;">Add Cut (Horizontal)</button>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="addCutVerticalBtn" style="background:#34495e; color:#fff; width:100%; margin-bottom:8px;">Add Cut (Vertical)</button>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="downloadPDF" style="background:#555555; width:100%; margin-bottom:8px; margin-top:24px;">Download PDF</button>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="saveProgressBtn" style="background:#2c3e50; color:#fff; width:100%; margin-bottom:8px;">Simpan Progress</button>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="loadProgressBtn" style="background:#666666; color:#fff; width:100%;">Muat Progress</button>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="showLayersBtn" style="background:#444444; color:#fff; width:100%;">Show Cut Layers</button>
+        </div>
+      </form>
+    </div>
+    <div id="canvas-container">
+      <canvas id="c"></canvas>
+    </div>
+    <div id="weight-panel" style="display:none;"></div>
+    <!-- Modal Edit Plat Dasar -->
+    <div id="editModal" style="display:none; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); background:#fff; border:1px solid #ccc; padding:20px; z-index:1000; min-width:250px; box-shadow:0 2px 10px #0002;">
+      <h4>Edit Base Plate</h4>
+      <label>Color:
+        <input type="color" id="modalBaseColor" />
+      </label>
+      <br/>
+      <button id="rotate90">Rotate 90°</button>
+      <br/><br/>
+      <button id="closeModal">Close</button>
+    </div>
+  </div>
+  <!-- Modal for Cut Layers -->
+  <div id="cutLayersModal" style="display:none; position:fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.18); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:#fff; padding:32px 28px; border-radius:10px; box-shadow:0 2px 16px #0002; min-width:320px; max-width:90vw; text-align:left;">
+      <div style="font-size:1.2em; font-weight:600; color:#2c3e50; margin-bottom:16px;">Urutan Layer Potongan</div>
+      <div id="cutLayersList" style="max-height:320px; overflow:auto;"></div>
+      <div style="text-align:right; margin-top:18px;"><button id="closeLayersBtn" style="background:#666666; color:#fff; border:none; border-radius:6px; padding:8px 24px; font-size:1em; font-weight:600; cursor:pointer;">Tutup</button></div>
+    </div>
+  </div>
+  <!-- Shape Type Selection Modal -->
+  <div id="shapeTypeModal" style="display:none; position:fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:10000; align-items:center; justify-content:center;">
+    <div style="background:#fff; padding:40px; border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,0.2); min-width:400px; max-width:90vw; text-align:center;">
+      <div style="font-size:1.8em; font-weight:700; color:#2c3e50; margin-bottom:8px;">Pilih Jenis Bentuk</div>
+      <div style="font-size:1.1em; color:#6c757d; margin-bottom:32px;">Pilih jenis bentuk yang akan Anda kerjakan</div>
+      <div style="display:flex; gap:20px; justify-content:center; margin-bottom:32px;">
+        <div id="shape1D" style="flex:1; max-width:180px; padding:24px; border:3px solid #e9ecef; border-radius:12px; cursor:pointer; transition:all 0.3s ease; background:#f8f9fa;">
+          <div style="font-size:3em; margin-bottom:12px;">📏</div>
+          <div style="font-size:1.2em; font-weight:600; color:#2d3a4b; margin-bottom:8px;">1D - Shaft</div>
+          <div style="font-size:0.9em; color:#6c757d;">Bentuk 1 dimensi<br/>Hanya panjang</div>
+        </div>
+        <div id="shape2D" style="flex:1; max-width:180px; padding:24px; border:3px solid #e9ecef; border-radius:12px; cursor:pointer; transition:all 0.3s ease; background:#f8f9fa;">
+          <div style="font-size:3em; margin-bottom:12px;">📐</div>
+          <div style="font-size:1.2em; font-weight:600; color:#2d3a4b; margin-bottom:8px;">2D - Plate</div>
+          <div style="font-size:0.9em; color:#6c757d;">Bentuk 2 dimensi<br/>Panjang & lebar</div>
+        </div>
+      </div>
+      <div style="font-size:0.9em; color:#6c757d; font-style:italic;">Pilihan ini akan menentukan konfigurasi workshop yang tersedia</div>
+    </div>
+  </div>
+  <!-- Custom Confirm Dialog -->
+  <div id="customConfirm" style="display:none; position:fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.2); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:#fff; padding:32px 28px; border-radius:10px; box-shadow:0 2px 16px #0002; min-width:260px; text-align:center;">
+      <div id="customConfirmMsg" style="margin-bottom:18px; font-size:1.1em;">Yakin ingin logout?</div>
+      <button id="customConfirmYes" style="background:#3498db; color:#fff; border:none; border-radius:6px; padding:8px 24px; font-size:1em; font-weight:600; cursor:pointer;">Ya</button>
+      <button id="customConfirmNo" style="background:#eee; color:#444; border:none; border-radius:6px; padding:8px 24px; font-size:1em; font-weight:600; margin-left:18px; cursor:pointer;">Tidak</button>
+    </div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../logics/workshop.js"></script>
+  <script src="../logics/ui.js"></script>
+  <script>
+    // Shape type selection logic
+    let selectedShapeType = null;
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      // Show shape type selection modal every time
+      const shapeTypeModal = document.getElementById('shapeTypeModal');
+      shapeTypeModal.style.display = 'flex';
+      
+      // Shape type selection handlers
+      document.getElementById('shape1D').addEventListener('click', function() {
+        selectShapeType('1D');
+      });
+      
+      document.getElementById('shape2D').addEventListener('click', function() {
+        selectShapeType('2D');
+      });
+      
+      // Hover effects for shape selection
+      document.getElementById('shape1D').addEventListener('mouseenter', function() {
+        this.style.borderColor = '#3498db';
+        this.style.background = '#f0f8ff';
+        this.style.transform = 'translateY(-2px)';
+      });
+      
+      document.getElementById('shape1D').addEventListener('mouseleave', function() {
+        this.style.borderColor = '#e9ecef';
+        this.style.background = '#f8f9fa';
+        this.style.transform = 'translateY(0)';
+      });
+      
+      document.getElementById('shape2D').addEventListener('mouseenter', function() {
+        this.style.borderColor = '#3498db';
+        this.style.background = '#f0f8ff';
+        this.style.transform = 'translateY(-2px)';
+      });
+      
+      document.getElementById('shape2D').addEventListener('mouseleave', function() {
+        this.style.borderColor = '#e9ecef';
+        this.style.background = '#f8f9fa';
+        this.style.transform = 'translateY(0)';
+      });
+    });
+    
+    function selectShapeType(type) {
+      selectedShapeType = type;
+      const shapeTypeModal = document.getElementById('shapeTypeModal');
+      shapeTypeModal.style.display = 'none';
+      
+      // Update config based on shape type
+      if (type === '1D') {
+        // Hide height fields for 1D (shaft)
+        document.querySelectorAll('.height-field').forEach(field => {
+          field.style.display = 'none';
+        });
+        
+        // Hide horizontal and vertical cut buttons for 1D
+        document.getElementById('addCutHorizontalBtn').style.display = 'none';
+        document.getElementById('addCutVerticalBtn').style.display = 'none';
+        
+        // Show auto cut button for 1D
+        document.getElementById('addCutAuto').style.display = 'block';
+        
+        // Update labels for 1D
+        document.querySelector('label[for="baseWidth"]').textContent = 'Base Length (cm):';
+        document.querySelector('label[for="cutWidth"]').textContent = 'Cut Length (cm):';
+        document.querySelector('#setBase').textContent = 'Create Base Shaft';
+        
+        // Set default values for 1D
+        document.getElementById('baseWidth').value = '100';
+        document.getElementById('cutWidth').value = '20';
+        
+      } else {
+        // Show all fields for 2D (plate)
+        document.querySelectorAll('.height-field').forEach(field => {
+          field.style.display = 'block';
+        });
+        
+        // Show horizontal and vertical cut buttons for 2D
+        document.getElementById('addCutHorizontalBtn').style.display = 'block';
+        document.getElementById('addCutVerticalBtn').style.display = 'block';
+        
+        // Hide auto cut button for 2D
+        document.getElementById('addCutAuto').style.display = 'none';
+        
+        // Update labels for 2D
+        document.querySelector('label[for="baseWidth"]').textContent = 'Base Width (cm):';
+        document.querySelector('label[for="cutWidth"]').textContent = 'Cut Width (cm):';
+        document.querySelector('#setBase').textContent = 'Create Base Plate';
+        
+        // Set default values for 2D
+        document.getElementById('baseWidth').value = '300';
+        document.getElementById('baseHeight').value = '150';
+        document.getElementById('cutWidth').value = '20';
+        document.getElementById('cutHeight').value = '30';
+      }
+      
+      // Store selection in localStorage (for current session only)
+      localStorage.setItem('workshopShapeType', type);
+    }
+  </script>
+</body>
+</html>

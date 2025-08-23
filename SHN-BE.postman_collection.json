@@ -1,0 +1,2511 @@
+{
+	"info": {
+		"_postman_id": "168b982f-00b0-4bbd-a10a-62e677d2ea3b",
+		"name": "SHN-BE API Collection",
+		"description": "API collection untuk SHN-BE dengan JWT authentication",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "14608183"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('jwt_token', response.token);",
+									"    console.log('Token saved:', response.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"testuser\",\n  \"name\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"role_id\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('jwt_token', response.token);",
+									"    console.log('Token saved:', response.token);",
+									"}",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"admin\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"login"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Roles",
+			"item": [
+				{
+					"name": "Get All Roles",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/roles",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"roles"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Get All Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Users with Role",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users-with-role",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users-with-role"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"updateduser\",\n  \"name\": \"Updated User\",\n  \"email\": \"updated@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Soft Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/1/soft",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"1",
+								"soft"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Users (including soft deleted)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users-with-trashed/all",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users-with-trashed",
+								"all"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Only Soft Deleted Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users-with-trashed/trashed",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users-with-trashed",
+								"trashed"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Restore Soft Deleted User",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/1/restore",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"1",
+								"restore"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Force Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/1/force",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"1",
+								"force"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Master Data",
+			"item": [
+				{
+					"name": "Jenis Barang",
+					"item": [
+						{
+							"name": "List Jenis Barang",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-barang",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-barang"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Show Jenis Barang",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-barang/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-barang",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Create Jenis Barang",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"kode\": \"J001\",\n  \"nama_jenis\": \"Jenis Contoh\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/jenis-barang",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-barang"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Jenis Barang",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"kode\": \"J001\",\n  \"nama_jenis\": \"Jenis Update\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/jenis-barang/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-barang",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Soft Delete Jenis Barang",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-barang/1/soft",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-barang",
+										"1",
+										"soft"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Restore Jenis Barang",
+							"request": {
+								"method": "PATCH",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-barang/1/restore",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-barang",
+										"1",
+										"restore"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Force Delete Jenis Barang",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-barang/1/force",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-barang",
+										"1",
+										"force"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "List All (With Trashed)",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-barang/with-trashed/all",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-barang",
+										"with-trashed",
+										"all"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "List Only Trashed",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-barang/with-trashed/trashed",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-barang",
+										"with-trashed",
+										"trashed"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Bentuk Barang",
+					"item": [
+						{
+							"name": "List Bentuk Barang",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/bentuk-barang",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"bentuk-barang"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Show Bentuk Barang",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/bentuk-barang/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"bentuk-barang",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Create Bentuk Barang",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"kode\": \"B001\",\n  \"nama_bentuk\": \"Bentuk Contoh\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/bentuk-barang",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"bentuk-barang"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Bentuk Barang",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"kode\": \"B001\",\n  \"nama_bentuk\": \"Bentuk Update\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/bentuk-barang/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"bentuk-barang",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Soft Delete Bentuk Barang",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/bentuk-barang/1/soft",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"bentuk-barang",
+										"1",
+										"soft"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Restore Bentuk Barang",
+							"request": {
+								"method": "PATCH",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/bentuk-barang/1/restore",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"bentuk-barang",
+										"1",
+										"restore"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Force Delete Bentuk Barang",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/bentuk-barang/1/force",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"bentuk-barang",
+										"1",
+										"force"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "List All (With Trashed)",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/bentuk-barang/with-trashed/all",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"bentuk-barang",
+										"with-trashed",
+										"all"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "List Only Trashed",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/bentuk-barang/with-trashed/trashed",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"bentuk-barang",
+										"with-trashed",
+										"trashed"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Grade Barang",
+					"item": [
+						{
+							"name": "List Grade Barang",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/grade-barang",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"grade-barang"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Show Grade Barang",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/grade-barang/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"grade-barang",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Create Grade Barang",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"kode\": \"G001\",\n  \"nama\": \"Grade Contoh\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/grade-barang",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"grade-barang"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Grade Barang",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"kode\": \"G001\",\n  \"nama\": \"Grade Update\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/grade-barang/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"grade-barang",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Soft Delete Grade Barang",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/grade-barang/1/soft",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"grade-barang",
+										"1",
+										"soft"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Restore Grade Barang",
+							"request": {
+								"method": "PATCH",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/grade-barang/1/restore",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"grade-barang",
+										"1",
+										"restore"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Force Delete Grade Barang",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/grade-barang/1/force",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"grade-barang",
+										"1",
+										"force"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "List All (With Trashed)",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/grade-barang/with-trashed/all",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"grade-barang",
+										"with-trashed",
+										"all"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "List Only Trashed",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/grade-barang/with-trashed/trashed",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"grade-barang",
+										"with-trashed",
+										"trashed"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Jenis Mutasi Stock",
+					"item": [
+						{
+							"name": "List Jenis Mutasi Stock",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-mutasi-stock",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-mutasi-stock"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Show Jenis Mutasi Stock",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-mutasi-stock/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-mutasi-stock",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Create Jenis Mutasi Stock",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"kode\": \"M001\",\n  \"mutasi_stock\": \"Mutasi Contoh\",\n  \"jenis\": \"Masuk\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/jenis-mutasi-stock",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-mutasi-stock"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Jenis Mutasi Stock",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"kode\": \"M001\",\n  \"mutasi_stock\": \"Mutasi Update\",\n  \"jenis\": \"Keluar\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/jenis-mutasi-stock/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-mutasi-stock",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Soft Delete Jenis Mutasi Stock",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-mutasi-stock/1/soft",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-mutasi-stock",
+										"1",
+										"soft"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Restore Jenis Mutasi Stock",
+							"request": {
+								"method": "PATCH",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-mutasi-stock/1/restore",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-mutasi-stock",
+										"1",
+										"restore"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Force Delete Jenis Mutasi Stock",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-mutasi-stock/1/force",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-mutasi-stock",
+										"1",
+										"force"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "List All (With Trashed)",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-mutasi-stock/with-trashed/all",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-mutasi-stock",
+										"with-trashed",
+										"all"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "List Only Trashed",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-mutasi-stock/with-trashed/trashed",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-mutasi-stock",
+										"with-trashed",
+										"trashed"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Supplier",
+					"item": [
+						{
+							"name": "List Supplier",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/supplier",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"supplier"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Show Supplier",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/supplier/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"supplier",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Create Supplier",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"kode\": \"S001\",\n  \"nama_supplier\": \"Supplier Contoh\",\n  \"kota\": \"Jakarta\",\n  \"telepon_hp\": \"08123456789\",\n  \"contact_person\": \"Budi\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/supplier",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"supplier"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Supplier",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"kode\": \"S001\",\n  \"nama_supplier\": \"Supplier Update\",\n  \"kota\": \"Bandung\",\n  \"telepon_hp\": \"08123456789\",\n  \"contact_person\": \"Andi\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/supplier/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"supplier",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Soft Delete Supplier",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/supplier/1/soft",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"supplier",
+										"1",
+										"soft"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Restore Supplier",
+							"request": {
+								"method": "PATCH",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/supplier/1/restore",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"supplier",
+										"1",
+										"restore"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Force Delete Supplier",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/supplier/1/force",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"supplier",
+										"1",
+										"force"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "List All (With Trashed)",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/supplier/with-trashed/all",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"supplier",
+										"with-trashed",
+										"all"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "List Only Trashed",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/supplier/with-trashed/trashed",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"supplier",
+										"with-trashed",
+										"trashed"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Pelanggan",
+					"item": [
+						{
+							"name": "List Pelanggan",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/pelanggan",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"pelanggan"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Show Pelanggan",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/pelanggan/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"pelanggan",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Create Pelanggan",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"kode\": \"P001\",\n  \"nama_pelanggan\": \"Pelanggan Contoh\",\n  \"kota\": \"Jakarta\",\n  \"telepon_hp\": \"08123456789\",\n  \"contact_person\": \"Budi\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/pelanggan",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"pelanggan"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Pelanggan",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"kode\": \"P001\",\n  \"nama_pelanggan\": \"Pelanggan Update\",\n  \"kota\": \"Bandung\",\n  \"telepon_hp\": \"08123456789\",\n  \"contact_person\": \"Andi\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/pelanggan/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"pelanggan",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Soft Delete Pelanggan",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/pelanggan/1/soft",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"pelanggan",
+										"1",
+										"soft"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Restore Pelanggan",
+							"request": {
+								"method": "PATCH",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/pelanggan/1/restore",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"pelanggan",
+										"1",
+										"restore"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Force Delete Pelanggan",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/pelanggan/1/force",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"pelanggan",
+										"1",
+										"force"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "List All (With Trashed)",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/pelanggan/with-trashed/all",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"pelanggan",
+										"with-trashed",
+										"all"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "List Only Trashed",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/pelanggan/with-trashed/trashed",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"pelanggan",
+										"with-trashed",
+										"trashed"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Gudang",
+					"item": [
+						{
+							"name": "List Gudang",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/gudang",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"gudang"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Show Gudang",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/gudang/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"gudang",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Create Gudang",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"kode\": \"GUD001\",\n  \"nama_gudang\": \"Gudang Contoh\",\n  \"telepon_hp\": \"08123456789\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/gudang",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"gudang"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Gudang",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"kode\": \"GUD001\",\n  \"nama_gudang\": \"Gudang Update\",\n  \"telepon_hp\": \"08123456789\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/gudang/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"gudang",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Soft Delete Gudang",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/gudang/1/soft",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"gudang",
+										"1",
+										"soft"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Restore Gudang",
+							"request": {
+								"method": "PATCH",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/gudang/1/restore",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"gudang",
+										"1",
+										"restore"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Force Delete Gudang",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/gudang/1/force",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"gudang",
+										"1",
+										"force"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "List All (With Trashed)",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/gudang/with-trashed/all",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"gudang",
+										"with-trashed",
+										"all"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "List Only Trashed",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/gudang/with-trashed/trashed",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"gudang",
+										"with-trashed",
+										"trashed"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Pelaksana",
+					"item": [
+						{
+							"name": "List Pelaksana",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/pelaksana",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"pelaksana"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Show Pelaksana",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/pelaksana/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"pelaksana",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Create Pelaksana",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"kode\": \"PLK001\",\n  \"nama_pelaksana\": \"Pelaksana Contoh\",\n  \"level\": \"Supervisor\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/pelaksana",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"pelaksana"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Pelaksana",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"kode\": \"PLK001\",\n  \"nama_pelaksana\": \"Pelaksana Update\",\n  \"level\": \"Operator\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/pelaksana/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"pelaksana",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Soft Delete Pelaksana",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/pelaksana/1/soft",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"pelaksana",
+										"1",
+										"soft"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Restore Pelaksana",
+							"request": {
+								"method": "PATCH",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/pelaksana/1/restore",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"pelaksana",
+										"1",
+										"restore"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Force Delete Pelaksana",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/pelaksana/1/force",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"pelaksana",
+										"1",
+										"force"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "List All (With Trashed)",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/pelaksana/with-trashed/all",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"pelaksana",
+										"with-trashed",
+										"all"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "List Only Trashed",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/pelaksana/with-trashed/trashed",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"pelaksana",
+										"with-trashed",
+										"trashed"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Jenis Biaya",
+					"item": [
+						{
+							"name": "List Jenis Biaya",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-biaya",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-biaya"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Show Jenis Biaya",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-biaya/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-biaya",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Create Jenis Biaya",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"kode\": \"BIA001\",\n  \"jenis_biaya\": \"Jenis Biaya Contoh\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/jenis-biaya",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-biaya"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Jenis Biaya",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"kode\": \"BIA001\",\n  \"jenis_biaya\": \"Jenis Biaya Update\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/jenis-biaya/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-biaya",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Soft Delete Jenis Biaya",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-biaya/1/soft",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-biaya",
+										"1",
+										"soft"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Restore Jenis Biaya",
+							"request": {
+								"method": "PATCH",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-biaya/1/restore",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-biaya",
+										"1",
+										"restore"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Force Delete Jenis Biaya",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-biaya/1/force",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-biaya",
+										"1",
+										"force"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "List All (With Trashed)",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-biaya/with-trashed/all",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-biaya",
+										"with-trashed",
+										"all"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "List Only Trashed",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-biaya/with-trashed/trashed",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-biaya",
+										"with-trashed",
+										"trashed"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Item Barang",
+					"item": [
+						{
+							"name": "List Item Barang",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/item-barang",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"item-barang"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Show Item Barang",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/item-barang/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"item-barang",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Create Item Barang",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"kode_barang\": \"ITM001\",\n  \"jenis_barang_id\": 1,\n  \"bentuk_barang_id\": 1,\n  \"grade_barang_id\": 1,\n  \"nama_item_barang\": \"Item Barang Contoh\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/item-barang",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"item-barang"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Item Barang",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"kode_barang\": \"ITM001\",\n  \"jenis_barang_id\": 1,\n  \"bentuk_barang_id\": 1,\n  \"grade_barang_id\": 1,\n  \"nama_item_barang\": \"Item Barang Update\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/item-barang/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"item-barang",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Soft Delete Item Barang",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/item-barang/1/soft",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"item-barang",
+										"1",
+										"soft"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Restore Item Barang",
+							"request": {
+								"method": "PATCH",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/item-barang/1/restore",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"item-barang",
+										"1",
+										"restore"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Force Delete Item Barang",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/item-barang/1/force",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"item-barang",
+										"1",
+										"force"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "List All (With Trashed)",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/item-barang/with-trashed/all",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"item-barang",
+										"with-trashed",
+										"all"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "List Only Trashed",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/item-barang/with-trashed/trashed",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"item-barang",
+										"with-trashed",
+										"trashed"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Jenis Transaksi Kas",
+					"item": [
+						{
+							"name": "List Jenis Transaksi Kas",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-transaksi-kas",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-transaksi-kas"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Show Jenis Transaksi Kas",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-transaksi-kas/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-transaksi-kas",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Create Jenis Transaksi Kas",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"jenis_biaya_id\": 1,\n  \"keterangan\": \"Transaksi kas contoh\",\n  \"jumlah\": 1000000.00\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/jenis-transaksi-kas",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-transaksi-kas"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Jenis Transaksi Kas",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"jenis_biaya_id\": 1,\n  \"keterangan\": \"Transaksi kas update\",\n  \"jumlah\": 2000000.00\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/jenis-transaksi-kas/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-transaksi-kas",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Soft Delete Jenis Transaksi Kas",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-transaksi-kas/1/soft",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-transaksi-kas",
+										"1",
+										"soft"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Restore Jenis Transaksi Kas",
+							"request": {
+								"method": "PATCH",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-transaksi-kas/1/restore",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-transaksi-kas",
+										"1",
+										"restore"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Force Delete Jenis Transaksi Kas",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-transaksi-kas/1/force",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-transaksi-kas",
+										"1",
+										"force"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "List All (With Trashed)",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-transaksi-kas/with-trashed/all",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-transaksi-kas",
+										"with-trashed",
+										"all"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "List Only Trashed",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/jenis-transaksi-kas/with-trashed/trashed",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"jenis-transaksi-kas",
+										"with-trashed",
+										"trashed"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{jwt_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000/api",
+			"type": "string"
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>SURYA LOGAM JAYA | Master Data Jenis Barang</title>
+  <link rel="stylesheet" href="../styles/style.css">
+  <link rel="icon" type="image/x-icon" href="../assets/logo.ico">
+  <style>
+    .content {
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .jenis-main-wrapper {
+      max-width: 900px;
+      margin-left: 0;
+    }
+    #addJenisBtn {
+      display: inline-block;
+      margin-bottom: 18px;
+      margin-top: 8px;
+      background: #2c3e50;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.98rem;
+      cursor: pointer;
+      padding: 8px 10px;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 18px;
+      margin-top: 8px;
+      color: #2c3e50;
+      letter-spacing: 1px;
+      text-align: left;
+    }
+    
+    .page-title {
+      margin-bottom: 24px;
+      margin-top: 12px;
+    }
+    
+    .page-title .main-title {
+      font-size: 1.8rem;
+      font-weight: 300;
+      color: #7f8c8d;
+      margin-bottom: 4px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    
+    .page-title .sub-title {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: #2c3e50;
+      letter-spacing: 1px;
+    }
+    
+    /* Modern Table Styling */
+    #jenisTable {
+      width: 100%;
+      border-collapse: collapse;
+      background: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      border: none;
+    }
+    
+    #jenisTable thead {
+      background: linear-gradient(135deg, #ecf0f1 0%, #bdc3c7 100%);
+    }
+    
+    #jenisTable th {
+      padding: 16px 12px;
+      text-align: left;
+      font-weight: 600;
+      color: #000000;
+      font-size: 0.95rem;
+      border: none;
+      position: relative;
+    }
+    
+    #jenisTable th.sortable {
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    
+    #jenisTable th.sortable:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    #jenisTable tbody tr {
+      border-bottom: 1px solid #f0f0f0;
+      transition: all 0.3s ease;
+    }
+    
+    #jenisTable tbody tr:hover {
+      background: #f8f9ff;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    #jenisTable tbody tr:last-child {
+      border-bottom: none;
+    }
+    
+    #jenisTable td {
+      padding: 14px 12px;
+      color: #333333;
+      font-size: 0.9rem;
+      border: none;
+    }
+    
+    #jenisTable td:first-child {
+      font-weight: 600;
+      color: #2c3e50;
+    }
+    
+    /* Action Buttons */
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    
+    .edit-btn, .delete-btn {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 500;
+    }
+    
+    .edit-btn {
+      background: #2c3e50;
+      color: #ffffff;
+    }
+    
+    .edit-btn:hover {
+      background: #34495e;
+      transform: translateY(-1px);
+    }
+    
+    .delete-btn {
+      background: #e74c3c;
+      color: #ffffff;
+    }
+    
+    .delete-btn:hover {
+      background: #c0392b;
+      transform: translateY(-1px);
+    }
+    
+    /* Sort Arrows */
+    .sort-arrow {
+      display: inline-block;
+      margin-left: 6px;
+      width: 0;
+      height: 0;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-bottom: none;
+      border-top: none;
+    }
+    
+    .sort-arrow.asc {
+      border-bottom: 4px solid #ffffff;
+      border-top: none;
+    }
+    
+    .sort-arrow.desc {
+      border-top: 4px solid #ffffff;
+      border-bottom: none;
+    }
+    
+    /* Table Container */
+    .table-scroll-x {
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    }
+  </style>
+</head>
+<body>
+  <div class="header-bar">
+    <div class="header-left">
+      <img src="../assets/logo.png" alt="Logo" class="header-logo">
+      <div class="header-title">
+        <span>SURYA</span>
+        <span>LOGAM</span>
+        <span>JAYA</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="header-user">Admin</div>
+      <div class="header-version">v1.0.0</div>
+    </div>
+  </div>
+  <div class="content">
+    <div class="jenis-main-wrapper">
+      <div class="page-title">
+        <div class="main-title">Master Data</div>
+        <div class="sub-title">Jenis Barang</div>
+      </div>
+      <button id="addJenisBtn">+ Jenis Barang</button>
+      <div class="table-scroll-x">
+        <table id="jenisTable">
+          <thead>
+            <tr>
+              <th data-col="id" class="sortable">ID <span class="sort-arrow"></span></th>
+              <th data-col="kode" class="sortable">Kode <span class="sort-arrow"></span></th>
+              <th data-col="nama" class="sortable">Nama Jenis <span class="sort-arrow"></span></th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Data rows will be injected by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <!-- Modal for Add/Edit -->
+  <div id="jenisModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.25);z-index:2000;align-items:center;justify-content:center;">
+    <div style="background:#fff;padding:32px 28px 24px 28px;border-radius:10px;min-width:320px;max-width:90vw;box-shadow:0 4px 24px rgba(0,0,0,0.13);position:relative;">
+      <h2 id="modalTitle" style="margin-top:0;font-size:1.3rem;">Tambah Jenis Barang</h2>
+      <form id="jenisForm">
+        <div style="margin-bottom:16px;">
+          <label for="jenisId" style="display:block;font-weight:500;margin-bottom:4px;">ID</label>
+          <input type="text" id="jenisId" name="id" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:14px;" required maxlength="8">
+        </div>
+        <div style="margin-bottom:16px;">
+          <label for="jenisKode" style="display:block;font-weight:500;margin-bottom:4px;">Kode</label>
+          <input type="text" id="jenisKode" name="kode" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:14px;" required maxlength="8">
+        </div>
+        <div style="margin-bottom:20px;">
+          <label for="jenisNama" style="display:block;font-weight:500;margin-bottom:4px;">Nama Jenis</label>
+          <input type="text" id="jenisNama" name="nama" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:14px;" required maxlength="32">
+        </div>
+        <div style="text-align:right;">
+          <button type="button" id="batalBtn" style="margin-right:12px;padding:8px 18px;background:#95a5a6;border:none;border-radius:5px;cursor:pointer;color:#fff;">Batal</button>
+          <button type="submit" style="padding:8px 18px;background:#34495e;color:#fff;border:none;border-radius:5px;cursor:pointer;">Simpan</button>
+        </div>
+      </form>
+      <button id="closeModalBtn" style="position:absolute;top:10px;right:12px;background:none;border:none;font-size:1.3rem;cursor:pointer;color:#888;">&times;</button>
+    </div>
+  </div>
+  <script>
+    // --- Jenis Barang CRUD with localStorage + Sorting ---
+    const defaultData = [
+      { id: '0001', kode: 'ALU', nama: 'Aluminium' },
+      { id: '0002', kode: 'BRZ', nama: 'Bronze' }
+    ];
+    let sortState = { col: null, dir: null }; // dir: 'asc'|'desc'|null
+    function getJenisData() {
+      const data = localStorage.getItem('jenisBarang');
+      return data ? JSON.parse(data) : defaultData.slice();
+    }
+    function setJenisData(data) {
+      localStorage.setItem('jenisBarang', JSON.stringify(data));
+    }
+    function renderTable() {
+      const tbody = document.querySelector('#jenisTable tbody');
+      let data = getJenisData();
+      // Sorting
+      if (sortState.col && sortState.dir) {
+        data = data.slice().sort((a, b) => {
+          let va = a[sortState.col];
+          let vb = b[sortState.col];
+          if (sortState.col === 'id') { va = va.padStart(8, '0'); vb = vb.padStart(8, '0'); }
+          if (va < vb) return sortState.dir === 'asc' ? -1 : 1;
+          if (va > vb) return sortState.dir === 'asc' ? 1 : -1;
+          return 0;
+        });
+      }
+      tbody.innerHTML = data.map((row, idx) => `
+        <tr>
+          <td>
+            <span style="font-family:monospace;">${row.id}</span>
+          </td>
+          <td>${row.kode}</td>
+          <td>${row.nama}</td>
+          <td>
+            <button class="editBtn" data-idx="${idx}" style="background:#ffd666;color:#7a5d00;border:none;padding:6px 14px;border-radius:5px;margin-right:8px;cursor:pointer;">Edit</button>
+            <button class="deleteBtn" data-idx="${idx}" style="background:#ff7875;color:#a8071a;border:none;padding:6px 14px;border-radius:5px;cursor:pointer;">Hapus</button>
+          </td>
+        </tr>
+      `).join('');
+      // Update sort arrows
+      document.querySelectorAll('th.sortable').forEach(th => {
+        const arrow = th.querySelector('.sort-arrow');
+        const col = th.getAttribute('data-col');
+        if (sortState.col === col) {
+          arrow.textContent = sortState.dir === 'asc' ? '▲' : (sortState.dir === 'desc' ? '▼' : '');
+        } else {
+          arrow.textContent = '';
+        }
+      });
+    }
+    // Sorting click handler
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('th.sortable').forEach(th => {
+        th.style.cursor = 'pointer';
+        th.addEventListener('click', function() {
+          const col = th.getAttribute('data-col');
+          if (sortState.col !== col) {
+            sortState = { col, dir: 'asc' };
+          } else if (sortState.dir === 'asc') {
+            sortState.dir = 'desc';
+          } else if (sortState.dir === 'desc') {
+            sortState = { col: null, dir: null };
+          } else {
+            sortState.dir = 'asc';
+          }
+          renderTable();
+        });
+      });
+      // Modal logic
+      document.getElementById('addJenisBtn').onclick = () => showModal();
+      document.getElementById('closeModalBtn').onclick = hideModal;
+      document.getElementById('batalBtn').onclick = hideModal;
+      document.getElementById('jenisForm').onsubmit = function(e) {
+        e.preventDefault();
+        const id = this.jenisId.value.trim();
+        const kode = this.jenisKode.value.trim();
+        const nama = this.jenisNama.value.trim();
+        let data = getJenisData();
+        if (this.dataset.editIdx !== undefined) {
+          // Edit
+          data[this.dataset.editIdx] = { id, kode, nama };
+        } else {
+          // Add
+          if (data.some(d => d.id === id)) {
+            alert('ID sudah ada!');
+            return;
+          }
+          data.push({ id, kode, nama });
+        }
+        setJenisData(data);
+        renderTable();
+        hideModal();
+      };
+      document.querySelector('#jenisTable tbody').onclick = function(e) {
+        if (e.target.classList.contains('editBtn')) {
+          showModal(e.target.dataset.idx);
+        } else if (e.target.classList.contains('deleteBtn')) {
+          if (confirm('Hapus data ini?')) {
+            let data = getJenisData();
+            data.splice(e.target.dataset.idx, 1);
+            setJenisData(data);
+            renderTable();
+          }
+        }
+      };
+      // Initial render
+      if (!localStorage.getItem('jenisBarang')) setJenisData(defaultData);
+      renderTable();
+    });
+    function showModal(editIdx = null) {
+      const modal = document.getElementById('jenisModal');
+      const form = document.getElementById('jenisForm');
+      const title = document.getElementById('modalTitle');
+      if (editIdx !== null) {
+        const data = getJenisData()[editIdx];
+        form.jenisId.value = data.id;
+        form.jenisKode.value = data.kode;
+        form.jenisNama.value = data.nama;
+        form.jenisId.disabled = true;
+        title.textContent = 'Edit Jenis Barang';
+        form.dataset.editIdx = editIdx;
+      } else {
+        form.reset();
+        form.jenisId.disabled = false;
+        title.textContent = 'Tambah Jenis Barang';
+        delete form.dataset.editIdx;
+      }
+      modal.style.display = 'flex';
+    }
+    function hideModal() {
+      document.getElementById('jenisModal').style.display = 'none';
+    }
+  </script>
+  <script src="ui.js"></script>
+</body>
+<!-- Custom Confirm Dialog -->
+<div id="customConfirm" style="display:none; position:fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.2); z-index:9999; align-items:center; justify-content:center;">
+  <div style="background:#fff; padding:32px 28px; border-radius:10px; box-shadow:0 2px 16px #0002; min-width:260px; text-align:center;">
+    <div id="customConfirmMsg" style="margin-bottom:18px; font-size:1.1em;">Yakin ingin logout?</div>
+    <button id="customConfirmYes" style="background:#3498db; color:#fff; border:none; border-radius:6px; padding:8px 24px; font-size:1em; font-weight:600; cursor:pointer;">Ya</button>
+    <button id="customConfirmNo" style="background:#eee; color:#444; border:none; border-radius:6px; padding:8px 24px; font-size:1em; font-weight:600; margin-left:18px; cursor:pointer;">Tidak</button>
+  </div>
+</div>
+</html> 

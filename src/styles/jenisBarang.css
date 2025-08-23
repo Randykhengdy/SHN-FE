@@ -1,0 +1,139 @@
+/* Styling untuk halaman Jenis Barang */
+.jenis-main-wrapper {
+  max-width: 900px;
+  margin-left: 0;
+}
+
+.page-title {
+  margin-bottom: 24px;
+  margin-top: 12px;
+}
+
+.page-title .main-title {
+  font-size: 1.8rem;
+  font-weight: 300;
+  color: #7f8c8d;
+  margin-bottom: 4px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.page-title .sub-title {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #2c3e50;
+  letter-spacing: 1px;
+}
+
+/* Add button styling */
+.add-button {
+  display: inline-block;
+  margin-bottom: 18px;
+  margin-top: 8px;
+  background: #2c3e50;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.98rem;
+  cursor: pointer;
+  padding: 8px 10px;
+}
+
+/* Table styling */
+.table-scroll-x {
+  overflow-x: auto;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* Custom table styling to match the image */
+.custom-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: none;
+}
+
+.custom-table-head {
+  background: linear-gradient(135deg, #ecf0f1 0%, #bdc3c7 100%);
+}
+
+.custom-table-header {
+  padding: 16px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #000000;
+  font-size: 0.95rem;
+  border: none;
+}
+
+.custom-table-cell {
+  padding: 12px;
+  text-align: left;
+  border: none;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* Action buttons */
+.edit-button {
+  background-color: #f1c40f;
+  color: #7f5f00;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.edit-button:hover {
+  background-color: #f39c12;
+}
+
+.delete-button {
+  background-color: #e74c3c;
+  color: #7f2a1f;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.delete-button:hover {
+  background-color: #c0392b;
+}
+
+/* Sortable columns */
+th.sortable {
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+th.sortable:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+th.sortable.active {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.sort-arrow {
+  display: inline-block;
+  margin-left: 6px;
+}
+
+/* Table row hover effect */
+tbody tr {
+  transition: all 0.3s ease;
+}
+
+tbody tr:hover {
+  background-color: #f8f9ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}

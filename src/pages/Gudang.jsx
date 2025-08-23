@@ -1,0 +1,24 @@
+import React from "react";
+import MasterDataLayout from "@/components/MasterDataLayout";
+import { gudangService } from "@/services/gudangService";
+
+export default function GudangPage() {
+  return (
+    <MasterDataLayout
+      title="Gudang"
+      subtitle="Master Data"
+      service={gudangService}
+      fields={[
+        { name: "kode", label: "Kode", maxLength: 8 },
+        { name: "nama_gudang", label: "Nama Gudang", maxLength: 64 },
+        { name: "telepon_hp", label: "Telepon/HP", maxLength: 20 },
+      ]}
+      columns={[
+        { key: "id", label: "ID" },
+        { key: "kode", label: "Kode" },
+        { key: "nama_gudang", label: "Nama Gudang" },
+        { key: "telepon_hp", label: "Telepon/HP" },
+      ]}
+    />
+  );
+}
