@@ -1,8 +1,22 @@
-import { request } from "@/lib/request";
+import { request } from "../lib/request";
 
 export const itemBarangService = {
   async getAll() {
     return request("/item-barang", { method: "GET" });
+  },
+
+  async getPaginated(page = 1, perPage = 10, search = "", sortBy = "", sortDir = "asc") {
+    const params = new URLSearchParams({
+      search: search || "",
+      page: page.toString(),
+      per_page: perPage.toString()
+    });
+    
+    if (sortBy && sortDir) {
+      params.append('sort', `${sortBy},${sortDir}`);
+    }
+    
+    return request(`/item-barang?${params}`, { method: "GET" });
   },
 
   async getById(id) {
@@ -51,5 +65,19 @@ export const itemBarangService = {
     return request("/item-barang/with-trashed/trashed", {
       method: "GET",
     });
+  },
+
+  async getTrashedPaginated(page = 1, perPage = 10, search = "", sortBy = "", sortDir = "asc") {
+    const params = new URLSearchParams({
+      search: search || "",
+      page: page.toString(),
+      per_page: perPage.toString()
+    });
+    
+    if (sortBy && sortDir) {
+      params.append('sort', `${sortBy},${sortDir}`);
+    }
+    
+    return request(`/item-barang/with-trashed/trashed?${params}`, { method: "GET" });
   }
 };

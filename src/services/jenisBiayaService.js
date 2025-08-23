@@ -1,8 +1,22 @@
-import { request } from "@/lib/request";
+import { request } from "../lib/request";
 
 export const jenisBiayaService = {
   async getAll() {
     return request("/jenis-biaya", { method: "GET" });
+  },
+
+  async getPaginated(page = 1, perPage = 10, search = "", sortBy = "", sortDir = "asc") {
+    const params = new URLSearchParams({
+      search: search || "",
+      page: page.toString(),
+      per_page: perPage.toString()
+    });
+    
+    if (sortBy && sortDir) {
+      params.append('sort', `${sortBy},${sortDir}`);
+    }
+    
+    return request(`/jenis-biaya?${params}`, { method: "GET" });
   },
 
   async getById(id) {
@@ -52,4 +66,18 @@ export const jenisBiayaService = {
       method: "GET",
     });
   },
+
+  async getTrashedPaginated(page = 1, perPage = 10, search = "", sortBy = "", sortDir = "asc") {
+    const params = new URLSearchParams({
+      search: search || "",
+      page: page.toString(),
+      per_page: perPage.toString()
+    });
+    
+    if (sortBy && sortDir) {
+      params.append('sort', `${sortBy},${sortDir}`);
+    }
+    
+    return request(`/jenis-biaya/with-trashed/trashed?${params}`, { method: "GET" });
+  }
 };

@@ -2,6 +2,7 @@ import { useLocation } from "react-router-dom";
 import AppRouter from "@/router/AppRouter";
 import useElectronNavigation from "@/hooks/useElectronNavigation";
 import Sidebar from "@/components/Sidebar";
+import DevTools from "@/components/DevTools";
 
 function App() {
   // Gunakan hook untuk menangani navigasi dari Electron
@@ -17,10 +18,13 @@ function App() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden">
-      {showSidebar && <Sidebar />}
+      {/* {showSidebar && <Sidebar />} */}
       <main className="flex-1 overflow-auto w-full">
         <AppRouter />
       </main>
+      
+      {/* Development Tools - Always available */}
+      <DevTools />
     </div>
   );
 }

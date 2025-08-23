@@ -5,6 +5,20 @@ export const bentukBarangService = {
     return request("/bentuk-barang", { method: "GET" });
   },
 
+  async getPaginated(page = 1, perPage = 10, search = "", sortBy = "", sortDir = "asc") {
+    const params = new URLSearchParams({
+      search: search || "",
+      page: page.toString(),
+      per_page: perPage.toString()
+    });
+    
+    if (sortBy && sortDir) {
+      params.append('sort', `${sortBy},${sortDir}`);
+    }
+    
+    return request(`/bentuk-barang?${params}`, { method: "GET" });
+  },
+
   async getById(id) {
     return request(`/bentuk-barang/${id}`, { method: "GET" });
   },
@@ -24,22 +38,46 @@ export const bentukBarangService = {
   },
 
   async softDelete(id) {
-    return request(`/bentuk-barang/${id}/soft`, { method: "DELETE" });
+    return request(`/bentuk-barang/${id}/soft`, {
+      method: "DELETE",
+    });
   },
 
   async restore(id) {
-    return request(`/bentuk-barang/${id}/restore`, { method: "PATCH" });
+    return request(`/bentuk-barang/${id}/restore`, {
+      method: "PATCH",
+    });
   },
 
   async forceDelete(id) {
-    return request(`/bentuk-barang/${id}/force`, { method: "DELETE" });
+    return request(`/bentuk-barang/${id}/force`, {
+      method: "DELETE",
+    });
   },
 
   async getAllWithTrashed() {
-    return request("/bentuk-barang/with-trashed/all", { method: "GET" });
+    return request("/bentuk-barang/with-trashed/all", {
+      method: "GET",
+    });
   },
 
   async getOnlyTrashed() {
-    return request("/bentuk-barang/with-trashed/trashed", { method: "GET" });
+    return request("/bentuk-barang/with-trashed/trashed", {
+      method: "GET",
+    });
+  },
+
+  async getTrashedPaginated(page = 1, perPage = 10, search = "", sortBy = "", sortDir = "asc") {
+    const params = new URLSearchParams({
+      search: search || "",
+      page: page.toString(),
+      per_page: perPage.toString()
+    });
+    
+    if (sortBy && sortDir) {
+      params.append('sort', `${sortBy},${sortDir}`);
+    }
+    
+    return request(`/bentuk-barang/with-trashed/trashed?${params}`, { method: "GET" });
   }
 };

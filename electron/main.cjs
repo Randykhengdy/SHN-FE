@@ -1,8 +1,8 @@
 const { app, BrowserWindow, Menu, ipcMain } = require('electron');
 const path = require('path');
 
-
 let win;
+let isDev = process.env.NODE_ENV === 'development' || process.env.ELECTRON_IS_DEV;
 
 function createWindow () {
   win = new BrowserWindow({
@@ -12,16 +12,39 @@ function createWindow () {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
-      nodeIntegration: false // penting demi keamanan
+      nodeIntegration: false, // penting demi keamanan
+      webSecurity: false, // Allow loading local resources in dev
+      devTools: true
     }
   });
 
   win.maximize();
 
-  if (process.env.NODE_ENV === 'development') {
+  if (isDev) {
+    // Development mode
     win.loadURL('http://localhost:5173');
+    
+    // Open DevTools automatically
     win.webContents.openDevTools();
+    
+    // Enable hot reload for development
+    win.webContents.on('did-finish-load', () => {
+      console.log('Development server loaded successfully');
+    });
+    
+    // Handle development server errors
+    win.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+      console.error('Failed to load development server:', errorDescription);
+      // Retry after 2 seconds
+      setTimeout(() => {
+        if (isDev) {
+          win.loadURL('http://localhost:5173');
+        }
+      }, 2000);
+    });
+    
   } else {
+    // Production mode
     win.loadFile(path.join(__dirname, '../dist/index.html'));
   }
 
@@ -40,6 +63,41 @@ function createWindow () {
       }
     }
   });
+
+  // Add keyboard shortcuts for development
+  if (isDev) {
+    win.webContents.on('before-input-event', (event, input) => {
+      // Ctrl+Shift+I to toggle DevTools
+      if (input.control && input.shift && input.key === 'I') {
+        event.preventDefault();
+        if (win.webContents.isDevToolsOpened()) {
+          win.webContents.closeDevTools();
+        } else {
+          win.webContents.openDevTools();
+        }
+      }
+      
+      // Ctrl+R to reload
+      if (input.control && input.key === 'r') {
+        event.preventDefault();
+        if (isDev) {
+          win.loadURL('http://localhost:5173');
+        } else {
+          win.reload();
+        }
+      }
+      
+      // Ctrl+Shift+R to hard reload
+      if (input.control && input.shift && input.key === 'R') {
+        event.preventDefault();
+        if (isDev) {
+          win.loadURL('http://localhost:5173');
+        } else {
+          win.webContents.reloadIgnoringCache();
+        }
+      }
+    });
+  }
 
   // Build native menu, but trigger React navigation
   const template = [

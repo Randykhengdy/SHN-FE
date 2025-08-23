@@ -18,6 +18,9 @@ export default function MasterFormModal({
   fields,
   title,
   onSave,
+  saveLoading = false,
+  error = null,
+  onSaveSuccess = null,
 }) {
   const [form, setForm] = useState({});
   const [options, setOptions] = useState({});
@@ -56,7 +59,22 @@ export default function MasterFormModal({
   const handleSubmit = (e) => {
     e.preventDefault();
     onSave(form);
+    // Clear form after successful save
+    if (onSaveSuccess) {
+      onSaveSuccess();
+    }
   };
+
+  // Clear form when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      const initialForm = {};
+      fields.forEach((field) => {
+        initialForm[field.name] = "";
+      });
+      setForm(initialForm);
+    }
+  }, [isOpen, fields]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -105,10 +123,17 @@ export default function MasterFormModal({
           ))}
 
           <DialogFooter className="sm:justify-end">
-            <Button type="button" variant="outline" onClick={onClose}>
+            {error && (
+              <div className="text-red-600 text-sm mb-2 w-full">
+                ❌ {error}
+              </div>
+            )}
+            <Button type="button" variant="outline" onClick={onClose} disabled={saveLoading}>
               Batal
             </Button>
-            <Button type="submit">{editData ? "Update" : "Simpan"}</Button>
+            <Button type="submit" disabled={saveLoading}>
+              {saveLoading ? "Menyimpan..." : (editData ? "Update" : "Simpan")}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

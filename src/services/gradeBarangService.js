@@ -5,6 +5,21 @@ export const gradeBarangService = {
     return request("/grade-barang", { method: "GET" });
   },
 
+  async getPaginated(page = 1, perPage = 10, search = "", sortBy = "", sortDir = "asc") {
+    const params = new URLSearchParams({
+      search: search || "",
+      page: page.toString(),
+      per_page: perPage.toString()
+    });
+    
+    // Handle sorting in the format: sort=kode,asc;nama_jenis,desc
+    if (sortBy && sortDir) {
+      params.append('sort', `${sortBy},${sortDir}`);
+    }
+    
+    return request(`/grade-barang?${params}`, { method: "GET" });
+  },
+
   async getById(id) {
     return request(`/grade-barang/${id}`, { method: "GET" });
   },
@@ -51,5 +66,20 @@ export const gradeBarangService = {
     return request("/grade-barang/with-trashed/trashed", {
       method: "GET",
     });
+  },
+
+  async getTrashedPaginated(page = 1, perPage = 10, search = "", sortBy = "", sortDir = "asc") {
+    const params = new URLSearchParams({
+      search: search || "",
+      page: page.toString(),
+      per_page: perPage.toString()
+    });
+    
+    // Handle sorting in the format: sort=kode,asc;nama_jenis,desc
+    if (sortBy && sortDir) {
+      params.append('sort', `${sortBy},${sortDir}`);
+    }
+    
+    return request(`/grade-barang/with-trashed/trashed?${params}`, { method: "GET" });
   }
 };
