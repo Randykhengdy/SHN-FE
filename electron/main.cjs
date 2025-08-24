@@ -1,10 +1,10 @@
-const { app, BrowserWindow, Menu, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
 const path = require('path');
+const fs = require('fs');
 
 let win;
-let isDev = process.env.NODE_ENV === 'development' || process.env.ELECTRON_IS_DEV;
 
-function createWindow () {
+function createWindow() {
   win = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -12,58 +12,83 @@ function createWindow () {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
-      nodeIntegration: false, // penting demi keamanan
-      webSecurity: false, // Allow loading local resources in dev
+      nodeIntegration: false,
+      webSecurity: false,
       devTools: true,
       allowRunningInsecureContent: true
-    }
+    },
+    show: false, // Don't show until ready
   });
 
-  win.maximize();
+  // Show window when ready to prevent visual flash
+  win.once('ready-to-show', () => {
+    win.show();
+    win.maximize();
+  });
 
-  if (isDev) {
+  if (process.env.VITE_DEV_SERVER_URL) {
     // Development mode
-    win.loadURL('http://localhost:5173');
-    
-    // Open DevTools automatically
+    console.log('Development mode - loading URL:', process.env.VITE_DEV_SERVER_URL);
+    win.loadURL(process.env.VITE_DEV_SERVER_URL);
     win.webContents.openDevTools();
-    
-    // Enable hot reload for development
-    win.webContents.on('did-finish-load', () => {
-      console.log('Development server loaded successfully');
-    });
-    
-    // Handle development server errors
-    win.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
-      console.error('Failed to load development server:', errorDescription);
-      // Retry after 2 seconds
-      setTimeout(() => {
-        if (isDev) {
-          win.loadURL('http://localhost:5173');
-        }
-      }, 2000);
-    });
-    
   } else {
     // Production mode
-    const htmlPath = path.join(__dirname, '../dist/index.html');
-    console.log('Loading HTML from:', htmlPath);
-    win.loadFile(htmlPath);
+    console.log('Production mode - loading local file');
     
-    // Add error handling for renderer
-    win.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
-      console.error('Failed to load renderer:', errorDescription);
-      console.error('Error code:', errorCode);
-      console.error('URL:', validatedURL);
-    });
+    // Check if we're in a packaged app
+    const isPackaged = app.isPackaged;
+    console.log('Is packaged:', isPackaged);
     
-    win.webContents.on('crashed', (event) => {
-      console.error('Renderer process crashed');
-    });
+    let indexPath;
+    if (isPackaged) {
+      // In packaged app, resources are in app.asar
+      indexPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'dist', 'index.html');
+      if (!fs.existsSync(indexPath)) {
+        indexPath = path.join(__dirname, '..', 'dist', 'index.html');
+      }
+    } else {
+      // In development, use relative path
+      indexPath = path.join(__dirname, '..', 'dist', 'index.html');
+    }
     
-    win.webContents.on('unresponsive', () => {
-      console.error('Renderer process unresponsive');
-    });
+    console.log('Trying to load:', indexPath);
+    console.log('File exists:', fs.existsSync(indexPath));
+    
+    if (fs.existsSync(indexPath)) {
+      win.loadFile(indexPath).catch(err => {
+        console.error('Failed to load index.html:', err);
+        dialog.showErrorBox('Load Error', `Failed to load application: ${err.message}`);
+      });
+    } else {
+      console.error('index.html not found at:', indexPath);
+      
+      // Try alternative paths
+      const alternativePaths = [
+        path.join(process.cwd(), 'dist', 'index.html'),
+        path.join(__dirname, 'dist', 'index.html'),
+        path.join(app.getAppPath(), 'dist', 'index.html')
+      ];
+      
+      let found = false;
+      for (const altPath of alternativePaths) {
+        if (fs.existsSync(altPath)) {
+          console.log('Found at alternative path:', altPath);
+          win.loadFile(altPath).catch(err => {
+            console.error('Failed to load from alternative path:', err);
+            dialog.showErrorBox('Load Error', `Failed to load application: ${err.message}`);
+          });
+          found = true;
+          break;
+        }
+      }
+      
+      if (!found) {
+        const errorMsg = `Application files not found.\n\nSearched paths:\n- ${indexPath}\n- ${alternativePaths.join('\n- ')}\n\nPlease reinstall the application.`;
+        console.error(errorMsg);
+        dialog.showErrorBox('File Not Found', errorMsg);
+        app.quit();
+      }
+    }
   }
 
   // Disable zoom
@@ -97,8 +122,8 @@ function createWindow () {
     // Ctrl+R to reload
     if (input.control && input.key === 'r') {
       event.preventDefault();
-      if (isDev) {
-        win.loadURL('http://localhost:5173');
+      if (process.env.VITE_DEV_SERVER_URL) {
+        win.loadURL(process.env.VITE_DEV_SERVER_URL);
       } else {
         win.reload();
       }
@@ -107,8 +132,8 @@ function createWindow () {
     // Ctrl+Shift+R to hard reload
     if (input.control && input.shift && input.key === 'R') {
       event.preventDefault();
-      if (isDev) {
-        win.loadURL('http://localhost:5173');
+      if (process.env.VITE_DEV_SERVER_URL) {
+        win.loadURL(process.env.VITE_DEV_SERVER_URL);
       } else {
         win.webContents.reloadIgnoringCache();
       }
@@ -186,13 +211,8 @@ function createWindow () {
                 const key = localStorage.key(i);
                 data[key] = localStorage.getItem(key);
               }
-              const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = 'data-export-' + new Date().toISOString().split('T')[0] + '.json';
-              a.click();
-              URL.revokeObjectURL(url);
+              console.log('Exported data:', data);
+              alert('Data exported to console');
             `);
           }
         }
@@ -203,12 +223,22 @@ function createWindow () {
       submenu: [
         {
           label: 'About',
-          accelerator: 'CmdOrCtrl+Shift+A',
-          click: () => win.webContents.executeJavaScript(`alert('Surya Logam Jaya\\nVersion 1.0.0');`)
+          click: () => {
+            win.webContents.executeJavaScript(`
+              alert('SHN React App v1.0.0\\n\\nAplikasi manajemen untuk Surya Logam Jaya');
+            `);
+          }
         },
         {
-          label: 'Keyboard Shortcuts',
-          accelerator: 'CmdOrCtrl+Shift+K',
+          label: 'Toggle DevTools',
+          accelerator: 'F12',
+          click: () => {
+            if (win.webContents.isDevToolsOpened()) {
+              win.webContents.closeDevTools();
+            } else {
+              win.webContents.openDevTools();
+            }
+          }
         }
       ]
     }
@@ -216,61 +246,42 @@ function createWindow () {
 
   const menu = Menu.buildFromTemplate(template);
   console.log('Menu created:', menu);
-  
   ipcMain.on('show-menu', () => {
     if (win) {
       Menu.setApplicationMenu(menu);
       console.log('Menu shown');
     }
   });
-  
   ipcMain.on('hide-menu', () => {
     if (win) {
       Menu.setApplicationMenu(null);
       console.log('Menu hidden');
     }
   });
-  
-  // Set menu for production
+  // Set menu for all environments
   Menu.setApplicationMenu(menu);
   console.log('Menu set for all environments');
 }
 
-app.whenReady().then(() => {
-  createWindow();
+app.whenReady().then(createWindow);
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
-  });
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  }
 });
 
-// Handle app window all closed
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
 });
 
-// Handle app before quit
-app.on('before-quit', () => {
-  console.log('Application is quitting...');
+// Handle IPC messages from renderer
+ipcMain.handle('get-app-version', () => {
+  return app.getVersion();
 });
 
-// Handle app quit
-app.on('quit', () => {
-  console.log('Application has quit');
-});
-
-// Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
-  // Don't quit the app, just log the error
-});
-
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  // Don't quit the app, just log the error
+ipcMain.handle('get-app-name', () => {
+  return app.getName();
 });

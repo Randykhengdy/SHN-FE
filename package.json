@@ -10,20 +10,23 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "electron": "electron .",
-    "electron:dev": "vite build && electron .",
+    "electron:dev": "vite build && cross-env VITE_DEV_SERVER_URL= electron .",
     "electron:reload": "vite build && npx electronmon .",
     "start": "electron .",
-    "dev:electron": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
+    "dev:electron": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .\"",
     "dev:electron:reload": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electronmon .\"",
     "build:electron": "npm run build && electron .",
     "dev:full": "node scripts/dev.js",
     "dev:simple": "node scripts/dev-simple.js",
     "dev:debug": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron . --enable-logging --v=1\"",
+    "build:prod": "node scripts/build-production.js",
+    "test:prod": "node scripts/test-production.js",
     "dist": "npm run build && electron-builder",
     "dist:win": "npm run build && electron-builder --win",
     "dist:mac": "npm run build && electron-builder --mac",
     "dist:linux": "npm run build && electron-builder --linux",
-    "pack": "npm run build && npx electron-packager . SHNReactApp --platform=win32 --arch=x64 --out=dist --overwrite && robocopy dist dist\\SHNReactApp-win32-x64\\resources\\app\\dist /E /NFL /NDL"
+    "pack": "npm run build && electron-builder --dir",
+    "pack:win": "npm run build && electron-builder --win --dir"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.11",
@@ -64,6 +67,7 @@
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
     "concurrently": "^8.2.2",
+    "cross-env": "^10.0.0",
     "electron": "^37.2.4",
     "electron-builder": "^26.0.12",
     "electron-packager": "^17.1.2",
@@ -84,7 +88,14 @@
     },
     "files": [
       "dist/**/*",
-      "electron/**/*"
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "src/assets",
+        "to": "assets"
+      }
     ],
     "win": {
       "target": [
@@ -93,12 +104,25 @@
           "arch": [
             "x64"
           ]
+        },
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "src/assets/logo.ico"
     },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
     "npmRebuild": false,
     "buildDependenciesFromSource": false,
-    "forceCodeSigning": false
+    "forceCodeSigning": false,
+    "asar": true
   }
 }

@@ -22,14 +22,21 @@ export default function TokenInterceptor() {
         console.log('✅ Token status:', tokenInfo);
       } catch (error) {
         console.error('❌ Error during auto refresh:', error);
+        // Don't throw error, just log it
       }
     };
 
-    // Auto refresh token saat component mount dan setiap route change
-    checkToken();
+    // Only run auto refresh if we're not on login page
+    if (location.pathname !== '/') {
+      checkToken();
+    }
 
-    // Set up interval untuk auto refresh setiap 30 detik
-    const interval = setInterval(checkToken, 30000);
+    // Set up interval untuk auto refresh setiap 30 detik (only if logged in)
+    const interval = setInterval(() => {
+      if (location.pathname !== '/') {
+        checkToken();
+      }
+    }, 30000);
 
     return () => {
       clearInterval(interval);

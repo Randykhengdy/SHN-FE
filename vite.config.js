@@ -17,6 +17,8 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
+    assetsDir: 'assets',
+    emptyOutDir: true,
     rollupOptions: {
       output: {
         manualChunks: {
@@ -24,7 +26,10 @@ export default defineConfig({
           ui: ['@radix-ui/react-dialog', '@radix-ui/react-select', '@radix-ui/react-tabs']
         }
       }
-    }
+    },
+    // Ensure assets are properly referenced
+    assetsInlineLimit: 4096,
+    chunkSizeWarningLimit: 1000
   },
   server: {
     port: 5173,

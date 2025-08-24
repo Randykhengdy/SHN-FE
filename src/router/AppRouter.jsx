@@ -15,6 +15,8 @@ import SupplierPage from "@/pages/Supplier";
 import PelangganPage from "@/pages/Pelanggan";
 import GudangPage from "@/pages/Gudang";
 import WorkshopPage from "@/pages/Workshop";
+import SalesOrderPage from "@/pages/SalesOrder";
+import AddSalesOrderPage from "@/pages/AddSalesOrder";
 
 const AppRouter = () => {
     return (
@@ -35,6 +37,8 @@ const AppRouter = () => {
         <Route path="/masterdata/pelaksana" element={<PelaksanaPage />} />
         <Route path="/masterdata/jenis-transaksi-kas" element={<JenisTransaksiKasPage />} />
         <Route path="/workshop" element={<WorkshopPage />} />
+        <Route path="/sales-order" element={<SalesOrderPage />} />
+        <Route path="/sales-order/add" element={<AddSalesOrderPage />} />
 
       </Routes>
     );
