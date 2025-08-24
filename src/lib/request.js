@@ -1,7 +1,14 @@
 import { getAuthHeader } from "../api/GetAuthHeader";
 import apiConfig from "../config/api";
+import { checkAndRefreshToken, logoutAndRedirect } from "./tokenUtils";
 
 export async function request(path, options = {}) {
+  // Auto refresh token sebelum hit API
+  const tokenValid = await checkAndRefreshToken();
+  if (!tokenValid) {
+    throw new Error("Token expired and refresh failed");
+  }
+
   const response = await fetch(`${apiConfig.baseUrl}${path}`, {
     headers: {
       "Content-Type": "application/json",
@@ -16,29 +23,11 @@ export async function request(path, options = {}) {
     console.error("API Error:", response.status, errorText);
     console.log("🔍 Raw error response:", errorText);
     
-    // Cek apakah error 401 (Unauthorized) dan token expired
+    // Cek apakah error 401 (Unauthorized) - handle semua kasus token expired
     if (response.status === 401) {
-      try {
-        // Coba parse response sebagai JSON
-        const errorJson = JSON.parse(errorText);
-        
-        // Jika pesan menunjukkan token expired
-        if (errorJson && errorJson.message === "Token expired") {
-          console.log("Token expired, redirecting to login page...");
-          
-          // Hapus data login dari localStorage
-          localStorage.removeItem("token");
-          localStorage.removeItem("token_type");
-          localStorage.removeItem("isLoggedIn");
-          
-          // Redirect ke halaman login
-          window.location.href = "/";
-          return; // Hentikan eksekusi lebih lanjut
-        }
-      } catch (e) {
-        // Jika gagal parse JSON, lanjutkan dengan error biasa
-        console.error("Error parsing error response:", e);
-      }
+      console.log("🔍 401 Unauthorized - Token expired or invalid");
+      logoutAndRedirect();
+      throw new Error("Token expired or invalid");
     }
     
     // Coba parse error response sebagai JSON untuk mendapatkan message yang lebih spesifik

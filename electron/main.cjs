@@ -14,7 +14,8 @@ function createWindow () {
       contextIsolation: true,
       nodeIntegration: false, // penting demi keamanan
       webSecurity: false, // Allow loading local resources in dev
-      devTools: true
+      devTools: true,
+      allowRunningInsecureContent: true
     }
   });
 
@@ -45,7 +46,24 @@ function createWindow () {
     
   } else {
     // Production mode
-    win.loadFile(path.join(__dirname, '../dist/index.html'));
+    const htmlPath = path.join(__dirname, '../dist/index.html');
+    console.log('Loading HTML from:', htmlPath);
+    win.loadFile(htmlPath);
+    
+    // Add error handling for renderer
+    win.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+      console.error('Failed to load renderer:', errorDescription);
+      console.error('Error code:', errorCode);
+      console.error('URL:', validatedURL);
+    });
+    
+    win.webContents.on('crashed', (event) => {
+      console.error('Renderer process crashed');
+    });
+    
+    win.webContents.on('unresponsive', () => {
+      console.error('Renderer process unresponsive');
+    });
   }
 
   // Disable zoom
@@ -64,40 +82,38 @@ function createWindow () {
     }
   });
 
-  // Add keyboard shortcuts for development
-  if (isDev) {
-    win.webContents.on('before-input-event', (event, input) => {
-      // Ctrl+Shift+I to toggle DevTools
-      if (input.control && input.shift && input.key === 'I') {
-        event.preventDefault();
-        if (win.webContents.isDevToolsOpened()) {
-          win.webContents.closeDevTools();
-        } else {
-          win.webContents.openDevTools();
-        }
+  // Add keyboard shortcuts for all environments
+  win.webContents.on('before-input-event', (event, input) => {
+    // Ctrl+Shift+I to toggle DevTools
+    if (input.control && input.shift && input.key === 'I') {
+      event.preventDefault();
+      if (win.webContents.isDevToolsOpened()) {
+        win.webContents.closeDevTools();
+      } else {
+        win.webContents.openDevTools();
       }
-      
-      // Ctrl+R to reload
-      if (input.control && input.key === 'r') {
-        event.preventDefault();
-        if (isDev) {
-          win.loadURL('http://localhost:5173');
-        } else {
-          win.reload();
-        }
+    }
+    
+    // Ctrl+R to reload
+    if (input.control && input.key === 'r') {
+      event.preventDefault();
+      if (isDev) {
+        win.loadURL('http://localhost:5173');
+      } else {
+        win.reload();
       }
-      
-      // Ctrl+Shift+R to hard reload
-      if (input.control && input.shift && input.key === 'R') {
-        event.preventDefault();
-        if (isDev) {
-          win.loadURL('http://localhost:5173');
-        } else {
-          win.webContents.reloadIgnoringCache();
-        }
+    }
+    
+    // Ctrl+Shift+R to hard reload
+    if (input.control && input.shift && input.key === 'R') {
+      event.preventDefault();
+      if (isDev) {
+        win.loadURL('http://localhost:5173');
+      } else {
+        win.webContents.reloadIgnoringCache();
       }
-    });
-  }
+    }
+  });
 
   // Build native menu, but trigger React navigation
   const template = [
@@ -108,21 +124,6 @@ function createWindow () {
           label: 'Dashboard',
           accelerator: 'CmdOrCtrl+D',
           click: () => win.webContents.send('navigate-to', '/dashboard')
-        },
-        {
-          label: 'Input PO',
-          accelerator: 'CmdOrCtrl+P',
-          click: () => win.webContents.send('navigate-to', '/input-po')
-        },
-        {
-          label: 'AR / AP',
-          accelerator: 'CmdOrCtrl+A',
-          click: () => win.webContents.send('navigate-to', '/ar-ap')
-        },
-        {
-          label: 'Mutasi',
-          accelerator: 'CmdOrCtrl+M',
-          click: () => win.webContents.send('navigate-to', '/mutasi')
         },
         { type: 'separator' },
         {
@@ -141,7 +142,7 @@ function createWindow () {
         { label: 'Item Barang', accelerator: 'CmdOrCtrl+4', click: () => win.webContents.send('navigate-to', '/masterdata/item-barang') },
         { label: 'Jenis Mutasi Stock', accelerator: 'CmdOrCtrl+5', click: () => win.webContents.send('navigate-to', '/masterdata/jenis-mutasi-stock') },
         { type: 'separator' },
-        { label: 'Supplier', accelerator: 'CmdOrCtrl+6', click: () => win.webContents.send('navigate-to', '/masterdata/supplier') },
+        { label: 'Suppliers', accelerator: 'CmdOrCtrl+6', click: () => win.webContents.send('navigate-to', '/masterdata/supplier') },
         { label: 'Pelanggan', accelerator: 'CmdOrCtrl+7', click: () => win.webContents.send('navigate-to', '/masterdata/pelanggan') },
         { label: 'Gudang', accelerator: 'CmdOrCtrl+8', click: () => win.webContents.send('navigate-to', '/masterdata/gudang') },
         { label: 'Pelaksana', accelerator: 'CmdOrCtrl+9', click: () => win.webContents.send('navigate-to', '/masterdata/pelaksana') },
@@ -149,10 +150,21 @@ function createWindow () {
       ]
     },
     {
+      label: 'Transaksi',
+      submenu: [
+        { label: 'Purchase Order', accelerator: 'CmdOrCtrl+P', click: () => win.webContents.send('navigate-to', '/purchase-order') },
+        { label: 'Sales Order', accelerator: 'CmdOrCtrl+S', click: () => win.webContents.send('navigate-to', '/sales-order') },
+        { label: 'Work Order', accelerator: 'CmdOrCtrl+W', click: () => win.webContents.send('navigate-to', '/work-order') },
+        { type: 'separator' },
+        { label: 'AR / AP', accelerator: 'CmdOrCtrl+A', click: () => win.webContents.send('navigate-to', '/ar-ap') },
+        { label: 'Mutasi Stock', accelerator: 'CmdOrCtrl+M', click: () => win.webContents.send('navigate-to', '/mutasi-stock') }
+      ]
+    },
+    {
       label: 'Tools',
       submenu: [
         { label: 'FUI', accelerator: 'CmdOrCtrl+F', click: () => win.webContents.send('navigate-to', '/tools/fui') },
-        { label: 'Workshop', accelerator: 'CmdOrCtrl+W', click: () => win.webContents.send('navigate-to', '/tools/workshop') },
+        { label: 'Workshop', accelerator: 'CmdOrCtrl+Shift+W', click: () => win.webContents.send('navigate-to', '/tools/workshop') },
         { label: 'Report', accelerator: 'CmdOrCtrl+R', click: () => win.webContents.send('navigate-to', '/tools/report') }
       ]
     },
@@ -203,18 +215,25 @@ function createWindow () {
   ];
 
   const menu = Menu.buildFromTemplate(template);
+  console.log('Menu created:', menu);
+  
   ipcMain.on('show-menu', () => {
     if (win) {
       Menu.setApplicationMenu(menu);
+      console.log('Menu shown');
     }
   });
   
   ipcMain.on('hide-menu', () => {
     if (win) {
       Menu.setApplicationMenu(null);
+      console.log('Menu hidden');
     }
   });
+  
+  // Set menu for production
   Menu.setApplicationMenu(menu);
+  console.log('Menu set for all environments');
 }
 
 app.whenReady().then(() => {
@@ -227,8 +246,31 @@ app.whenReady().then(() => {
   });
 });
 
+// Handle app window all closed
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+// Handle app before quit
+app.on('before-quit', () => {
+  console.log('Application is quitting...');
+});
+
+// Handle app quit
+app.on('quit', () => {
+  console.log('Application has quit');
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  // Don't quit the app, just log the error
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't quit the app, just log the error
 });

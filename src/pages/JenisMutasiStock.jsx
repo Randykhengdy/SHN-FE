@@ -22,10 +22,10 @@ export default function JenisMutasiStockPage() {
         },
       ]}
       columns={[
-        { key: "id", label: "ID" },
-        { key: "kode", label: "Kode" },
-        { key: "mutasi_stock", label: "Mutasi Stock" },
-        { key: "jenis", label: "Jenis" },
+        { key: "id", label: "ID", align: "center", width: "5rem", maxWidth: "5rem" },
+        { key: "kode", label: "Kode", align: "center", width: "8rem", maxWidth: "8rem" },
+        { key: "mutasi_stock", label: "Mutasi Stock", align: "left", minWidth: "15rem", maxWidth: "20rem" },
+        { key: "jenis", label: "Jenis", align: "center", width: "8rem", maxWidth: "8rem" },
       ]}
     />
   );

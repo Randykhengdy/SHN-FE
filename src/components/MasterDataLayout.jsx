@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import MasterFormModal from "./MasterFormModal";
+import Header from "./Header";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -188,9 +189,14 @@ export default function MasterDataLayout({
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      {/* Main Card Container */}
-      <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-sm border border-gray-200">
+    <div className="bg-gray-50 min-h-screen">
+      {/* Header */}
+      <Header />
+      
+      {/* Main Content */}
+      <div className="p-6">
+        {/* Main Card Container */}
+        <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="p-6">
           {/* Page Header */}
           <div className="mb-6">
@@ -472,6 +478,7 @@ export default function MasterDataLayout({
               )}
             </div>
           </div>
+        </div>
         </div>
       </div>
 

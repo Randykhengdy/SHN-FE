@@ -3,6 +3,7 @@ import AppRouter from "@/router/AppRouter";
 import useElectronNavigation from "@/hooks/useElectronNavigation";
 import Sidebar from "@/components/Sidebar";
 import DevTools from "@/components/DevTools";
+import TokenInterceptor from "@/components/TokenInterceptor";
 
 function App() {
   // Gunakan hook untuk menangani navigasi dari Electron
@@ -18,13 +19,16 @@ function App() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden">
+      {/* Token Interceptor - Check token expiration */}
+      <TokenInterceptor />
+      
       {/* {showSidebar && <Sidebar />} */}
-      <main className="flex-1 overflow-auto w-full">
+      <main className={`overflow-auto ${showSidebar ? 'flex-1' : 'w-full'}`}>
         <AppRouter />
       </main>
       
       {/* Development Tools - Always available */}
-      <DevTools />
+      {/* <DevTools /> */}
     </div>
   );
 }

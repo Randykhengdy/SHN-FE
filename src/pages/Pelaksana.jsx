@@ -14,10 +14,10 @@ export default function PelaksanaPage() {
         { name: "level", label: "Level", maxLength: 16 },
       ]}
       columns={[
-        { key: "id", label: "ID" },
-        { key: "kode", label: "Kode" },
-        { key: "nama_pelaksana", label: "Nama Pelaksana" },
-        { key: "level", label: "Level" },
+        { key: "id", label: "ID", align: "center", width: "5rem", maxWidth: "5rem" },
+        { key: "kode", label: "Kode", align: "center", width: "8rem", maxWidth: "8rem" },
+        { key: "nama_pelaksana", label: "Nama Pelaksana", align: "left", minWidth: "15rem", maxWidth: "20rem" },
+        { key: "level", label: "Level", align: "center", width: "8rem", maxWidth: "8rem" },
       ]}
     />
   );

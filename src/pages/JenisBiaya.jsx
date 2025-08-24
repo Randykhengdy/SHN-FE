@@ -13,9 +13,9 @@ export default function JenisBiayaPage() {
         { name: "jenis_biaya", label: "Jenis Biaya", maxLength: 64 },
       ]}
       columns={[
-        { key: "id", label: "ID" },
-        { key: "kode", label: "Kode" },
-        { key: "jenis_biaya", label: "Jenis Biaya" },
+        { key: "id", label: "ID", align: "center", width: "5rem", maxWidth: "5rem" },
+        { key: "kode", label: "Kode", align: "center", width: "8rem", maxWidth: "8rem" },
+        { key: "jenis_biaya", label: "Jenis Biaya", align: "left", minWidth: "15rem", maxWidth: "25rem" },
       ]}
     />
   );

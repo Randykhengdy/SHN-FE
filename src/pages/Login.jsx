@@ -13,10 +13,21 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Debug logging
+  console.log("Login component loaded");
+  console.log("Current localStorage:", {
+    isLoggedIn: localStorage.getItem("isLoggedIn"),
+    token: localStorage.getItem("token")
+  });
+
   // Auto-redirect if already logged in
   useEffect(() => {
+    console.log("Login useEffect triggered");
     if (localStorage.getItem("isLoggedIn") === "1") {
+      console.log("User already logged in, redirecting to dashboard");
       navigate("/dashboard");
+    } else {
+      console.log("User not logged in, showing login form");
     }
   }, [navigate]);
 

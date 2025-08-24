@@ -19,12 +19,12 @@ export default function ItemBarangPage() {
         { name: "grade_barang_id", label: "Grade Barang", type: "select", optionsService: gradeBarangService, optionLabel: "nama" },
       ]}
       columns={[
-        { key: "id", label: "ID" },
-        { key: "kode_barang", label: "Kode Barang" },
-        { key: "nama_item_barang", label: "Nama Item Barang" },
-        { key: "jenis_barang.nama_jenis", label: "Jenis Barang" },
-        { key: "bentuk_barang.nama_bentuk", label: "Bentuk Barang" },
-        { key: "grade_barang.nama", label: "Grade Barang" },
+        { key: "id", label: "ID", align: "center", width: "5rem", maxWidth: "5rem" },
+        { key: "kode_barang", label: "Kode Barang", align: "center", width: "10rem", maxWidth: "10rem" },
+        { key: "nama_item_barang", label: "Nama Item Barang", align: "left", minWidth: "15rem", maxWidth: "20rem" },
+        { key: "jenis_barang.nama_jenis", label: "Jenis Barang", align: "center", width: "12rem", maxWidth: "12rem" },
+        { key: "bentuk_barang.nama_bentuk", label: "Bentuk Barang", align: "center", width: "12rem", maxWidth: "12rem" },
+        { key: "grade_barang.nama", label: "Grade Barang", align: "center", width: "12rem", maxWidth: "12rem" },
       ]}
     />
   );

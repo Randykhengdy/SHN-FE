@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Chart from "chart.js/auto";
-import logo from "@/assets/logo.png";
+import Header from "@/components/Header";
 
 function formatRupiah(num) {
   return "Rp " + (num || 0).toLocaleString("id-ID");
@@ -9,7 +9,6 @@ function formatRupiah(num) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [showConfirm, setShowConfirm] = useState(false);
 
   // Data from localStorage
   const poList = JSON.parse(localStorage.getItem("poList") || "[]");
@@ -145,13 +144,7 @@ export default function Dashboard() {
     };
   }, []);
 
-  // Logout logic
-  const handleLogout = () => setShowConfirm(true);
-  const confirmLogout = () => {
-    localStorage.removeItem("isLoggedIn");
-    setShowConfirm(false);
-    navigate("/");
-  };
+  // Logout confirmation modal sudah tidak diperlukan karena ada di Header
 
   // Dummy low stock items (replace with your own logic if needed)
   const lowStockItems = [
@@ -165,22 +158,7 @@ export default function Dashboard() {
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-gray-50">
       {/* Header */}
-      <div className="flex justify-between items-center bg-white px-6 py-3 shadow-sm">
-        <div className="flex items-center">
-          <img src={logo} alt="Logo" className="w-9 h-9 rounded-lg mr-3" />
-          <div className="font-bold text-lg text-gray-800">SURYALOGAMJAYA</div>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="font-semibold text-gray-800">Admin</div>
-          <div className="text-gray-500 text-sm">v1.0.0</div>
-          <button
-            onClick={handleLogout}
-            className="bg-red-500 text-white border-none rounded-md px-4 py-2 font-semibold cursor-pointer hover:bg-red-600 transition-colors"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
+      <Header />
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -299,29 +277,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Logout Confirmation Modal */}
-      {showConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full">
-            <h3 className="text-lg font-semibold mb-4">Konfirmasi Logout</h3>
-            <p className="mb-6">Apakah Anda yakin ingin keluar dari sistem?</p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowConfirm(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
-              >
-                Batal
-              </button>
-              <button
-                onClick={confirmLogout}
-                className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }

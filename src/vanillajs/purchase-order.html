@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Purchase Order | SURYA LOGAM JAYA</title>
+  <link rel="stylesheet" href="../styles/style.css">
+  <link rel="icon" type="image/x-icon" href="../assets/logo.ico">
+</head>
+<body>
+  <div class="sidebar">
+    <div class="sidebar-header" style="display:flex; align-items:center; gap:8px;">
+      <span class="sidebar-icon" aria-label="icon"><img src="../assets/logo.png" alt="Logo" style="width:40px; height:auto; aspect-ratio:1/1; object-fit:contain; border-radius:6px; margin-right:0;"></span>
+      <span class="sidebar-title" style="display:flex; flex-direction:column; justify-content:center; align-items:flex-start; font-size:0.85em; line-height:1.05; height:40px; margin:0;">
+        <span style="font-weight:700; letter-spacing:1px;">SURYA</span>
+        <span style="font-weight:700; letter-spacing:1px;">LOGAM</span>
+        <span style="font-weight:700; letter-spacing:1px;">JAYA</span>
+      </span>
+      <button id="sidebarToggle" class="sidebar-toggle">☰</button>
+    </div>
+    <nav>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="fui.html" id="fuiMenu">FUI</a>
+      <a href="index.html">Input PO</a>
+      <a href="arap.html">AR / AP</a>
+      <a href="workshop.html">Workshop</a>
+      <a href="report.html">Report</a>
+      <div class="menu-transaksi">
+        <a href="#" class="transaksi-toggle">Transaksi <span class="arrow">▼</span></a>
+        <div class="transaksi-submenu" style="display:flex; flex-direction:column; margin-left:16px;">
+          <a href="purchase-order.html" class="submenu-item active">Purchase Order</a>
+          <a href="sales-order.html" class="submenu-item">Sales Order</a>
+          <a href="work-order.html" class="submenu-item">Work Order</a>
+          <div style="border-top:1px solid #ddd; margin:4px 0;"></div>
+          <a href="ar-ap.html" class="submenu-item">AR / AP</a>
+          <a href="mutasi-stock.html" class="submenu-item">Mutasi Stock</a>
+        </div>
+      </div>
+      <div class="menu-masterdata">
+        <a href="#" class="masterdata-toggle">Masterdata <span class="arrow">▼</span></a>
+        <div class="masterdata-submenu" style="display:none; flex-direction:column; margin-left:16px;">
+          <a href="jenis-barang.html" class="submenu-item">Jenis Barang</a>
+          <a href="#" class="submenu-item">Bentuk Barang</a>
+          <a href="#" class="submenu-item">Grade Barang</a>
+          <a href="#" class="submenu-item">Item Barang</a>
+          <a href="#" class="submenu-item">Jenis Mutasi Stock</a>
+          <a href="#" class="submenu-item">Supplier</a>
+          <a href="#" class="submenu-item">Pelanggan</a>
+          <a href="#" class="submenu-item">Gudang</a>
+          <a href="#" class="submenu-item">Pelaksana</a>
+          <a href="#" class="submenu-item">Jenis Transaksi Kas</a>
+        </div>
+      </div>
+      <a href="#" id="logoutMenu">Logout</a>
+      <a href="#" id="clearDataMenu" style="color:#ff4444;">Clear Data</a>
+    </nav>
+  </div>
+  <div class="content">
+    <h1>Purchase Order</h1>
+    <p>Halaman Purchase Order akan dikembangkan lebih lanjut...</p>
+  </div>
+  <script src="../logics/ui.js"></script>
+  <script>
+    // Toggle Masterdata submenu
+    document.addEventListener('DOMContentLoaded', function() {
+      // Masterdata menu
+      var masterdataMenu = document.querySelector('.menu-masterdata');
+      var masterdataToggle = document.querySelector('.masterdata-toggle');
+      var masterdataSubmenu = document.querySelector('.masterdata-submenu');
+      if(masterdataToggle && masterdataMenu) {
+        masterdataToggle.addEventListener('click', function(e) {
+          e.preventDefault();
+          masterdataSubmenu.style.display = masterdataSubmenu.style.display === 'flex' ? 'none' : 'flex';
+        });
+      }
+      // Close masterdata submenu and redirect on submenu item click
+      masterdataSubmenu.addEventListener('click', function(e) {
+        if(e.target.classList.contains('submenu-item') && e.target.getAttribute('href') !== '#') {
+          masterdataSubmenu.style.display = 'none';
+          // Allow default navigation
+        }
+      });
+
+      // Transaksi menu
+      var transaksiMenu = document.querySelector('.menu-transaksi');
+      var transaksiToggle = document.querySelector('.transaksi-toggle');
+      var transaksiSubmenu = document.querySelector('.transaksi-submenu');
+      if(transaksiToggle && transaksiMenu) {
+        transaksiToggle.addEventListener('click', function(e) {
+          e.preventDefault();
+          transaksiSubmenu.style.display = transaksiSubmenu.style.display === 'flex' ? 'none' : 'flex';
+        });
+      }
+      // Close transaksi submenu and redirect on submenu item click
+      transaksiSubmenu.addEventListener('click', function(e) {
+        if(e.target.classList.contains('submenu-item') && e.target.getAttribute('href') !== '#') {
+          transaksiSubmenu.style.display = 'none';
+          // Allow default navigation
+        }
+      });
+    });
+  </script>
+</body>
+</html>
