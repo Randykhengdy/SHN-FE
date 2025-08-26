@@ -1,6 +1,6 @@
 import React from "react";
 import MasterDataLayout from "@/components/MasterDataLayout";
-import { jenisMutasiStockService } from "@/services/jenisMutasiStockService";
+import { jenisMutasiStockService } from "@/services/master-data";
 
 export default function JenisMutasiStockPage() {
   return (

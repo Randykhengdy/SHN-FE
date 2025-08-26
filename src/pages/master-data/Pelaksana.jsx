@@ -1,6 +1,6 @@
 import React from "react";
 import MasterDataLayout from "@/components/MasterDataLayout";
-import { pelaksanaService } from "@/services/pelaksanaService";
+import { pelaksanaService } from "@/services/master-data";
 
 export default function PelaksanaPage() {
   return (

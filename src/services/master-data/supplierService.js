@@ -1,8 +1,8 @@
-import { request } from "../lib/request";
+import { request } from "../../lib/request";
 
-export const itemBarangService = {
+export const supplierService = {
   async getAll() {
-    return request("/item-barang", { method: "GET" });
+    return request("/supplier", { method: "GET" });
   },
 
   async getPaginated(page = 1, perPage = 10, search = "", sortBy = "", sortDir = "asc") {
@@ -16,53 +16,53 @@ export const itemBarangService = {
       params.append('sort', `${sortBy},${sortDir}`);
     }
     
-    return request(`/item-barang?${params}`, { method: "GET" });
+    return request(`/supplier?${params}`, { method: "GET" });
   },
 
   async getById(id) {
-    return request(`/item-barang/${id}`, { method: "GET" });
+    return request(`/supplier/${id}`, { method: "GET" });
   },
 
   async create(data) {
-    return request("/item-barang", {
+    return request("/supplier", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
   async update(id, data) {
-    return request(`/item-barang/${id}`, {
+    return request(`/supplier/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
     });
   },
 
   async softDelete(id) {
-    return request(`/item-barang/${id}/soft`, {
+    return request(`/supplier/${id}/soft`, {
       method: "DELETE",
     });
   },
 
   async restore(id) {
-    return request(`/item-barang/${id}/restore`, {
+    return request(`/supplier/${id}/restore`, {
       method: "PATCH",
     });
   },
 
   async forceDelete(id) {
-    return request(`/item-barang/${id}/force`, {
+    return request(`/supplier/${id}/force`, {
       method: "DELETE",
     });
   },
 
   async getAllWithTrashed() {
-    return request("/item-barang/with-trashed/all", {
+    return request("/supplier/with-trashed/all", {
       method: "GET",
     });
   },
 
   async getOnlyTrashed() {
-    return request("/item-barang/with-trashed/trashed", {
+    return request("/supplier/with-trashed/trashed", {
       method: "GET",
     });
   },
@@ -78,6 +78,6 @@ export const itemBarangService = {
       params.append('sort', `${sortBy},${sortDir}`);
     }
     
-    return request(`/item-barang/with-trashed/trashed?${params}`, { method: "GET" });
+    return request(`/supplier/with-trashed/trashed?${params}`, { method: "GET" });
   }
 };

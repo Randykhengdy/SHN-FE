@@ -1,6 +1,6 @@
 import React from "react";
 import MasterDataLayout from "@/components/MasterDataLayout";
-import { gradeBarangService } from "@/services/gradeBarangService";
+import { gradeBarangService } from "@/services/master-data";
 
 export default function GradeBarangPage() {
   return (

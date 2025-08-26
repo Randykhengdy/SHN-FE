@@ -1,8 +1,8 @@
-import { request } from "../lib/request";
+import { request } from "../../lib/request";
 
-export const jenisMutasiStockService = {
+export const gudangService = {
   async getAll() {
-    return request("/jenis-mutasi-stock", { method: "GET" });
+    return request("/gudang", { method: "GET" });
   },
 
   async getPaginated(page = 1, perPage = 10, search = "", sortBy = "", sortDir = "asc") {
@@ -16,53 +16,53 @@ export const jenisMutasiStockService = {
       params.append('sort', `${sortBy},${sortDir}`);
     }
     
-    return request(`/jenis-mutasi-stock?${params}`, { method: "GET" });
+    return request(`/gudang?${params}`, { method: "GET" });
   },
 
   async getById(id) {
-    return request(`/jenis-mutasi-stock/${id}`, { method: "GET" });
+    return request(`/gudang/${id}`, { method: "GET" });
   },
 
   async create(data) {
-    return request("/jenis-mutasi-stock", {
+    return request("/gudang", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
   async update(id, data) {
-    return request(`/jenis-mutasi-stock/${id}`, {
+    return request(`/gudang/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
     });
   },
 
   async softDelete(id) {
-    return request(`/jenis-mutasi-stock/${id}/soft`, {
+    return request(`/gudang/${id}/soft`, {
       method: "DELETE",
     });
   },
 
   async restore(id) {
-    return request(`/jenis-mutasi-stock/${id}/restore`, {
+    return request(`/gudang/${id}/restore`, {
       method: "PATCH",
     });
   },
 
   async forceDelete(id) {
-    return request(`/jenis-mutasi-stock/${id}/force`, {
+    return request(`/gudang/${id}/force`, {
       method: "DELETE",
     });
   },
 
   async getAllWithTrashed() {
-    return request("/jenis-mutasi-stock/with-trashed/all", {
+    return request("/gudang/with-trashed/all", {
       method: "GET",
     });
   },
 
   async getOnlyTrashed() {
-    return request("/jenis-mutasi-stock/with-trashed/trashed", {
+    return request("/gudang/with-trashed/trashed", {
       method: "GET",
     });
   },
@@ -78,6 +78,6 @@ export const jenisMutasiStockService = {
       params.append('sort', `${sortBy},${sortDir}`);
     }
     
-    return request(`/jenis-mutasi-stock/with-trashed/trashed?${params}`, { method: "GET" });
+    return request(`/gudang/with-trashed/trashed?${params}`, { method: "GET" });
   }
 };

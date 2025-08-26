@@ -1,42 +1,48 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { checkAndRefreshToken, getTokenInfo } from '../lib/tokenUtils';
+import { checkAndRefreshToken } from '../lib/tokenUtils';
 
 export default function TokenInterceptor() {
   const location = useLocation();
+  const lastCheckRef = useRef(0);
 
   useEffect(() => {
-    // Auto refresh token setiap kali route berubah
+    // Auto refresh token setiap 15 menit
     const checkToken = async () => {
-      console.log('🔍 Auto refresh check on route change...');
+      const now = Date.now();
+      
+      // Prevent multiple checks within 5 seconds
+      if (now - lastCheckRef.current < 5000) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('⏭️ Skipping token check (too soon)');
+        }
+        return;
+      }
+      
+      lastCheckRef.current = now;
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 Background token check...');
+      }
       
       try {
         const tokenValid = await checkAndRefreshToken();
-        if (!tokenValid) {
-          console.log('❌ Auto refresh failed on route change');
-          return;
+        if (!tokenValid && process.env.NODE_ENV === 'development') {
+          console.log('❌ Background token check failed');
         }
-        
-        // Log token info untuk debugging
-        const tokenInfo = getTokenInfo();
-        console.log('✅ Token status:', tokenInfo);
       } catch (error) {
-        console.error('❌ Error during auto refresh:', error);
-        // Don't throw error, just log it
+        if (process.env.NODE_ENV === 'development') {
+          console.error('❌ Error during background token check:', error);
+        }
       }
     };
 
-    // Only run auto refresh if we're not on login page
-    if (location.pathname !== '/') {
-      checkToken();
-    }
-
-    // Set up interval untuk auto refresh setiap 30 detik (only if logged in)
+    // Set up interval untuk auto refresh setiap 15 menit
     const interval = setInterval(() => {
       if (location.pathname !== '/') {
         checkToken();
       }
-    }, 30000);
+    }, 900000); // 15 minutes
 
     return () => {
       clearInterval(interval);

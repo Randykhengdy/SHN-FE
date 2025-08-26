@@ -1,8 +1,8 @@
-import { request } from "../lib/request";
+import { request } from "../../lib/request";
 
-export const pelaksanaService = {
+export const jenisBarangService = {
   async getAll() {
-    return request("/pelaksana", { method: "GET" });
+    return request("/jenis-barang", { method: "GET" });
   },
 
   async getPaginated(page = 1, perPage = 10, search = "", sortBy = "", sortDir = "asc") {
@@ -12,57 +12,58 @@ export const pelaksanaService = {
       per_page: perPage.toString()
     });
     
+    // Handle sorting in the format: sort=kode,asc;nama_jenis,desc
     if (sortBy && sortDir) {
       params.append('sort', `${sortBy},${sortDir}`);
     }
     
-    return request(`/pelaksana?${params}`, { method: "GET" });
+    return request(`/jenis-barang?${params}`, { method: "GET" });
   },
 
   async getById(id) {
-    return request(`/pelaksana/${id}`, { method: "GET" });
+    return request(`/jenis-barang/${id}`, { method: "GET" });
   },
 
   async create(data) {
-    return request("/pelaksana", {
+    return request("/jenis-barang", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
   async update(id, data) {
-    return request(`/pelaksana/${id}`, {
+    return request(`/jenis-barang/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
     });
   },
 
   async softDelete(id) {
-    return request(`/pelaksana/${id}/soft`, {
+    return request(`/jenis-barang/${id}/soft`, {
       method: "DELETE",
     });
   },
 
   async restore(id) {
-    return request(`/pelaksana/${id}/restore`, {
+    return request(`/jenis-barang/${id}/restore`, {
       method: "PATCH",
     });
   },
 
   async forceDelete(id) {
-    return request(`/pelaksana/${id}/force`, {
+    return request(`/jenis-barang/${id}/force`, {
       method: "DELETE",
     });
   },
 
   async getAllWithTrashed() {
-    return request("/pelaksana/with-trashed/all", {
+    return request("/jenis-barang/with-trashed/all", {
       method: "GET",
     });
   },
 
   async getOnlyTrashed() {
-    return request("/pelaksana/with-trashed/trashed", {
+    return request("/jenis-barang/with-trashed/trashed", {
       method: "GET",
     });
   },
@@ -74,10 +75,11 @@ export const pelaksanaService = {
       per_page: perPage.toString()
     });
     
+    // Handle sorting in the format: sort=kode,asc;nama_jenis,desc
     if (sortBy && sortDir) {
       params.append('sort', `${sortBy},${sortDir}`);
     }
     
-    return request(`/pelaksana/with-trashed/trashed?${params}`, { method: "GET" });
+    return request(`/jenis-barang/with-trashed/trashed?${params}`, { method: "GET" });
   }
 };

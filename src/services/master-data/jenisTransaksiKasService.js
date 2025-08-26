@@ -1,8 +1,8 @@
-import { request } from "../lib/request";
+import { request } from "../../lib/request";
 
-export const gudangService = {
+export const jenisTransaksiKasService = {
   async getAll() {
-    return request("/gudang", { method: "GET" });
+    return request("/jenis-transaksi-kas", { method: "GET" });
   },
 
   async getPaginated(page = 1, perPage = 10, search = "", sortBy = "", sortDir = "asc") {
@@ -16,53 +16,53 @@ export const gudangService = {
       params.append('sort', `${sortBy},${sortDir}`);
     }
     
-    return request(`/gudang?${params}`, { method: "GET" });
+    return request(`/jenis-transaksi-kas?${params}`, { method: "GET" });
   },
 
   async getById(id) {
-    return request(`/gudang/${id}`, { method: "GET" });
+    return request(`/jenis-transaksi-kas/${id}`, { method: "GET" });
   },
 
   async create(data) {
-    return request("/gudang", {
+    return request("/jenis-transaksi-kas", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
   async update(id, data) {
-    return request(`/gudang/${id}`, {
+    return request(`/jenis-transaksi-kas/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
     });
   },
 
   async softDelete(id) {
-    return request(`/gudang/${id}/soft`, {
+    return request(`/jenis-transaksi-kas/${id}/soft`, {
       method: "DELETE",
     });
   },
 
   async restore(id) {
-    return request(`/gudang/${id}/restore`, {
+    return request(`/jenis-transaksi-kas/${id}/restore`, {
       method: "PATCH",
     });
   },
 
   async forceDelete(id) {
-    return request(`/gudang/${id}/force`, {
+    return request(`/jenis-transaksi-kas/${id}/force`, {
       method: "DELETE",
     });
   },
 
   async getAllWithTrashed() {
-    return request("/gudang/with-trashed/all", {
+    return request("/jenis-transaksi-kas/with-trashed/all", {
       method: "GET",
     });
   },
 
   async getOnlyTrashed() {
-    return request("/gudang/with-trashed/trashed", {
+    return request("/jenis-transaksi-kas/with-trashed/trashed", {
       method: "GET",
     });
   },
@@ -78,6 +78,6 @@ export const gudangService = {
       params.append('sort', `${sortBy},${sortDir}`);
     }
     
-    return request(`/gudang/with-trashed/trashed?${params}`, { method: "GET" });
+    return request(`/jenis-transaksi-kas/with-trashed/trashed?${params}`, { method: "GET" });
   }
 };

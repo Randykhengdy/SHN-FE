@@ -55,6 +55,17 @@ export default function Login() {
       localStorage.setItem("token", result.token);
       localStorage.setItem("token_type", result.token_type); // biasanya "Bearer"
       localStorage.setItem("isLoggedIn", "1");
+      
+      // Simpan refresh token jika ada
+      if (result.refresh_token) {
+        localStorage.setItem("refresh_token", result.refresh_token);
+        console.log("✅ Refresh token saved");
+      }
+      
+      // Simpan user info jika ada
+      if (result.user) {
+        localStorage.setItem("user", JSON.stringify(result.user));
+      }
   
       navigate("/dashboard");
     } catch (err) {

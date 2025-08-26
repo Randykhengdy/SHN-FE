@@ -1,6 +1,6 @@
 import React from "react";
 import MasterDataLayout from "@/components/MasterDataLayout";
-import { jenisBiayaService } from "@/services/jenisBiayaService";
+import { jenisBiayaService } from "@/services/master-data";
 
 export default function JenisBiayaPage() {
   return (

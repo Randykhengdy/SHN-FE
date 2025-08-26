@@ -1,6 +1,6 @@
 import React from "react";
 import MasterDataLayout from "@/components/MasterDataLayout";
-import { gudangService } from "@/services/gudangService";
+import { gudangService } from "@/services/master-data";
 
 export default function GudangPage() {
   return (

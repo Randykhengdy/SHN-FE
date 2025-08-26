@@ -11,7 +11,17 @@ export default {
   endpoints: {
     login: "/login",
     register: "/register",
+    refresh: "/auth/refresh",
+    logout: "/auth/logout",
     jenisBarang: "/jenis-barang",
     // Tambahkan endpoint lain di sini
   }
+};
+
+export const API_ENDPOINTS = {
+  login: "/login",
+  register: "/register",
+  refresh: "/auth/refresh",
+  logout: "/auth/logout",
+  jenisBarang: "/jenis-barang",
 };

@@ -1,8 +1,8 @@
-import { request } from "../lib/request";
+import { request } from "../../lib/request";
 
-export const pelangganService = {
+export const pelaksanaService = {
   async getAll() {
-    return request("/pelanggan", { method: "GET" });
+    return request("/pelaksana", { method: "GET" });
   },
 
   async getPaginated(page = 1, perPage = 10, search = "", sortBy = "", sortDir = "asc") {
@@ -16,53 +16,53 @@ export const pelangganService = {
       params.append('sort', `${sortBy},${sortDir}`);
     }
     
-    return request(`/pelanggan?${params}`, { method: "GET" });
+    return request(`/pelaksana?${params}`, { method: "GET" });
   },
 
   async getById(id) {
-    return request(`/pelanggan/${id}`, { method: "GET" });
+    return request(`/pelaksana/${id}`, { method: "GET" });
   },
 
   async create(data) {
-    return request("/pelanggan", {
+    return request("/pelaksana", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
   async update(id, data) {
-    return request(`/pelanggan/${id}`, {
+    return request(`/pelaksana/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
     });
   },
 
   async softDelete(id) {
-    return request(`/pelanggan/${id}/soft`, {
+    return request(`/pelaksana/${id}/soft`, {
       method: "DELETE",
     });
   },
 
   async restore(id) {
-    return request(`/pelanggan/${id}/restore`, {
+    return request(`/pelaksana/${id}/restore`, {
       method: "PATCH",
     });
   },
 
   async forceDelete(id) {
-    return request(`/pelanggan/${id}/force`, {
+    return request(`/pelaksana/${id}/force`, {
       method: "DELETE",
     });
   },
 
   async getAllWithTrashed() {
-    return request("/pelanggan/with-trashed/all", {
+    return request("/pelaksana/with-trashed/all", {
       method: "GET",
     });
   },
 
   async getOnlyTrashed() {
-    return request("/pelanggan/with-trashed/trashed", {
+    return request("/pelaksana/with-trashed/trashed", {
       method: "GET",
     });
   },
@@ -78,6 +78,6 @@ export const pelangganService = {
       params.append('sort', `${sortBy},${sortDir}`);
     }
     
-    return request(`/pelanggan/with-trashed/trashed?${params}`, { method: "GET" });
+    return request(`/pelaksana/with-trashed/trashed?${params}`, { method: "GET" });
   }
 };

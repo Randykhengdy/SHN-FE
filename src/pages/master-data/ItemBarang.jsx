@@ -1,9 +1,11 @@
 import React from "react";
 import MasterDataLayout from "@/components/MasterDataLayout";
-import { itemBarangService } from "@/services/itemBarangService";
-import { jenisBarangService } from "@/services/jenisBarangService";
-import { bentukBarangService } from "@/services/bentukBarangService";
-import { gradeBarangService } from "@/services/gradeBarangService";
+import { 
+  itemBarangService, 
+  jenisBarangService, 
+  bentukBarangService, 
+  gradeBarangService 
+} from "@/services/master-data";
 
 export default function ItemBarangPage() {
   return (

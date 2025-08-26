@@ -1,8 +1,8 @@
-import { request } from "../lib/request";
+import { request } from "../../lib/request";
 
-export const jenisTransaksiKasService = {
+export const pelangganService = {
   async getAll() {
-    return request("/jenis-transaksi-kas", { method: "GET" });
+    return request("/pelanggan", { method: "GET" });
   },
 
   async getPaginated(page = 1, perPage = 10, search = "", sortBy = "", sortDir = "asc") {
@@ -16,53 +16,53 @@ export const jenisTransaksiKasService = {
       params.append('sort', `${sortBy},${sortDir}`);
     }
     
-    return request(`/jenis-transaksi-kas?${params}`, { method: "GET" });
+    return request(`/pelanggan?${params}`, { method: "GET" });
   },
 
   async getById(id) {
-    return request(`/jenis-transaksi-kas/${id}`, { method: "GET" });
+    return request(`/pelanggan/${id}`, { method: "GET" });
   },
 
   async create(data) {
-    return request("/jenis-transaksi-kas", {
+    return request("/pelanggan", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
   async update(id, data) {
-    return request(`/jenis-transaksi-kas/${id}`, {
+    return request(`/pelanggan/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
     });
   },
 
   async softDelete(id) {
-    return request(`/jenis-transaksi-kas/${id}/soft`, {
+    return request(`/pelanggan/${id}/soft`, {
       method: "DELETE",
     });
   },
 
   async restore(id) {
-    return request(`/jenis-transaksi-kas/${id}/restore`, {
+    return request(`/pelanggan/${id}/restore`, {
       method: "PATCH",
     });
   },
 
   async forceDelete(id) {
-    return request(`/jenis-transaksi-kas/${id}/force`, {
+    return request(`/pelanggan/${id}/force`, {
       method: "DELETE",
     });
   },
 
   async getAllWithTrashed() {
-    return request("/jenis-transaksi-kas/with-trashed/all", {
+    return request("/pelanggan/with-trashed/all", {
       method: "GET",
     });
   },
 
   async getOnlyTrashed() {
-    return request("/jenis-transaksi-kas/with-trashed/trashed", {
+    return request("/pelanggan/with-trashed/trashed", {
       method: "GET",
     });
   },
@@ -78,6 +78,6 @@ export const jenisTransaksiKasService = {
       params.append('sort', `${sortBy},${sortDir}`);
     }
     
-    return request(`/jenis-transaksi-kas/with-trashed/trashed?${params}`, { method: "GET" });
+    return request(`/pelanggan/with-trashed/trashed?${params}`, { method: "GET" });
   }
 };

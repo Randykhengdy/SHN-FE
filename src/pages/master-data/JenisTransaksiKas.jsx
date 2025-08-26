@@ -1,7 +1,6 @@
 import React from "react";
 import MasterDataLayout from "@/components/MasterDataLayout";
-import { jenisTransaksiKasService } from "@/services/jenisTransaksiKasService";
-import { jenisBiayaService } from "@/services/jenisBiayaService";
+import { jenisTransaksiKasService, jenisBiayaService } from "@/services/master-data";
 
 export default function JenisTransaksiKasPage() {
   return (
