@@ -10,3 +10,4 @@ export { jenisTransaksiKasService } from './jenisTransaksiKasService';
 export { pelaksanaService } from './pelaksanaService';
 export { pelangganService } from './pelangganService';
 export { supplierService } from './supplierService';
+export { roleService } from './roleService';

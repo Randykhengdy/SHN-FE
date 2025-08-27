@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { RefreshCw, ChevronUp, ChevronDown } from "lucide-react";
+import RolePermissionEditor from "./RolePermissionEditor";
 
 export default function MasterDataLayout({
   title,
   columns,
   fields,
   service,
+  customEditComponent,
 }) {
   const [data, setData] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -25,7 +27,7 @@ export default function MasterDataLayout({
   const [totalItems, setTotalItems] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const fetchData = async () => {
+  const fetchData = React.useCallback(async () => {
     setLoading(true);
     try {
       if (showTrashed) {
@@ -53,7 +55,7 @@ export default function MasterDataLayout({
       console.error("Fetch error:", error.message);
     }
     setLoading(false);
-  };
+  }, [showTrashed, currentPage, itemsPerPage, searchTerm, sortState.col, sortState.dir, service]);
 
   useEffect(() => {
     fetchData();
@@ -73,22 +75,47 @@ export default function MasterDataLayout({
     setSaveLoading(true);
     setError(null);
     try {
+      // Process form data for API
+      const processedFormData = { ...formData };
+      
+      // Filter out hidden fields when editing
       if (editData) {
-        await service.update(editData.id, formData);
-        console.log("✅ Data berhasil diupdate:", formData);
-      } else {
-        await service.create(formData);
-        console.log("✅ Data berhasil ditambahkan:", formData);
+        fields.forEach((field) => {
+          if (field.hideOnEdit) {
+            delete processedFormData[field.name];
+          }
+        });
       }
+      
+      // For role field, keep the role ID as is (API expects role_id)
+      if (processedFormData.role) {
+        // Convert role field name to role_id for API
+        processedFormData.role_id = processedFormData.role;
+        delete processedFormData.role;
+      }
+
+      if (editData) {
+        await service.update(editData.id, processedFormData);
+        console.log("✅ Data berhasil diupdate:", processedFormData);
+      } else {
+        await service.create(processedFormData);
+        console.log("✅ Data berhasil ditambahkan:", processedFormData);
+      }
+      
+      // Success: close modal and reset state
       setIsModalOpen(false);
-      setEditData(null); // Clear edit data
+      setEditData(null);
+      setError(null);
+      setSaveLoading(false);
+      
+      // Fetch data in background
       fetchData();
     } catch (error) {
       console.error("❌ Error saat menyimpan data:", error);
-      // Tampilkan error message yang spesifik dari API
+      // Error: keep modal open, keep form data, just show error
       setError(error.message || "Terjadi kesalahan saat menyimpan data");
-    } finally {
       setSaveLoading(false);
+      // Don't reset editData or close modal - let user fix the error
     }
   };
 
@@ -97,6 +124,12 @@ export default function MasterDataLayout({
       await service.softDelete(id);
       fetchData();
     }
+  };
+
+  const clearForm = () => {
+    setEditData(null);
+    setError(null);
+    setSaveLoading(false);
   };
 
   const handleRestore = async (id) => {
@@ -154,12 +187,14 @@ export default function MasterDataLayout({
     setCurrentPage(1); // Reset to first page when searching
   };
 
-  const clearForm = () => {
-    setEditData(null);
-    setError(null);
-  };
-
   const getValue = (obj, path) => {
+    // Special handling for role field
+    if (path === "role") {
+      if (obj.roles && obj.roles.length > 0) {
+        return obj.roles[0].name;
+      }
+      return obj[path] || "";
+    }
     return path.split(".").reduce((o, k) => (o ? o[k] : ""), obj);
   };
 
@@ -482,17 +517,41 @@ export default function MasterDataLayout({
         </div>
       </div>
 
-      <MasterFormModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSave={handleSave}
-        editData={editData}
-        fields={fields}
-        title={editData ? `Edit ${title}` : `Tambah ${title}`}
-        saveLoading={saveLoading}
-        error={error}
-        onSaveSuccess={clearForm}
-      />
+      {customEditComponent === "RolePermissionEditor" ? (
+        <div className={`fixed inset-0 bg-black/50 z-50 ${isModalOpen ? 'flex' : 'hidden'} items-center justify-center p-4`}>
+          <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <RolePermissionEditor
+                role={editData}
+                onSave={(updatedRole) => {
+                  setIsModalOpen(false);
+                  setEditData(null);
+                  fetchData();
+                }}
+                onCancel={() => {
+                  setIsModalOpen(false);
+                  setEditData(null);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <MasterFormModal
+          key={editData ? `edit-${editData.id}` : 'add'}
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            clearForm();
+          }}
+          onSave={handleSave}
+          editData={editData}
+          fields={fields}
+          title={editData ? `Edit ${title}` : `Tambah ${title}`}
+          saveLoading={saveLoading}
+          error={error}
+        />
+      )}
     </div>
   );
 }

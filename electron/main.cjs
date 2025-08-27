@@ -172,6 +172,13 @@ function createWindow() {
         { label: 'Gudang', accelerator: 'CmdOrCtrl+8', click: () => win.webContents.send('navigate-to', '/masterdata/gudang') },
         { label: 'Pelaksana', accelerator: 'CmdOrCtrl+9', click: () => win.webContents.send('navigate-to', '/masterdata/pelaksana') },
         { label: 'Jenis Transaksi Kas', accelerator: 'CmdOrCtrl+0', click: () => win.webContents.send('navigate-to', '/masterdata/jenis-transaksi-kas') },
+        { label: 'Role', accelerator: 'CmdOrCtrl+Shift+R', click: () => win.webContents.send('navigate-to', '/masterdata/role') },
+      ]
+    },
+    {
+      label: 'User Management',
+      submenu: [
+        { label: 'Users', accelerator: 'CmdOrCtrl+U', click: () => win.webContents.send('navigate-to', '/users') },
       ]
     },
     {

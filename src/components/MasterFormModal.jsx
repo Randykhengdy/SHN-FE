@@ -31,13 +31,19 @@ export default function MasterFormModal({
     const loadOptions = async () => {
       const newOptions = {};
       for (const field of fields) {
-        if (field.type === "select" && field.optionsService) {
-          try {
-            const res = await field.optionsService.getAll();
-            newOptions[field.name] = res.data;
-          } catch (error) {
-            console.error(`Error loading options for ${field.name}:`, error);
-            newOptions[field.name] = [];
+        if (field.type === "select") {
+          if (field.optionsService) {
+            // Load options from service
+            try {
+              const res = await field.optionsService.getAll();
+              newOptions[field.name] = res.data;
+            } catch (error) {
+              console.error(`Error loading options for ${field.name}:`, error);
+              newOptions[field.name] = [];
+            }
+          } else if (field.options) {
+            // Use static options array
+            newOptions[field.name] = field.options;
           }
         }
       }
@@ -52,10 +58,39 @@ export default function MasterFormModal({
   useEffect(() => {
     const initialForm = {};
     fields.forEach((field) => {
+      // Skip fields that should be hidden on edit
+      if (editData && field.hideOnEdit) {
+        return;
+      }
+      
       if (editData) {
-        // For select fields, make sure we have the correct value
+        // For select fields, handle role mapping
         if (field.type === "select") {
-          initialForm[field.name] = editData[field.name] ? String(editData[field.name]) : "";
+          if (field.name === "role") {
+            // Handle role field - user data has roles array with id and name
+            if (editData.roles && editData.roles.length > 0) {
+              // Use the first role from the roles array
+              initialForm[field.name] = String(editData.roles[0].id);
+            } else if (editData[field.name]) {
+                          // Fallback to direct role field if roles array doesn't exist
+            const roleOption = options[field.name]?.find(
+              option => option[field.optionLabel || "name"] === editData[field.name]
+            );
+              initialForm[field.name] = roleOption ? String(roleOption.id) : "";
+            } else {
+              initialForm[field.name] = "";
+            }
+          } else {
+            // For other select fields, handle both static and service options
+            const option = options[field.name]?.find(opt => {
+              if (opt.value !== undefined) {
+                return String(opt.value) === String(editData[field.name]);
+              } else {
+                return String(opt.id) === String(editData[field.name]);
+              }
+            });
+            initialForm[field.name] = option ? String(option.id || option.value) : String(editData[field.name] || "");
+          }
         } else {
           initialForm[field.name] = editData[field.name] || "";
         }
@@ -78,22 +113,9 @@ export default function MasterFormModal({
   const handleSubmit = (e) => {
     e.preventDefault();
     onSave(form);
-    // Clear form after successful save
-    if (onSaveSuccess) {
-      onSaveSuccess();
-    }
   };
 
-  // Clear form when modal closes
-  useEffect(() => {
-    if (!isOpen) {
-      const initialForm = {};
-      fields.forEach((field) => {
-        initialForm[field.name] = "";
-      });
-      setForm(initialForm);
-    }
-  }, [isOpen, fields]);
+
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -133,7 +155,13 @@ export default function MasterFormModal({
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {fields.map((field) => (
+          {fields.map((field) => {
+            // Skip fields that should be hidden on edit
+            if (editData && field.hideOnEdit) {
+              return null;
+            }
+            
+            return (
             <div key={field.name} className="grid grid-cols-1 gap-2">
               <Label htmlFor={field.name} className="text-sm font-medium text-gray-700">
                 {field.label}
@@ -166,7 +194,17 @@ export default function MasterFormModal({
                   >
                     <span>
                       {form[field.name] 
-                        ? options[field.name]?.find((option) => String(option.id) === form[field.name])?.[field.optionLabel || "name"]
+                        ? (() => {
+                            const option = options[field.name]?.find((opt) => {
+                              // Handle both static options (value/label) and service options (id/optionLabel)
+                              if (opt.value !== undefined) {
+                                return String(opt.value) === form[field.name];
+                              } else {
+                                return String(opt.id) === form[field.name];
+                              }
+                            });
+                            return option ? (option.label || option[field.optionLabel || "name"]) : `Pilih ${field.label}`;
+                          })()
                         : `Pilih ${field.label}`}
                     </span>
                     <svg className="h-4 w-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -189,29 +227,29 @@ export default function MasterFormModal({
                         {options[field.name]
                           ?.filter(option => 
                             !searchTerms[field.name] || 
-                            option[field.optionLabel || "name"]
+                            (option.label || option[field.optionLabel || "name"])
                               .toLowerCase()
                               .includes(searchTerms[field.name].toLowerCase())
                           )
                           ?.map((option) => (
                             <div
-                              key={option.id}
+                              key={option.id || option.value}
                               className={`cursor-pointer px-3 py-2 text-sm hover:bg-gray-100 ${
-                                form[field.name] === String(option.id) ? 'bg-blue-50 text-blue-600' : ''
+                                form[field.name] === String(option.id || option.value) ? 'bg-blue-50 text-blue-600' : ''
                               }`}
                               onClick={() => {
-                                handleSelectChange(field.name, String(option.id));
+                                handleSelectChange(field.name, String(option.id || option.value));
                                 setOpenDropdowns(prev => ({ ...prev, [field.name]: false }));
                                 setSearchTerms(prev => ({ ...prev, [field.name]: "" }));
                               }}
                             >
-                              {option[field.optionLabel || "name"]}
+                              {option.label || option[field.optionLabel || "name"]}
                             </div>
                           ))}
                         {options[field.name]
                           ?.filter(option => 
                             !searchTerms[field.name] || 
-                            option[field.optionLabel || "name"]
+                            (option.label || option[field.optionLabel || "name"])
                               .toLowerCase()
                               .includes(searchTerms[field.name].toLowerCase())
                           )?.length === 0 && (
@@ -231,12 +269,13 @@ export default function MasterFormModal({
                   value={form[field.name] || ""}
                   onChange={handleChange}
                   className="w-full"
-                  required={field.required}
+                  required={editData && field.hideOnEdit ? false : field.required}
                   maxLength={field.maxLength}
                 />
               )}
             </div>
-          ))}
+          );
+          })}
 
           {error && (
             <div className="text-red-600 text-sm p-3 bg-red-50 border border-red-200 rounded-md">
