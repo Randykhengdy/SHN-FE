@@ -5,6 +5,7 @@ import wallpaper from "@/assets/loginwallpaper.jpg";
 import LoginBackground from "@/components/LoginBackground";
 import LoginForm from "@/components/LoginForm";
 import LoginFooter from "@/components/LoginFooter";
+import { setToken, setTokenType, setIsLoggedIn, setRefreshToken, setUser } from "@/lib/tokenStorage";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -16,14 +17,14 @@ export default function Login() {
   // Debug logging
   console.log("Login component loaded");
   console.log("Current localStorage:", {
-    isLoggedIn: localStorage.getItem("isLoggedIn"),
-    token: localStorage.getItem("token")
+    isLoggedIn: localStorage.getItem("shn_app_isLoggedIn"),
+    token: localStorage.getItem("shn_app_token")
   });
 
   // Auto-redirect if already logged in
   useEffect(() => {
     console.log("Login useEffect triggered");
-    if (localStorage.getItem("isLoggedIn") === "1") {
+    if (localStorage.getItem("shn_app_isLoggedIn") === "1") {
       console.log("User already logged in, redirecting to dashboard");
       navigate("/dashboard");
     } else {
@@ -51,20 +52,20 @@ export default function Login() {
         throw new Error(result.message || "Login gagal");
       }
   
-      // Simpan token ke localStorage
-      localStorage.setItem("token", result.token);
-      localStorage.setItem("token_type", result.token_type); // biasanya "Bearer"
-      localStorage.setItem("isLoggedIn", "1");
+      // Simpan token menggunakan sistem storage baru
+      setToken(result.token);
+      setTokenType(result.token_type); // biasanya "Bearer"
+      setIsLoggedIn("1");
       
       // Simpan refresh token jika ada
       if (result.refresh_token) {
-        localStorage.setItem("refresh_token", result.refresh_token);
+        setRefreshToken(result.refresh_token);
         console.log("✅ Refresh token saved");
       }
       
       // Simpan user info jika ada
       if (result.user) {
-        localStorage.setItem("user", JSON.stringify(result.user));
+        setUser(result.user);
       }
   
       navigate("/dashboard");

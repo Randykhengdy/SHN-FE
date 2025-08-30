@@ -19,8 +19,9 @@ import TermPage from "@/pages/master-data/Term";
 import UnitPage from "@/pages/master-data/Unit";
 import UsersPage from "@/pages/Users";
 import WorkshopPage from "@/pages/Workshop";
-import SalesOrderPage from "@/pages/SalesOrder";
-import AddSalesOrderPage from "@/pages/AddSalesOrder";
+import SalesOrderPage from "@/pages/sales-order";
+import AddSalesOrderPage from "@/pages/sales-order/add";
+import ViewSalesOrderPage from "@/pages/sales-order/view";
 
 const AppRouter = () => {
     return (
@@ -47,6 +48,7 @@ const AppRouter = () => {
         <Route path="/workshop" element={<WorkshopPage />} />
         <Route path="/sales-order" element={<SalesOrderPage />} />
         <Route path="/sales-order/add" element={<AddSalesOrderPage />} />
+        <Route path="/sales-order/view/:id" element={<ViewSalesOrderPage />} />
 
       </Routes>
     );

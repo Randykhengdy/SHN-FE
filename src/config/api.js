@@ -24,4 +24,5 @@ export const API_ENDPOINTS = {
   refresh: "/auth/refresh",
   logout: "/auth/logout",
   jenisBarang: "/jenis-barang",
+  salesOrder: "/sales-order",
 };

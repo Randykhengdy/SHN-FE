@@ -1,4 +1,16 @@
 import apiConfig from "@/config/api";
+import { 
+  setToken, 
+  removeToken, 
+  setRefreshToken, 
+  removeRefreshToken,
+  setTokenType,
+  setIsLoggedIn,
+  setUser,
+  removeUser,
+  clearAllTokens,
+  getRefreshToken
+} from "@/lib/tokenStorage";
 
 export const authService = {
   async login(credentials) {
@@ -7,7 +19,21 @@ export const authService = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(credentials),
     });
-    return response.json();
+    
+    const result = await response.json();
+    
+    // If login successful, store tokens
+    if (result.success) {
+      setToken(result.token);
+      setTokenType(result.token_type);
+      setRefreshToken(result.refresh_token);
+      setIsLoggedIn("true");
+      if (result.user) {
+        setUser(result.user);
+      }
+    }
+    
+    return result;
   },
   
   async register(userData) {
@@ -29,7 +55,7 @@ export const authService = {
   },
 
   async logout() {
-    const refreshToken = localStorage.getItem("refresh_token");
+    const refreshToken = getRefreshToken();
     
     // Hit API logout untuk invalidate refresh token di backend
     if (refreshToken) {
@@ -45,12 +71,8 @@ export const authService = {
       }
     }
     
-    // Clear local storage
-    localStorage.removeItem("token");
-    localStorage.removeItem("refresh_token");
-    localStorage.removeItem("token_type");
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("user");
+    // Clear all tokens using new storage utility
+    clearAllTokens();
     console.log("✅ Logout successful - all tokens cleared");
   }
 };

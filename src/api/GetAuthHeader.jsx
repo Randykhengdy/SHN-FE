@@ -1,5 +1,14 @@
+import { getToken, getTokenType } from "@/lib/tokenStorage";
+
 export function getAuthHeader() {
-    const token = localStorage.getItem("token");
-    const type = localStorage.getItem("token_type") || "Bearer";
-    return {Authorization: `${type} ${token}`,};
+  const token = getToken();
+  const tokenType = getTokenType() || 'Bearer';
+  
+  if (token) {
+    return {
+      Authorization: `${tokenType} ${token}`,
+    };
+  }
+  
+  return {};
 }

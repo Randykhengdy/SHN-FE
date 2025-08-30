@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Search, Filter, Download, FileText, Eye, Trash2, ArrowLeft, Calendar, Dices } from "lucide-react";
+import { Plus, ArrowLeft, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
@@ -19,9 +18,11 @@ import {
   getUnitOptions 
 } from "@/services/masterDataService";
 import { useAlert } from "@/hooks/useAlert";
+import { request } from "@/lib/request";
+import { API_ENDPOINTS } from "@/config/api";
 
 export default function AddSalesOrderPage() {
-  const { showAlert, showConfirm, AlertComponent } = useAlert();
+  const { showAlert, AlertComponent } = useAlert();
   
   // Master data state
   const [termOptions, setTermOptions] = useState([]);
@@ -39,7 +40,6 @@ export default function AddSalesOrderPage() {
   const [loadingItemGrade, setLoadingItemGrade] = useState(false);
   const [loadingUnit, setLoadingUnit] = useState(false);
 
-  // Customer Information
   // Customer Information
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [customerName, setCustomerName] = useState("");
@@ -96,9 +96,9 @@ export default function AddSalesOrderPage() {
   }, []);
 
   // Sales Order Details
-  const [soNumber, setSoNumber] = useState("SO-20250825-001");
-  const [soDate, setSoDate] = useState("2025-08-24");
-  const [deliveryDate, setDeliveryDate] = useState("2025-08-31");
+  const [soNumber, setSoNumber] = useState("");
+  const [soDate, setSoDate] = useState(new Date().toISOString().split('T')[0]);
+  const [deliveryDate, setDeliveryDate] = useState(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
   const [termOfPayment, setTermOfPayment] = useState("cash");
   const [originWarehouse, setOriginWarehouse] = useState("");
 
@@ -111,10 +111,11 @@ export default function AddSalesOrderPage() {
   const [itemShape, setItemShape] = useState("");
   const [selectedShape, setSelectedShape] = useState(null);
   const [itemGrade, setItemGrade] = useState("");
-  const [itemPrice, setItemPrice] = useState("Auto dari jenis plat");
+  const [itemPrice, setItemPrice] = useState("");
   const [itemUnit, setItemUnit] = useState("per-dimensi");
   const [itemDiscount, setItemDiscount] = useState("0");
   const [itemNotes, setItemNotes] = useState("");
+  const [itemWeight, setItemWeight] = useState("");
 
   // Modal state
   const [shapeModalOpen, setShapeModalOpen] = useState(false);
@@ -130,43 +131,43 @@ export default function AddSalesOrderPage() {
 
   // Calculate item area and total
   useEffect(() => {
-    const length = parseFloat(itemLength) || 0;
-    const width = parseFloat(itemWidth) || 0;
-    const diameter = parseFloat(itemDiameter) || 0;
-    const qty = parseInt(itemQty) || 0;
-    const discount = parseFloat(itemDiscount) || 0;
+    const timeoutId = setTimeout(() => {
+      try {
+        const length = parseFloat(itemLength) || 0;
+        const width = parseFloat(itemWidth) || 0;
+        const diameter = parseFloat(itemDiameter) || 0;
+        const qty = parseInt(itemQty) || 0;
+        const discount = parseFloat(itemDiscount) || 0;
 
-    let area = 0;
-    let areaPerItem = "0.00";
+        let area = 0;
+        let areaPerItem = "0.00";
 
-    // Calculate area based on selected shape dimension
-    if (selectedShape?.dimensi === "1D") {
-      // 1D items (AS, CANAL U) - use diameter or length
-      if (diameter > 0) {
-        // For circular 1D items
-        const radius = diameter / 2;
-        area = Math.PI * radius * radius;
-        areaPerItem = area.toFixed(2);
-      } else if (length > 0) {
-        // For linear 1D items
-        area = length;
-        areaPerItem = area.toFixed(2);
+        if (selectedShape?.dimensi === "1D") {
+          area = length * width;
+          areaPerItem = area.toFixed(2);
+        } else if (selectedShape?.dimensi === "2D") {
+          area = length * diameter;
+          areaPerItem = area.toFixed(2);
+        }
+
+        const pricePerUnit = parseFloat(itemPrice) || 0;
+        const totalBeforeDiscount = area * pricePerUnit * qty;
+        const discountAmount = totalBeforeDiscount * (discount / 100);
+        const totalAfterDiscount = totalBeforeDiscount - discountAmount;
+
+        setItemArea(`${areaPerItem} m²`);
+        setItemPricePerUnit(`Rp ${pricePerUnit.toLocaleString()}/m²`);
+        setItemTotal(`Rp ${totalAfterDiscount.toLocaleString()}`);
+      } catch (error) {
+        console.error('Error calculating area:', error);
+        setItemArea("0.00 m²");
+        setItemPricePerUnit("Rp 0/m²");
+        setItemTotal("Rp 0");
       }
-    } else if (selectedShape?.dimensi === "2D") {
-      // 2D items (PLAT) - use length * width
-      area = length * width;
-      areaPerItem = area.toFixed(2);
-    }
+    }, 100);
 
-    const pricePerUnit = 50000; // Mock price
-    const totalBeforeDiscount = area * pricePerUnit * qty;
-    const discountAmount = totalBeforeDiscount * (discount / 100);
-    const totalAfterDiscount = totalBeforeDiscount - discountAmount;
-
-    setItemArea(`${areaPerItem} m²`);
-    setItemPricePerUnit(`Rp ${pricePerUnit.toLocaleString()}/m²`);
-    setItemTotal(`Rp ${totalAfterDiscount.toLocaleString()}`);
-  }, [itemLength, itemWidth, itemDiameter, selectedShape, itemQty, itemDiscount]);
+    return () => clearTimeout(timeoutId);
+  }, [itemLength, itemWidth, itemDiameter, selectedShape, itemQty, itemDiscount, itemPrice]);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('id-ID', {
@@ -177,111 +178,78 @@ export default function AddSalesOrderPage() {
   };
 
   const handleCustomerSelect = (customer) => {
+    if (!customer) return;
+    
     setSelectedCustomer(customer);
-    setCustomerName(customer.nama);
-    setCustomerPhone(customer.telepon);
-    setCustomerEmail(customer.email);
-    setCustomerAddress(customer.alamat);
-  };
-
-  const handleFillTestData = () => {
-    setCustomerName("PT Test Customer");
-    setCustomerPhone("08123456789");
-    setCustomerEmail("test@customer.com");
-    setCustomerAddress("Jl. Test No. 123, Jakarta");
-    setOriginWarehouse("gudang-utama");
-    setItemType("plat-besi");
-    setItemShape("persegi");
-    setItemGrade("grade-a");
-  };
-
-  const handleAddTestItem = () => {
-    const testItem = {
-      id: Date.now(),
-      jenisBarang: "Plat Besi",
-      bentuk: "Persegi",
-      grade: "Grade A",
-      dimensi: "2.00 x 1.50",
-      qty: 2,
-      luasPerItem: "3.00 m²",
-      harga: "Rp 50,000/m²",
-      satuan: "per dimensi",
-      diskon: "5%",
-      total: "Rp 285,000"
-    };
-    setItems([...items, testItem]);
+    setCustomerName(customer.nama || "");
+    setCustomerPhone(customer.telepon || "");
+    setCustomerEmail(customer.email || "");
+    setCustomerAddress(customer.alamat || "");
   };
 
   const handleAddItem = () => {
     try {
-      // Validation based on selected shape
       if (!itemType || !selectedShape || !itemGrade) {
         showAlert("Peringatan", "Mohon lengkapi data item", "warning");
         return;
       }
 
       if (selectedShape.dimensi === "1D") {
-        if (!itemDiameter && !itemLength) {
-          showAlert("Peringatan", "Mohon isi diameter atau panjang untuk bentuk 1D", "warning");
+        if (!itemLength || !itemWidth) {
+          showAlert("Peringatan", "Mohon isi panjang dan lebar untuk bentuk 1D", "warning");
           return;
         }
       } else if (selectedShape.dimensi === "2D") {
-        if (!itemLength || !itemWidth) {
-          showAlert("Peringatan", "Mohon isi panjang dan lebar untuk bentuk 2D", "warning");
+        if (!itemLength || !itemDiameter) {
+          showAlert("Peringatan", "Mohon isi panjang dan tebal untuk bentuk 2D", "warning");
           return;
         }
       }
 
-    // Create dimension string based on shape
-    let dimensiString = "";
-    if (selectedShape.dimensi === "1D") {
-      if (itemDiameter) {
-        dimensiString = `Diameter: ${itemDiameter}m`;
+      let dimensiString = "";
+      if (selectedShape.dimensi === "1D") {
+        dimensiString = `${itemLength} x ${itemWidth}`;
       } else {
-        dimensiString = `Panjang: ${itemLength}m`;
+        dimensiString = `${itemLength} x ${itemDiameter}`;
       }
-    } else {
-      dimensiString = `${itemLength} x ${itemWidth}`;
-    }
 
-    const newItem = {
-      id: Date.now(),
-      // For display purposes
-      jenisBarang: itemTypeOptions.find(opt => opt.value === itemType)?.label || itemType,
-      bentuk: selectedShape.nama,
-      grade: itemGradeOptions.find(opt => opt.value === itemGrade)?.label || itemGrade,
-      dimensi: dimensiString,
-      qty: parseInt(itemQty),
-      luasPerItem: itemArea,
-      harga: itemPricePerUnit,
-      satuan: unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit,
-      diskon: `${itemDiscount}%`,
-      total: itemTotal,
-      // For API submission (store the actual values)
-      jenisBarangId: itemType,
-      bentukBarangId: selectedShape.id,
-      gradeBarangId: itemGrade,
-      panjang: parseFloat(itemLength) || 0,
-      lebar: parseFloat(itemWidth) || 0,
-      diameter: parseFloat(itemDiameter) || null,
-      satuan: itemUnit, // This will be the kode string from static API
-      diskonPercent: parseFloat(itemDiscount) || 0,
-      catatan: itemNotes
-    };
+      const newItem = {
+        id: Date.now(),
+        jenisBarang: itemTypeOptions.find(opt => opt.value === itemType)?.label || itemType,
+        bentuk: selectedShape.nama,
+        grade: itemGradeOptions.find(opt => opt.value === itemGrade)?.label || itemGrade,
+        dimensi: dimensiString,
+        qty: parseInt(itemQty),
+        luasPerItem: itemArea,
+        harga: itemPricePerUnit,
+        satuan: unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit,
+        diskon: `${itemDiscount}%`,
+        total: itemTotal,
+        jenisBarangId: itemType,
+        bentukBarangId: selectedShape.id,
+        gradeBarangId: itemGrade,
+        panjang: parseFloat(itemLength) || 0,
+        lebar: parseFloat(itemWidth) || 0,
+        tebal: parseFloat(itemDiameter) || 0,
+        harga: parseFloat(itemPrice) || 0,
+        satuan: itemUnit,
+        diskonPercent: parseFloat(itemDiscount) || 0,
+        catatan: itemNotes
+      };
 
-    setItems([...items, newItem]);
+      setItems([...items, newItem]);
 
-    // Reset form
-    setItemLength("");
-    setItemWidth("");
-    setItemDiameter("");
-    setItemQty("1");
-    setItemType("");
-    setItemShape("");
-    setSelectedShape(null);
-    setItemGrade("");
-    setItemDiscount("0");
-    setItemNotes("");
+      // Reset form
+      setItemLength("");
+      setItemWidth("");
+      setItemDiameter("");
+      setItemQty("1");
+      setItemType("");
+      setItemShape("");
+      setSelectedShape(null);
+      setItemGrade("");
+      setItemDiscount("0");
+      setItemNotes("");
     } catch (error) {
       console.error('Error adding item:', error);
       showAlert("Error", "Terjadi kesalahan saat menambahkan item", "error");
@@ -292,57 +260,147 @@ export default function AddSalesOrderPage() {
     setItems(items.filter(item => item.id !== id));
   };
 
-  const handleTestSimpanSO = () => {
+  const handleTestSimpanSO = async () => {
     console.log("Testing save SO...");
     
-    // Prepare data for API submission
-    const salesOrderData = {
-      header: {
-        soNumber: soNumber,
-        soDate: soDate,
-        deliveryDate: deliveryDate,
-        termOfPayment: termOfPayment, // String from static API
-        originWarehouseId: originWarehouse,
-        customerId: selectedCustomer?.id
-      },
-      items: items.map(item => ({
-        jenisBarangId: item.jenisBarangId,
-        bentukBarangId: item.bentukBarangId,
-        gradeBarangId: item.gradeBarangId,
-        panjang: item.panjang,
-        lebar: item.lebar,
-        diameter: item.diameter,
-        qty: item.qty,
-        luasPerItem: parseFloat(item.luasPerItem.replace(' m²', '')) || 0,
-        hargaPerUnit: parseInt(item.harga.replace(/[^\d]/g, '')) || 0,
-        satuan: item.satuan, // String from static API
-        diskonPercent: item.diskonPercent,
-        totalHarga: parseInt(item.total.replace(/[^\d]/g, '')) || 0,
-        catatan: item.catatan
-      })),
-      summary: {
-        subtotal: subtotal,
-        totalDiskon: totalDiscount,
-        ppnPercent: 11.0,
-        ppnAmount: ppn,
-        totalHargaSO: totalHargaSO
-      }
-    };
-    
-    console.log("Data yang akan dikirim ke API:", salesOrderData);
-    showAlert("Sukses", "Test Simpan SO berhasil! Cek console untuk melihat data.", "success");
+    try {
+      const salesOrderData = {
+        nomor_so: soNumber,
+        tanggal_so: soDate,
+        tanggal_pengiriman: deliveryDate,
+        syarat_pembayaran: termOfPayment,
+        gudang_id: parseInt(originWarehouse) || 1,
+        pelanggan_id: selectedCustomer?.id || 1,
+        subtotal: subtotal || 0,
+        total_diskon: totalDiscount || 0,
+        ppn_percent: 11.0,
+        ppn_amount: ppn || 0,
+        total_harga_so: totalHargaSO || 0,
+        items: items.map(item => ({
+          panjang: parseFloat(item.panjang) || 0,
+          lebar: parseFloat(item.lebar) || 0,
+          tebal: parseFloat(item.tebal) || 0,
+          qty: parseInt(item.qty) || 0,
+          jenis_barang_id: parseInt(item.jenisBarangId) || 0,
+          bentuk_barang_id: parseInt(item.bentukBarangId) || 0,
+          grade_barang_id: parseInt(item.gradeBarangId) || 0,
+          harga: parseFloat(item.harga) || 0,
+          satuan: item.satuan,
+          diskon: parseFloat(item.diskonPercent) || 0,
+          catatan: item.catatan || ""
+        }))
+      };
+      
+      console.log("Data yang akan dikirim ke API:", salesOrderData);
+      
+      const result = await request(API_ENDPOINTS.salesOrder, {
+        method: 'POST',
+        body: JSON.stringify(salesOrderData)
+      });
+      
+      console.log("✅ Sales Order berhasil disimpan:", result);
+      showAlert("Sukses", "Sales Order berhasil disimpan!", "success");
+      
+      setTimeout(() => {
+        window.history.back();
+      }, 2000);
+      
+    } catch (error) {
+      console.error("❌ Error saving Sales Order:", error);
+      showAlert("Error", "Terjadi kesalahan saat menyimpan Sales Order", "error");
+    }
   };
 
   const handleBackToList = () => {
-    // Navigate back to sales order list
     window.history.back();
+  };
+
+  const handleAutoFill = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const timestamp = Date.now().toString().slice(-3);
+    setSoNumber(`SO-${year}${month}${day}-${timestamp}`);
+    
+    setCustomerName("PT Jaya Makmur Sejahtera");
+    setCustomerPhone("08123456789");
+    setCustomerEmail("info@jayamakmur.com");
+    setCustomerAddress("Jl. Raya Jakarta No. 123, Jakarta Selatan");
+    
+    setSelectedCustomer({
+      id: 1,
+      nama: "PT Jaya Makmur Sejahtera",
+      kode: "CUST-001",
+      telepon: "08123456789",
+      email: "info@jayamakmur.com",
+      alamat: "Jl. Raya Jakarta No. 123, Jakarta Selatan"
+    });
+
+    if (warehouseOptions.length > 0) {
+      setOriginWarehouse(warehouseOptions[0].value);
+    }
+    if (termOptions.length > 0) {
+      setTermOfPayment(termOptions[0].value);
+    }
+
+    const autoItems = [
+      {
+        id: Date.now(),
+        jenisBarang: itemTypeOptions.length > 0 ? itemTypeOptions[0].label : "Plat Besi",
+        bentuk: "Persegi",
+        grade: itemGradeOptions.length > 0 ? itemGradeOptions[0].label : "Grade A",
+        dimensi: "2.50 x 1.20",
+        qty: 3,
+        luasPerItem: "3.00 m²",
+        harga: "Rp 75,000/m²",
+        satuanDisplay: unitOptions.length > 0 ? unitOptions[0].label : "Per Dimensi",
+        diskon: "5%",
+        total: "Rp 213,750",
+        jenisBarangId: itemTypeOptions.length > 0 ? itemTypeOptions[0].value : "1",
+        bentukBarangId: 2,
+        gradeBarangId: itemGradeOptions.length > 0 ? itemGradeOptions[0].value : "1",
+        panjang: 2.50,
+        lebar: 1.20,
+        tebal: 0.50,
+        harga: 75000,
+        satuan: unitOptions.length > 0 ? unitOptions[0].value : "PER_DIMENSI",
+        diskonPercent: 5,
+        catatan: "Auto-filled item 1 😄"
+      },
+      {
+        id: Date.now() + 1,
+        jenisBarang: itemTypeOptions.length > 1 ? itemTypeOptions[1].label : "Besi Beton",
+        bentuk: "Bulat",
+        grade: itemGradeOptions.length > 1 ? itemGradeOptions[1].label : "Grade B",
+        dimensi: "6.00 x 0.12",
+        qty: 2,
+        luasPerItem: "0.72 m²",
+        harga: "Rp 45,000/m²",
+        satuan: unitOptions.length > 0 ? unitOptions[0].label : "Per Dimensi",
+        diskon: "3%",
+        total: "Rp 62,856",
+        jenisBarangId: itemTypeOptions.length > 1 ? itemTypeOptions[1].value : "2",
+        bentukBarangId: 1,
+        gradeBarangId: itemGradeOptions.length > 1 ? itemGradeOptions[1].value : "2",
+        panjang: 6.00,
+        lebar: 0.12,
+        tebal: 0.12,
+        harga: 45000,
+        satuan: unitOptions.length > 0 ? unitOptions[0].value : "PER_DIMENSI",
+        diskonPercent: 3,
+        catatan: "Auto-filled item 2 🎯"
+      }
+    ];
+
+    setItems(autoItems);
+    showAlert("Info", "Data sudah di-auto fill! Items langsung masuk ke table. 🎲", "info");
   };
 
   const handleShapeSelect = (shape) => {
     setSelectedShape(shape);
   };
 
-  // Column configuration for shape modal
   const shapeColumns = [
     { key: 'id', label: 'ID' },
     { key: 'kode', label: 'Kode' },
@@ -394,14 +452,12 @@ export default function AddSalesOrderPage() {
           <div className="flex justify-between items-center">
             <CardTitle className="page-title">Input Sales Order Baru</CardTitle>
             <div className="flex space-sm">
-              <Button variant="destructive" size="sm" onClick={handleFillTestData} className="btn-danger">
-                Fill Test Data
+              <Button variant="outline" size="sm" onClick={handleAutoFill} className="btn-outline">
+                🎲 Auto Fill
               </Button>
-              <Button variant="outline" size="sm" onClick={handleAddTestItem} className="btn-outline">
-                Add Test Item
-              </Button>
+              
               <Button variant="default" size="sm" onClick={handleTestSimpanSO} className="btn-primary">
-                Test Simpan SO
+                Simpan Sales Order
               </Button>
 
               <Button variant="secondary" size="sm" onClick={handleBackToList} className="btn-secondary">
@@ -419,21 +475,21 @@ export default function AddSalesOrderPage() {
             selectedCustomer={selectedCustomer}
           />
 
-                     {/* Display Selected Customer Info */}
-           {selectedCustomer && (
-             <div className="p-4 bg-gray-50 border border-gray-200 rounded-md">
-               <div className="text-sm font-medium text-gray-800 mb-2">
-                 Data Pelanggan yang Dipilih:
-               </div>
-               <div className="grid grid-cols-2 gap-4 text-sm">
-                 <div><strong>Nama:</strong> {selectedCustomer.nama}</div>
-                 <div><strong>Kode:</strong> {selectedCustomer.kode}</div>
-                 <div><strong>Telepon:</strong> {selectedCustomer.telepon}</div>
-                 <div><strong>Email:</strong> {selectedCustomer.email}</div>
-                 <div className="col-span-2"><strong>Alamat:</strong> {selectedCustomer.alamat}</div>
-               </div>
-             </div>
-           )}
+          {/* Display Selected Customer Info */}
+          {selectedCustomer && (
+            <div className="p-4 bg-gray-50 border border-gray-200 rounded-md">
+              <div className="text-sm font-medium text-gray-800 mb-2">
+                Data Pelanggan yang Dipilih:
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div><strong>Nama:</strong> {selectedCustomer.nama}</div>
+                <div><strong>Kode:</strong> {selectedCustomer.kode}</div>
+                <div><strong>Telepon:</strong> {selectedCustomer.telepon}</div>
+                <div><strong>Email:</strong> {selectedCustomer.email}</div>
+                <div className="col-span-2"><strong>Alamat:</strong> {selectedCustomer.alamat}</div>
+              </div>
+            </div>
+          )}
 
           <div className="border-t pt-6">
             {/* Sales Order Details */}
@@ -444,7 +500,7 @@ export default function AddSalesOrderPage() {
                   id="soNumber"
                   value={soNumber}
                   onChange={(e) => setSoNumber(e.target.value)}
-                  readOnly
+                  placeholder="Masukkan nomor SO atau klik Auto Fill"
                 />
               </div>
               <div>
@@ -456,7 +512,7 @@ export default function AddSalesOrderPage() {
                     value={soDate}
                     onChange={(e) => setSoDate(e.target.value)}
                   />
-                  <Calendar className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
+                  <Calendar className="absolute right-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
                 </div>
               </div>
               <div>
@@ -468,33 +524,33 @@ export default function AddSalesOrderPage() {
                     value={deliveryDate}
                     onChange={(e) => setDeliveryDate(e.target.value)}
                   />
-                  <Calendar className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
+                  <Calendar className="absolute right-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
                 </div>
               </div>
-                             <div>
-                 <SearchSelect
-                   label="Term of Payment"
-                   placeholder="Pilih Term of Payment"
-                   searchPlaceholder="Cari term of payment..."
-                   value={termOfPayment}
-                   onValueChange={setTermOfPayment}
-                   options={termOptions}
-                   loading={loadingTerm}
-                   required
-                 />
-               </div>
-               <div>
-                 <SearchSelect
-                   label="Asal Gudang"
-                   placeholder="Pilih Gudang"
-                   searchPlaceholder="Cari gudang..."
-                   value={originWarehouse}
-                   onValueChange={setOriginWarehouse}
-                   options={warehouseOptions}
-                   loading={loadingWarehouse}
-                   required
-                 />
-               </div>
+              <div>
+                <SearchSelect
+                  label="Term of Payment"
+                  placeholder="Pilih Term of Payment"
+                  searchPlaceholder="Cari term of payment..."
+                  value={termOfPayment}
+                  onValueChange={setTermOfPayment}
+                  options={termOptions}
+                  loading={loadingTerm}
+                  required
+                />
+              </div>
+              <div>
+                <SearchSelect
+                  label="Asal Gudang"
+                  placeholder="Pilih Gudang"
+                  searchPlaceholder="Cari gudang..."
+                  value={originWarehouse}
+                  onValueChange={setOriginWarehouse}
+                  options={warehouseOptions}
+                  loading={loadingWarehouse}
+                  required
+                />
+              </div>
             </div>
           </div>
         </CardContent>
@@ -507,77 +563,7 @@ export default function AddSalesOrderPage() {
         </CardHeader>
         <CardContent className="section-content">
           <div className="grid-form m-lg">
-            {/* Dimensi Input - Dynamic based on selected shape */}
-            {selectedShape?.dimensi === "1D" ? (
-              <div>
-                <Label htmlFor="itemDiameter">Diameter/Panjang (m)</Label>
-                <Input
-                  id="itemDiameter"
-                  type="number"
-                  step="0.01"
-                  value={itemDiameter || itemLength}
-                  onChange={(e) => {
-                    if (selectedShape.nama === "AS") {
-                      setItemDiameter(e.target.value);
-                    } else {
-                      setItemLength(e.target.value);
-                    }
-                  }}
-                  placeholder="0.00"
-                />
-              </div>
-            ) : selectedShape?.dimensi === "2D" ? (
-              <>
-                <div>
-                  <Label htmlFor="itemLength">Panjang (m)</Label>
-                  <Input
-                    id="itemLength"
-                    type="number"
-                    step="0.01"
-                    value={itemLength}
-                    onChange={(e) => setItemLength(e.target.value)}
-                    placeholder="0.00"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="itemWidth">Lebar (m)</Label>
-                  <Input
-                    id="itemWidth"
-                    type="number"
-                    step="0.01"
-                    value={itemWidth}
-                    onChange={(e) => setItemWidth(e.target.value)}
-                    placeholder="0.00"
-                  />
-                </div>
-              </>
-            ) : (
-              <div className="col-span-2">
-                <Label className="text-gray-500">Pilih bentuk barang terlebih dahulu</Label>
-              </div>
-            )}
-            <div>
-              <Label htmlFor="itemQty">Qty</Label>
-              <Input
-                id="itemQty"
-                type="number"
-                value={itemQty}
-                onChange={(e) => setItemQty(e.target.value)}
-                min="1"
-              />
-            </div>
-                         <div>
-               <SearchSelect
-                 label="Jenis Barang"
-                 placeholder="Pilih Jenis Barang"
-                 searchPlaceholder="Cari jenis barang..."
-                 value={itemType}
-                 onValueChange={setItemType}
-                 options={itemTypeOptions}
-                 loading={loadingItemType}
-                 required
-               />
-             </div>
+            {/* Row 1: Bentuk Barang, Qty, Jenis Barang */}
             <div>
               <Label htmlFor="itemShape">Bentuk Barang</Label>
               <div className="flex gap-2">
@@ -596,39 +582,113 @@ export default function AddSalesOrderPage() {
                 </Button>
               </div>
             </div>
-                         <div>
-               <SearchSelect
-                 label="Grade Barang"
-                 placeholder="Pilih Grade"
-                 searchPlaceholder="Cari grade..."
-                 value={itemGrade}
-                 onValueChange={setItemGrade}
-                 options={itemGradeOptions}
-                 loading={loadingItemGrade}
-                 required
-               />
-             </div>
+            <div>
+              <Label htmlFor="itemQty">Qty</Label>
+              <Input
+                id="itemQty"
+                type="number"
+                value={itemQty}
+                onChange={(e) => setItemQty(e.target.value)}
+                min="1"
+              />
+            </div>
+            <div>
+              <SearchSelect
+                label="Jenis Barang"
+                placeholder="Pilih Jenis Barang"
+                searchPlaceholder="Cari jenis barang..."
+                value={itemType}
+                onValueChange={setItemType}
+                options={itemTypeOptions}
+                loading={loadingItemType}
+                required
+              />
+            </div>
+
+            {/* Row 2: Grade Barang, Satuan, Timbangan */}
+            <div>
+              <SearchSelect
+                label="Grade Barang"
+                placeholder="Pilih Grade"
+                searchPlaceholder="Cari grade..."
+                value={itemGrade}
+                onValueChange={setItemGrade}
+                options={itemGradeOptions}
+                loading={loadingItemGrade}
+                required
+              />
+            </div>
+            <div>
+              <SearchSelect
+                label="Satuan"
+                placeholder="Pilih Satuan"
+                searchPlaceholder="Cari satuan..."
+                value={itemUnit}
+                onValueChange={setItemUnit}
+                options={unitOptions}
+                loading={loadingUnit}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="itemWeight">Timbangan (kg)</Label>
+              <Input
+                id="itemWeight"
+                type="number"
+                step="0.01"
+                value={itemWeight}
+                onChange={(e) => setItemWeight(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+
+            {/* Row 3: Panjang, Lebar, Tebal */}
+            <div>
+              <Label htmlFor="itemLength">Panjang</Label>
+              <Input
+                id="itemLength"
+                type="number"
+                step="0.01"
+                value={itemLength}
+                onChange={(e) => setItemLength(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+            <div>
+              <Label htmlFor="itemWidth">Lebar</Label>
+              <Input
+                id="itemWidth"
+                type="number"
+                step="0.01"
+                value={itemWidth}
+                onChange={(e) => setItemWidth(e.target.value)}
+                placeholder="0.00"
+                disabled={selectedShape?.dimensi === "2D"}
+              />
+            </div>
+            <div>
+              <Label htmlFor="itemDiameter">Tebal</Label>
+              <Input
+                id="itemDiameter"
+                type="number"
+                step="0.01"
+                value={itemDiameter}
+                onChange={(e) => setItemDiameter(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+
+            {/* Row 4: Harga, Diskon, Empty */}
             <div>
               <Label htmlFor="itemPrice">Harga</Label>
               <Input
                 id="itemPrice"
+                type="number"
                 value={itemPrice}
                 onChange={(e) => setItemPrice(e.target.value)}
-                placeholder="Auto dari jenis plat"
+                placeholder="0"
               />
             </div>
-                         <div>
-               <SearchSelect
-                 label="Satuan"
-                 placeholder="Pilih Satuan"
-                 searchPlaceholder="Cari satuan..."
-                 value={itemUnit}
-                 onValueChange={setItemUnit}
-                 options={unitOptions}
-                 loading={loadingUnit}
-                 required
-               />
-             </div>
             <div>
               <Label htmlFor="itemDiscount">Diskon (%)</Label>
               <Input
@@ -640,15 +700,7 @@ export default function AddSalesOrderPage() {
                 max="100"
               />
             </div>
-            <div>
-              <Label htmlFor="itemNotes">Catatan</Label>
-              <Input
-                id="itemNotes"
-                value={itemNotes}
-                onChange={(e) => setItemNotes(e.target.value)}
-                placeholder="Optional"
-              />
-            </div>
+            <div></div> {/* Empty cell untuk melengkapi 3 kolom */}
           </div>
 
           {/* Calculated Values */}
@@ -673,7 +725,19 @@ export default function AddSalesOrderPage() {
             </div>
           </div>
 
-          <div className="flex justify-end">
+          {/* Notes Section */}
+          <div className="mt-6">
+            <Label htmlFor="itemNotes">Catatan</Label>
+            <Textarea
+              id="itemNotes"
+              value={itemNotes}
+              onChange={(e) => setItemNotes(e.target.value)}
+              placeholder="Masukkan catatan tambahan untuk item ini (opsional)..."
+              className="min-h-[100px] resize-y"
+            />
+          </div>
+
+          <div className="flex justify-end mt-6">
             <Button onClick={handleAddItem} className="btn-primary">
               <Plus className="w-4 h-4 mr-2" />
               Tambah Item
@@ -687,10 +751,6 @@ export default function AddSalesOrderPage() {
         <CardHeader className="section-header">
           <div className="flex justify-between items-center">
             <CardTitle className="page-title">Daftar Item dalam SO</CardTitle>
-            <Button variant="outline" size="sm" onClick={handleAddTestItem} className="btn-outline">
-              <Dices className="w-4 h-4 mr-2" />
-              Fill Test Data
-            </Button>
           </div>
         </CardHeader>
         <CardContent className="section-content">
@@ -732,7 +792,7 @@ export default function AddSalesOrderPage() {
                       onClick={() => handleRemoveItem(item.id)}
                       className="btn-danger"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Plus className="w-4 h-4" />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -775,28 +835,28 @@ export default function AddSalesOrderPage() {
 
       {/* Action Buttons */}
       <div className="flex justify-center gap-4">
-        <Button size="lg" className="bg-green-600 hover:bg-green-700">
+        <Button size="lg" className="bg-green-600 hover:bg-green-700" onClick={handleTestSimpanSO}>
           Simpan SO
         </Button>
-                 <Button size="lg" variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
-           Print SO
-         </Button>
-       </div>
+        <Button size="lg" variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
+          Print SO
+        </Button>
+      </div>
 
-       {/* Data Table Modal for Shape Selection */}
-       <DataTableModal
-         open={shapeModalOpen}
-         onOpenChange={setShapeModalOpen}
-         onItemSelect={handleShapeSelect}
-         data={itemShapeOptions}
-         columns={shapeColumns}
-         title="Pilih Bentuk Barang"
-         searchPlaceholder="Cari bentuk barang..."
-         selectButtonText="Pilih"
-       />
+      {/* Data Table Modal for Shape Selection */}
+      <DataTableModal
+        open={shapeModalOpen}
+        onOpenChange={setShapeModalOpen}
+        onItemSelect={handleShapeSelect}
+        data={itemShapeOptions}
+        columns={shapeColumns}
+        title="Pilih Bentuk Barang"
+        searchPlaceholder="Cari bentuk barang..."
+        selectButtonText="Pilih"
+      />
 
-       {/* Alert Modal Component */}
-       <AlertComponent />
-     </div>
-   );
- }
+      {/* Alert Modal Component */}
+      <AlertComponent />
+    </div>
+  );
+}

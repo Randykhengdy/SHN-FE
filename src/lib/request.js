@@ -1,8 +1,17 @@
 import { getAuthHeader } from "../api/GetAuthHeader";
 import apiConfig from "../config/api";
-import { performTokenRefresh, logoutAndRedirect } from "./tokenUtils";
+import { performTokenRefresh, logoutAndRedirect, checkAndRefreshToken } from "./tokenUtils";
 
 export async function request(path, options = {}) {
+  // Proactive token check before making request
+  try {
+    await checkAndRefreshToken();
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log("⚠️ Proactive token check failed:", error.message);
+    }
+    // Continue with request even if proactive check fails
+  }
 
   const response = await fetch(`${apiConfig.baseUrl}${path}`, {
     headers: {
@@ -26,7 +35,7 @@ export async function request(path, options = {}) {
       
       // Coba refresh token dengan retry
       let refreshSuccess = false;
-      for (let attempt = 1; attempt <= 2; attempt++) {
+      for (let attempt = 1; attempt <= 3; attempt++) {
         try {
           refreshSuccess = await performTokenRefresh();
           if (refreshSuccess) {
@@ -43,30 +52,18 @@ export async function request(path, options = {}) {
         }
         
         // Wait 1 second before retry
-        if (attempt < 2) {
+        if (attempt < 3) {
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
       
-      // Jika semua retry gagal, cek apakah ini request penting
+      // Jika semua retry gagal, logout
       if (process.env.NODE_ENV === 'development') {
-        console.log("❌ All token refresh attempts failed");
+        console.log("❌ All token refresh attempts failed, logging out");
       }
       
-      // Untuk request yang tidak kritis, return error biasa tanpa logout
-      // Untuk request kritis (seperti auth), bisa logout
-      const isCriticalRequest = path.includes('/auth/') || path.includes('/user/');
-      
-      if (isCriticalRequest) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log("🚪 Critical request failed, logging out");
-        }
-        logoutAndRedirect();
-        throw new Error("Authentication failed");
-      } else {
-        // Untuk request non-kritis, throw error biasa
-        throw new Error("Session expired. Please refresh the page.");
-      }
+      logoutAndRedirect();
+      throw new Error("Session expired. Please login again.");
     }
     
     // Coba parse error response sebagai JSON untuk mendapatkan message yang lebih spesifik

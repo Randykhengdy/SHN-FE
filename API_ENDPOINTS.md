@@ -264,12 +264,13 @@
 
 ## Transaction - Sales Order
 - `GET /api/sales-order` - List all sales order
-  - **Response:** `{ "data": [{ "id": "int", "kode": "string", "tanggal": "date", "pelanggan_id": "int", "total_amount": "decimal", "status": "string" }] }`
+  - **Response:** `{ "data": [{ "id": "int", "nomor_so": "string", "tanggal_so": "date", "tanggal_pengiriman": "date", "syarat_pembayaran": "string", "gudang_id": "int", "pelanggan_id": "int", "subtotal": "decimal", "total_diskon": "decimal", "ppn_percent": "decimal", "ppn_amount": "decimal", "total_harga_so": "decimal", "salesOrderItems": [{ "id": "int", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "qty": "int", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "harga": "decimal", "satuan": "string", "diskon": "decimal", "catatan": "string" }] }] }`
 - `POST /api/sales-order` - Create new sales order
-  - **Request:** `{ "kode": "string", "tanggal": "date", "pelanggan_id": "int", "total_amount": "decimal", "status": "string" }`
+  - **Request:** `{ "nomor_so": "string", "tanggal_so": "date", "tanggal_pengiriman": "date", "syarat_pembayaran": "string", "gudang_id": "int", "pelanggan_id": "int", "subtotal": "decimal", "total_diskon": "decimal", "ppn_percent": "decimal", "ppn_amount": "decimal", "total_harga_so": "decimal", "items": [{ "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "qty": "int", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "harga": "decimal", "satuan": "string", "diskon": "decimal", "catatan": "string" }] }`
 - `GET /api/sales-order/{id}` - Get sales order by ID
+  - **Response:** `{ "id": "int", "nomor_so": "string", "tanggal_so": "date", "tanggal_pengiriman": "date", "syarat_pembayaran": "string", "gudang_id": "int", "pelanggan_id": "int", "subtotal": "decimal", "total_diskon": "decimal", "ppn_percent": "decimal", "ppn_amount": "decimal", "total_harga_so": "decimal", "salesOrderItems": [{ "id": "int", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "qty": "int", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "harga": "decimal", "satuan": "string", "diskon": "decimal", "catatan": "string" }] }`
 - `PUT /api/sales-order/{id}` - Update sales order
-  - **Request:** `{ "kode": "string", "tanggal": "date", "pelanggan_id": "int", "total_amount": "decimal", "status": "string" }`
+  - **Request:** `{ "nomor_so": "string", "tanggal_so": "date", "tanggal_pengiriman": "date", "syarat_pembayaran": "string", "gudang_id": "int", "pelanggan_id": "int", "subtotal": "decimal", "total_diskon": "decimal", "ppn_percent": "decimal", "ppn_amount": "decimal", "total_harga_so": "decimal", "items": [{ "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "qty": "int", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "harga": "decimal", "satuan": "string", "diskon": "decimal", "catatan": "string" }] }`
 - `PATCH /api/sales-order/{id}` - Update sales order
 - `DELETE /api/sales-order/{id}/soft` - Soft delete sales order
 - `PATCH /api/sales-order/{id}/restore` - Restore soft deleted sales order
@@ -330,3 +331,78 @@
 - Role-menu-permission endpoints provide full CRUD operations for managing role access to menu permissions
 - Bulk operations are available for efficient role-menu-permission management
 - Static Data APIs are temporary and should be converted to proper master data tables in the future
+
+### Sales Order Example Request:
+```json
+{
+  "nomor_so": "SO-20250825-001",
+  "tanggal_so": "2025-08-25",
+  "tanggal_pengiriman": "2025-08-31",
+  "syarat_pembayaran": "CASH",
+  "gudang_id": 1,
+  "pelanggan_id": 1,
+  "subtotal": 285000,
+  "total_diskon": 14250,
+  "ppn_percent": 11.0,
+  "ppn_amount": 29783,
+  "total_harga_so": 300533,
+  "items": [
+    {
+      "panjang": 2.00,
+      "lebar": 1.50,
+      "tebal": 0.50,
+      "qty": 2,
+      "jenis_barang_id": 1,
+      "bentuk_barang_id": 2,
+      "grade_barang_id": 1,
+      "harga": 50000,
+      "satuan": "PER_DIMENSI",
+      "diskon": 5.0,
+      "catatan": "Item untuk proyek A"
+    }
+  ]
+}
+```
+
+### Sales Order Example Response (GET by ID):
+```json
+{
+  "success": true,
+  "message": "Data berhasil diambil",
+  "data": {
+    "id": 1,
+    "nomor_so": "SO-20250825-001",
+    "tanggal_so": "2025-08-25",
+    "tanggal_pengiriman": "2025-08-31",
+    "syarat_pembayaran": "CASH",
+    "gudang_id": 1,
+    "pelanggan_id": 1,
+    "subtotal": 285000,
+    "total_diskon": 14250,
+    "ppn_percent": 11.0,
+    "ppn_amount": 29783,
+    "total_harga_so": 300533,
+    "created_at": "2025-08-28T19:00:00.000000Z",
+    "updated_at": "2025-08-28T19:00:00.000000Z",
+    "salesOrderItems": [
+      {
+        "id": 1,
+        "sales_order_id": 1,
+        "panjang": 2.00,
+        "lebar": 1.50,
+        "tebal": 0.50,
+        "qty": 2,
+        "jenis_barang_id": 1,
+        "bentuk_barang_id": 2,
+        "grade_barang_id": 1,
+        "harga": 50000,
+        "satuan": "PER_DIMENSI",
+        "diskon": 5.0,
+        "catatan": "Item untuk proyek A",
+        "created_at": "2025-08-28T19:00:00.000000Z",
+        "updated_at": "2025-08-28T19:00:00.000000Z"
+      }
+    ]
+  }
+}
+```

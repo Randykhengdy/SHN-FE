@@ -1,5 +1,18 @@
 import { jwtDecode } from 'jwt-decode';
 import { authService } from '@/services/authService';
+import { 
+  getToken, 
+  setToken, 
+  removeToken, 
+  getRefreshToken, 
+  setRefreshToken, 
+  removeRefreshToken,
+  setTokenType,
+  setIsLoggedIn,
+  setUser,
+  clearAllTokens,
+  getStorageInfo
+} from './tokenStorage';
 
 // Fungsi untuk cek apakah token expired
 export function isTokenExpired(token) {
@@ -49,6 +62,9 @@ export function logoutAndRedirect() {
   // Use authService logout untuk cleanup yang lebih baik
   authService.logout();
   
+  // Clear all tokens using new storage utility
+  clearAllTokens();
+  
   // Redirect ke login page
   if (window.location.pathname !== '/') {
     window.location.href = '/';
@@ -57,12 +73,13 @@ export function logoutAndRedirect() {
 
 // Fungsi untuk cek dan auto refresh token
 export async function checkAndRefreshToken() {
-  const token = localStorage.getItem("token");
-  const refreshToken = localStorage.getItem("refresh_token");
+  const token = getToken();
+  const refreshToken = getRefreshToken();
   
   // Only log in development mode
   if (process.env.NODE_ENV === 'development') {
     console.log("🔍 Token check - Access:", !!token, "Refresh:", !!refreshToken);
+    console.log("🔧 Storage info:", getStorageInfo());
   }
   
   if (!token) {
@@ -125,12 +142,12 @@ export async function checkAndRefreshToken() {
 
 // Fungsi untuk refresh token dengan retry logic
 export async function performTokenRefresh() {
-  const maxRetries = 2;
+  const maxRetries = 3;
   let retryCount = 0;
   
   while (retryCount <= maxRetries) {
     try {
-      const refreshToken = localStorage.getItem("refresh_token");
+      const refreshToken = getRefreshToken();
       
       if (!refreshToken) {
         console.log("❌ No refresh token available");
@@ -148,13 +165,14 @@ export async function performTokenRefresh() {
           console.log("✅ Token refreshed successfully");
         }
         
-        // Update tokens
-        localStorage.setItem("token", result.token);
-        localStorage.setItem("token_type", result.token_type);
+        // Update tokens using new storage utility
+        setToken(result.token);
+        setTokenType(result.token_type);
+        setIsLoggedIn("true");
         
         // Update refresh token jika ada yang baru
         if (result.refresh_token) {
-          localStorage.setItem("refresh_token", result.refresh_token);
+          setRefreshToken(result.refresh_token);
           if (process.env.NODE_ENV === 'development') {
             console.log("✅ New refresh token saved");
           }
@@ -162,7 +180,7 @@ export async function performTokenRefresh() {
         
         // Update user info jika ada
         if (result.user) {
-          localStorage.setItem("user", JSON.stringify(result.user));
+          setUser(result.user);
         }
         
         return true;
@@ -172,7 +190,7 @@ export async function performTokenRefresh() {
         }
         
         // Jika refresh token expired atau invalid, logout
-        if (result.message?.includes('expired') || result.message?.includes('invalid')) {
+        if (result.message?.includes('expired') || result.message?.includes('invalid') || result.message?.includes('Unauthorized')) {
           if (process.env.NODE_ENV === 'development') {
             console.log("🚪 Refresh token expired/invalid, logging out");
           }
@@ -220,14 +238,15 @@ export async function refreshToken() {
 
 // Fungsi untuk get token info (untuk debugging)
 export function getTokenInfo() {
-  const token = localStorage.getItem("token");
-  const refreshToken = localStorage.getItem("refresh_token");
+  const token = getToken();
+  const refreshToken = getRefreshToken();
   
   if (!token) {
     return { 
       valid: false, 
       message: 'No token found',
-      hasRefreshToken: !!refreshToken
+      hasRefreshToken: !!refreshToken,
+      storageInfo: getStorageInfo()
     };
   }
   
@@ -242,21 +261,23 @@ export function getTokenInfo() {
       expiresAt: decoded.exp ? new Date(decoded.exp * 1000) : null,
       currentTime: new Date(currentTime * 1000),
       hasRefreshToken: !!refreshToken,
-      payload: decoded
+      payload: decoded,
+      storageInfo: getStorageInfo()
     };
   } catch (error) {
     return { 
       valid: false, 
       message: 'Invalid token', 
       error: error.message,
-      hasRefreshToken: !!refreshToken
+      hasRefreshToken: !!refreshToken,
+      storageInfo: getStorageInfo()
     };
   }
 }
 
 // Fungsi untuk cek apakah refresh token expired
 export function isRefreshTokenExpired() {
-  const refreshToken = localStorage.getItem("refresh_token");
+  const refreshToken = getRefreshToken();
   
   if (!refreshToken) return true;
   

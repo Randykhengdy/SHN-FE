@@ -21,8 +21,12 @@ function createWindow() {
       allowRunningInsecureContent: true,
       // Memory management
       backgroundThrottling: false,
-      // Increase memory limit
-      maxMemory: 2048
+      // Increase memory limit and add crash prevention
+      maxMemory: 4096,
+      // Crash prevention
+      enableRemoteModule: false,
+      // Better error handling
+      worldSafeExecuteJavaScript: true
     },
     show: false, // Don't show until ready
   });
@@ -104,12 +108,16 @@ function createWindow() {
     mainWindow.webContents.setVisualZoomLevelLimits(1, 1);
     mainWindow.webContents.setZoomFactor(1);
     
-    // Periodic garbage collection to prevent memory leaks
-    setInterval(() => {
-      if (global.gc) {
-        global.gc();
-      }
-    }, 30000); // Every 30 seconds
+         // Simple memory management
+     setInterval(() => {
+       try {
+         if (global.gc) {
+           global.gc();
+         }
+       } catch (error) {
+         // Silent fail - don't log to avoid spam
+       }
+     }, 120000); // Every 2 minutes
   });
 
   mainWindow.webContents.on('before-input-event', (event, input) => {
@@ -292,14 +300,46 @@ function createWindow() {
   });
 }
 
-// Crash handler
+// Simple crash handler - just log, don't crash
 process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
-  dialog.showErrorBox('Application Error', `An error occurred: ${error.message}`);
+  console.error('Uncaught Exception:', error.message);
+  console.error('Stack:', error.stack);
+  
+  // Log to file
+  try {
+    const fs = require('fs');
+    const logPath = path.join(__dirname, '../logs/electron-crash.log');
+    const logDir = path.dirname(logPath);
+    
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+    
+    const logEntry = `[${new Date().toISOString()}] Uncaught Exception: ${error.message}\nStack: ${error.stack}\n\n`;
+    fs.appendFileSync(logPath, logEntry);
+  } catch (logError) {
+    console.error('Failed to log error:', logError);
+  }
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  console.error('Unhandled Rejection:', reason);
+  
+  // Log to file
+  try {
+    const fs = require('fs');
+    const logPath = path.join(__dirname, '../logs/electron-crash.log');
+    const logDir = path.dirname(logPath);
+    
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+    
+    const logEntry = `[${new Date().toISOString()}] Unhandled Rejection: ${reason}\n\n`;
+    fs.appendFileSync(logPath, logEntry);
+  } catch (logError) {
+    console.error('Failed to log rejection:', logError);
+  }
 });
 
 // Memory management
