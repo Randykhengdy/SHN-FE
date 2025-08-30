@@ -18,8 +18,11 @@ import {
   getGradeBarangOptions, 
   getUnitOptions 
 } from "@/services/masterDataService";
+import { useAlert } from "@/hooks/useAlert";
 
 export default function AddSalesOrderPage() {
+  const { showAlert, showConfirm, AlertComponent } = useAlert();
+  
   // Master data state
   const [termOptions, setTermOptions] = useState([]);
   const [warehouseOptions, setWarehouseOptions] = useState([]);
@@ -213,18 +216,18 @@ export default function AddSalesOrderPage() {
     try {
       // Validation based on selected shape
       if (!itemType || !selectedShape || !itemGrade) {
-        alert("Mohon lengkapi data item");
+        showAlert("Peringatan", "Mohon lengkapi data item", "warning");
         return;
       }
 
       if (selectedShape.dimensi === "1D") {
         if (!itemDiameter && !itemLength) {
-          alert("Mohon isi diameter atau panjang untuk bentuk 1D");
+          showAlert("Peringatan", "Mohon isi diameter atau panjang untuk bentuk 1D", "warning");
           return;
         }
       } else if (selectedShape.dimensi === "2D") {
         if (!itemLength || !itemWidth) {
-          alert("Mohon isi panjang dan lebar untuk bentuk 2D");
+          showAlert("Peringatan", "Mohon isi panjang dan lebar untuk bentuk 2D", "warning");
           return;
         }
       }
@@ -243,6 +246,7 @@ export default function AddSalesOrderPage() {
 
     const newItem = {
       id: Date.now(),
+      // For display purposes
       jenisBarang: itemTypeOptions.find(opt => opt.value === itemType)?.label || itemType,
       bentuk: selectedShape.nama,
       grade: itemGradeOptions.find(opt => opt.value === itemGrade)?.label || itemGrade,
@@ -252,7 +256,17 @@ export default function AddSalesOrderPage() {
       harga: itemPricePerUnit,
       satuan: unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit,
       diskon: `${itemDiscount}%`,
-      total: itemTotal
+      total: itemTotal,
+      // For API submission (store the actual values)
+      jenisBarangId: itemType,
+      bentukBarangId: selectedShape.id,
+      gradeBarangId: itemGrade,
+      panjang: parseFloat(itemLength) || 0,
+      lebar: parseFloat(itemWidth) || 0,
+      diameter: parseFloat(itemDiameter) || null,
+      satuan: itemUnit, // This will be the kode string from static API
+      diskonPercent: parseFloat(itemDiscount) || 0,
+      catatan: itemNotes
     };
 
     setItems([...items, newItem]);
@@ -270,7 +284,7 @@ export default function AddSalesOrderPage() {
     setItemNotes("");
     } catch (error) {
       console.error('Error adding item:', error);
-      alert("Terjadi kesalahan saat menambahkan item");
+      showAlert("Error", "Terjadi kesalahan saat menambahkan item", "error");
     }
   };
 
@@ -280,7 +294,43 @@ export default function AddSalesOrderPage() {
 
   const handleTestSimpanSO = () => {
     console.log("Testing save SO...");
-    alert("Test Simpan SO berhasil!");
+    
+    // Prepare data for API submission
+    const salesOrderData = {
+      header: {
+        soNumber: soNumber,
+        soDate: soDate,
+        deliveryDate: deliveryDate,
+        termOfPayment: termOfPayment, // String from static API
+        originWarehouseId: originWarehouse,
+        customerId: selectedCustomer?.id
+      },
+      items: items.map(item => ({
+        jenisBarangId: item.jenisBarangId,
+        bentukBarangId: item.bentukBarangId,
+        gradeBarangId: item.gradeBarangId,
+        panjang: item.panjang,
+        lebar: item.lebar,
+        diameter: item.diameter,
+        qty: item.qty,
+        luasPerItem: parseFloat(item.luasPerItem.replace(' m²', '')) || 0,
+        hargaPerUnit: parseInt(item.harga.replace(/[^\d]/g, '')) || 0,
+        satuan: item.satuan, // String from static API
+        diskonPercent: item.diskonPercent,
+        totalHarga: parseInt(item.total.replace(/[^\d]/g, '')) || 0,
+        catatan: item.catatan
+      })),
+      summary: {
+        subtotal: subtotal,
+        totalDiskon: totalDiscount,
+        ppnPercent: 11.0,
+        ppnAmount: ppn,
+        totalHargaSO: totalHargaSO
+      }
+    };
+    
+    console.log("Data yang akan dikirim ke API:", salesOrderData);
+    showAlert("Sukses", "Test Simpan SO berhasil! Cek console untuk melihat data.", "success");
   };
 
   const handleBackToList = () => {
@@ -353,6 +403,7 @@ export default function AddSalesOrderPage() {
               <Button variant="default" size="sm" onClick={handleTestSimpanSO} className="btn-primary">
                 Test Simpan SO
               </Button>
+
               <Button variant="secondary" size="sm" onClick={handleBackToList} className="btn-secondary">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Kembali ke List
@@ -743,6 +794,9 @@ export default function AddSalesOrderPage() {
          searchPlaceholder="Cari bentuk barang..."
          selectButtonText="Pilih"
        />
+
+       {/* Alert Modal Component */}
+       <AlertComponent />
      </div>
    );
  }

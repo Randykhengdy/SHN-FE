@@ -4,6 +4,7 @@ import {
   bentukBarangService, 
   gradeBarangService 
 } from './master-data';
+import { request } from '@/lib/request';
 
 // Fetch Gudang options
 export const getGudangOptions = async () => {
@@ -71,9 +72,9 @@ export const getJenisBarangOptions = async () => {
     }
     // Fallback to default options
     return [
-      { value: "plat-besi", label: "Plat Besi", searchKey: "Plat Besi" },
-      { value: "plat-stainless", label: "Plat Stainless", searchKey: "Plat Stainless" },
-      { value: "plat-aluminium", label: "Plat Aluminium", searchKey: "Plat Aluminium" }
+      { id: 1, kode: "JB001", value: "JB001", label: "Plat Besi", searchKey: "Plat Besi", nama_jenis: "Plat Besi" },
+      { id: 2, kode: "JB002", value: "JB002", label: "Plat Stainless", searchKey: "Plat Stainless", nama_jenis: "Plat Stainless" },
+      { id: 3, kode: "JB003", value: "JB003", label: "Plat Aluminium", searchKey: "Plat Aluminium", nama_jenis: "Plat Aluminium" }
     ];
   }
 };
@@ -108,11 +109,15 @@ export const getBentukBarangOptions = async () => {
     if (process.env.NODE_ENV === 'development') {
       console.log('🔄 Using fallback bentuk barang options');
     }
-    // Fallback to default options
+    // Fallback to default options (1D, 2D, and 3D)
     return [
-      { value: "BBG01", label: "AS (1D)", searchKey: "AS", dimensi: "1D", nama: "AS" },
-      { value: "BBG02", label: "PLAT (2D)", searchKey: "PLAT", dimensi: "2D", nama: "PLAT" },
-      { value: "BBG03", label: "CANAL U (1D)", searchKey: "CANAL U", dimensi: "1D", nama: "CANAL U" }
+      { id: 1, kode: "BBG01", value: "BBG01", label: "AS (1D)", searchKey: "AS", dimensi: "1D", nama: "AS", nama_bentuk: "AS" },
+      { id: 2, kode: "BBG02", value: "BBG02", label: "PLAT (2D)", searchKey: "PLAT", dimensi: "2D", nama: "PLAT", nama_bentuk: "PLAT" },
+      { id: 3, kode: "BBG03", value: "BBG03", label: "CANAL U (1D)", searchKey: "CANAL U", dimensi: "1D", nama: "CANAL U", nama_bentuk: "CANAL U" },
+      { id: 4, kode: "BBG04", value: "BBG04", label: "PIPA (1D)", searchKey: "PIPA", dimensi: "1D", nama: "PIPA", nama_bentuk: "PIPA" },
+      { id: 5, kode: "BBG05", value: "BBG05", label: "SHEET (2D)", searchKey: "SHEET", dimensi: "2D", nama: "SHEET", nama_bentuk: "SHEET" },
+      { id: 6, kode: "BBG06", value: "BBG06", label: "KOTAK (3D)", searchKey: "KOTAK", dimensi: "3D", nama: "KOTAK", nama_bentuk: "KOTAK" },
+      { id: 7, kode: "BBG07", value: "BBG07", label: "BALOK (3D)", searchKey: "BALOK", dimensi: "3D", nama: "BALOK", nama_bentuk: "BALOK" }
     ];
   }
 };
@@ -146,30 +151,81 @@ export const getGradeBarangOptions = async () => {
     }
     // Fallback to default options
     return [
-      { value: "grade-a", label: "Grade A", searchKey: "Grade A" },
-      { value: "grade-b", label: "Grade B", searchKey: "Grade B" },
-      { value: "grade-c", label: "Grade C", searchKey: "Grade C" }
+      { id: 1, kode: "GB001", value: "GB001", label: "Grade A", searchKey: "Grade A", nama: "Grade A" },
+      { id: 2, kode: "GB002", value: "GB002", label: "Grade B", searchKey: "Grade B", nama: "Grade B" },
+      { id: 3, kode: "GB003", value: "GB003", label: "Grade C", searchKey: "Grade C", nama: "Grade C" }
     ];
   }
 };
 
-// Fetch Term of Payment options (temporary mock data)
+// Fetch Term of Payment options from static API
 export const getTermOptions = async () => {
-  // For now, return mock data since we don't have term payment service yet
-  return [
-    { value: "cash", label: "Cash", searchKey: "Cash" },
-    { value: "credit", label: "Credit", searchKey: "Credit" },
-    { value: "net30", label: "Net 30", searchKey: "Net 30" },
-    { value: "net60", label: "Net 60", searchKey: "Net 60" }
-  ];
+  if (process.env.NODE_ENV === 'development') {
+    console.log('💳 Fetching term options from static API...');
+  }
+  try {
+    const response = await request('/static/term-of-payment', { method: 'GET' });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('✅ Term options fetched:', response.data.length, 'items');
+      const mappedData = response.data.map(item => ({
+        'Kode': item.kode,
+        'Nama Term': item.nama,
+        'Deskripsi': item.deskripsi
+      }));
+      console.table(mappedData);
+    }
+    return response.data.map(item => ({
+      value: item.kode, // Use kode as value (string)
+      label: item.nama,
+      searchKey: item.nama
+    }));
+  } catch (error) {
+    console.error('❌ Error fetching term options:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔄 Using fallback term options');
+    }
+    // Fallback to default options
+    return [
+      { value: "CASH", label: "Cash", searchKey: "Cash" },
+      { value: "CREDIT30", label: "Credit 30 Days", searchKey: "Credit 30 Days" },
+      { value: "CREDIT60", label: "Credit 60 Days", searchKey: "Credit 60 Days" },
+      { value: "DP", label: "Down Payment", searchKey: "Down Payment" }
+    ];
+  }
 };
 
-// Fetch Unit options (temporary mock data)
+// Fetch Satuan options from static API
 export const getUnitOptions = async () => {
-  // For now, return mock data since we don't have unit service yet
-  return [
-    { value: "per-dimensi", label: "per dimensi", searchKey: "per dimensi" },
-    { value: "per-meter", label: "per meter", searchKey: "per meter" },
-    { value: "per-piece", label: "per piece", searchKey: "per piece" }
-  ];
+  if (process.env.NODE_ENV === 'development') {
+    console.log('📏 Fetching satuan options from static API...');
+  }
+  try {
+    const response = await request('/static/satuan', { method: 'GET' });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('✅ Satuan options fetched:', response.data.length, 'items');
+      const mappedData = response.data.map(item => ({
+        'Kode': item.kode,
+        'Nama Satuan': item.nama,
+        'Deskripsi': item.deskripsi
+      }));
+      console.table(mappedData);
+    }
+    return response.data.map(item => ({
+      value: item.kode, // Use kode as value (string)
+      label: item.nama,
+      searchKey: item.nama
+    }));
+  } catch (error) {
+    console.error('❌ Error fetching satuan options:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔄 Using fallback satuan options');
+    }
+    // Fallback to default options
+    return [
+      { value: "PER_DIMENSI", label: "per dimensi", searchKey: "per dimensi" },
+      { value: "PER_METER", label: "per meter", searchKey: "per meter" },
+      { value: "PER_UNIT", label: "per unit", searchKey: "per unit" },
+      { value: "PER_KG", label: "per kg", searchKey: "per kg" }
+    ];
+  }
 };

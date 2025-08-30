@@ -145,6 +145,14 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
      );
    };
 
+   // Clear selected customer when switching to new tab
+   const handleTabChange = (value) => {
+     setActiveTab(value);
+     if (value === "new") {
+       onCustomerSelect(null); // Clear selected customer when switching to new tab
+     }
+   };
+
      return (
     <>
       <CustomAlert
@@ -156,16 +164,22 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
       />
       
       <div className="space-y-4">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="existing" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Existing Customer
-            </TabsTrigger>
-            <TabsTrigger value="new" className="flex items-center gap-2">
-              <UserPlus className="h-4 w-4" />
-              New Customer
-            </TabsTrigger>
+                 <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 bg-gray-100 p-1 rounded-lg">
+                         <TabsTrigger 
+               value="existing" 
+               className="flex items-center gap-3 px-4 py-2 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm cursor-pointer"
+             >
+               <User className="h-4 w-4" />
+               Existing Customer
+             </TabsTrigger>
+             <TabsTrigger 
+               value="new" 
+               className="flex items-center gap-3 px-4 py-2 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm cursor-pointer"
+             >
+               <UserPlus className="h-4 w-4" />
+               New Customer
+             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="existing" className="space-md">
@@ -173,13 +187,13 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
               <div className="space-y-2">
                 <Label>Cari Pelanggan</Label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     placeholder="Cari berdasarkan nama atau kode..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 form-input-standard"
+                                         className="pr-12 form-input-standard"
                   />
+                                     <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 </div>
               </div>
 
@@ -279,21 +293,22 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
               />
             </div>
 
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setActiveTab("existing")}
-              >
-                Batal
-              </Button>
-              <Button
-                onClick={handleSaveNewCustomer}
-                className="flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Simpan & Pilih
-              </Button>
-            </div>
+                         <div className="flex justify-end gap-4">
+               <Button
+                 variant="outline"
+                 onClick={() => setActiveTab("existing")}
+                 className="px-6"
+               >
+                 Batal
+               </Button>
+               <Button
+                 onClick={handleSaveNewCustomer}
+                 className="flex items-center gap-2 px-6"
+               >
+                 <Plus className="h-4 w-4" />
+                 Simpan & Pilih
+               </Button>
+             </div>
           </TabsContent>
         </Tabs>
       </div>

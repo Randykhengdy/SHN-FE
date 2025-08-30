@@ -39,15 +39,29 @@ export const roleService = {
   },
 
   async softDelete(id) {
-    return request(`/roles/${id}/soft`, {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🗑️ Role service - Soft deleting role ID: ${id}`);
+    }
+    const response = await request(`/roles/${id}/soft`, {
       method: "DELETE",
     });
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`✅ Role service - Soft delete response:`, response);
+    }
+    return response;
   },
 
   async restore(id) {
-    return request(`/roles/${id}/restore`, {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🔄 Role service - Restoring role ID: ${id}`);
+    }
+    const response = await request(`/roles/${id}/restore`, {
       method: "PATCH",
     });
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`✅ Role service - Restore response:`, response);
+    }
+    return response;
   },
 
   async forceDelete(id) {
@@ -80,7 +94,22 @@ export const roleService = {
       params.append('sort', `${sortBy},${sortDir}`);
     }
     
-    return request(`/roles/with-trashed/trashed?${params}`, { method: "GET" });
+    const url = `/roles/with-trashed/trashed?${params}`;
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🔍 Role service - Fetching trashed data from: ${url}`);
+    }
+    
+    const response = await request(url, { method: "GET" });
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`📊 Role service - Trashed data response:`, {
+        dataLength: response.data?.length || 0,
+        totalItems: response.meta?.total || response.data?.length || 0,
+        url
+      });
+    }
+    
+    return response;
   },
 
   // Menu and Permission related methods

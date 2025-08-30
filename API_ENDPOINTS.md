@@ -10,19 +10,22 @@
 
 ## User Management
 - `GET /api/users` - List all users
-  - **Response:** `{ "data": [{ "id": "int", "name": "string", "email": "string", "role": "string" }] }`
+  - **Response:** `{ "data": [{ "id": "int", "name": "string", "username": "string", "email": "string", "roles": [{ "id": "int", "name": "string" }] }] }`
+- `POST /api/users` - Create new user (Admin only)
+  - **Request:** `{ "username": "string", "name": "string", "email": "string", "password": "string", "role_id": "int" }`
+  - **Response:** `{ "id": "int", "name": "string", "username": "string", "email": "string", "roles": [{ "id": "int", "name": "string" }] }`
 - `GET /api/users/{id}` - Get user by ID
 - `PUT /api/users/{id}` - Update user
-  - **Request:** `{ "name": "string", "email": "string", "role": "string" }`
+  - **Request:** `{ "name": "string", "username": "string", "email": "string", "password": "string" }`
 - `PATCH /api/users/{id}` - Update user
-- `DELETE /api/users/{id}` - Delete user
+- `DELETE /api/users/{id}` - Soft delete user
 - `DELETE /api/users/{id}/soft` - Soft delete user
-- `DELETE /api/users/{id}/force` - Force delete user
+- `DELETE /api/users/{id}/force` - Force delete user (permanent)
 - `PATCH /api/users/{id}/restore` - Restore soft deleted user
 - `GET /api/users-with-trashed/all` - Get all users including deleted
 - `GET /api/users-with-trashed/trashed` - Get only deleted users
 - `POST /api/register` - Register new user
-  - **Request:** `{ "name": "string", "email": "string", "password": "string", "role": "string" }`
+  - **Request:** `{ "username": "string", "name": "string", "email": "string", "password": "string", "role_id": "int" }`
 
 ## Role Management
 - `GET /api/roles` - List all roles
@@ -272,6 +275,16 @@
 - `PATCH /api/sales-order/{id}/restore` - Restore soft deleted sales order
 - `DELETE /api/sales-order/{id}/force` - Force delete sales order
 
+## Static Data APIs (Temporary)
+- `GET /api/static/tipe-gudang` - Get tipe gudang data
+  - **Response:** `{ "data": [{ "id": "int", "kode": "string", "nama": "string", "deskripsi": "string" }] }`
+- `GET /api/static/status-order` - Get status order data
+  - **Response:** `{ "data": [{ "id": "int", "kode": "string", "nama": "string", "deskripsi": "string" }] }`
+- `GET /api/static/satuan` - Get satuan data
+  - **Response:** `{ "data": [{ "id": "int", "kode": "string", "nama": "string", "deskripsi": "string" }] }`
+- `GET /api/static/term-of-payment` - Get term of payment data
+  - **Response:** `{ "data": [{ "id": "int", "kode": "string", "nama": "string", "deskripsi": "string" }] }`
+
 ## System Settings
 - `GET /api/sys-setting` - List all system settings
   - **Response:** `{ "data": [{ "id": "int", "key": "string", "value": "string", "description": "string" }] }`
@@ -307,7 +320,7 @@
 ```
 
 ## Notes:
-- All endpoints require authentication via JWT token
+- All endpoints require authentication via JWT token (except Static Data APIs)
 - Role-based access control is implemented via middleware
 - Soft delete operations are available for most entities
 - Pagination is supported with `per_page` parameter
@@ -316,3 +329,4 @@
 - The `menu-with-permissions` endpoint is specifically designed for role-menu-permission mapping in the frontend
 - Role-menu-permission endpoints provide full CRUD operations for managing role access to menu permissions
 - Bulk operations are available for efficient role-menu-permission management
+- Static Data APIs are temporary and should be converted to proper master data tables in the future

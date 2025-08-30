@@ -38,6 +38,10 @@ export default defineConfig({
     watch: {
       usePolling: true,
       interval: 100
+    },
+    // Memory management
+    hmr: {
+      overlay: false
     }
   },
   preview: {

@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { RefreshCw, ChevronUp, ChevronDown } from "lucide-react";
 import RolePermissionEditor from "./RolePermissionEditor";
+import { useAlert } from "@/hooks/useAlert";
 
 export default function MasterDataLayout({
   title,
@@ -14,6 +15,7 @@ export default function MasterDataLayout({
   service,
   customEditComponent,
 }) {
+  const { showConfirm, AlertComponent } = useAlert();
   const [data, setData] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editData, setEditData] = useState(null);
@@ -30,36 +32,40 @@ export default function MasterDataLayout({
   const fetchData = React.useCallback(async () => {
     setLoading(true);
     try {
-      if (showTrashed) {
-        const response = await service.getTrashedPaginated(
-          currentPage, 
-          itemsPerPage, 
-          searchTerm, 
-          sortState.col, 
-          sortState.dir
-        );
-        setData(response.data);
-        setTotalItems(response.meta?.total || response.data.length);
-      } else {
-        const response = await service.getPaginated(
-          currentPage, 
-          itemsPerPage, 
-          searchTerm, 
-          sortState.col, 
-          sortState.dir
-        );
-        setData(response.data);
-        setTotalItems(response.meta?.total || response.data.length);
+      const response = showTrashed 
+        ? await service.getTrashedPaginated(currentPage, itemsPerPage, searchTerm, sortState.col, sortState.dir)
+        : await service.getPaginated(currentPage, itemsPerPage, searchTerm, sortState.col, sortState.dir);
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`📊 ${showTrashed ? 'Trashed' : 'Regular'} data for ${title}:`, {
+          dataLength: response.data?.length || 0,
+          totalItems: response.meta?.total || response.data?.length || 0,
+          currentPage,
+          itemsPerPage,
+          searchTerm,
+          sortState
+        });
+        if (response.data?.length > 0) {
+          console.table(response.data.map(item => ({
+            ID: item.id,
+            'Nama/Kode': item.name || item.nama_role || item.nama_gudang || item.kode || '-',
+            'Deleted At': item.deleted_at || '-',
+            'Created At': item.created_at || '-'
+          })));
+        }
       }
+      
+      setData(response.data);
+      setTotalItems(response.meta?.total || response.data.length);
     } catch (error) {
       console.error("Fetch error:", error.message);
     }
     setLoading(false);
-  }, [showTrashed, currentPage, itemsPerPage, searchTerm, sortState.col, sortState.dir, service]);
+  }, [showTrashed, currentPage, itemsPerPage, searchTerm, sortState.col, sortState.dir, service, title]);
 
   useEffect(() => {
     fetchData();
-  }, [showTrashed, currentPage, itemsPerPage, searchTerm, sortState]);
+  }, [fetchData]);
 
   const handleAdd = () => {
     setEditData(null);
@@ -75,7 +81,6 @@ export default function MasterDataLayout({
     setSaveLoading(true);
     setError(null);
     try {
-      // Process form data for API
       const processedFormData = { ...formData };
       
       // Filter out hidden fields when editing
@@ -87,9 +92,8 @@ export default function MasterDataLayout({
         });
       }
       
-      // For role field, keep the role ID as is (API expects role_id)
+      // Handle role field conversion
       if (processedFormData.role) {
-        // Convert role field name to role_id for API
         processedFormData.role_id = processedFormData.role;
         delete processedFormData.role;
       }
@@ -102,46 +106,63 @@ export default function MasterDataLayout({
         console.log("✅ Data berhasil ditambahkan:", processedFormData);
       }
       
-      // Success: close modal and reset state
       setIsModalOpen(false);
       setEditData(null);
       setError(null);
       setSaveLoading(false);
-      
-      // Fetch data in background
       fetchData();
     } catch (error) {
       console.error("❌ Error saat menyimpan data:", error);
-      // Error: keep modal open, keep form data, just show error
       setError(error.message || "Terjadi kesalahan saat menyimpan data");
       setSaveLoading(false);
-      // Don't reset editData or close modal - let user fix the error
     }
   };
 
   const handleDelete = async (id) => {
-    if (confirm("Yakin ingin menghapus data ini?")) {
-      await service.softDelete(id);
-      fetchData();
-    }
-  };
-
-  const clearForm = () => {
-    setEditData(null);
-    setError(null);
-    setSaveLoading(false);
+    showConfirm(
+      "Konfirmasi Hapus",
+      "Yakin ingin menghapus data ini?",
+      async () => {
+        try {
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`🗑️ Soft deleting item with ID: ${id}`);
+          }
+          await service.softDelete(id);
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`✅ Item with ID ${id} soft deleted successfully`);
+          }
+          fetchData();
+        } catch (error) {
+          console.error(`❌ Error soft deleting item ${id}:`, error);
+        }
+      }
+    );
   };
 
   const handleRestore = async (id) => {
-    await service.restore(id);
-    fetchData();
+    try {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🔄 Restoring item with ID: ${id}`);
+      }
+      await service.restore(id);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`✅ Item with ID ${id} restored successfully`);
+      }
+      fetchData();
+    } catch (error) {
+      console.error(`❌ Error restoring item ${id}:`, error);
+    }
   };
 
   const handleForceDelete = async (id) => {
-    if (confirm("Yakin ingin menghapus permanen data ini?")) {
-      await service.forceDelete(id);
-      fetchData();
-    }
+    showConfirm(
+      "Konfirmasi Hapus Permanen",
+      "Yakin ingin menghapus permanen data ini? Tindakan ini tidak dapat dibatalkan.",
+      async () => {
+        await service.forceDelete(id);
+        fetchData();
+      }
+    );
   };
 
   const handleSort = (col) => {
@@ -149,46 +170,12 @@ export default function MasterDataLayout({
       setSortState({ col, dir: 'asc' });
     } else if (sortState.dir === 'asc') {
       setSortState({ col, dir: 'desc' });
-    } else if (sortState.dir === 'desc') {
+    } else {
       setSortState({ col, dir: 'asc' });
     }
-    // Server-side sorting will be handled by useEffect
-  };
-
-  const getSortedData = () => {
-    if (!sortState.col) return data;
-    
-    return [...data].sort((a, b) => {
-      const aVal = getValue(a, sortState.col);
-      const bVal = getValue(b, sortState.col);
-      
-      if (sortState.dir === 'asc') {
-        return aVal > bVal ? 1 : -1;
-      } else {
-        return aVal < bVal ? 1 : -1;
-      }
-    });
-  };
-
-  // Server-side pagination logic
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
-
-  const handleItemsPerPageChange = (newItemsPerPage) => {
-    setItemsPerPage(newItemsPerPage);
-    setCurrentPage(1); // Reset to first page
-  };
-
-  const handleSearch = (term) => {
-    setSearchTerm(term);
-    setCurrentPage(1); // Reset to first page when searching
   };
 
   const getValue = (obj, path) => {
-    // Special handling for role field
     if (path === "role") {
       if (obj.roles && obj.roles.length > 0) {
         return obj.roles[0].name;
@@ -203,320 +190,253 @@ export default function MasterDataLayout({
     return sortState.dir === 'asc' ? <ChevronUp size={16} /> : <ChevronDown size={16} />;
   };
 
-  const getAlignmentStyle = (col) => {
-    const alignment = col.align || 'left';
-    return { textAlign: alignment };
-  };
-
-  const getColumnWidth = (col) => {
-    if (col.width) return { width: col.width };
-    if (col.minWidth) return { minWidth: col.minWidth };
-    
-    // Default widths based on column key
-    switch (col.key) {
-      case 'id':
-        return { minWidth: '5rem' };
-      case 'kode':
-        return { minWidth: '8rem' };
-      default:
-        return {};
-    }
-  };
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      {/* Header */}
       <Header />
       
-      {/* Main Content */}
       <div className="p-6">
-        {/* Main Card Container */}
         <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="p-6">
-          {/* Page Header */}
-          <div className="mb-6">
-            <div className="text-gray-500 text-sm font-medium uppercase tracking-wider mb-1">
-              Master Data
-            </div>
-            <div className="flex justify-between items-center">
-              <h1 className="text-2xl font-bold text-gray-800" style={{ color: '#2c3e50' }}>
-                {title}
-              </h1>
-              <div className="flex items-center space-x-4">
-                <input
-                  type="text"
-                  placeholder={showTrashed ? "Cari data yang dihapus..." : "Cari..."}
-                  value={searchTerm}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <div className="flex items-center gap-2 cursor-pointer">
-                  <Switch
-                    id="showTrashed"
-                    checked={showTrashed}
-                    onCheckedChange={setShowTrashed}
+          <div className="p-6">
+            {/* Page Header */}
+            <div className="mb-6">
+              <div className="text-gray-500 text-sm font-medium uppercase tracking-wider mb-1">
+                Master Data
+              </div>
+              <div className="flex justify-between items-center">
+                <h1 className="text-2xl font-bold text-gray-800">
+                  {title}
+                </h1>
+                <div className="flex items-center space-x-4">
+                  <input
+                    type="text"
+                    placeholder={showTrashed ? "Cari data yang dihapus..." : "Cari..."}
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  <Label htmlFor="showTrashed" className="text-sm text-gray-600 cursor-pointer">
-                    Tampilkan yang dihapus
-                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="showTrashed"
+                      checked={showTrashed}
+                      onCheckedChange={setShowTrashed}
+                    />
+                    <Label htmlFor="showTrashed" className="text-sm text-gray-600 cursor-pointer">
+                      Tampilkan yang dihapus
+                    </Label>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={fetchData} 
+                    disabled={loading}
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </Button>
+                  <Button
+                    onClick={handleAdd}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    + {title}
+                  </Button>
                 </div>
-                <Button 
-                  variant="outline" 
-                  onClick={fetchData} 
-                  disabled={loading}
-                  className="border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 cursor-pointer transition-colors"
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                  Refresh
-                </Button>
-                <Button
-                  onClick={handleAdd}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 cursor-pointer transition-colors"
-                >
-                  <span>+ {title}</span>
-                </Button>
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-50">
+                      {columns.map((col) => (
+                        <th 
+                          key={col.key} 
+                          className={`px-4 py-4 text-sm font-semibold ${
+                            col.key === 'actions' ? 'cursor-default' : 'cursor-pointer hover:bg-gray-100'
+                          }`}
+                          style={{ 
+                            textAlign: col.align || 'left',
+                            width: col.width,
+                            minWidth: col.minWidth
+                          }}
+                          onClick={() => col.key !== 'actions' && handleSort(col.key)}
+                        >
+                          <div className="flex items-center gap-1">
+                            {col.label}
+                            {col.key !== 'actions' && getSortIcon(col.key)}
+                          </div>
+                        </th>
+                      ))}
+                      <th className="px-4 py-4 text-sm font-semibold text-center min-w-[120px]">
+                        Aksi
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loading ? (
+                      <tr>
+                        <td colSpan={columns.length + 1} className="text-center py-8 text-gray-500">
+                          Memuat data...
+                        </td>
+                      </tr>
+                    ) : data.length === 0 ? (
+                      <tr>
+                        <td colSpan={columns.length + 1} className="text-center py-8 text-gray-500">
+                          Tidak ada data
+                        </td>
+                      </tr>
+                    ) : (
+                      data.map((item) => (
+                        <tr key={item.id} className="border-b border-gray-100 last:border-b-0">
+                          {columns.map((col) => (
+                            <td 
+                              key={col.key} 
+                              className="px-4 py-4 text-sm"
+                              style={{ 
+                                textAlign: col.align || 'left',
+                                wordWrap: 'break-word',
+                                maxWidth: col.maxWidth
+                              }}
+                            >
+                              {col.key === 'id' ? (
+                                <span className="font-semibold">{getValue(item, col.key)}</span>
+                              ) : (
+                                getValue(item, col.key)
+                              )}
+                            </td>
+                          ))}
+                          <td className="px-4 py-4 text-center">
+                            <div className="flex gap-2 justify-center">
+                              {!showTrashed ? (
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleEdit(item)}
+                                    className="bg-yellow-400 hover:bg-yellow-500 text-white border-yellow-400"
+                                  >
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleDelete(item.id)}
+                                    className="bg-red-500 hover:bg-red-600 text-white border-red-500"
+                                  >
+                                    Hapus
+                                  </Button>
+                                </>
+                              ) : (
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleRestore(item.id)}
+                                    className="bg-green-500 hover:bg-green-600 text-white border-green-500"
+                                  >
+                                    Pulihkan
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleForceDelete(item.id)}
+                                    className="bg-red-500 hover:bg-red-600 text-white border-red-500"
+                                  >
+                                    Hapus Permanen
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+                
+                {/* Pagination */}
+                {data.length > 0 && (
+                  <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-gray-200">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-gray-700">
+                        Menampilkan {currentPage * itemsPerPage - itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, totalItems)} dari {totalItems} data{showTrashed ? ' yang dihapus' : ''}
+                      </span>
+                      <select
+                        value={itemsPerPage}
+                        onChange={(e) => {
+                          setItemsPerPage(Number(e.target.value));
+                          setCurrentPage(1);
+                        }}
+                        className="border border-gray-300 rounded px-2 py-1 text-sm"
+                      >
+                        <option value={5}>5 per halaman</option>
+                        <option value={10}>10 per halaman</option>
+                        <option value={25}>25 per halaman</option>
+                        <option value={50}>50 per halaman</option>
+                      </select>
+                    </div>
+                    
+                    {totalPages > 1 && (
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => setCurrentPage(currentPage - 1)}
+                          disabled={currentPage === 1}
+                          className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                        >
+                          Sebelumnya
+                        </button>
+                        
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          let pageNum;
+                          if (totalPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (currentPage <= 3) {
+                            pageNum = i + 1;
+                          } else if (currentPage >= totalPages - 2) {
+                            pageNum = totalPages - 4 + i;
+                          } else {
+                            pageNum = currentPage - 2 + i;
+                          }
+                          
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => setCurrentPage(pageNum)}
+                              className={`px-3 py-1 text-sm border rounded ${
+                                currentPage === pageNum
+                                  ? 'bg-blue-500 text-white border-blue-500'
+                                  : 'border-gray-300 hover:bg-gray-50'
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        })}
+                        
+                        <button
+                          onClick={() => setCurrentPage(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                          className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                        >
+                          Selanjutnya
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
-
-          {/* Table */}
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200" style={{ backgroundColor: '#f8f8f8' }}>
-                    {columns.map((col) => (
-                      <th 
-                        key={col.key} 
-                        className={`px-4 py-4 text-sm font-semibold cursor-pointer hover:bg-gray-100 transition-colors ${
-                          col.key === 'actions' ? 'cursor-default' : ''
-                        }`}
-                        style={{ 
-                          color: '#333333', 
-                          ...getAlignmentStyle(col),
-                          ...getColumnWidth(col)
-                        }}
-                        onClick={() => col.key !== 'actions' && handleSort(col.key)}
-                      >
-                        <div style={{ ...getAlignmentStyle(col), display: 'flex', alignItems: 'center', gap: '4px', justifyContent: getAlignmentStyle(col).textAlign === 'center' ? 'center' : getAlignmentStyle(col).textAlign === 'right' ? 'flex-end' : 'flex-start' }}>
-                          {col.label}
-                          {col.key !== 'actions' && getSortIcon(col.key)}
-                        </div>
-                      </th>
-                    ))}
-                    <th className="px-4 py-4 text-sm font-semibold" style={{ color: '#333333', textAlign: 'center', minWidth: '120px' }}>
-                      Aksi
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan={columns.length + 1} className="text-center py-8 text-gray-500">
-                        Memuat data...
-                      </td>
-                    </tr>
-                  ) : data.length === 0 ? (
-                    <tr>
-                      <td colSpan={columns.length + 1} className="text-center py-8 text-gray-500">
-                        Tidak ada data
-                      </td>
-                    </tr>
-                  ) : (
-                    data.map((item, index) => (
-                      <tr 
-                        key={item.id} 
-                        className="border-b border-gray-100 last:border-b-0"
-                      >
-                        {columns.map((col) => (
-                          <td key={col.key} className={`px-4 py-4 text-sm`} style={{ 
-                            color: '#333333', 
-                            ...getAlignmentStyle(col),
-                            wordWrap: 'break-word',
-                            wordBreak: 'break-word',
-                            whiteSpace: 'normal',
-                            maxWidth: col.maxWidth || 'none'
-                          }}>
-                            {col.key === 'id' ? (
-                              <span className="font-semibold" style={{ color: '#333333' }}>
-                                {getValue(item, col.key)}
-                              </span>
-                            ) : (
-                              getValue(item, col.key)
-                            )}
-                          </td>
-                        ))}
-                        <td className="px-4 py-4" style={{ textAlign: 'center' }}>
-                          <div className="flex gap-2">
-                            {!showTrashed ? (
-                              <>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleEdit(item)}
-                                  className="text-white px-4 py-2 cursor-pointer transition-colors duration-200"
-                                  style={{ 
-                                    backgroundColor: '#fcd34d', 
-                                    borderColor: '#fcd34d',
-                                    ':hover': { backgroundColor: '#f59e0b' }
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.target.style.backgroundColor = '#f59e0b';
-                                    e.target.style.borderColor = '#f59e0b';
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.target.style.backgroundColor = '#fcd34d';
-                                    e.target.style.borderColor = '#fcd34d';
-                                  }}
-                                >
-                                  Edit
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleDelete(item.id)}
-                                  className="text-white px-4 py-2 cursor-pointer transition-colors duration-200"
-                                  style={{ 
-                                    backgroundColor: '#ef4444', 
-                                    borderColor: '#ef4444'
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.target.style.backgroundColor = '#dc2626';
-                                    e.target.style.borderColor = '#dc2626';
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.target.style.backgroundColor = '#ef4444';
-                                    e.target.style.borderColor = '#ef4444';
-                                  }}
-                                >
-                                  Hapus
-                                </Button>
-                              </>
-                            ) : (
-                              <>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleRestore(item.id)}
-                                  className="text-white px-4 py-2 cursor-pointer transition-colors duration-200"
-                                  style={{ 
-                                    backgroundColor: '#10b981', 
-                                    borderColor: '#10b981'
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.target.style.backgroundColor = '#059669';
-                                    e.target.style.borderColor = '#059669';
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.target.style.backgroundColor = '#10b981';
-                                    e.target.style.borderColor = '#10b981';
-                                  }}
-                                >
-                                  Pulihkan
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleForceDelete(item.id)}
-                                  className="text-white px-4 py-2 cursor-pointer transition-colors duration-200"
-                                  style={{ 
-                                    backgroundColor: '#ef4444', 
-                                    borderColor: '#ef4444'
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.target.style.backgroundColor = '#dc2626';
-                                    e.target.style.borderColor = '#dc2626';
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.target.style.backgroundColor = '#ef4444';
-                                    e.target.style.borderColor = '#ef4444';
-                                  }}
-                                >
-                                  Hapus Permanen
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-              
-              {/* Pagination Controls */}
-              {data.length > 0 && (
-                <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-gray-200">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-700">
-                      Menampilkan {currentPage * itemsPerPage - itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, totalItems)} dari {totalItems} data{showTrashed ? ' yang dihapus' : ''}
-                    </span>
-                    <select
-                      value={itemsPerPage}
-                      onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
-                      className="border border-gray-300 rounded px-2 py-1 text-sm"
-                    >
-                      <option value={5}>5 per halaman</option>
-                      <option value={10}>10 per halaman</option>
-                      <option value={25}>25 per halaman</option>
-                      <option value={50}>50 per halaman</option>
-                    </select>
-                  </div>
-                  
-                  {totalPages > 1 && (
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                      >
-                        Sebelumnya
-                      </button>
-                      
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        let pageNum;
-                        if (totalPages <= 5) {
-                          pageNum = i + 1;
-                        } else if (currentPage <= 3) {
-                          pageNum = i + 1;
-                        } else if (currentPage >= totalPages - 2) {
-                          pageNum = totalPages - 4 + i;
-                        } else {
-                          pageNum = currentPage - 2 + i;
-                        }
-                        
-                        return (
-                          <button
-                            key={pageNum}
-                            onClick={() => handlePageChange(pageNum)}
-                            className={`px-3 py-1 text-sm border rounded ${
-                              currentPage === pageNum
-                                ? 'bg-blue-500 text-white border-blue-500'
-                                : 'border-gray-300 hover:bg-gray-50'
-                            }`}
-                          >
-                            {pageNum}
-                          </button>
-                        );
-                      })}
-                      
-                      <button
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                      >
-                        Selanjutnya
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
         </div>
       </div>
 
+      {/* Modal */}
       {customEditComponent === "RolePermissionEditor" ? (
         <div className={`fixed inset-0 bg-black/50 z-50 ${isModalOpen ? 'flex' : 'hidden'} items-center justify-center p-4`}>
           <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
@@ -542,7 +462,9 @@ export default function MasterDataLayout({
           isOpen={isModalOpen}
           onClose={() => {
             setIsModalOpen(false);
-            clearForm();
+            setEditData(null);
+            setError(null);
+            setSaveLoading(false);
           }}
           onSave={handleSave}
           editData={editData}
@@ -552,6 +474,9 @@ export default function MasterDataLayout({
           error={error}
         />
       )}
+      
+      {/* Alert Component */}
+      <AlertComponent />
     </div>
   );
 }
