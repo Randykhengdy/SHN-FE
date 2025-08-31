@@ -5,6 +5,7 @@ import './index.css'
 import '@/styles/global.css'
 import '@/styles/jenisBarang.css'
 import { HashRouter } from "react-router-dom";
+import errorHandler from '@/lib/errorHandler';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { ArrowLeft, Calendar, Eye } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,15 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import CustomerInfoTabs from "@/components/CustomerInfoTabs";
-import { 
-  getTermOptions, 
-  getGudangOptions, 
-  getJenisBarangOptions, 
-  getBentukBarangOptions, 
-  getGradeBarangOptions, 
-  getUnitOptions 
-} from "@/services/masterDataService";
 import { useAlert } from "@/hooks/useAlert";
 import { request } from "@/lib/request";
 import { API_ENDPOINTS } from "@/config/api";
@@ -26,26 +17,22 @@ export default function ViewSalesOrderPage() {
   const { showAlert, AlertComponent } = useAlert();
   
   // Loading states
-  const [loading, setLoading] = useState(true);
-  const [loadingMasterData, setLoadingMasterData] = useState(true);
+  const [loading, setLoading] = useState(false);
+  
+  // Prevent multiple API calls
+  const isLoadingRef = useRef(false);
 
   // Master data state
-  const [termOptions, setTermOptions] = useState([]);
   const [warehouseOptions, setWarehouseOptions] = useState([]);
   const [itemTypeOptions, setItemTypeOptions] = useState([]);
   const [itemShapeOptions, setItemShapeOptions] = useState([]);
   const [itemGradeOptions, setItemGradeOptions] = useState([]);
-  const [unitOptions, setUnitOptions] = useState([]);
 
   // Sales Order Data
   const [salesOrder, setSalesOrder] = useState(null);
 
   // Customer Information
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
-  const [customerEmail, setCustomerEmail] = useState("");
-  const [customerAddress, setCustomerAddress] = useState("");
+  const [customerData, setCustomerData] = useState(null);
 
   // Sales Order Details
   const [soNumber, setSoNumber] = useState("");
@@ -57,96 +44,197 @@ export default function ViewSalesOrderPage() {
   // Item List
   const [items, setItems] = useState([]);
 
-  // Load master data and sales order data
+  // Load sales order data (includes all master data)
   useEffect(() => {
     const loadData = async () => {
+      // Prevent duplicate calls using ref
+      if (isLoadingRef.current) {
+        console.log('🔧 Skipping loadData - already loading (ref check)');
+        return;
+      }
+      
+      isLoadingRef.current = true;
+      
       try {
         setLoading(true);
-        setLoadingMasterData(true);
 
-        // Load master data for mapping
-        const [
-          terms,
-          gudang,
-          jenisBarang,
-          bentukBarang,
-          gradeBarang,
-          units
-        ] = await Promise.all([
-          getTermOptions(),
-          getGudangOptions(),
-          getJenisBarangOptions(),
-          getBentukBarangOptions(),
-          getGradeBarangOptions(),
-          getUnitOptions()
-        ]);
-
-        setTermOptions(terms);
-        setWarehouseOptions(gudang);
-        setItemTypeOptions(jenisBarang);
-        setItemShapeOptions(bentukBarang);
-        setItemGradeOptions(gradeBarang);
-        setUnitOptions(units);
-
-        // Load sales order data
+        // Load sales order data (includes master data)
+        console.log('🔧 Fetching sales order data for ID:', id);
+        console.log('🔧 API URL:', `${API_ENDPOINTS.salesOrder}/${id}`);
+        
         const response = await request(`${API_ENDPOINTS.salesOrder}/${id}`, {
           method: 'GET'
         });
 
-        const soData = response.data;
+        console.log('🔍 Sales Order API Response:', response);
+        
+        // Handle different response structures
+        let soData = response.data || response;
+        
+        // If response is an array, take the first item
+        if (Array.isArray(soData)) {
+          soData = soData[0];
+        }
+        
+        // If still no data, try different possible structures
+        if (!soData && response.sales_order) {
+          soData = response.sales_order;
+        }
+        if (!soData && response.salesOrder) {
+          soData = response.salesOrder;
+        }
+        
+        console.log('🔍 Sales Order Data:', soData);
+        
+        if (!soData) {
+          throw new Error('Sales order data not found in response');
+        }
+        
         setSalesOrder(soData);
 
-        // Set customer information
-        if (soData.pelanggan) {
-          setSelectedCustomer(soData.pelanggan);
-          setCustomerName(soData.pelanggan.nama_pelanggan || "");
-          setCustomerPhone(soData.pelanggan.telepon || "");
-          setCustomerEmail(soData.pelanggan.email || "");
-          setCustomerAddress(soData.pelanggan.alamat || "");
+        // Extract master data from sales order response
+        console.log('🔧 Extracting master data from sales order response...');
+        
+        // Get customer data from sales order
+        const customerData = soData.pelanggan || soData.customer || soData.client;
+        if (customerData) {
+          console.log('🔍 Customer data found:', customerData);
+          setCustomerData(customerData);
         }
 
-        // Set sales order details
-        setSoNumber(soData.nomor_so || "");
-        setSoDate(formatDateForInput(soData.tanggal_so));
-        setDeliveryDate(formatDateForInput(soData.tanggal_pengiriman));
-        setTermOfPayment(soData.syarat_pembayaran || "");
-        setOriginWarehouse(soData.gudang?.nama_gudang || "");
+        // Get warehouse data from sales order
+        const warehouseData = soData.gudang || soData.warehouse;
+        if (warehouseData) {
+          console.log('🔍 Warehouse data found:', warehouseData);
+          setWarehouseOptions([warehouseData]);
+        }
 
-        // Set items
-        if (soData.salesOrderItems && soData.salesOrderItems.length > 0) {
-          const mappedItems = soData.salesOrderItems.map(item => ({
-            id: item.id,
-            jenisBarang: getMasterDataName(item.jenis_barang_id, jenisBarang),
-            bentukBarang: getMasterDataName(item.bentuk_barang_id, bentukBarang),
-            gradeBarang: getMasterDataName(item.grade_barang_id, gradeBarang),
-            panjang: item.panjang || 0,
-            lebar: item.lebar || 0,
-            diameter: item.diameter || 0,
-            ketebalan: item.ketebalan || 0,
-            berat: item.berat || 0,
-            qty: item.qty || 0,
-            harga: item.harga || 0,
-            diskon: item.diskon || 0,
-            satuan: getMasterDataName(item.unit_id, units),
-            catatan: item.catatan || "",
-            total: item.total || 0
-          }));
+        // Extract master data from items
+        const itemsData = soData.salesOrderItems || soData.items || soData.sales_order_items || soData.orderItems || [];
+        console.log('🔍 Items data:', itemsData);
+        
+        // Collect unique master data from items
+        const masterData = {
+          jenisBarang: [],
+          bentukBarang: [],
+          gradeBarang: [],
+          units: []
+        };
+
+        itemsData.forEach(item => {
+          // Add jenis barang if exists and not already added
+          if (item.jenis_barang && !masterData.jenisBarang.find(jb => jb.id === item.jenis_barang.id)) {
+            masterData.jenisBarang.push(item.jenis_barang);
+          }
+          
+          // Add bentuk barang if exists and not already added
+          if (item.bentuk_barang && !masterData.bentukBarang.find(bb => bb.id === item.bentuk_barang.id)) {
+            masterData.bentukBarang.push(item.bentuk_barang);
+          }
+          
+          // Add grade barang if exists and not already added
+          if (item.grade_barang && !masterData.gradeBarang.find(gb => gb.id === item.grade_barang.id)) {
+            masterData.gradeBarang.push(item.grade_barang);
+          }
+        });
+
+        console.log('🔧 Master data extracted:', {
+          jenisBarang: masterData.jenisBarang.length,
+          bentukBarang: masterData.bentukBarang.length,
+          gradeBarang: masterData.gradeBarang.length,
+          warehouse: warehouseData ? 1 : 0
+        });
+
+        // Set master data options
+        setItemTypeOptions(masterData.jenisBarang);
+        setItemShapeOptions(masterData.bentukBarang);
+        setItemGradeOptions(masterData.gradeBarang);
+
+
+
+                // Set sales order details
+        console.log('🔍 Setting SO details:', {
+          nomor_so: soData.nomor_so,
+          tanggal_so: soData.tanggal_so,
+          tanggal_pengiriman: soData.tanggal_pengiriman,
+          syarat_pembayaran: soData.syarat_pembayaran,
+          gudang: warehouseData,
+          gudang_nama: warehouseData?.nama_gudang,
+          gudang_nama_alt: warehouseData?.nama,
+          gudang_label: warehouseData?.label
+        });
+        
+        setSoNumber(soData.nomor_so || soData.so_number || soData.order_number || "");
+        setSoDate(formatDateForInput(soData.tanggal_so || soData.so_date || soData.order_date));
+        setDeliveryDate(formatDateForInput(soData.tanggal_pengiriman || soData.delivery_date));
+        setTermOfPayment(soData.syarat_pembayaran || soData.term_of_payment || "");
+        
+        // Set warehouse name from included data
+        const warehouseName = warehouseData?.nama_gudang || warehouseData?.nama || 
+                             warehouseData?.label || 'N/A';
+        setOriginWarehouse(warehouseName);
+
+        // Process items with included master data
+        if (itemsData && itemsData.length > 0) {
+          const mappedItems = itemsData.map(item => {
+            console.log('🔍 Mapping item:', item);
+            
+            // Calculate total if not provided
+            const qty = parseFloat(item.qty || item.quantity || item.jumlah || 0);
+            const harga = parseFloat(item.harga || item.price || 0);
+            const diskon = parseFloat(item.diskon || item.discount || 0);
+            const subtotal = qty * harga;
+            const discountAmount = subtotal * (diskon / 100);
+            const total = subtotal - discountAmount;
+            
+            console.log('🔍 Item calculations:', {
+              qty,
+              harga,
+              diskon,
+              subtotal,
+              discountAmount,
+              total,
+              originalTotal: item.total || item.subtotal
+            });
+            
+            return {
+              id: item.id,
+              jenisBarang: item.jenis_barang?.nama_jenis_barang || 'N/A',
+              bentukBarang: item.bentuk_barang?.nama_bentuk_barang || 'N/A',
+              gradeBarang: item.grade_barang?.nama_grade_barang || 'N/A',
+              panjang: item.panjang || item.length || 0,
+              lebar: item.lebar || item.width || 0,
+              diameter: item.diameter || 0,
+              ketebalan: item.ketebalan || item.thickness || 0,
+              berat: item.berat || item.weight || 0,
+              qty: qty,
+              harga: harga,
+              diskon: diskon,
+              satuan: item.satuan || 'N/A',
+              catatan: item.catatan || item.note || item.notes || "",
+              total: item.total || item.subtotal || total || 0
+            };
+          });
+          console.log('🔍 Mapped items:', mappedItems);
           setItems(mappedItems);
+        } else {
+          console.log('🔍 No items found or items array is empty');
+          setItems([]);
         }
 
-      } catch (error) {
-        console.error('Error loading sales order:', error);
-        showAlert("Error", "Gagal memuat data Sales Order", "error");
-      } finally {
-        setLoading(false);
-        setLoadingMasterData(false);
-      }
+                           } catch (error) {
+          console.error('Error loading sales order:', error);
+          showAlert("Error", "Gagal memuat data Sales Order", "error");
+        } finally {
+         setLoading(false);
+         isLoadingRef.current = false;
+       }
     };
 
-    if (id) {
-      loadData();
-    }
-  }, [id]);
+         if (id) {
+       loadData();
+     }
+   }, [id]);
 
   const formatDateForInput = (dateString) => {
     if (!dateString) return "";
@@ -172,26 +260,55 @@ export default function ViewSalesOrderPage() {
     }).format(amount || 0);
   };
 
-  const getMasterDataName = (id, options) => {
-    const option = options.find(opt => opt.value === id);
-    return option ? option.label : 'N/A';
-  };
 
-  const getTermName = (termValue) => {
-    const term = termOptions.find(t => t.value === termValue);
-    return term ? term.label : termValue;
-  };
 
-  const getWarehouseName = (warehouseId) => {
-    const warehouse = warehouseOptions.find(w => w.value === warehouseId);
-    return warehouse ? warehouse.label : 'N/A';
-  };
+  // Memoized calculations
+  const { subtotal, totalDiscount, ppnAmount, grandTotal } = useMemo(() => {
+    console.log('🔍 Calculating totals for items:', items);
+    
+    const subtotal = items.reduce((sum, item) => {
+      const itemTotal = parseFloat(item.total) || 0;
+      console.log('🔍 Item total:', { item: item.jenisBarang, total: itemTotal });
+      return sum + itemTotal;
+    }, 0);
+    
+    const totalDiscount = items.reduce((sum, item) => {
+      const itemTotal = parseFloat(item.total) || 0;
+      const itemDiscount = parseFloat(item.diskon) || 0;
+      const discountAmount = (itemTotal * itemDiscount / 100);
+      console.log('🔍 Item discount:', { item: item.jenisBarang, total: itemTotal, discount: itemDiscount, discountAmount });
+      return sum + discountAmount;
+    }, 0);
+    
+    const ppnAmount = (subtotal - totalDiscount) * 0.11; // 11% PPN
+    const grandTotal = subtotal - totalDiscount + ppnAmount;
+    
+    console.log('🔍 Final calculations:', {
+      subtotal,
+      totalDiscount,
+      ppnAmount,
+      grandTotal,
+      itemsCount: items.length
+    });
+    
+    return { subtotal, totalDiscount, ppnAmount, grandTotal };
+  }, [items]);
 
-  // Calculate totals
-  const subtotal = items.reduce((sum, item) => sum + (item.total || 0), 0);
-  const totalDiscount = items.reduce((sum, item) => sum + ((item.total * item.diskon / 100) || 0), 0);
-  const ppnAmount = (subtotal - totalDiscount) * 0.11; // 11% PPN
-  const grandTotal = subtotal - totalDiscount + ppnAmount;
+  // Debug logging for render (only in development)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔍 Render state:', {
+      loading,
+      salesOrder: !!salesOrder,
+      soNumber,
+      soDate,
+      deliveryDate,
+      termOfPayment,
+      originWarehouse,
+      customerData: !!customerData,
+      itemsCount: items.length,
+      warehouseOptionsCount: warehouseOptions.length
+    });
+  }
 
   if (loading) {
     return (
@@ -274,14 +391,14 @@ export default function ViewSalesOrderPage() {
                   className="bg-gray-50"
                 />
               </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-700">Syarat Pembayaran</Label>
-                <Input 
-                  value={getTermName(termOfPayment)} 
-                  disabled 
-                  className="bg-gray-50"
-                />
-              </div>
+                             <div>
+                 <Label className="text-sm font-medium text-gray-700">Syarat Pembayaran</Label>
+                 <Input 
+                   value={termOfPayment || 'N/A'} 
+                   disabled 
+                   className="bg-gray-50"
+                 />
+               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">Asal Gudang</Label>
                 <Input 
@@ -294,22 +411,62 @@ export default function ViewSalesOrderPage() {
           </CardContent>
         </Card>
 
-        {/* Customer Information */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Informasi Pelanggan</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CustomerInfoTabs
-              selectedCustomer={selectedCustomer}
-              customerName={customerName}
-              customerPhone={customerPhone}
-              customerEmail={customerEmail}
-              customerAddress={customerAddress}
-              disabled={true}
-            />
-          </CardContent>
-        </Card>
+                 {/* Customer Information */}
+         <Card className="mb-6">
+           <CardHeader>
+             <CardTitle>Informasi Pelanggan</CardTitle>
+           </CardHeader>
+                       <CardContent>
+              {customerData ? (
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div>
+                   <Label className="text-sm font-medium text-gray-700">Kode Pelanggan</Label>
+                   <Input 
+                     value={customerData.kode || 'N/A'} 
+                     disabled 
+                     className="bg-gray-50"
+                   />
+                 </div>
+                 <div>
+                   <Label className="text-sm font-medium text-gray-700">Nama Pelanggan</Label>
+                   <Input 
+                     value={customerData.nama_pelanggan || customerData.nama || customerData.name || 'N/A'} 
+                     disabled 
+                     className="bg-gray-50"
+                   />
+                 </div>
+                 <div>
+                   <Label className="text-sm font-medium text-gray-700">Kota</Label>
+                   <Input 
+                     value={customerData.kota || 'N/A'} 
+                     disabled 
+                     className="bg-gray-50"
+                   />
+                 </div>
+                 <div>
+                   <Label className="text-sm font-medium text-gray-700">Telepon/HP</Label>
+                   <Input 
+                     value={customerData.telepon_hp || customerData.telepon || customerData.phone || 'N/A'} 
+                     disabled 
+                     className="bg-gray-50"
+                   />
+                 </div>
+                 <div className="md:col-span-2">
+                   <Label className="text-sm font-medium text-gray-700">Contact Person</Label>
+                   <Input 
+                     value={customerData.contact_person || 'N/A'} 
+                     disabled 
+                     className="bg-gray-50"
+                   />
+                 </div>
+               </div>
+             ) : (
+               <div className="text-center py-8 text-gray-500">
+                 Data pelanggan tidak ditemukan
+               </div>
+             )}
+           </CardContent>
+         </Card>
 
         {/* Items Table */}
         <Card className="mb-6">
@@ -319,51 +476,55 @@ export default function ViewSalesOrderPage() {
           <CardContent>
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50">
-                    <TableHead className="font-semibold">No</TableHead>
-                    <TableHead className="font-semibold">Jenis Barang</TableHead>
-                    <TableHead className="font-semibold">Bentuk</TableHead>
-                    <TableHead className="font-semibold">Grade</TableHead>
-                    <TableHead className="font-semibold text-center">Panjang</TableHead>
-                    <TableHead className="font-semibold text-center">Lebar</TableHead>
-                    <TableHead className="font-semibold text-center">Diameter</TableHead>
-                    <TableHead className="font-semibold text-center">Ketebalan</TableHead>
-                    <TableHead className="font-semibold text-center">Berat</TableHead>
-                    <TableHead className="font-semibold text-center">Qty</TableHead>
-                    <TableHead className="font-semibold text-center">Harga</TableHead>
-                    <TableHead className="font-semibold text-center">Diskon</TableHead>
-                    <TableHead className="font-semibold text-center">Satuan</TableHead>
-                    <TableHead className="font-semibold text-center">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
+                                 <TableHeader className="table-header-standard">
+                   <TableRow className="bg-gray-50">
+                     <TableHead className="table-header-cell-standard">#</TableHead>
+                     <TableHead className="table-header-cell-standard">Jenis Barang</TableHead>
+                     <TableHead className="table-header-cell-standard">Bentuk</TableHead>
+                     <TableHead className="table-header-cell-standard">Grade</TableHead>
+                     <TableHead className="table-header-cell-standard">Dimensi</TableHead>
+                     <TableHead className="table-header-cell-standard">Qty</TableHead>
+                     <TableHead className="table-header-cell-standard">Luas/item</TableHead>
+                     <TableHead className="table-header-cell-standard">Harga</TableHead>
+                     <TableHead className="table-header-cell-standard">Satuan</TableHead>
+                     <TableHead className="table-header-cell-standard">Diskon</TableHead>
+                     <TableHead className="table-header-cell-standard">Total</TableHead>
+                   </TableRow>
+                 </TableHeader>
                 <TableBody>
-                  {items.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={14} className="text-center py-8 text-gray-500">
-                        Tidak ada item
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    items.map((item, index) => (
-                      <TableRow key={item.id || index} className="hover:bg-gray-50">
-                        <TableCell className="font-medium">{index + 1}</TableCell>
-                        <TableCell>{item.jenisBarang}</TableCell>
-                        <TableCell>{item.bentukBarang}</TableCell>
-                        <TableCell>{item.gradeBarang}</TableCell>
-                        <TableCell className="text-center">{item.panjang} mm</TableCell>
-                        <TableCell className="text-center">{item.lebar} mm</TableCell>
-                        <TableCell className="text-center">{item.diameter} mm</TableCell>
-                        <TableCell className="text-center">{item.ketebalan} mm</TableCell>
-                        <TableCell className="text-center">{item.berat} kg</TableCell>
-                        <TableCell className="text-center">{item.qty}</TableCell>
-                        <TableCell className="text-center">{formatCurrency(item.harga)}</TableCell>
-                        <TableCell className="text-center">{item.diskon}%</TableCell>
-                        <TableCell className="text-center">{item.satuan}</TableCell>
-                        <TableCell className="text-center font-semibold">{formatCurrency(item.total)}</TableCell>
-                      </TableRow>
-                    ))
-                  )}
+                                     {items.length === 0 ? (
+                     <TableRow>
+                       <TableCell colSpan={12} className="text-center py-8 text-gray-500">
+                         Tidak ada item
+                       </TableCell>
+                     </TableRow>
+                   ) : (
+                     items.map((item, index) => {
+                       // Calculate luas per item
+                       const panjang = parseFloat(item.panjang) || 0;
+                       const lebar = parseFloat(item.lebar) || 0;
+                       const luasPerItem = panjang * lebar;
+                       
+                       // Format dimensi
+                       const dimensi = `${panjang} x ${lebar} mm`;
+                       
+                       return (
+                         <TableRow key={item.id || index} className="hover:bg-gray-50">
+                           <TableCell className="font-medium">{index + 1}</TableCell>
+                           <TableCell>{item.jenisBarang}</TableCell>
+                           <TableCell>{item.bentukBarang}</TableCell>
+                           <TableCell>{item.gradeBarang}</TableCell>
+                           <TableCell>{dimensi}</TableCell>
+                           <TableCell>{item.qty}</TableCell>
+                           <TableCell>{luasPerItem.toFixed(2)} mm²</TableCell>
+                           <TableCell>{formatCurrency(item.harga)}</TableCell>
+                           <TableCell>{item.satuan}</TableCell>
+                           <TableCell>{item.diskon}%</TableCell>
+                           <TableCell className="font-semibold">{formatCurrency(item.total)}</TableCell>
+                         </TableRow>
+                       );
+                     })
+                   )}
                 </TableBody>
               </Table>
             </div>

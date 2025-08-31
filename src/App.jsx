@@ -2,7 +2,6 @@ import AppRouter from "@/router/AppRouter";
 import useElectronNavigation from "@/hooks/useElectronNavigation";
 import TokenInterceptor from "@/components/TokenInterceptor";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import DevTools from "@/components/DevTools";
 import "@/lib/tokenDebug"; // Import debug utilities
 
 function App() {
@@ -14,9 +13,6 @@ function App() {
       <div className="h-screen w-screen overflow-hidden">
         {/* Token Interceptor - Check token expiration */}
         <TokenInterceptor />
-        
-        {/* Dev Tools - Only in development */}
-        <DevTools />
         
         {/* Main content - Full width without sidebar */}
         <main className="w-full h-full overflow-auto">
