@@ -20,11 +20,13 @@ export function decodeJWT(token) {
   }
 }
 
+import { getToken, getUser } from './tokenStorage';
+
 // Get user info dari JWT token
 export function getUserInfo() {
-  const token = localStorage.getItem('token');
+  const token = getToken();
   if (!token) {
-    console.log('🔍 No token found in localStorage');
+    console.log('🔍 No token found in tokenStorage');
     return null;
   }
   
@@ -36,18 +38,11 @@ export function getUserInfo() {
   
   console.log('🔍 JWT Payload:', payload);
   
-  // Check different possible role fields
-  const roles = payload.roles || payload.role || payload.user_roles || payload.authorities || [];
-  console.log('🔍 Extracted roles:', roles);
-  console.log('🔍 Roles type:', typeof roles);
-  console.log('🔍 Is Array:', Array.isArray(roles));
-  
   const userInfo = {
-    name: payload.name || payload.full_name || payload.display_name,
-    username: payload.username || payload.user_name || payload.preferred_username,
-    email: payload.email,
-    roles: Array.isArray(roles) ? roles : [roles].filter(Boolean),
-    id: payload.sub || payload.id || payload.user_id
+    name: payload.name,
+    username: payload.username,
+    roles: payload.roles || [],
+    id: payload.sub
   };
   
   console.log('🔍 Final user info:', userInfo);

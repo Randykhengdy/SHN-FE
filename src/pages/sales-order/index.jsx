@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Plus, Search, Filter, Download, FileText, Eye, Trash2, ArrowRight, Calendar, RefreshCw } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { Plus, Search, Filter, Download, FileText, Eye, Trash2, ArrowRight, Calendar, RefreshCw, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,9 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { request } from "@/lib/request";
-import { API_ENDPOINTS } from "@/config/api";
+import { salesOrderService } from "@/services/salesOrderService";
 import { useAlert } from "@/hooks/useAlert";
+import { isAdmin } from "@/lib/utils";
+import CustomAlert from "@/components/modals/CustomAlert";
+import DeleteRequestModal from "@/components/modals/DeleteRequestModal";
+import SalesOrderLayout from "@/components/SalesOrderLayout";
 
 const statusOptions = [
   { value: "all", label: "Semua Status" },
@@ -43,18 +46,21 @@ export default function SalesOrderListPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
+  
+  // Delete modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteModalType, setDeleteModalType] = useState('admin'); // 'admin' or 'request'
+  const [selectedSO, setSelectedSO] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false); // Prevent multiple delete operations
+  
+  // Delete request modal state
+  const [showDeleteRequestModal, setShowDeleteRequestModal] = useState(false);
 
   // Load sales orders from API
-  useEffect(() => {
-    loadSalesOrders();
-  }, [currentPage, itemsPerPage, searchTerm, statusFilter, periodFilter]);
-
-  const loadSalesOrders = async () => {
+  const loadSalesOrders = useCallback(async () => {
     try {
       setLoading(true);
-      const result = await request(API_ENDPOINTS.salesOrder, {
-        method: 'GET'
-      });
+      const result = await salesOrderService.getAll();
       
       // Transform API data to match our UI structure
       const transformedData = result.data.map(so => ({
@@ -70,7 +76,11 @@ export default function SalesOrderListPage() {
         totalDiskon: parseFloat(so.total_diskon) || 0,
         ppnAmount: parseFloat(so.ppn_amount) || 0,
         syaratPembayaran: so.syarat_pembayaran,
-        status: "Draft", // Default status since API doesn't provide it yet
+         status: so.status || "Draft",
+         deleteRequestStatus: so.delete_requested_by ? 'delete_requested' : null,
+         deleteRequestedAt: so.delete_requested_at || null,
+         deleteReason: so.delete_reason || null,
+         deleteRequestedBy: so.delete_requested_by?.name || null,
         items: so.salesOrderItems || []
       }));
       
@@ -101,7 +111,12 @@ export default function SalesOrderListPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, itemsPerPage, searchTerm, statusFilter, periodFilter]);
+
+  // Load sales orders from API
+  useEffect(() => {
+    loadSalesOrders();
+  }, [loadSalesOrders]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -146,6 +161,101 @@ export default function SalesOrderListPage() {
     }).format(amount);
   };
 
+  // Handle delete SO (admin only)
+  const handleDeleteSO = (so) => {
+    setSelectedSO(so);
+    setDeleteModalType('admin');
+    setShowDeleteModal(true);
+  };
+
+  // Handle request delete SO (non-admin)
+  const handleRequestDeleteSO = (so) => {
+    setSelectedSO(so);
+    setShowDeleteRequestModal(true);
+  };
+
+  // Handle delete confirmation (admin)
+  const handleDeleteConfirm = async () => {
+    // Prevent multiple delete operations
+    if (isDeleting) {
+      console.log('⏭️ Already processing delete operation');
+      return;
+    }
+    
+    try {
+      setIsDeleting(true);
+      
+      // Call delete API - use soft delete
+      const response = await salesOrderService.delete(selectedSO.id, 'soft');
+      
+      console.log('✅ Sales Order deleted:', response);
+      
+      // Close modal first
+      setShowDeleteModal(false);
+      
+      // Show success message and reload data after alert closes
+      showAlert("Sukses", "Sales Order berhasil dihapus!", "success", () => {
+        loadSalesOrders();
+      });
+      
+    } catch (error) {
+      console.error('❌ Error deleting Sales Order:', error);
+      showAlert("Error", "Gagal menghapus Sales Order", "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Handle request delete confirmation (non-admin)
+  const handleRequestDeleteConfirm = async (reason) => {
+    try {
+      // Call request delete API
+      const response = await salesOrderService.requestDelete(selectedSO.id, reason);
+      
+      console.log('✅ Delete request submitted:', response);
+      
+      // Close modal first
+      setShowDeleteRequestModal(false);
+      
+      // Show success message and reload data after alert closes
+      showAlert(
+        "Sukses", 
+        "Permintaan hapus berhasil diajukan!\n\n" +
+        "📧 Admin akan meninjau permintaan Anda.\n" +
+        "📋 Alasan: " + reason, 
+        "success",
+        () => {
+          loadSalesOrders();
+        }
+      );
+      
+    } catch (error) {
+      console.error('❌ Error requesting delete:', error);
+      showAlert("Error", "Gagal mengajukan permintaan hapus", "error");
+    }
+  };
+
+  // Handle cancel delete request (non-admin)
+  const handleCancelDeleteRequest = async (so) => {
+    try {
+      // Call cancel delete request API
+      const response = await salesOrderService.cancelDeleteRequest(so.id);
+      
+      console.log('✅ Delete request cancelled:', response);
+      
+      // Show success message and reload data after alert closes
+      showAlert("Sukses", "Permintaan hapus berhasil dibatalkan!", "success", () => {
+        loadSalesOrders();
+      });
+      
+    } catch (error) {
+      console.error('❌ Error cancelling delete request:', error);
+      showAlert("Error", "Gagal membatalkan permintaan hapus", "error");
+    }
+  };
+
+
+
   const handleClearFilter = () => {
     setSearchTerm("");
     setStatusFilter("all");
@@ -187,26 +297,16 @@ export default function SalesOrderListPage() {
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="text-gray-500 text-sm font-medium uppercase tracking-wider mb-1">
-            TRANSAKSI
-          </div>
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Sales Order (SO)</h1>
-              <div className="mt-2 bg-white rounded-lg px-4 py-2 border border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-800">Daftar Sales Order</h2>
-              </div>
-            </div>
-            <Button onClick={handleAddNew} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
-              <Plus className="w-4 h-4 mr-2" />
-              Tambah Sales Order
-            </Button>
-          </div>
+    <SalesOrderLayout title="Sales Order (SO)" subtitle="TRANSAKSI">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+        <div className="bg-white rounded-lg px-4 py-2 border border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-800">Daftar Sales Order</h2>
         </div>
+        <Button onClick={handleAddNew} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
+          <Plus className="w-4 h-4 mr-2" />
+          Tambah Sales Order
+        </Button>
+      </div>
 
         {/* Filter and Search */}
         <Card className="mb-6">
@@ -347,11 +447,17 @@ export default function SalesOrderListPage() {
                         <TableCell>{formatCurrency(so.totalDiskon)}</TableCell>
                         <TableCell>{formatCurrency(so.ppnAmount)}</TableCell>
                         <TableCell className="font-semibold">{formatCurrency(so.totalHarga)}</TableCell>
-                        <TableCell>
-                          <Badge className={getStatusColor(so.status)}>
-                            {so.status}
-                          </Badge>
-                        </TableCell>
+                                                 <TableCell>
+                           {so.deleteRequestStatus === 'delete_requested' ? (
+                             <Badge className="bg-orange-100 text-orange-800">
+                               🗑️ Delete Requested
+                             </Badge>
+                           ) : (
+                             <Badge className={getStatusColor(so.status)}>
+                               {so.status}
+                             </Badge>
+                           )}
+                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col sm:flex-row gap-2 justify-center">
                             <Button size="sm" variant="outline" onClick={() => handleView(so.id)}>
@@ -361,9 +467,34 @@ export default function SalesOrderListPage() {
                               <ArrowRight className="w-4 h-4 mr-1" />
                               <span className="hidden sm:inline">Convert to WO</span>
                             </Button>
-                            <Button size="sm" variant="destructive" onClick={() => handleDelete(so.id)}>
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            {isAdmin() ? (
+                              <Button 
+                                size="sm" 
+                                variant="destructive" 
+                                onClick={() => handleDeleteSO(so)}
+                                title="Hapus Sales Order (Admin)"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            ) : so.deleteRequestStatus === 'delete_requested' ? (
+                              <Button 
+                                size="sm" 
+                                className="bg-yellow-600 hover:bg-yellow-700" 
+                                onClick={() => handleCancelDeleteRequest(so)}
+                                title="Batalkan Permintaan Hapus"
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            ) : (
+                              <Button 
+                                size="sm" 
+                                className="bg-orange-600 hover:bg-orange-700" 
+                                onClick={() => handleRequestDeleteSO(so)}
+                                title="Ajukan Permintaan Hapus"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -484,9 +615,30 @@ export default function SalesOrderListPage() {
           </CardContent>
         </Card>
         
+                 {/* Delete Confirmation Modal */}
+         <CustomAlert
+           open={showDeleteModal}
+           onOpenChange={setShowDeleteModal}
+           title="Konfirmasi Hapus"
+           message={`Yakin ingin menghapus Sales Order "${selectedSO?.noSo}"?`}
+           type="warning"
+           showCancel={true}
+           confirmText={isDeleting ? "Menghapus..." : "Ya, Hapus"}
+           cancelText="Tidak"
+           onConfirm={handleDeleteConfirm}
+         />
+         
+         {/* Delete Request Modal */}
+         <DeleteRequestModal
+           open={showDeleteRequestModal}
+           onOpenChange={setShowDeleteRequestModal}
+           salesOrder={selectedSO}
+           onConfirm={handleRequestDeleteConfirm}
+           onCancel={() => setShowDeleteRequestModal(false)}
+         />
+        
         {/* Alert Modal Component */}
         <AlertComponent />
-      </div>
-    </div>
+      </SalesOrderLayout>
   );
 }

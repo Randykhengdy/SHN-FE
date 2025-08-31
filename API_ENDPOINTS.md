@@ -120,12 +120,12 @@
 
 ## Master Data - Item Barang
 - `GET /api/item-barang` - List all item barang
-  - **Response:** `{ "data": [{ "id": "int", "kode_barang": "string", "nama_item_barang": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }] }`
+  - **Response:** `{ "data": [{ "id": "int", "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }] }`
 - `POST /api/item-barang` - Create new item barang
-  - **Request:** `{ "kode_barang": "string", "nama_item_barang": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }`
+  - **Request:** `{ "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }`
 - `GET /api/item-barang/{id}` - Get item barang by ID
 - `PUT /api/item-barang/{id}` - Update item barang
-  - **Request:** `{ "kode_barang": "string", "nama_item_barang": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }`
+  - **Request:** `{ "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }`
 - `PATCH /api/item-barang/{id}` - Update item barang
 - `DELETE /api/item-barang/{id}/soft` - Soft delete item barang
 - `PATCH /api/item-barang/{id}/restore` - Restore soft deleted item barang
@@ -264,17 +264,25 @@
 
 ## Transaction - Sales Order
 - `GET /api/sales-order` - List all sales order
-  - **Response:** `{ "data": [{ "id": "int", "nomor_so": "string", "tanggal_so": "date", "tanggal_pengiriman": "date", "syarat_pembayaran": "string", "gudang_id": "int", "pelanggan_id": "int", "subtotal": "decimal", "total_diskon": "decimal", "ppn_percent": "decimal", "ppn_amount": "decimal", "total_harga_so": "decimal", "salesOrderItems": [{ "id": "int", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "qty": "int", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "harga": "decimal", "satuan": "string", "diskon": "decimal", "catatan": "string", "jenis_barang": { "id": "int", "nama_jenis_barang": "string" }, "bentuk_barang": { "id": "int", "nama_bentuk_barang": "string" }, "grade_barang": { "id": "int", "nama_grade_barang": "string" } }], "pelanggan": { "id": "int", "nama_pelanggan": "string", "alamat": "string", "telepon": "string" }, "gudang": { "id": "int", "kode": "string", "nama_gudang": "string", "tipe_gudang": "string" } }] }`
+  - **Response:** `{ "data": [{ "id": "int", "nomor_so": "string", "tanggal_so": "date", "tanggal_pengiriman": "date", "syarat_pembayaran": "string", "gudang_id": "int", "pelanggan_id": "int", "subtotal": "decimal", "total_diskon": "decimal", "ppn_percent": "decimal", "ppn_amount": "decimal", "total_harga_so": "decimal", "status": "string", "salesOrderItems": [{ "id": "int", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "qty": "int", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "harga": "decimal", "satuan": "string", "diskon": "decimal", "catatan": "string", "jenis_barang": { "id": "int", "nama_jenis_barang": "string" }, "bentuk_barang": { "id": "int", "nama_bentuk_barang": "string" }, "grade_barang": { "id": "int", "nama_grade_barang": "string" } }], "pelanggan": { "id": "int", "nama_pelanggan": "string", "alamat": "string", "telepon": "string" }, "gudang": { "id": "int", "kode": "string", "nama_gudang": "string", "tipe_gudang": "string" } }] }`
 - `POST /api/sales-order` - Create new sales order
   - **Request:** `{ "nomor_so": "string", "tanggal_so": "date", "tanggal_pengiriman": "date", "syarat_pembayaran": "string", "gudang_id": "int", "pelanggan_id": "int", "subtotal": "decimal", "total_diskon": "decimal", "ppn_percent": "decimal", "ppn_amount": "decimal", "total_harga_so": "decimal", "items": [{ "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "qty": "int", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "harga": "decimal", "satuan": "string", "diskon": "decimal", "catatan": "string" }] }`
 - `GET /api/sales-order/{id}` - Get sales order by ID
-  - **Response:** `{ "id": "int", "nomor_so": "string", "tanggal_so": "date", "tanggal_pengiriman": "date", "syarat_pembayaran": "string", "gudang_id": "int", "pelanggan_id": "int", "subtotal": "decimal", "total_diskon": "decimal", "ppn_percent": "decimal", "ppn_amount": "decimal", "total_harga_so": "decimal", "salesOrderItems": [{ "id": "int", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "qty": "int", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "harga": "decimal", "satuan": "string", "diskon": "decimal", "catatan": "string", "jenis_barang": { "id": "int", "nama_jenis_barang": "string" }, "bentuk_barang": { "id": "int", "nama_bentuk_barang": "string" }, "grade_barang": { "id": "int", "nama_grade_barang": "string" } }], "pelanggan": { "id": "int", "nama_pelanggan": "string", "alamat": "string", "telepon": "string" }, "gudang": { "id": "int", "kode": "string", "nama_gudang": "string", "tipe_gudang": "string" } }`
+  - **Response:** `{ "id": "int", "nomor_so": "string", "tanggal_so": "date", "tanggal_pengiriman": "date", "syarat_pembayaran": "string", "gudang_id": "int", "pelanggan_id": "int", "subtotal": "decimal", "total_diskon": "decimal", "ppn_percent": "decimal", "ppn_amount": "decimal", "total_harga_so": "decimal", "status": "string", "salesOrderItems": [{ "id": "int", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "qty": "int", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "harga": "decimal", "satuan": "string", "diskon": "decimal", "catatan": "string", "jenis_barang": { "id": "int", "nama_jenis_barang": "string" }, "bentuk_barang": { "id": "int", "nama_bentuk_barang": "string" }, "grade_barang": { "id": "int", "nama_grade_barang": "string" } }], "pelanggan": { "id": "int", "nama_pelanggan": "string", "alamat": "string", "telepon": "string" }, "gudang": { "id": "int", "kode": "string", "nama_gudang": "string", "tipe_gudang": "string" } }`
 - `PUT /api/sales-order/{id}` - Update sales order
   - **Request:** `{ "nomor_so": "string", "tanggal_so": "date", "tanggal_pengiriman": "date", "syarat_pembayaran": "string", "gudang_id": "int", "pelanggan_id": "int", "subtotal": "decimal", "total_diskon": "decimal", "ppn_percent": "decimal", "ppn_amount": "decimal", "total_harga_so": "decimal", "items": [{ "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "qty": "int", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "harga": "decimal", "satuan": "string", "diskon": "decimal", "catatan": "string" }] }`
 - `PATCH /api/sales-order/{id}` - Update sales order
-- `DELETE /api/sales-order/{id}/soft` - Soft delete sales order
-- `PATCH /api/sales-order/{id}/restore` - Restore soft deleted sales order
-- `DELETE /api/sales-order/{id}/force` - Force delete sales order
+- `POST /api/sales-order/{id}/request-delete` - Request delete sales order (user)
+  - **Request:** `{ "delete_reason": "string" }`
+- `PATCH /api/sales-order/{id}/cancel-delete-request` - Cancel delete request (user)
+- `GET /api/sales-order/pending-delete-requests` - Get pending delete requests for approval (admin only)
+  - **Response:** `{ "data": [{ "id": "int", "nomor_so": "string", "status": "delete_requested", "delete_reason": "string", "delete_requested_at": "datetime", "deleteRequestedBy": { "id": "int", "name": "string" } }] }`
+- `PATCH /api/sales-order/{id}/approve-delete` - Approve delete request (admin only)
+- `PATCH /api/sales-order/{id}/reject-delete` - Reject delete request (admin only)
+  - **Request:** `{ "rejection_reason": "string" }`
+- `DELETE /api/sales-order/{id}/soft` - Soft delete sales order (admin only)
+- `PATCH /api/sales-order/{id}/restore` - Restore soft deleted sales order (admin only)
+- `DELETE /api/sales-order/{id}/force` - Force delete sales order (admin only)
 
 ## Static Data APIs (Temporary)
 - `GET /api/static/tipe-gudang` - Get tipe gudang data
@@ -382,6 +390,13 @@
     "ppn_percent": 11.0,
     "ppn_amount": 29783,
     "total_harga_so": 300533,
+    "status": "active",
+    "delete_requested_by": null,
+    "delete_requested_at": null,
+    "delete_approved_by": null,
+    "delete_approved_at": null,
+    "delete_reason": null,
+    "delete_rejection_reason": null,
     "created_at": "2025-08-28T19:00:00.000000Z",
     "updated_at": "2025-08-28T19:00:00.000000Z",
     "salesOrderItems": [
@@ -426,6 +441,72 @@
       "kode": "G001",
       "nama_gudang": "Gudang Utama",
       "tipe_gudang": "Gudang"
+    },
+    "deleteRequestedBy": null,
+    "deleteApprovedBy": null
+  }
+}
+```
+
+## Sales Order Delete Request Management
+
+### Get Sales Order with Filter
+- **GET** `/api/sales-order`
+- **Query Parameters:**
+  - `search` - Pencarian berdasarkan nomor SO, syarat pembayaran, atau status
+  - `status` - Filter berdasarkan status (active, delete_requested, deleted)
+  - `per_page` - Jumlah data per halaman (default: 10)
+  - `page` - Nomor halaman (default: 1)
+
+### Get Pending Delete Requests for Approval (Admin Only)
+- **GET** `/api/sales-order/pending-delete-requests`
+- **Query Parameters:**
+  - `search` - Pencarian berdasarkan nomor SO atau syarat pembayaran
+  - `delete_requested_from` - Filter tanggal request delete dari (YYYY-MM-DD)
+  - `delete_requested_to` - Filter tanggal request delete sampai (YYYY-MM-DD)
+  - `per_page` - Jumlah data per halaman (default: 10)
+  - `page` - Nomor halaman (default: 1)
+
+### Request Delete (User)
+- **POST** `/api/sales-order/{id}/request-delete`
+- **Body:**
+```json
+{
+  "delete_reason": "Data tidak valid dan perlu dihapus"
+}
+```
+
+### Approve Delete Request (Admin Only)
+- **PATCH** `/api/sales-order/{id}/approve-delete`
+
+### Reject Delete Request (Admin Only)
+- **PATCH** `/api/sales-order/{id}/reject-delete`
+- **Body:**
+```json
+{
+  "rejection_reason": "Data masih diperlukan untuk referensi"
+}
+```
+
+### Cancel Delete Request (User)
+- **PATCH** `/api/sales-order/{id}/cancel-delete-request`
+
+### Example Response for Delete Request:
+```json
+{
+  "success": true,
+  "message": "Request penghapusan Sales Order berhasil dikirim",
+  "data": {
+    "id": 1,
+    "nomor_so": "SO-20250825-001",
+    "status": "delete_requested",
+    "delete_requested_by": 1,
+    "delete_requested_at": "2025-08-31T14:00:00.000000Z",
+    "delete_reason": "Data tidak valid dan perlu dihapus",
+    "deleteRequestedBy": {
+      "id": 1,
+      "name": "John Doe",
+      "email": "john@example.com"
     }
   }
 }

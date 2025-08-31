@@ -8,13 +8,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAlert } from "@/hooks/useAlert";
+import { useRole } from "@/hooks/useRole";
+import RoleGuard from "@/components/RoleGuard";
 import { request } from "@/lib/request";
 import { API_ENDPOINTS } from "@/config/api";
+import SalesOrderLayout from "@/components/SalesOrderLayout";
 
 export default function ViewSalesOrderPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { showAlert, AlertComponent } = useAlert();
+  const { isUserAdmin, hasRole } = useRole();
   
   // Loading states
   const [loading, setLoading] = useState(false);
@@ -43,6 +47,8 @@ export default function ViewSalesOrderPage() {
 
   // Item List
   const [items, setItems] = useState([]);
+  
+
 
   // Load sales order data (includes all master data)
   useEffect(() => {
@@ -150,9 +156,7 @@ export default function ViewSalesOrderPage() {
         setItemShapeOptions(masterData.bentukBarang);
         setItemGradeOptions(masterData.gradeBarang);
 
-
-
-                // Set sales order details
+        // Set sales order details
         console.log('🔍 Setting SO details:', {
           nomor_so: soData.nomor_so,
           tanggal_so: soData.tanggal_so,
@@ -221,20 +225,19 @@ export default function ViewSalesOrderPage() {
           console.log('🔍 No items found or items array is empty');
           setItems([]);
         }
-
-                           } catch (error) {
-          console.error('Error loading sales order:', error);
-          showAlert("Error", "Gagal memuat data Sales Order", "error");
-        } finally {
-         setLoading(false);
-         isLoadingRef.current = false;
-       }
+      } catch (error) {
+        console.error('Error loading sales order:', error);
+        showAlert("Error", "Gagal memuat data Sales Order", "error");
+      } finally {
+        setLoading(false);
+        isLoadingRef.current = false;
+      }
     };
 
-         if (id) {
-       loadData();
-     }
-   }, [id]);
+    if (id) {
+      loadData();
+    }
+  }, [id]);
 
   const formatDateForInput = (dateString) => {
     if (!dateString) return "";
@@ -259,6 +262,8 @@ export default function ViewSalesOrderPage() {
       minimumFractionDigits: 0
     }).format(amount || 0);
   };
+
+
 
 
 
@@ -294,21 +299,7 @@ export default function ViewSalesOrderPage() {
     return { subtotal, totalDiscount, ppnAmount, grandTotal };
   }, [items]);
 
-  // Debug logging for render (only in development)
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🔍 Render state:', {
-      loading,
-      salesOrder: !!salesOrder,
-      soNumber,
-      soDate,
-      deliveryDate,
-      termOfPayment,
-      originWarehouse,
-      customerData: !!customerData,
-      itemsCount: items.length,
-      warehouseOptionsCount: warehouseOptions.length
-    });
-  }
+
 
   if (loading) {
     return (
@@ -335,27 +326,17 @@ export default function ViewSalesOrderPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-4 mb-4">
-            <Button 
-              variant="outline" 
-              onClick={() => navigate('/sales-order')}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Kembali
-            </Button>
-            <div>
-              <div className="text-gray-500 text-sm font-medium uppercase tracking-wider mb-1">
-                TRANSAKSI
-              </div>
-              <h1 className="text-2xl font-bold text-gray-900">Detail Sales Order</h1>
-            </div>
-          </div>
-        </div>
+    <SalesOrderLayout title="Detail Sales Order" subtitle="TRANSAKSI">
+      <div className="flex items-center gap-4 mb-6">
+        <Button 
+          variant="outline" 
+          onClick={() => navigate('/sales-order')}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Kembali
+        </Button>
+      </div>
 
         {/* Sales Order Information */}
         <Card className="mb-6">
@@ -583,9 +564,21 @@ export default function ViewSalesOrderPage() {
           </CardContent>
         </Card>
         
+        {/* Action Buttons */}
+        <div className="flex justify-center gap-4 mt-6">
+          <Button size="lg" variant="outline" onClick={() => navigate('/sales-order')}>
+            Kembali ke List
+          </Button>
+          
+          <RoleGuard roles={['admin', 'manager', 'supervisor']}>
+            <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
+              Print SO
+            </Button>
+          </RoleGuard>
+        </div>
+        
         {/* Alert Modal Component */}
         <AlertComponent />
-      </div>
-    </div>
+      </SalesOrderLayout>
   );
 }

@@ -18,11 +18,14 @@ import {
   getUnitOptions 
 } from "@/services/masterDataService";
 import { useAlert } from "@/hooks/useAlert";
+import { useRole } from "@/hooks/useRole";
 import { request } from "@/lib/request";
 import { API_ENDPOINTS } from "@/config/api";
+import SalesOrderLayout from "@/components/SalesOrderLayout";
 
 export default function AddSalesOrderPage() {
   const { showAlert, AlertComponent } = useAlert();
+  const { isUserAdmin, hasRole } = useRole();
   
   // Master data state
   const [termOptions, setTermOptions] = useState([]);
@@ -353,7 +356,7 @@ export default function AddSalesOrderPage() {
         dimensi: "2.50 x 1.20",
         qty: 3,
         luasPerItem: "3.00 m²",
-        harga: "Rp 75,000/m²",
+        hargaDisplay: "Rp 75,000/m²",
         satuanDisplay: unitOptions.length > 0 ? unitOptions[0].label : "Per Dimensi",
         diskon: "5%",
         total: "Rp 213,750",
@@ -376,8 +379,8 @@ export default function AddSalesOrderPage() {
         dimensi: "6.00 x 0.12",
         qty: 2,
         luasPerItem: "0.72 m²",
-        harga: "Rp 45,000/m²",
-        satuan: unitOptions.length > 0 ? unitOptions[0].label : "Per Dimensi",
+        hargaDisplay: "Rp 45,000/m²",
+        satuanDisplay: unitOptions.length > 0 ? unitOptions[0].label : "Per Dimensi",
         diskon: "3%",
         total: "Rp 62,856",
         jenisBarangId: itemTypeOptions.length > 1 ? itemTypeOptions[1].value : "2",
@@ -399,6 +402,11 @@ export default function AddSalesOrderPage() {
 
   const handleShapeSelect = (shape) => {
     setSelectedShape(shape);
+    
+    // Reset field lebar saat bentuk barang berubah
+    if (shape?.dimensi === "1D") {
+      setItemWidth("");
+    }
   };
 
   const shapeColumns = [
@@ -439,22 +447,18 @@ export default function AddSalesOrderPage() {
   const totalHargaSO = subtotal - totalDiscount + ppn;
 
   return (
-    <div className="page-container">
-      {/* Header */}
-      <div className="page-header">
-        <div className="page-subtitle">TRANSAKSI</div>
-        <h1 className="page-title">Sales Order (SO)</h1>
-      </div>
-
+    <SalesOrderLayout title="Sales Order (SO)" subtitle="TRANSAKSI">
       {/* Main Content Card */}
       <Card className="section-card">
         <CardHeader className="section-header">
           <div className="flex justify-between items-center">
             <CardTitle className="page-title">Input Sales Order Baru</CardTitle>
             <div className="flex space-sm">
-              <Button variant="outline" size="sm" onClick={handleAutoFill} className="btn-outline">
-                🎲 Auto Fill
-              </Button>
+              {isUserAdmin && (
+                <Button variant="outline" size="sm" onClick={handleAutoFill} className="btn-outline">
+                  🎲 Auto Fill
+                </Button>
+              )}
               
               <Button variant="default" size="sm" onClick={handleTestSimpanSO} className="btn-primary">
                 Simpan Sales Order
@@ -663,7 +667,7 @@ export default function AddSalesOrderPage() {
                 value={itemWidth}
                 onChange={(e) => setItemWidth(e.target.value)}
                 placeholder="0.00"
-                disabled={selectedShape?.dimensi === "2D"}
+                disabled={selectedShape?.dimensi === "1D"}
               />
             </div>
             <div>
@@ -833,15 +837,17 @@ export default function AddSalesOrderPage() {
         </CardContent>
       </Card>
 
-      {/* Action Buttons */}
-      <div className="flex justify-center gap-4">
-        <Button size="lg" className="bg-green-600 hover:bg-green-700" onClick={handleTestSimpanSO}>
-          Simpan SO
-        </Button>
-        <Button size="lg" variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
-          Print SO
-        </Button>
-      </div>
+             {/* Action Buttons */}
+       <div className="flex justify-center gap-4">
+         <Button size="lg" className="bg-green-600 hover:bg-green-700" onClick={handleTestSimpanSO}>
+           Simpan SO
+         </Button>
+         {hasRole(['admin', 'manager', 'supervisor']) && (
+           <Button size="lg" variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
+             Print SO
+           </Button>
+         )}
+       </div>
 
       {/* Data Table Modal for Shape Selection */}
       <DataTableModal
@@ -857,6 +863,6 @@ export default function AddSalesOrderPage() {
 
       {/* Alert Modal Component */}
       <AlertComponent />
-    </div>
+    </SalesOrderLayout>
   );
 }

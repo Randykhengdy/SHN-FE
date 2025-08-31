@@ -3,6 +3,7 @@ import useElectronNavigation from "@/hooks/useElectronNavigation";
 import TokenInterceptor from "@/components/TokenInterceptor";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import "@/lib/tokenDebug"; // Import debug utilities
+import "@/lib/debugUtils"; // Import debug utilities
 
 function App() {
   // Gunakan hook untuk menangani navigasi dari Electron

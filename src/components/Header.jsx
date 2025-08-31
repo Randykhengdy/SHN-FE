@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getUserInfo } from "@/lib/jwtUtils";
+import { clearAllTokens } from "@/lib/tokenStorage";
 import logo from "@/assets/logo.png";
 
 export default function Header() {
@@ -16,14 +17,14 @@ export default function Header() {
     console.log('🎯 Header - Roles from userInfo:', info?.roles);
     console.log('🎯 Header - Roles type:', typeof info?.roles);
     console.log('🎯 Header - Is roles array:', Array.isArray(info?.roles));
+    console.log('🎯 Header - User name:', info?.name);
+    console.log('🎯 Header - Username:', info?.username);
     setUserInfo(info);
   }, []);
 
   const handleLogout = () => {
-    // Clear localStorage
-    localStorage.removeItem("token");
-    localStorage.removeItem("token_type");
-    localStorage.removeItem("isLoggedIn");
+    // Clear all tokens using tokenStorage system
+    clearAllTokens();
     
     console.log('🚪 Logout completed, redirecting to login...');
     

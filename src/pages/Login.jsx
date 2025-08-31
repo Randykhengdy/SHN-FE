@@ -24,7 +24,10 @@ export default function Login() {
   // Auto-redirect if already logged in
   useEffect(() => {
     console.log("Login useEffect triggered");
-    if (localStorage.getItem("shn_app_isLoggedIn") === "1") {
+    const isLoggedIn = localStorage.getItem("shn_app_isLoggedIn");
+    console.log("isLoggedIn value:", isLoggedIn);
+    
+    if (isLoggedIn === "true" || isLoggedIn === "1") {
       console.log("User already logged in, redirecting to dashboard");
       navigate("/dashboard");
     } else {
@@ -55,7 +58,7 @@ export default function Login() {
       // Simpan token menggunakan sistem storage baru
       setToken(result.token);
       setTokenType(result.token_type); // biasanya "Bearer"
-      setIsLoggedIn("1");
+      setIsLoggedIn("true");
       
       // Simpan refresh token jika ada
       if (result.refresh_token) {
@@ -66,6 +69,9 @@ export default function Login() {
       // Simpan user info jika ada
       if (result.user) {
         setUser(result.user);
+        console.log("✅ User data saved:", result.user);
+      } else {
+        console.log("⚠️ No user data in response");
       }
   
       navigate("/dashboard");
