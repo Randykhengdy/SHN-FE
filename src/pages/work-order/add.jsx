@@ -9,6 +9,7 @@ import { Plus, Trash2, Save, ArrowLeft, Users, Package } from 'lucide-react';
 import { useAlert } from '@/hooks/useAlert';
 import PageLayout from '@/components/PageLayout';
 import { workOrderService } from '@/services/workOrderService';
+import { request } from '@/lib/request';
 import { 
   getGudangOptions, 
   getJenisBarangOptions, 
@@ -61,6 +62,10 @@ export default function AddWorkOrderPage() {
   const [pelaksanaList, setPelaksanaList] = useState([]);
   const [salesOrderList, setSalesOrderList] = useState([]);
 
+  // Sales Order Detail State
+  const [selectedSalesOrder, setSelectedSalesOrder] = useState(null);
+  const [loadingSalesOrderDetail, setLoadingSalesOrderDetail] = useState(false);
+
   // Loading State
   const [loading, setLoading] = useState(false);
   const [loadingGudang, setLoadingGudang] = useState(false);
@@ -98,6 +103,12 @@ export default function AddWorkOrderPage() {
         console.log('Pelaksana data:', pelaksana);
 
         // Set data directly like sales order does
+        console.log('Setting gudang list:', gudang);
+        console.log('Setting jenis barang list:', jenisBarang);
+        console.log('Setting bentuk barang list:', bentukBarang);
+        console.log('Setting grade barang list:', gradeBarang);
+        console.log('Setting pelaksana list:', pelaksana);
+        
         setGudangList(gudang);
         setJenisBarangList(jenisBarang);
         setBentukBarangList(bentukBarang);
@@ -114,14 +125,19 @@ export default function AddWorkOrderPage() {
           console.log('Pelanggan response:', pelangganResponse);
           console.log('Sales Order response:', salesOrderResponse);
           
-          if (pelangganResponse?.data) {
+          // getPelangganOptions sudah mengembalikan data yang sudah di-map
+          if (pelangganResponse && Array.isArray(pelangganResponse)) {
+            setPelangganList(pelangganResponse);
+            console.log('Pelanggan options:', pelangganResponse);
+          } else if (pelangganResponse?.data && Array.isArray(pelangganResponse.data)) {
+            // Fallback jika response masih dalam format lama
             const pelangganOptions = pelangganResponse.data.map(item => ({
-              value: item.id?.toString() || item.kode,
-              label: item.nama || item.nama_pelanggan,
-              searchKey: item.nama || item.nama_pelanggan
+              value: item.id?.toString(),
+              label: item.nama_pelanggan ? `${item.nama_pelanggan} (${item.alamat || 'N/A'})` : item.nama || 'Unknown',
+              searchKey: `${item.nama_pelanggan || item.nama || ''} ${item.alamat || ''}`.trim()
             }));
             setPelangganList(pelangganOptions);
-            console.log('Pelanggan options:', pelangganOptions);
+            console.log('Pelanggan options (fallback):', pelangganOptions);
           }
           
           // Set sales order data
@@ -133,6 +149,18 @@ export default function AddWorkOrderPage() {
         
         console.log('State set - gudangList:', gudang);
         console.log('State set - pelangganList:', pelangganList);
+        
+        // Debug: Log semua state setelah di-set
+        setTimeout(() => {
+          console.log('=== DEBUG STATE AFTER SET ===');
+          console.log('gudangList state:', gudangList);
+          console.log('pelangganList state:', pelangganList);
+          console.log('jenisBarangList state:', jenisBarangList);
+          console.log('bentukBarangList state:', bentukBarangList);
+          console.log('gradeBarangList state:', gradeBarangList);
+          console.log('pelaksanaList state:', pelaksanaList);
+          console.log('================================');
+        }, 100);
       } catch (error) {
         console.error('Error loading master data:', error);
       }
@@ -140,6 +168,90 @@ export default function AddWorkOrderPage() {
 
     loadMasterData();
   }, []);
+
+  // Function to load Sales Order detail and populate items
+  const loadSalesOrderDetail = async (salesOrderId) => {
+    if (!salesOrderId) return;
+    
+    setLoadingSalesOrderDetail(true);
+    try {
+      console.log('Loading Sales Order detail for ID:', salesOrderId);
+      
+      // Get Sales Order detail with items
+      const response = await request(`/sales-order/${salesOrderId}`, {
+        method: 'GET'
+      });
+      
+      console.log('Sales Order detail response:', response);
+      
+      let soData = response.data || response;
+      
+      // If response is an array, take the first item
+      if (Array.isArray(soData)) {
+        soData = soData[0];
+      }
+      
+      if (!soData) {
+        throw new Error('Sales order data not found');
+      }
+      
+      setSelectedSalesOrder(soData);
+      
+      // Extract items from Sales Order
+      const itemsData = soData.salesOrderItems || soData.items || soData.sales_order_items || soData.orderItems || [];
+      console.log('Sales Order items:', itemsData);
+      
+      if (itemsData && itemsData.length > 0) {
+        // Transform Sales Order items to Work Order items
+        const transformedItems = itemsData.map((item, index) => ({
+          id: Date.now() + index,
+          panjang: item.panjang || item.length || 0,
+          lebar: item.lebar || item.width || 0,
+          tebal: item.tebal || item.ketebalan || item.thickness || 0,
+          qty: item.qty || item.quantity || item.jumlah || 1,
+          jenis_barang_id: item.jenis_barang_id || item.jenis_barang?.id,
+          bentuk_barang_id: item.bentuk_barang_id || item.bentuk_barang?.id,
+          grade_barang_id: item.grade_barang_id || item.grade_barang?.id,
+          catatan: item.catatan || item.note || item.notes || '',
+          pelaksana: []
+        }));
+        
+        console.log('Transformed Work Order items:', transformedItems);
+        setWorkOrderItems(transformedItems);
+        
+        // Auto-fill other fields from Sales Order
+        setWorkOrderData(prev => ({
+          ...prev,
+          gudang_id: soData.gudang_id || soData.gudang?.id,
+          pelanggan_id: soData.pelanggan_id || soData.pelanggan?.id,
+          catatan: soData.catatan || ''
+        }));
+        
+        showAlert('Sukses', `${itemsData.length} item berhasil diambil dari Sales Order`, 'success');
+      } else {
+        showAlert('Info', 'Sales Order tidak memiliki item', 'info');
+        // Reset to default item if no items found
+        setWorkOrderItems([{
+          id: Date.now(),
+          panjang: '',
+          lebar: '',
+          tebal: '',
+          qty: 1,
+          jenis_barang_id: '',
+          bentuk_barang_id: '',
+          grade_barang_id: '',
+          catatan: '',
+          pelaksana: []
+        }]);
+      }
+      
+    } catch (error) {
+      console.error('Error loading Sales Order detail:', error);
+      showAlert('Error', 'Gagal memuat detail Sales Order', 'error');
+    } finally {
+      setLoadingSalesOrderDetail(false);
+    }
+  };
 
   // Add new work order item
   const addWorkOrderItem = () => {
@@ -211,7 +323,7 @@ export default function AddWorkOrderPage() {
     e.preventDefault();
     
     // Validation
-    if (!workOrderData.nomor_wo || !workOrderData.gudang_id || !workOrderData.pelanggan_id) {
+    if (!workOrderData.nomor_wo || !workOrderData.gudang_id || !workOrderData.pelanggan_id || !workOrderData.sales_order_id) {
       showAlert('Error', 'Mohon lengkapi data Work Order', 'error');
       return;
     }
@@ -242,8 +354,6 @@ export default function AddWorkOrderPage() {
     }
   };
 
-
-
   return (
     <PageLayout title="Tambah Work Order Planning" category="TRANSAKSI">
       <div className="mb-6">
@@ -270,13 +380,44 @@ export default function AddWorkOrderPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Sales Order *
+                </label>
+                <SearchSelect
+                  label=""
+                  options={salesOrderList}
+                  value={workOrderData.sales_order_id ? workOrderData.sales_order_id.toString() : ''} 
+                  onValueChange={(value) => {
+                    const selectedSO = salesOrderList.find(so => so.value === value);
+                    if (selectedSO) {
+                      // Generate WO number from SO number
+                      const soNumber = selectedSO.label || selectedSO.value;
+                      const woNumber = soNumber.replace(/^SO-/, 'WO-');
+                      setWorkOrderData({
+                        ...workOrderData, 
+                        sales_order_id: parseInt(value),
+                        nomor_wo: woNumber
+                      });
+                      
+                      // Load Sales Order detail and populate items automatically
+                      loadSalesOrderDetail(parseInt(value));
+                    } else {
+                      setWorkOrderData({...workOrderData, sales_order_id: parseInt(value)});
+                    }
+                  }}
+                  placeholder="Pilih Sales Order"
+                  loading={loadingSalesOrder}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Nomor WO *
                 </label>
                 <Input
-                  placeholder="Masukkan nomor WO..."
+                  placeholder="Nomor WO akan otomatis terisi"
                   value={workOrderData.nomor_wo}
-                  onChange={(e) => setWorkOrderData({...workOrderData, nomor_wo: e.target.value})}
-                  required
+                  disabled
+                  className="bg-gray-100"
                 />
               </div>
               
@@ -303,40 +444,35 @@ export default function AddWorkOrderPage() {
                 />
               </div>
               
-                             <div>
-                 <SearchSelect
-                   label="Gudang *"
-                   options={gudangList}
-                   value={workOrderData.gudang_id ? workOrderData.gudang_id.toString() : ''} 
-                   onValueChange={(value) => setWorkOrderData({...workOrderData, gudang_id: parseInt(value)})}
-                   placeholder="Pilih gudang"
-                   loading={loadingGudang}
-                   required
-                 />
-               </div>
+              <div>
+                <SearchSelect
+                  label="Gudang *"
+                  options={gudangList}
+                  value={workOrderData.gudang_id ? workOrderData.gudang_id.toString() : ''} 
+                  onValueChange={(value) => {
+                    console.log('Gudang selected:', value, 'Type:', typeof value);
+                    console.log('Available gudang options:', gudangList);
+                    setWorkOrderData({...workOrderData, gudang_id: parseInt(value)});
+                  }}
+                  placeholder="Pilih gudang"
+                  loading={loadingGudang}
+                />
+              </div>
               
-                             <div>
-                 <SearchSelect
-                   label="Pelanggan *"
-                   options={pelangganList}
-                   value={workOrderData.pelanggan_id ? workOrderData.pelanggan_id.toString() : ''} 
-                   onValueChange={(value) => setWorkOrderData({...workOrderData, pelanggan_id: parseInt(value)})}
-                   placeholder="Pilih pelanggan"
-                   loading={loadingPelanggan}
-                   required
-                 />
-               </div>
-               
-               <div>
-                 <SearchSelect
-                   label="Sales Order (Opsional)"
-                   options={salesOrderList}
-                   value={workOrderData.sales_order_id ? workOrderData.sales_order_id.toString() : ''} 
-                   onValueChange={(value) => setWorkOrderData({...workOrderData, sales_order_id: parseInt(value)})}
-                   placeholder="Pilih Sales Order (opsional)"
-                   loading={loadingSalesOrder}
-                 />
-               </div>
+              <div>
+                <SearchSelect
+                  label="Pelanggan *"
+                  options={pelangganList}
+                  value={workOrderData.pelanggan_id ? workOrderData.pelanggan_id.toString() : ''} 
+                  onValueChange={(value) => {
+                    console.log('Pelanggan selected:', value, 'Type:', typeof value);
+                    console.log('Available pelanggan options:', pelangganList);
+                    setWorkOrderData({...workOrderData, pelanggan_id: parseInt(value)});
+                  }}
+                  placeholder="Pilih pelanggan"
+                  loading={loadingPelanggan}
+                />
+              </div>
               
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -358,6 +494,11 @@ export default function AddWorkOrderPage() {
             <CardTitle className="flex items-center gap-2">
               <Package className="w-5 h-5" />
               Work Order Items
+              {selectedSalesOrder && (
+                <Badge variant="secondary" className="ml-2">
+                  {selectedSalesOrder.nomor_so} - {selectedSalesOrder.pelanggan?.nama_pelanggan || 'Unknown'}
+                </Badge>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -380,7 +521,7 @@ export default function AddWorkOrderPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Panjang (m)
+                      Panjang (mm)
                     </label>
                     <Input
                       type="number"
@@ -393,7 +534,7 @@ export default function AddWorkOrderPage() {
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Lebar (m)
+                      Lebar (mm)
                     </label>
                     <Input
                       type="number"
@@ -406,7 +547,7 @@ export default function AddWorkOrderPage() {
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Tebal (m)
+                      Tebal (mm)
                     </label>
                     <Input
                       type="number"
@@ -432,41 +573,38 @@ export default function AddWorkOrderPage() {
                     />
                   </div>
                   
-                                     <div>
-                     <SearchSelect
-                       label="Jenis Barang *"
-                       options={jenisBarangList}
-                       value={item.jenis_barang_id ? item.jenis_barang_id.toString() : ''} 
-                       onValueChange={(value) => updateWorkOrderItem(item.id, 'jenis_barang_id', parseInt(value))}
-                       placeholder="Pilih jenis"
-                       loading={loadingJenisBarang}
-                       required
-                     />
-                   </div>
+                  <div>
+                    <SearchSelect
+                      label="Jenis Barang *"
+                      options={jenisBarangList}
+                      value={item.jenis_barang_id ? item.jenis_barang_id.toString() : ''} 
+                      onValueChange={(value) => updateWorkOrderItem(item.id, 'jenis_barang_id', parseInt(value))}
+                      placeholder="Pilih jenis"
+                      loading={loadingJenisBarang}
+                    />
+                  </div>
                   
-                                     <div>
-                     <SearchSelect
-                       label="Bentuk Barang *"
-                       options={bentukBarangList}
-                       value={item.bentuk_barang_id ? item.bentuk_barang_id.toString() : ''} 
-                       onValueChange={(value) => updateWorkOrderItem(item.id, 'bentuk_barang_id', parseInt(value))}
-                       placeholder="Pilih bentuk"
-                       loading={loadingBentukBarang}
-                       required
-                     />
-                   </div>
+                  <div>
+                    <SearchSelect
+                      label="Bentuk Barang *"
+                      options={bentukBarangList}
+                      value={item.bentuk_barang_id ? item.bentuk_barang_id.toString() : ''} 
+                      onValueChange={(value) => updateWorkOrderItem(item.id, 'bentuk_barang_id', parseInt(value))}
+                      placeholder="Pilih bentuk"
+                      loading={loadingBentukBarang}
+                    />
+                  </div>
                   
-                                     <div>
-                     <SearchSelect
-                       label="Grade Barang *"
-                       options={gradeBarangList}
-                       value={item.grade_barang_id ? item.grade_barang_id.toString() : ''} 
-                       onValueChange={(value) => updateWorkOrderItem(item.id, 'grade_barang_id', parseInt(value))}
-                       placeholder="Pilih grade"
-                       loading={loadingGradeBarang}
-                       required
-                     />
-                   </div>
+                  <div>
+                    <SearchSelect
+                      label="Grade Barang *"
+                      options={gradeBarangList}
+                      value={item.grade_barang_id ? item.grade_barang_id.toString() : ''} 
+                      onValueChange={(value) => updateWorkOrderItem(item.id, 'grade_barang_id', parseInt(value))}
+                      placeholder="Pilih grade"
+                      loading={loadingGradeBarang}
+                    />
+                  </div>
                 </div>
                 
                 <div className="mb-4">
@@ -505,16 +643,16 @@ export default function AddWorkOrderPage() {
                       {item.pelaksana.map((pelaksana, pelaksanaIndex) => (
                         <div key={pelaksana.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                           <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
-                                                         <div>
-                               <SearchSelect
-                                 label="Pelaksana"
-                                 options={pelaksanaList}
-                                 value={pelaksana.pelaksana_id ? pelaksana.pelaksana_id.toString() : ''} 
-                                 onValueChange={(value) => updatePelaksana(item.id, pelaksana.id, 'pelaksana_id', parseInt(value))}
-                                 placeholder="Pilih pelaksana"
-                                 loading={loadingPelaksana}
-                               />
-                             </div>
+                            <div>
+                              <SearchSelect
+                                label="Pelaksana"
+                                options={pelaksanaList}
+                                value={pelaksana.pelaksana_id ? pelaksana.pelaksana_id.toString() : ''} 
+                                onValueChange={(value) => updatePelaksana(item.id, pelaksana.id, 'pelaksana_id', parseInt(value))}
+                                placeholder="Pilih pelaksana"
+                                loading={loadingPelaksana}
+                              />
+                            </div>
                             
                             <div>
                               <label className="block text-xs font-medium text-gray-700 mb-1">

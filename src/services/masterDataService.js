@@ -97,10 +97,11 @@ export const getGudangOptions = async () => {
   checkMemoryUsage();
   return await safeApiCall(async () => {
     const response = await gudangService.getAll();
+    console.log('Raw gudang data:', response.data); // Debug log
     return response.data.map(item => ({
-      value: item.id || item.kode,
-      label: `${item.nama_gudang}`,
-      searchKey: `${item.nama_gudang}`
+      value: item.id?.toString(),
+      label: item.nama_gudang || item.nama || 'Unknown',
+      searchKey: item.nama_gudang || item.nama || 'Unknown'
     }));
   }, 'GudangService');
 };
@@ -110,10 +111,11 @@ export const getJenisBarangOptions = async () => {
   checkMemoryUsage();
   return await safeApiCall(async () => {
     const response = await jenisBarangService.getAll();
+    console.log('Raw jenis barang data:', response.data); // Debug log
     return response.data.map(item => ({
-      value: item.id || item.kode,
-      label: item.nama_jenis || item.label,
-      searchKey: item.nama_jenis || item.label
+      value: item.id?.toString(),
+      label: item.nama_jenis || item.nama || item.label || 'Unknown',
+      searchKey: item.nama_jenis || item.nama || item.label || 'Unknown'
     }));
   }, 'JenisBarangService');
 };
@@ -123,12 +125,13 @@ export const getBentukBarangOptions = async () => {
   checkMemoryUsage();
   return await safeApiCall(async () => {
     const response = await bentukBarangService.getAll();
+    console.log('Raw bentuk barang data:', response.data); // Debug log
     return response.data.map(item => ({
-      value: item.id || item.kode,
-      label: `${item.nama_bentuk} (${item.dimensi})`,
-      searchKey: item.nama_bentuk,
+      value: item.id?.toString(),
+      label: item.nama_bentuk ? `${item.nama_bentuk} (${item.dimensi || 'N/A'})` : item.nama || 'Unknown',
+      searchKey: item.nama_bentuk || item.nama || 'Unknown',
       dimensi: item.dimensi,
-      nama: item.nama_bentuk,
+      nama: item.nama_bentuk || item.nama,
       // Tambahkan id dan kode untuk modal
       id: item.id,
       kode: item.kode
@@ -141,10 +144,11 @@ export const getGradeBarangOptions = async () => {
   checkMemoryUsage();
   return await safeApiCall(async () => {
     const response = await gradeBarangService.getAll();
+    console.log('Raw grade barang data:', response.data); // Debug log
     return response.data.map(item => ({
-      value: item.id || item.kode,
-      label: item.nama || item.label,
-      searchKey: item.nama || item.label
+      value: item.id?.toString(),
+      label: item.nama || item.nama_grade || item.label || 'Unknown',
+      searchKey: item.nama || item.nama_grade || item.label || 'Unknown'
     }));
   }, 'GradeBarangService');
 };
@@ -155,7 +159,7 @@ export const getTermOptions = async () => {
   return await safeApiCall(async () => {
     const response = await request('/static/term-of-payment', { method: 'GET' });
     return response.data.map(item => ({
-      value: item.kode, // Use kode as value (string)
+      value: item.id?.toString() || item.kode?.toString(),
       label: item.nama,
       searchKey: item.nama
     }));
@@ -168,7 +172,7 @@ export const getUnitOptions = async () => {
   return await safeApiCall(async () => {
     const response = await request('/static/satuan', { method: 'GET' });
     return response.data.map(item => ({
-      value: item.kode, // Use kode as value (string)
+      value: item.id?.toString() || item.kode?.toString(),
       label: item.nama,
       searchKey: item.nama
     }));
@@ -182,9 +186,9 @@ export const getPelaksanaOptions = async () => {
     const response = await request('/pelaksana', { method: 'GET' });
     console.log('Pelaksana response:', response); // Debug log
     return response.data.map(item => ({
-      value: item.id,
-      label: `${item.nama_pelaksana} (${item.jabatan})`,
-      searchKey: `${item.nama_pelaksana} ${item.jabatan}`
+      value: item.id?.toString(),
+      label: item.nama_pelaksana ? `${item.nama_pelaksana}` : item.nama || 'Unknown',
+      searchKey: `${item.nama_pelaksana || item.nama || ''} ${item.jabatan || ''}`.trim()
     }));
   }, 'PelaksanaService');
 };
@@ -193,12 +197,37 @@ export const getPelaksanaOptions = async () => {
 export const getPelangganOptions = async () => {
   checkMemoryUsage();
   return await safeApiCall(async () => {
-    const response = await pelangganService.getAll();
-    return response.data.map(item => ({
-      value: item.id,
-      label: `${item.nama_pelanggan} (${item.alamat})`,
-      searchKey: `${item.nama_pelanggan} ${item.alamat}`
-    }));
+    console.log('🔄 [PelangganService] Starting to fetch pelanggan data...');
+    
+    try {
+      const response = await pelangganService.getAll();
+      console.log('📡 [PelangganService] Raw response:', response);
+      console.log('📡 [PelangganService] Response data:', response.data);
+      console.log('📡 [PelangganService] Response data type:', typeof response.data);
+      console.log('📡 [PelangganService] Response data length:', response.data?.length);
+      
+      if (!response.data || !Array.isArray(response.data)) {
+        console.error('❌ [PelangganService] Invalid response data format:', response);
+        return [];
+      }
+      
+      const mappedData = response.data.map(item => {
+        const mapped = {
+          value: item.id?.toString(),
+          label: item.nama_pelanggan ? `${item.nama_pelanggan}` : item.nama || 'Unknown',
+          searchKey: `${item.nama_pelanggan || item.nama || ''} ${item.alamat || ''}`.trim()
+        };
+        console.log('🔄 [PelangganService] Mapping item:', item, '→', mapped);
+        return mapped;
+      });
+      
+      console.log('✅ [PelangganService] Final mapped data:', mappedData);
+      return mappedData;
+      
+    } catch (error) {
+      console.error('❌ [PelangganService] Error in getPelangganOptions:', error);
+      throw error;
+    }
   }, 'PelangganService');
 };
 

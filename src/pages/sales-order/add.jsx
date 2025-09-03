@@ -138,31 +138,55 @@ export default function AddSalesOrderPage() {
       try {
         const length = parseFloat(itemLength) || 0;
         const width = parseFloat(itemWidth) || 0;
-        const diameter = parseFloat(itemDiameter) || 0;
+        const thickness = parseFloat(itemDiameter) || 0;
         const qty = parseInt(itemQty) || 0;
         const discount = parseFloat(itemDiscount) || 0;
+        const pricePerUnit = parseFloat(itemPrice) || 0;
 
+        // Hitung ketebalan (dalam mm)
+        let thicknessDisplay = "- mm";
+        if (thickness > 0) {
+          thicknessDisplay = `${thickness} mm`;
+        }
+        setItemThickness(thicknessDisplay);
+
+        // Hitung luas persegi berdasarkan dimensi
         let area = 0;
         let areaPerItem = "0.00";
 
         if (selectedShape?.dimensi === "1D") {
+          // Untuk bentuk 1D (persegi panjang), luas = panjang x lebar
           area = length * width;
           areaPerItem = area.toFixed(2);
         } else if (selectedShape?.dimensi === "2D") {
-          area = length * diameter;
+          // Untuk bentuk 2D (persegi), luas = panjang x tebal
+          area = length * width;
           areaPerItem = area.toFixed(2);
         }
 
-        const pricePerUnit = parseFloat(itemPrice) || 0;
-        const totalBeforeDiscount = area * pricePerUnit * qty;
-        const discountAmount = totalBeforeDiscount * (discount / 100);
-        const totalAfterDiscount = totalBeforeDiscount - discountAmount;
+        // Hitung harga per m²
+        let pricePerM2 = "Rp 0/m²";
+        if (pricePerUnit > 0) {
+          pricePerM2 = `Rp ${pricePerUnit.toLocaleString('id-ID')}/m²`;
+        }
+        setItemPricePerUnit(pricePerM2);
+
+        // Hitung total item (termasuk diskon)
+        let totalBeforeDiscount = 0;
+        let totalAfterDiscount = 0;
+        
+        if (area > 0 && pricePerUnit > 0) {
+          totalBeforeDiscount = area * pricePerUnit * qty;
+          const discountAmount = totalBeforeDiscount * (discount / 100);
+          totalAfterDiscount = totalBeforeDiscount - discountAmount;
+        }
 
         setItemArea(`${areaPerItem} m²`);
-        setItemPricePerUnit(`Rp ${pricePerUnit.toLocaleString()}/m²`);
-        setItemTotal(`Rp ${totalAfterDiscount.toLocaleString()}`);
+        setItemTotal(`Rp ${totalAfterDiscount.toLocaleString('id-ID')}`);
+
       } catch (error) {
         console.error('Error calculating area:', error);
+        setItemThickness("- mm");
         setItemArea("0.00 m²");
         setItemPricePerUnit("Rp 0/m²");
         setItemTotal("Rp 0");
@@ -192,11 +216,13 @@ export default function AddSalesOrderPage() {
 
   const handleAddItem = () => {
     try {
-      if (!itemType || !selectedShape || !itemGrade) {
-        showAlert("Peringatan", "Mohon lengkapi data item", "warning");
+      // Validasi field wajib
+      if (!itemType || !selectedShape || !itemGrade || !itemPrice || !itemQty || !itemLength) {
+        showAlert("Peringatan", "Mohon lengkapi data item yang wajib (*)", "warning");
         return;
       }
 
+      // Validasi berdasarkan dimensi bentuk barang
       if (selectedShape.dimensi === "1D") {
         if (!itemLength || !itemWidth) {
           showAlert("Peringatan", "Mohon isi panjang dan lebar untuk bentuk 1D", "warning");
@@ -207,6 +233,17 @@ export default function AddSalesOrderPage() {
           showAlert("Peringatan", "Mohon isi panjang dan tebal untuk bentuk 2D", "warning");
           return;
         }
+      }
+
+      // Validasi nilai numerik
+      if (parseFloat(itemPrice) <= 0) {
+        showAlert("Peringatan", "Harga harus lebih besar dari 0", "warning");
+        return;
+      }
+
+      if (parseInt(itemQty) <= 0) {
+        showAlert("Peringatan", "Qty harus lebih besar dari 0", "warning");
+        return;
       }
 
       let dimensiString = "";
@@ -576,6 +613,7 @@ export default function AddSalesOrderPage() {
                   placeholder="Pilih Bentuk Barang"
                   readOnly
                   className="flex-1"
+                  required
                 />
                 <Button
                   type="button"
@@ -594,6 +632,7 @@ export default function AddSalesOrderPage() {
                 value={itemQty}
                 onChange={(e) => setItemQty(e.target.value)}
                 min="1"
+                required
               />
             </div>
             <div>
@@ -656,6 +695,7 @@ export default function AddSalesOrderPage() {
                 value={itemLength}
                 onChange={(e) => setItemLength(e.target.value)}
                 placeholder="0.00"
+                required
               />
             </div>
             <div>
@@ -668,10 +708,11 @@ export default function AddSalesOrderPage() {
                 onChange={(e) => setItemWidth(e.target.value)}
                 placeholder="0.00"
                 disabled={selectedShape?.dimensi === "1D"}
+                required={selectedShape?.dimensi === "2D"}
               />
             </div>
             <div>
-              <Label htmlFor="itemDiameter">Tebal</Label>
+              <Label htmlFor="itemDiameter">Tebal (mm) {selectedShape?.dimensi === "2D" ? "*" : ""}</Label>
               <Input
                 id="itemDiameter"
                 type="number"
@@ -679,18 +720,20 @@ export default function AddSalesOrderPage() {
                 value={itemDiameter}
                 onChange={(e) => setItemDiameter(e.target.value)}
                 placeholder="0.00"
+                required={selectedShape?.dimensi === "2D"}
               />
             </div>
 
             {/* Row 4: Harga, Diskon, Empty */}
             <div>
-              <Label htmlFor="itemPrice">Harga</Label>
+              <Label htmlFor="itemPrice">Harga (Rp/m²)</Label>
               <Input
                 id="itemPrice"
                 type="number"
                 value={itemPrice}
                 onChange={(e) => setItemPrice(e.target.value)}
                 placeholder="0"
+                required
               />
             </div>
             <div>
@@ -702,6 +745,7 @@ export default function AddSalesOrderPage() {
                 onChange={(e) => setItemDiscount(e.target.value)}
                 min="0"
                 max="100"
+                placeholder="0"
               />
             </div>
             <div></div> {/* Empty cell untuk melengkapi 3 kolom */}
@@ -711,27 +755,25 @@ export default function AddSalesOrderPage() {
           <div className="grid-summary m-lg p-md bg-gray-50 rounded-lg">
             <div>
               <Label className="text-sm text-gray-600">Ketebalan</Label>
-              <div className="font-medium">{itemThickness}</div>
+              <div className="font-medium text-blue-600">{itemThickness}</div>
             </div>
             <div>
-              <Label className="text-sm text-gray-600">
-                {itemShape === "lingkaran" ? "Luas Lingkaran" : "Luas Persegi"}
-              </Label>
-              <div className="font-medium">{itemArea}</div>
+              <Label className="text-sm text-gray-600">Ukuran Panjang/Luas</Label>
+              <div className="font-medium text-green-600">{itemArea}</div>
             </div>
             <div>
               <Label className="text-sm text-gray-600">Harga/m²</Label>
-              <div className="font-medium">{itemPricePerUnit}</div>
+              <div className="font-medium text-orange-600">{itemPricePerUnit}</div>
             </div>
             <div>
               <Label className="text-sm text-gray-600">Total Item</Label>
-              <div className="font-medium">{itemTotal}</div>
+              <div className="font-medium text-red-600">{itemTotal}</div>
             </div>
           </div>
 
           {/* Notes Section */}
           <div className="mt-6">
-            <Label htmlFor="itemNotes">Catatan</Label>
+            <Label htmlFor="itemNotes">Catatan (Opsional)</Label>
             <Textarea
               id="itemNotes"
               value={itemNotes}
