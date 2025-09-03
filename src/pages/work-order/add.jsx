@@ -6,6 +6,7 @@ import SearchSelect from '@/components/ui/search-select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Save, ArrowLeft, Users, Package } from 'lucide-react';
+import SelectPlatShaftDasar from './select-platshaftdasar';
 import { useAlert } from '@/hooks/useAlert';
 import PageLayout from '@/components/PageLayout';
 import { workOrderService } from '@/services/workOrderService';
@@ -34,7 +35,8 @@ export default function AddWorkOrderPage() {
     pelanggan_id: '',
     sales_order_id: '',
     catatan: '',
-    status: 'Pending'
+    status: 'Pending',
+    prioritas: 'MEDIUM'
   });
 
   // Work Order Items State
@@ -65,6 +67,11 @@ export default function AddWorkOrderPage() {
   // Sales Order Detail State
   const [selectedSalesOrder, setSelectedSalesOrder] = useState(null);
   const [loadingSalesOrderDetail, setLoadingSalesOrderDetail] = useState(false);
+
+  // Plat Dasar State
+  const [showPlatDasarModal, setShowPlatDasarModal] = useState(false);
+  const [currentItemData, setCurrentItemData] = useState(null);
+  const [selectedPlatDasar, setSelectedPlatDasar] = useState({});
 
   // Loading State
   const [loading, setLoading] = useState(false);
@@ -117,6 +124,9 @@ export default function AddWorkOrderPage() {
         
         // Load pelanggan separately since it needs different handling
         try {
+          setLoadingPelanggan(true);
+          setLoadingSalesOrder(true);
+          
           const [pelangganResponse, salesOrderResponse] = await Promise.all([
             getPelangganOptions({ per_page: 100 }),
             getSalesOrderOptions()
@@ -145,6 +155,9 @@ export default function AddWorkOrderPage() {
           
         } catch (error) {
           console.error('Error loading additional data:', error);
+        } finally {
+          setLoadingPelanggan(false);
+          setLoadingSalesOrder(false);
         }
         
         console.log('State set - gudangList:', gudang);
@@ -219,13 +232,14 @@ export default function AddWorkOrderPage() {
         console.log('Transformed Work Order items:', transformedItems);
         setWorkOrderItems(transformedItems);
         
-        // Auto-fill other fields from Sales Order
-        setWorkOrderData(prev => ({
-          ...prev,
-          gudang_id: soData.gudang_id || soData.gudang?.id,
-          pelanggan_id: soData.pelanggan_id || soData.pelanggan?.id,
-          catatan: soData.catatan || ''
-        }));
+                 // Auto-fill other fields from Sales Order
+         setWorkOrderData(prev => ({
+           ...prev,
+           gudang_id: soData.gudang_id || soData.gudang?.id,
+           pelanggan_id: soData.pelanggan_id || soData.pelanggan?.id,
+           catatan: soData.catatan || '',
+           tanggal_target: workOrderData.tanggal_wo // Set tanggal target sama dengan tanggal WO
+         }));
         
         showAlert('Sukses', `${itemsData.length} item berhasil diambil dari Sales Order`, 'success');
       } else {
@@ -318,6 +332,36 @@ export default function AddWorkOrderPage() {
     }
   };
 
+  // Plat Dasar functions
+  const openPlatDasarModal = (item) => {
+    setCurrentItemData(item);
+    setShowPlatDasarModal(true);
+  };
+
+  const closePlatDasarModal = () => {
+    setShowPlatDasarModal(false);
+    setCurrentItemData(null);
+  };
+
+  const handlePlatDasarSelection = (selectedItems) => {
+    if (currentItemData) {
+      setSelectedPlatDasar(prev => ({
+        ...prev,
+        [currentItemData.id]: selectedItems
+      }));
+    }
+  };
+
+  const getTotalLuasTercukupi = (itemId) => {
+    const selected = selectedPlatDasar[itemId] || [];
+    return selected.reduce((sum, item) => sum + item.sisa_luas, 0);
+  };
+
+  const isLuasCukup = (itemId, totalDibutuhkan) => {
+    const totalTercukupi = getTotalLuasTercukupi(itemId);
+    return totalTercukupi >= (totalDibutuhkan * 1.1); // 110% tolerance
+  };
+
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -328,20 +372,75 @@ export default function AddWorkOrderPage() {
       return;
     }
 
+    // Check if there are pelaksana but no id_pelaksana at top level
+    const hasPelaksana = workOrderItems.some(item => item.pelaksana.length > 0);
+    if (hasPelaksana) {
+      const firstPelaksanaId = workOrderItems.find(item => item.pelaksana.length > 0)?.pelaksana[0]?.pelaksana_id;
+      if (!firstPelaksanaId) {
+        showAlert('Error', 'Mohon lengkapi data pelaksana untuk semua item', 'error');
+        return;
+      }
+    }
+
     // Validate items
     for (let item of workOrderItems) {
       if (!item.jenis_barang_id || !item.bentuk_barang_id || !item.grade_barang_id) {
         showAlert('Error', 'Mohon lengkapi data item', 'error');
         return;
       }
+      
+      // Validate pelaksana if exists
+      for (let pelaksana of item.pelaksana) {
+        if (!pelaksana.pelaksana_id) {
+          showAlert('Error', 'Mohon lengkapi data pelaksana', 'error');
+          return;
+        }
+      }
     }
 
     setLoading(true);
     try {
-      const response = await workOrderService.createWorkOrder({
-        ...workOrderData,
-        items: workOrderItems
-      });
+      // Transform data to match API expected format
+      const transformedData = {
+        nomor_wo: workOrderData.nomor_wo,
+        tanggal_wo: workOrderData.tanggal_wo,
+        tanggal_target: workOrderData.tanggal_target,
+        id_sales_order: workOrderData.sales_order_id,
+        id_pelanggan: workOrderData.pelanggan_id,
+        id_gudang: workOrderData.gudang_id,
+        // Add id_pelaksana field at the top level as required by API
+        id_pelaksana: workOrderItems.some(item => item.pelaksana.length > 0) 
+          ? workOrderItems[0].pelaksana[0]?.pelaksana_id || null 
+          : null,
+        prioritas: workOrderData.prioritas,
+        catatan: workOrderData.catatan,
+        status: workOrderData.status,
+        items: workOrderItems.map(item => ({
+          qty: item.qty,
+          panjang: parseFloat(item.panjang) || 0,
+          lebar: parseFloat(item.lebar) || 0,
+          tebal: parseFloat(item.tebal) || 0,
+          jenis_barang_id: item.jenis_barang_id,
+          bentuk_barang_id: item.bentuk_barang_id,
+          grade_barang_id: item.grade_barang_id,
+          // plat_dasar_id is optional and will be set later when plat dasar is selected
+          catatan: item.catatan,
+          // Add required fields for pelaksana
+          pelaksana: item.pelaksana.map(p => ({
+            pelaksana_id: p.pelaksana_id,
+            qty: p.qty,
+            weight: 0, // Default weight, bisa diisi nanti
+            tanggal: workOrderData.tanggal_wo, // Use WO date as default
+            jam_mulai: "08:00", // Default start time
+            jam_selesai: "17:00", // Default end time
+            catatan: p.catatan
+          }))
+        }))
+      };
+
+      console.log('Transformed data to send:', transformedData);
+      
+      const response = await workOrderService.createWorkOrder(transformedData);
       
       showAlert('Sukses', 'Work Order berhasil dibuat!', 'success', () => {
         navigate('/work-order');
@@ -472,6 +571,22 @@ export default function AddWorkOrderPage() {
                   placeholder="Pilih pelanggan"
                   loading={loadingPelanggan}
                 />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Prioritas
+                </label>
+                <select
+                  value={workOrderData.prioritas}
+                  onChange={(e) => setWorkOrderData({...workOrderData, prioritas: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="LOW">Rendah</option>
+                  <option value="MEDIUM">Sedang</option>
+                  <option value="HIGH">Tinggi</option>
+                  <option value="URGENT">Mendesak</option>
+                </select>
               </div>
               
               <div className="md:col-span-2">
@@ -618,6 +733,43 @@ export default function AddWorkOrderPage() {
                   />
                 </div>
 
+                {/* Plat Dasar Section */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Plat Dasar
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openPlatDasarModal(item)}
+                      disabled={!item.jenis_barang_id || !item.bentuk_barang_id || !item.grade_barang_id || !item.tebal}
+                      className="text-xs"
+                    >
+                      <Package className="w-3 h-3 mr-1" />
+                      Pilih Plat Dasar
+                    </Button>
+                    
+                    {selectedPlatDasar[item.id] && selectedPlatDasar[item.id].length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-xs">
+                          {selectedPlatDasar[item.id].length} item dipilih
+                        </Badge>
+                        {(() => {
+                          const totalDibutuhkan = parseFloat(item.panjang || 0) * parseFloat(item.lebar || 0) * item.qty;
+                          const isCukup = isLuasCukup(item.id, totalDibutuhkan);
+                          return (
+                            <Badge variant={isCukup ? "default" : "destructive"} className="text-xs">
+                              {isCukup ? "✓ Cukup" : "✗ Kurang"}
+                            </Badge>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {/* Pelaksana Section */}
                 <div className="border-t pt-4">
                   <div className="flex justify-between items-center mb-4">
@@ -731,6 +883,19 @@ export default function AddWorkOrderPage() {
           </Button>
         </div>
       </form>
+
+      {/* Plat Dasar Modal */}
+      {showPlatDasarModal && currentItemData && (
+        <SelectPlatShaftDasar
+          jenisBarangId={currentItemData.jenis_barang_id}
+          bentukBarangId={currentItemData.bentuk_barang_id}
+          gradeBarangId={currentItemData.grade_barang_id}
+          tebal={parseFloat(currentItemData.tebal) || 0}
+          totalDibutuhkan={parseFloat(currentItemData.panjang || 0) * parseFloat(currentItemData.lebar || 0) * currentItemData.qty}
+          onSelectionChange={handlePlatDasarSelection}
+          onClose={closePlatDasarModal}
+        />
+      )}
     </PageLayout>
   );
 }

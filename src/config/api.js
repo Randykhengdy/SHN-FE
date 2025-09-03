@@ -25,4 +25,5 @@ export const API_ENDPOINTS = {
   logout: "/auth/logout",
   jenisBarang: "/jenis-barang",
   salesOrder: "/sales-order",
+  workOrderPlanning: "/work-order-planning",
 };
