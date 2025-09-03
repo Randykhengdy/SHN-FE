@@ -23,6 +23,8 @@ import SalesOrderPage from "@/pages/sales-order";
 import AddSalesOrderPage from "@/pages/sales-order/add";
 import ViewSalesOrderPage from "@/pages/sales-order/view";
 import ApprovalPage from "@/pages/approval";
+import WorkOrderPage from "@/pages/work-order";
+import AddWorkOrderPage from "@/pages/work-order/add";
 
 const AppRouter = () => {
     return (
@@ -51,6 +53,8 @@ const AppRouter = () => {
         <Route path="/sales-order/add" element={<AddSalesOrderPage />} />
         <Route path="/sales-order/view/:id" element={<ViewSalesOrderPage />} />
         <Route path="/approval" element={<ApprovalPage />} />
+        <Route path="/work-order" element={<WorkOrderPage />} />
+        <Route path="/work-order/add" element={<AddWorkOrderPage />} />
 
       </Routes>
     );

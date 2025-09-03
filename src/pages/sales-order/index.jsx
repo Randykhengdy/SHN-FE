@@ -12,7 +12,7 @@ import { useAlert } from "@/hooks/useAlert";
 import { isAdmin } from "@/lib/utils";
 import CustomAlert from "@/components/modals/CustomAlert";
 import DeleteRequestModal from "@/components/modals/DeleteRequestModal";
-import SalesOrderLayout from "@/components/SalesOrderLayout";
+import PageLayout from "@/components/PageLayout";
 
 const statusOptions = [
   { value: "all", label: "Semua Status" },
@@ -297,7 +297,7 @@ export default function SalesOrderListPage() {
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
   return (
-    <SalesOrderLayout title="Sales Order (SO)" subtitle="TRANSAKSI">
+    <PageLayout title="Sales Order (SO)" category="TRANSAKSI">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div className="bg-white rounded-lg px-4 py-2 border border-gray-200">
           <h2 className="text-lg font-semibold text-gray-800">Daftar Sales Order</h2>
@@ -639,6 +639,6 @@ export default function SalesOrderListPage() {
         
         {/* Alert Modal Component */}
         <AlertComponent />
-      </SalesOrderLayout>
+      </PageLayout>
   );
 }

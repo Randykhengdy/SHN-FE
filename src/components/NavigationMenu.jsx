@@ -9,7 +9,8 @@ import {
   Settings, 
   CheckSquare,
   Warehouse,
-  Wrench
+  Wrench,
+  ClipboardList
 } from "lucide-react";
 
 export default function NavigationMenu() {
@@ -33,6 +34,12 @@ export default function NavigationMenu() {
       label: "Purchase Order",
       path: "/input-po",
       icon: ShoppingCart,
+      category: "transaksi"
+    },
+    {
+      label: "Work Order",
+      path: "/work-order",
+      icon: ClipboardList,
       category: "transaksi"
     },
     {

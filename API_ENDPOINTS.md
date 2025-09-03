@@ -284,6 +284,21 @@
 - `PATCH /api/sales-order/{id}/restore` - Restore soft deleted sales order (admin only)
 - `DELETE /api/sales-order/{id}/force` - Force delete sales order (admin only)
 
+### Sales Order Header Endpoints (Header Only)
+- `GET /api/sales-order/header` - List all sales order (header attributes only, without item details)
+  - **Description:** Mendapatkan data sales order dengan atribut header saja (tanpa salesOrderItems yang kompleks)
+  - **Query Parameters:**
+    - `per_page`: Jumlah data per halaman (default: 10)
+    - `search`: Pencarian berdasarkan nomor_so, syarat_pembayaran, status
+    - `tanggal_mulai`: Filter tanggal mulai (format: YYYY-MM-DD)
+    - `tanggal_akhir`: Filter tanggal akhir (format: YYYY-MM-DD)
+    - `pelanggan_id`: Filter berdasarkan ID pelanggan
+    - `gudang_id`: Filter berdasarkan ID gudang
+  - **Response:** `{ "data": [{ "id": "int", "nomor_so": "string", "tanggal_so": "date", "tanggal_pengiriman": "date", "syarat_pembayaran": "string", "gudang_id": "int", "pelanggan_id": "int", "subtotal": "decimal", "total_diskon": "decimal", "ppn_percent": "decimal", "ppn_amount": "decimal", "total_harga_so": "decimal", "status": "string", "pelanggan": { "id": "int", "nama_pelanggan": "string" }, "gudang": { "id": "int", "kode": "string", "nama_gudang": "string" } }] }`
+- `GET /api/sales-order/header/{id}` - Get sales order by ID (header attributes only)
+  - **Description:** Mendapatkan detail sales order dengan atribut header saja (tanpa salesOrderItems)
+  - **Response:** `{ "id": "int", "nomor_so": "string", "tanggal_so": "date", "tanggal_pengiriman": "date", "syarat_pembayaran": "string", "gudang_id": "int", "pelanggan_id": "int", "subtotal": "decimal", "total_diskon": "decimal", "ppn_percent": "decimal", "ppn_amount": "decimal", "total_harga_so": "decimal", "status": "string", "created_at": "datetime", "updated_at": "datetime", "pelanggan": { "id": "int", "nama_pelanggan": "string" }, "gudang": { "id": "int", "kode": "string", "nama_gudang": "string" } }`
+
 ## Static Data APIs (Temporary)
 - `GET /api/static/tipe-gudang` - Get tipe gudang data
   - **Response:** `{ "data": [{ "id": "int", "kode": "string", "nama": "string", "deskripsi": "string" }] }`
@@ -338,176 +353,218 @@
 - The `menu-with-permissions` endpoint is specifically designed for role-menu-permission mapping in the frontend
 - Role-menu-permission endpoints provide full CRUD operations for managing role access to menu permissions
 - Bulk operations are available for efficient role-menu-permission management
-- Static Data APIs are temporary and should be converted to proper master data tables in the future
 
-### Sales Order Example Request:
+## Work Order Planning
+
+### Base URL: `/api/work-order-planning`
+
+#### 1. Get All Work Order Planning
+- **GET** `/api/work-order-planning`
+- **Description**: Mendapatkan semua data work order planning dengan pagination
+- **Query Parameters**:
+  - `per_page`: Jumlah data per halaman (default: 10)
+  - `search`: Pencarian berdasarkan nomor_wo, tanggal_wo, prioritas, status
+- **Response**: List work order planning dengan items dan sales order
+
+#### 2. Get Work Order Planning by ID
+- **GET** `/api/work-order-planning/{id}`
+- **Description**: Mendapatkan detail work order planning berdasarkan ID
+- **Response**: Detail work order planning dengan items dan sales order
+
+#### 3. Create Work Order Planning
+- **POST** `/api/work-order-planning`
+- **Description**: Membuat work order planning baru
+- **Request Body**:
 ```json
 {
-  "nomor_so": "SO-20250825-001",
-  "tanggal_so": "2025-08-25",
-  "tanggal_pengiriman": "2025-08-31",
-  "syarat_pembayaran": "CASH",
-  "gudang_id": 1,
-  "pelanggan_id": 1,
-  "subtotal": 285000,
-  "total_diskon": 14250,
-  "ppn_percent": 11.0,
-  "ppn_amount": 29783,
-  "total_harga_so": 300533,
+  "nomor_wo": "WO-001",
+  "tanggal_wo": "2024-01-01",
+  "id_sales_order": 1,
+  "id_pelanggan": 1,
+  "id_gudang": 1,
+  "id_pelaksana": 1,
+  "prioritas": "HIGH",
+  "status": "DRAFT",
   "items": [
     {
-      "panjang": 2.00,
-      "lebar": 1.50,
-      "tebal": 0.50,
-      "qty": 2,
+      "qty": 10,
+      "panjang": 100.00,
+      "lebar": 50.00,
+      "tebal": 2.00,
+      "plat_dasar_id": 1,
       "jenis_barang_id": 1,
-      "bentuk_barang_id": 2,
+      "bentuk_barang_id": 1,
       "grade_barang_id": 1,
-      "harga": 50000,
-      "satuan": "PER_DIMENSI",
-      "diskon": 5.0,
-      "catatan": "Item untuk proyek A"
+      "catatan": "Catatan item"
     }
   ]
 }
 ```
 
-### Sales Order Example Response (GET by ID):
+#### 4. Update Work Order Planning
+- **PUT/PATCH** `/api/work-order-planning/{id}`
+- **Description**: Mengupdate work order planning
+- **Request Body**: Semua field yang ingin diupdate
+
+#### 5. Delete Work Order Planning
+- **DELETE** `/api/work-order-planning/{id}`
+- **Description**: Soft delete work order planning
+
+#### 6. Restore Work Order Planning
+- **PATCH** `/api/work-order-planning/{id}/restore`
+- **Description**: Restore work order planning yang sudah di-soft delete
+
+#### 7. Force Delete Work Order Planning
+- **DELETE** `/api/work-order-planning/{id}/force`
+- **Description**: Hard delete work order planning
+
+### Item Management
+
+#### 8. Get Work Order Planning Item
+- **GET** `/api/work-order-planning/item/{id}`
+- **Description**: Mendapatkan detail item work order planning
+- **Response**: Item dengan relasi jenis barang, bentuk barang, grade barang, dan plat dasar
+
+#### 9. Update Work Order Planning Item
+- **PUT/PATCH** `/api/work-order-planning/item/{id}`
+- **Description**: Mengupdate item work order planning, pelaksana, dan saran plat dasar
+- **Request Body**:
 ```json
 {
-  "success": true,
-  "message": "Data berhasil diambil",
-  "data": {
-    "id": 1,
-    "nomor_so": "SO-20250825-001",
-    "tanggal_so": "2025-08-25",
-    "tanggal_pengiriman": "2025-08-31",
-    "syarat_pembayaran": "CASH",
-    "gudang_id": 1,
-    "pelanggan_id": 1,
-    "subtotal": 285000,
-    "total_diskon": 14250,
-    "ppn_percent": 11.0,
-    "ppn_amount": 29783,
-    "total_harga_so": 300533,
-    "status": "active",
-    "delete_requested_by": null,
-    "delete_requested_at": null,
-    "delete_approved_by": null,
-    "delete_approved_at": null,
-    "delete_reason": null,
-    "delete_rejection_reason": null,
-    "created_at": "2025-08-28T19:00:00.000000Z",
-    "updated_at": "2025-08-28T19:00:00.000000Z",
-    "salesOrderItems": [
-      {
-        "id": 1,
-        "sales_order_id": 1,
-        "panjang": 2.00,
-        "lebar": 1.50,
-        "tebal": 0.50,
-        "qty": 2,
-        "jenis_barang_id": 1,
-        "bentuk_barang_id": 2,
-        "grade_barang_id": 1,
-        "harga": 50000,
-        "satuan": "PER_DIMENSI",
-        "diskon": 5.0,
-        "catatan": "Item untuk proyek A",
-        "created_at": "2025-08-28T19:00:00.000000Z",
-        "updated_at": "2025-08-28T19:00:00.000000Z",
-        "jenis_barang": {
-          "id": 1,
-          "nama_jenis_barang": "Kayu"
-        },
-        "bentuk_barang": {
-          "id": 2,
-          "nama_bentuk_barang": "Papan"
-        },
-        "grade_barang": {
-          "id": 1,
-          "nama_grade_barang": "A"
-        }
-      }
-    ],
-    "pelanggan": {
-      "id": 1,
-      "nama_pelanggan": "PT ABC",
-      "alamat": "Jl. Contoh No. 123",
-      "telepon": "08123456789"
-    },
-    "gudang": {
-      "id": 1,
-      "kode": "G001",
-      "nama_gudang": "Gudang Utama",
-      "tipe_gudang": "Gudang"
-    },
-    "deleteRequestedBy": null,
-    "deleteApprovedBy": null
-  }
-}
-```
-
-## Sales Order Delete Request Management
-
-### Get Sales Order with Filter
-- **GET** `/api/sales-order`
-- **Query Parameters:**
-  - `search` - Pencarian berdasarkan nomor SO, syarat pembayaran, atau status
-  - `status` - Filter berdasarkan status (active, delete_requested, deleted)
-  - `per_page` - Jumlah data per halaman (default: 10)
-  - `page` - Nomor halaman (default: 1)
-
-### Get Pending Delete Requests for Approval (Admin Only)
-- **GET** `/api/sales-order/pending-delete-requests`
-- **Query Parameters:**
-  - `search` - Pencarian berdasarkan nomor SO atau syarat pembayaran
-  - `delete_requested_from` - Filter tanggal request delete dari (YYYY-MM-DD)
-  - `delete_requested_to` - Filter tanggal request delete sampai (YYYY-MM-DD)
-  - `per_page` - Jumlah data per halaman (default: 10)
-  - `page` - Nomor halaman (default: 1)
-
-### Request Delete (User)
-- **POST** `/api/sales-order/{id}/request-delete`
-- **Body:**
-```json
-{
-  "delete_reason": "Data tidak valid dan perlu dihapus"
-}
-```
-
-### Approve Delete Request (Admin Only)
-- **PATCH** `/api/sales-order/{id}/approve-delete`
-
-### Reject Delete Request (Admin Only)
-- **PATCH** `/api/sales-order/{id}/reject-delete`
-- **Body:**
-```json
-{
-  "rejection_reason": "Data masih diperlukan untuk referensi"
-}
-```
-
-### Cancel Delete Request (User)
-- **PATCH** `/api/sales-order/{id}/cancel-delete-request`
-
-### Example Response for Delete Request:
-```json
-{
-  "success": true,
-  "message": "Request penghapusan Sales Order berhasil dikirim",
-  "data": {
-    "id": 1,
-    "nomor_so": "SO-20250825-001",
-    "status": "delete_requested",
-    "delete_requested_by": 1,
-    "delete_requested_at": "2025-08-31T14:00:00.000000Z",
-    "delete_reason": "Data tidak valid dan perlu dihapus",
-    "deleteRequestedBy": {
-      "id": 1,
-      "name": "John Doe",
-      "email": "john@example.com"
+  "qty": 15,
+  "panjang": 120.00,
+  "lebar": 60.00,
+  "tebal": 2.50,
+  "jenis_barang_id": 1,
+  "bentuk_barang_id": 1,
+  "grade_barang_id": 1,
+  "catatan": "Update catatan",
+  "pelaksana": [
+    {
+      "pelaksana_id": 1,
+      "qty": 5,
+      "weight": 25.50,
+      "tanggal": "2024-01-01",
+      "jam_mulai": "08:00",
+      "jam_selesai": "12:00",
+      "catatan": "Catatan pelaksana"
     }
-  }
+  ],
+  "saran_plat_dasar": [
+    {
+      "item_barang_id": 1,
+      "is_selected": true
+    },
+    {
+      "item_barang_id": 2,
+      "is_selected": false
+    },
+    {
+      "item_barang_id": 3,
+      "is_selected": false
+    }
+  ]
 }
 ```
+
+### Pelaksana Management
+
+#### 10. Add Pelaksana to Item
+- **POST** `/api/work-order-planning/item/{itemId}/pelaksana`
+- **Description**: Menambahkan pelaksana baru ke item work order planning
+- **Request Body**:
+```json
+{
+  "pelaksana_id": 1,
+  "qty": 5,
+  "weight": 25.50,
+  "tanggal": "2024-01-01",
+  "jam_mulai": "08:00",
+  "jam_selesai": "12:00",
+  "catatan": "Catatan pelaksana"
+}
+```
+
+#### 11. Update Pelaksana
+- **PUT/PATCH** `/api/work-order-planning/item/{itemId}/pelaksana/{pelaksanaId}`
+- **Description**: Mengupdate data pelaksana
+- **Request Body**: Field yang ingin diupdate (qty, weight, tanggal, jam_mulai, jam_selesai, catatan)
+
+#### 12. Remove Pelaksana
+- **DELETE** `/api/work-order-planning/item/{itemId}/pelaksana/{pelaksanaId}`
+- **Description**: Menghapus pelaksana dari item
+
+### Utility Endpoints
+
+#### 13. Get Saran Plat Dasar
+- **GET** `/api/work-order-planning/saran-plat-dasar`
+- **Description**: Mendapatkan saran plat dasar berdasarkan jenis, bentuk, grade barang dan tebal
+- **Query Parameters**:
+  - `jenis_barang_id`: ID jenis barang
+  - `bentuk_barang_id`: ID bentuk barang
+  - `grade_barang_id`: ID grade barang
+  - `tebal`: Tebal barang
+
+#### 14. Set Saran Plat Dasar
+- **POST** `/api/work-order-planning/saran-plat-dasar`
+- **Description**: Set plat dasar untuk work order planning item
+- **Request Body**:
+```json
+{
+  "wo_planning_item_id": 1,
+  "plat_dasar_id": 1
+}
+```
+
+#### 15. Print SPK Work Order
+- **GET** `/api/work-order-planning/{id}/print-spk`
+- **Description**: Mendapatkan data untuk print SPK work order
+- **Response**: Data terformat untuk print dengan informasi jenis barang, bentuk barang, grade barang, ukuran, qty, berat, luas, plat dasar, dan pelaksana
+
+### Saran Plat/Shaft Dasar Management
+
+#### 16. Get Saran Plat Dasar by Item
+- **GET** `/api/work-order-planning/item/{itemId}/saran-plat-dasar`
+- **Description**: Mendapatkan semua saran plat/shaft dasar untuk item tertentu
+- **Response**: List saran plat dasar dengan relasi item barang, diurutkan berdasarkan is_selected (true di atas) dan created_at
+
+#### 17. Add Saran Plat Dasar
+- **POST** `/api/work-order-planning/item/{itemId}/saran-plat-dasar`
+- **Description**: Menambahkan saran plat/shaft dasar baru ke item
+- **Request Body**:
+```json
+{
+  "item_barang_id": 1,
+  "is_selected": true
+}
+```
+
+#### 18. Update Saran Plat Dasar
+- **PUT/PATCH** `/api/work-order-planning/item/{itemId}/saran-plat-dasar/{saranId}`
+- **Description**: Mengupdate saran plat/shaft dasar
+- **Request Body**:
+```json
+{
+  "is_selected": true
+}
+```
+
+#### 19. Remove Saran Plat Dasar
+- **DELETE** `/api/work-order-planning/item/{itemId}/saran-plat-dasar/{saranId}`
+- **Description**: Menghapus saran plat/shaft dasar dari item
+
+#### 20. Set Selected Plat Dasar
+- **PATCH** `/api/work-order-planning/item/{itemId}/saran-plat-dasar/{saranId}/select`
+- **Description**: Set saran plat dasar sebagai yang dipilih (is_selected = true)
+- **Note**: Otomatis akan set semua saran lain menjadi false dan update plat_dasar_id di work order planning item
+
+## Notes
+
+- Semua endpoint memerlukan authentication dan authorization (middleware `checkrole`)
+- Field `pelaksana` dalam update item akan mengganti semua pelaksana yang ada dengan yang baru
+- Field `saran_plat_dasar` dalam update item akan mengganti semua saran plat dasar yang ada dengan yang baru
+- Jika tidak ada field `pelaksana` atau `saran_plat_dasar` dalam request, data yang ada tidak akan berubah
+- Hanya satu saran plat dasar yang dapat memiliki `is_selected = true` per item
+- Ketika `is_selected = true` diset, otomatis akan update `plat_dasar_id` di work order planning item
+- Semua operasi pelaksana dan saran plat dasar menggunakan soft delete
+- Relasi yang di-load secara otomatis: jenis barang, bentuk barang, grade barang, plat dasar, pelaksana, dan saran plat dasar
