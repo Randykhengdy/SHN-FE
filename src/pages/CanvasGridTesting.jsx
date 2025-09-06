@@ -33,6 +33,7 @@ export default function CanvasGridTestingPage() {
   const [containerDragOffset, setContainerDragOffset] = useState({ x: 0, y: 0 });
   const [isLeftClickPanning, setIsLeftClickPanning] = useState(false);
   const [leftClickPanStart, setLeftClickPanStart] = useState({ x: 0, y: 0 });
+  const [selectedBoxIds, setSelectedBoxIds] = useState(new Set());
   
   // Colors for boxes
   const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#8b5cf6'];
@@ -66,6 +67,7 @@ export default function CanvasGridTestingPage() {
     
     ctx.restore();
   }, [gridSize, zoom, panOffset]);
+
   
   const drawBaseContainer = useCallback((ctx) => {
     ctx.save();
@@ -116,7 +118,7 @@ export default function CanvasGridTestingPage() {
     ctx.restore();
   }, [baseContainer, gridSize, zoom, panOffset, isDraggingContainer]);
   
-  const drawBox = useCallback((ctx, box, isPreview = false, isDragged = false, isMovingWithContainer = false) => {
+  const drawBox = useCallback((ctx, box, isPreview = false, isDragged = false, isMovingWithContainer = false, isSelected = false) => {
     ctx.save();
     ctx.translate(panOffset.x, panOffset.y);
     
@@ -148,6 +150,12 @@ export default function CanvasGridTestingPage() {
       ctx.shadowBlur = 6;
       ctx.shadowOffsetX = 2;
       ctx.shadowOffsetY = 2;
+    } else if (isSelected) {
+      // Add selection highlight
+      ctx.shadowColor = 'rgba(239, 68, 68, 0.4)';
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetX = 2;
+      ctx.shadowOffsetY = 2;
     }
     
     // Create gradient for more modern look
@@ -159,8 +167,14 @@ export default function CanvasGridTestingPage() {
     } else if (isMovingWithContainer) {
       // Slightly more transparent for boxes moving with container
       ctx.fillStyle = `${box.color}E0`;
+    } else if (isSelected) {
+      // Red tint for selected boxes
+      ctx.fillStyle = `${box.color}CC`;
     } else if (isPreview) {
       ctx.fillStyle = `${box.color}40`;
+    } else if (box.isDisabled) {
+      // Grayed out for disabled boxes
+      ctx.fillStyle = '#9ca3af';
     } else {
       ctx.fillStyle = box.color;
     }
@@ -178,12 +192,18 @@ export default function CanvasGridTestingPage() {
     // Draw box border with enhanced styling
     ctx.strokeStyle = isPreview ? box.color : 
                       (isDragged ? '#fff' : 
-                       (isMovingWithContainer ? '#3b82f6' : '#000'));
+                       (isMovingWithContainer ? '#3b82f6' : 
+                        (isSelected ? '#ef4444' : 
+                         (box.isDisabled ? '#6b7280' : '#000'))));
     ctx.lineWidth = isPreview ? 3 : 
                     (isDragged ? 3 : 
-                     (isMovingWithContainer ? 2 : 1));
+                     (isMovingWithContainer ? 2 : 
+                      (isSelected ? 3 : 
+                       (box.isDisabled ? 2 : 1))));
     ctx.setLineDash(isPreview ? [8, 4] : 
-                    (isMovingWithContainer ? [4, 2] : []));
+                    (isMovingWithContainer ? [4, 2] : 
+                     (isSelected ? [6, 3] : 
+                      (box.isDisabled ? [3, 3] : []))));
     
     // Draw rounded border
     ctx.beginPath();
@@ -193,7 +213,9 @@ export default function CanvasGridTestingPage() {
     
     // Draw box content with better visibility
     ctx.fillStyle = isDragged ? '#000' : 
-                    (isMovingWithContainer ? '#1d4ed8' : '#fff');
+                    (isMovingWithContainer ? '#1d4ed8' : 
+                     (isSelected ? '#fff' : 
+                      (box.isDisabled ? '#4b5563' : '#fff')));
     ctx.font = `bold ${Math.max(12, Math.min(width, height) * 0.3)}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -212,11 +234,30 @@ export default function CanvasGridTestingPage() {
       ctx.shadowBlur = 1;
       ctx.shadowOffsetX = 1;
       ctx.shadowOffsetY = 1;
+    } else if (isSelected) {
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+      ctx.shadowBlur = 2;
+      ctx.shadowOffsetX = 1;
+      ctx.shadowOffsetY = 1;
     }
     
     ctx.fillText(box.id.toString(), centerX, centerY - 5);
     ctx.font = `${Math.max(8, Math.min(width, height) * 0.2)}px Arial`;
     ctx.fillText(`${box.width}×${box.height}`, centerX, centerY + 8);
+    
+    // Draw selection indicator
+    if (isSelected) {
+      ctx.fillStyle = '#ef4444';
+      ctx.font = `${Math.max(10, Math.min(width, height) * 0.25)}px Arial`;
+      ctx.fillText('✓', x + width - 8, y + 8);
+    }
+    
+    // Draw disabled indicator
+    if (box.isDisabled) {
+      ctx.fillStyle = '#6b7280';
+      ctx.font = `${Math.max(8, Math.min(width, height) * 0.2)}px Arial`;
+      ctx.fillText('🔒', x + width - 8, y + height - 8);
+    }
     
     // Restore context
     ctx.restore();
@@ -239,6 +280,7 @@ export default function CanvasGridTestingPage() {
     // Draw grid
     drawGrid(ctx, canvas.width, canvas.height);
     
+    
     // Draw base container
     drawBaseContainer(ctx);
     
@@ -250,8 +292,9 @@ export default function CanvasGridTestingPage() {
         box.x < baseContainer.x + baseContainer.width &&
         box.y >= baseContainer.y && 
         box.y < baseContainer.y + baseContainer.height;
+      const isSelected = selectedBoxIds.has(box.id);
       
-      drawBox(ctx, box, false, isDragged, isMovingWithContainer);
+      drawBox(ctx, box, false, isDragged, isMovingWithContainer, isSelected);
     });
     
     // Draw preview position if dragging
@@ -348,7 +391,16 @@ export default function CanvasGridTestingPage() {
     });
     
     if (clickedBox) {
-      setIsDragging(true);
+      // Check if box is disabled
+      if (clickedBox.isDisabled) {
+        showAlert('Info', 'This box is disabled and cannot be moved', 'info');
+        return;
+      }
+      
+      // Left-click: single select box and prepare for drag
+      setSelectedBoxIds(new Set([clickedBox.id]));
+      
+      // Prepare for drag (will start dragging on mousemove)
       setDraggedBoxId(clickedBox.id);
       setDragOffset({
         x: mousePos.x - (clickedBox.x * gridSize * zoom),
@@ -360,13 +412,43 @@ export default function CanvasGridTestingPage() {
       return;
     }
     
-    // If clicking on empty canvas area, start left-click panning
+    // If clicking on empty canvas area
     if (e.button === 0) { // Left mouse button
+      // Start left-click panning
       setIsLeftClickPanning(true);
       setLeftClickPanStart(mousePos);
       setLastPanPos(mousePos);
     }
   }, [boxes, getMousePos, getGridPos, gridSize, zoom, isMouseOverBox, isMouseOverContainer, baseContainer]);
+
+  // Right-click handler for selection
+  const handleRightClick = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const mousePos = getMousePos(e);
+    
+    // Find clicked box
+    const clickedBox = boxes.find(box => {
+      return isMouseOverBox(mousePos, box);
+    });
+    
+    if (clickedBox) {
+      // Toggle selection on right-click
+      setSelectedBoxIds(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(clickedBox.id)) {
+          newSet.delete(clickedBox.id);
+        } else {
+          newSet.add(clickedBox.id);
+        }
+        return newSet;
+      });
+    } else {
+      // Clear selection when right-clicking empty area
+      setSelectedBoxIds(new Set());
+    }
+  }, [boxes, getMousePos, isMouseOverBox]);
   
   // Smooth drag update using requestAnimationFrame with momentum
   const updateDragPosition = useCallback((mousePos) => {
@@ -466,6 +548,20 @@ export default function CanvasGridTestingPage() {
   }, [isDragging, isDraggingContainer, draggedBoxId, boxes, dragOffset, containerDragOffset, gridSize, zoom, baseContainer, lastMousePos]);
 
   const handleMouseMove = useCallback((e) => {
+    // Start dragging if we have a draggedBoxId but not yet dragging
+    if (draggedBoxId && !isDragging && !isDraggingContainer && !isLeftClickPanning) {
+      const mousePos = getMousePos(e);
+      const dragDistance = Math.sqrt(
+        Math.pow(mousePos.x - dragStartPos.x, 2) + 
+        Math.pow(mousePos.y - dragStartPos.y, 2)
+      );
+      
+      // Start dragging if mouse moved more than 5 pixels
+      if (dragDistance > 5) {
+        setIsDragging(true);
+      }
+    }
+    
     if ((!isDragging && !isDraggingContainer && !isLeftClickPanning) || 
         (!draggedBoxId && !isDraggingContainer && !isLeftClickPanning)) return;
     
@@ -510,6 +606,11 @@ export default function CanvasGridTestingPage() {
       setAnimationFrameId(null);
     }
     
+    // If we had a draggedBoxId but didn't actually drag, it was just a click
+    if (draggedBoxId && !isDragging) {
+      // Box was selected on click, no need to clear selection
+    }
+    
     setIsDragging(false);
     setDraggedBoxId(null);
     setPreviewPosition(null);
@@ -522,7 +623,7 @@ export default function CanvasGridTestingPage() {
     setContainerDragOffset({ x: 0, y: 0 });
     setIsLeftClickPanning(false);
     setLeftClickPanStart({ x: 0, y: 0 });
-  }, [animationFrameId]);
+  }, [animationFrameId, draggedBoxId, isDragging]);
 
   // Mouse wheel zoom
   const handleWheel = useCallback((e) => {
@@ -609,7 +710,8 @@ export default function CanvasGridTestingPage() {
             y: y,
             width: newBoxSize.width,
             height: newBoxSize.height,
-            color: newColor
+            color: newColor,
+            isDisabled: false // Default: new boxes are enabled
           }]);
           placed = true;
         }
@@ -700,7 +802,12 @@ export default function CanvasGridTestingPage() {
       
       // Update state with imported data
       setBaseContainer(data.baseContainer);
-      setBoxes(data.boxes);
+      // Ensure backward compatibility by adding isDisabled if missing
+      const boxesWithDefaults = data.boxes.map(box => ({
+        ...box,
+        isDisabled: box.isDisabled !== undefined ? box.isDisabled : false
+      }));
+      setBoxes(boxesWithDefaults);
       if (data.gridSize) setGridSize(data.gridSize);
       if (data.zoom) setZoom(data.zoom);
       if (data.panOffset) setPanOffset(data.panOffset);
@@ -736,6 +843,91 @@ export default function CanvasGridTestingPage() {
       console.error('Clipboard error:', error);
     }
   }, [exportToJSON, showAlert]);
+
+  // Cell occupancy calculation
+  const calculateCellOccupancy = useCallback(() => {
+    const totalCells = baseContainer.width * baseContainer.height;
+    let occupiedCells = 0;
+    
+    // Create a grid to track occupied cells
+    const grid = Array(baseContainer.height).fill().map(() => 
+      Array(baseContainer.width).fill(false)
+    );
+    
+    // Mark occupied cells
+    boxes.forEach(box => {
+      for (let y = box.y; y < box.y + box.height; y++) {
+        for (let x = box.x; x < box.x + box.width; x++) {
+          if (x >= 0 && x < baseContainer.width && y >= 0 && y < baseContainer.height) {
+            if (!grid[y][x]) {
+              grid[y][x] = true;
+              occupiedCells++;
+            }
+          }
+        }
+      }
+    });
+    
+    const emptyCells = totalCells - occupiedCells;
+    const occupancyPercentage = totalCells > 0 ? Math.round((occupiedCells / totalCells) * 100) : 0;
+    
+    return {
+      total: totalCells,
+      occupied: occupiedCells,
+      empty: emptyCells,
+      percentage: occupancyPercentage
+    };
+  }, [baseContainer, boxes]);
+
+  // Selection and delete functions
+  const toggleSelectedBoxesDisabled = useCallback(() => {
+    if (selectedBoxIds.size === 0) {
+      showAlert('Info', 'No boxes selected to toggle disable state', 'info');
+      return;
+    }
+    
+    setBoxes(prevBoxes => 
+      prevBoxes.map(box => 
+        selectedBoxIds.has(box.id) 
+          ? { ...box, isDisabled: !box.isDisabled }
+          : box
+      )
+    );
+    
+    const disabledCount = boxes.filter(box => 
+      selectedBoxIds.has(box.id) && !box.isDisabled
+    ).length;
+    
+    const enabledCount = boxes.filter(box => 
+      selectedBoxIds.has(box.id) && box.isDisabled
+    ).length;
+    
+    if (disabledCount > 0) {
+      showAlert('Success', `${disabledCount} box(es) disabled`, 'success');
+    } else if (enabledCount > 0) {
+      showAlert('Success', `${enabledCount} box(es) enabled`, 'success');
+    }
+  }, [selectedBoxIds, boxes, showAlert]);
+
+  const deleteSelectedBoxes = useCallback(() => {
+    if (selectedBoxIds.size === 0) {
+      showAlert('Info', 'No boxes selected for deletion', 'info');
+      return;
+    }
+    
+    setBoxes(prevBoxes => prevBoxes.filter(box => !selectedBoxIds.has(box.id)));
+    setSelectedBoxIds(new Set());
+    showAlert('Success', `Deleted ${selectedBoxIds.size} box(es)`, 'success');
+  }, [selectedBoxIds, showAlert]);
+
+  const selectAllBoxes = useCallback(() => {
+    const allBoxIds = new Set(boxes.map(box => box.id));
+    setSelectedBoxIds(allBoxIds);
+  }, [boxes]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedBoxIds(new Set());
+  }, []);
   
   // Canvas setup and resize
   useEffect(() => {
@@ -794,6 +986,20 @@ export default function CanvasGridTestingPage() {
     handleMouseUp(mouseEvent);
   }, [handleMouseUp]);
 
+  // Keyboard event handler
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      if (selectedBoxIds.size > 0) {
+        deleteSelectedBoxes();
+      }
+    } else if (e.key === 'Escape') {
+      setSelectedBoxIds(new Set());
+    } else if (e.key === 'a' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      selectAllBoxes();
+    }
+  }, [selectedBoxIds, deleteSelectedBoxes, selectAllBoxes]);
+
   // Event listeners
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -802,6 +1008,7 @@ export default function CanvasGridTestingPage() {
     // Mouse events
     canvas.addEventListener('mousedown', handleMouseDown);
     canvas.addEventListener('mousedown', handleMouseDownPan);
+    canvas.addEventListener('contextmenu', handleRightClick);
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mousemove', handleMouseMovePan);
     document.addEventListener('mouseup', handleMouseUp);
@@ -813,9 +1020,13 @@ export default function CanvasGridTestingPage() {
     document.addEventListener('touchmove', handleTouchMove, { passive: false });
     document.addEventListener('touchend', handleTouchEnd, { passive: false });
     
+    // Keyboard events
+    document.addEventListener('keydown', handleKeyDown);
+    
     return () => {
       canvas.removeEventListener('mousedown', handleMouseDown);
       canvas.removeEventListener('mousedown', handleMouseDownPan);
+      canvas.removeEventListener('contextmenu', handleRightClick);
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mousemove', handleMouseMovePan);
       document.removeEventListener('mouseup', handleMouseUp);
@@ -825,8 +1036,10 @@ export default function CanvasGridTestingPage() {
       canvas.removeEventListener('touchstart', handleTouchStart);
       document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('touchend', handleTouchEnd);
+      
+      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handleMouseDown, handleMouseMove, handleMouseUp, handleMouseDownPan, handleMouseMovePan, handleMouseUpPan, handleWheel, handleTouchStart, handleTouchMove, handleTouchEnd]);
+  }, [handleMouseDown, handleMouseMove, handleMouseUp, handleMouseDownPan, handleMouseMovePan, handleMouseUpPan, handleWheel, handleTouchStart, handleTouchMove, handleTouchEnd, handleKeyDown, handleRightClick]);
   
   return (
     <div className="h-screen flex flex-col">
@@ -858,7 +1071,7 @@ export default function CanvasGridTestingPage() {
           <div className="p-4 space-y-4">
             {/* Box Info */}
             <div className="bg-white rounded-lg p-3 border">
-              <h3 className="text-sm font-medium mb-3">Performance Info</h3>
+              <h3 className="text-sm font-medium mb-3">Grid Statistics</h3>
               <div className="space-y-2">
                 <div className="text-sm">
                   <span className="font-medium">Total Boxes:</span> {boxes.length}
@@ -866,21 +1079,36 @@ export default function CanvasGridTestingPage() {
                 <div className="text-sm">
                   <span className="font-medium">Container:</span> {baseContainer.width}×{baseContainer.height}
                 </div>
-                <div className="text-sm">
-                  <span className="font-medium">Position:</span> ({baseContainer.x}, {baseContainer.y})
-                </div>
-                <div className="text-sm">
-                  <span className="font-medium">Rendering:</span> Canvas
-                </div>
-                <div className="text-sm">
-                  <span className="font-medium">Zoom:</span> {Math.round(zoom * 100)}%
-                </div>
-                <div className="text-sm">
-                  <span className="font-medium">Grid Size:</span> {gridSize}px
-                </div>
-                <div className="text-sm">
-                  <span className="font-medium">Pan Offset:</span> ({Math.round(panOffset.x)}, {Math.round(panOffset.y)})
-                </div>
+                
+                {/* Cell Occupancy */}
+                {(() => {
+                  const occupancy = calculateCellOccupancy();
+                  return (
+                    <>
+                      <div className="border-t pt-2 mt-2">
+                        <div className="text-sm font-medium text-gray-700 mb-1">Cell Occupancy</div>
+                        <div className="text-sm">
+                          <span className="font-medium text-green-600">Occupied:</span> {occupancy.occupied} cells
+                        </div>
+                        <div className="text-sm">
+                          <span className="font-medium text-gray-500">Empty:</span> {occupancy.empty} cells
+                        </div>
+                        <div className="text-sm">
+                          <span className="font-medium">Total:</span> {occupancy.total} cells
+                        </div>
+                        <div className="text-sm">
+                          <span className="font-medium">Usage:</span> {occupancy.percentage}%
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                          <div 
+                            className="bg-green-500 h-2 rounded-full transition-all duration-300" 
+                            style={{ width: `${occupancy.percentage}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
 
@@ -971,6 +1199,51 @@ export default function CanvasGridTestingPage() {
               </div>
             </div>
 
+            {/* Selection Controls */}
+            <div className="bg-white rounded-lg p-3 border">
+              <h3 className="text-sm font-medium mb-3">Selection & Delete</h3>
+              <div className="space-y-2">
+                <div className="text-xs text-gray-600 mb-2">
+                  Selected: {selectedBoxIds.size} box(es)
+                </div>
+                <div className="grid grid-cols-2 gap-1">
+                  <Button
+                    onClick={selectAllBoxes}
+                    className="h-7 text-xs bg-blue-600 hover:bg-blue-700"
+                    disabled={boxes.length === 0}
+                  >
+                    Select All
+                  </Button>
+                  <Button
+                    onClick={clearSelection}
+                    className="h-7 text-xs bg-gray-500 hover:bg-gray-600"
+                    disabled={selectedBoxIds.size === 0}
+                  >
+                    Clear
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 gap-1">
+                  <Button
+                    onClick={toggleSelectedBoxesDisabled}
+                    className="h-8 text-sm bg-yellow-600 hover:bg-yellow-700"
+                    disabled={selectedBoxIds.size === 0}
+                  >
+                    🔒 Toggle Disable
+                  </Button>
+                  <Button
+                    onClick={deleteSelectedBoxes}
+                    className="h-8 text-sm bg-red-600 hover:bg-red-700"
+                    disabled={selectedBoxIds.size === 0}
+                  >
+                    🗑️ Delete
+                  </Button>
+                </div>
+                <div className="text-xs text-gray-500 mt-2">
+                  Left-click: single select + drag | Right-click: multi select
+                </div>
+              </div>
+            </div>
+
             {/* Data Management */}
             <div className="bg-white rounded-lg p-3 border">
               <h3 className="text-sm font-medium mb-3">Data Management</h3>
@@ -1047,6 +1320,11 @@ export default function CanvasGridTestingPage() {
                 <div>• Click and drag any box to move it</div>
                 <div>• Click and drag container border to move it</div>
                 <div>• Boxes inside container move together</div>
+                <div>• Left-click boxes to select (single) and drag them</div>
+                <div>• Right-click boxes to toggle selection (multi)</div>
+                <div>• Toggle Disable to lock/unlock boxes</div>
+                <div>• Disabled boxes cannot be moved</div>
+                <div>• Press Delete key to remove selected boxes</div>
                 <div>• Click and drag empty area to pan</div>
                 <div>• Mouse wheel to zoom in/out</div>
                 <div>• Ctrl+Click or Middle mouse to pan</div>
