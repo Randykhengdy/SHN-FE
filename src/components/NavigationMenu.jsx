@@ -10,7 +10,8 @@ import {
   CheckSquare,
   Warehouse,
   Wrench,
-  ClipboardList
+  ClipboardList,
+  Edit3
 } from "lucide-react";
 
 export default function NavigationMenu() {
@@ -41,6 +42,12 @@ export default function NavigationMenu() {
       path: "/work-order",
       icon: ClipboardList,
       category: "transaksi"
+    },
+    {
+      label: "Canvas Testing",
+      path: "/canvas-testing",
+      icon: Edit3,
+      category: "testing"
     },
     {
       label: "Approval",

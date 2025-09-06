@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -82,6 +82,8 @@ export default function AddWorkOrderPage() {
   const [loadingGradeBarang, setLoadingGradeBarang] = useState(false);
   const [loadingPelaksana, setLoadingPelaksana] = useState(false);
   const [loadingSalesOrder, setLoadingSalesOrder] = useState(false);
+
+
 
   // Load master data on component mount
   useEffect(() => {
@@ -862,6 +864,7 @@ export default function AddWorkOrderPage() {
             </div>
           </CardContent>
         </Card>
+
 
         {/* Submit Button */}
         <div className="flex justify-end gap-3">

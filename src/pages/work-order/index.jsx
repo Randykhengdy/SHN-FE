@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Eye, Trash2, RefreshCw, Download, Filter } from 'lucide-react';
+import { Plus, Search, Eye, Trash2, RefreshCw, Download, Filter, Edit3 } from 'lucide-react';
 import { useAlert } from '@/hooks/useAlert';
 import CustomAlert from '@/components/modals/CustomAlert';
 import PageLayout from '@/components/PageLayout';
@@ -167,10 +167,20 @@ export default function WorkOrderPage() {
         <div className="bg-white rounded-lg px-4 py-2 border border-gray-200">
           <h2 className="text-lg font-semibold text-gray-800">Daftar Work Order</h2>
         </div>
-        <Button onClick={handleAddWorkOrder} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
-          <Plus className="w-4 h-4 mr-2" />
-          Tambah Work Order
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => navigate('/canvas-testing')} 
+            variant="outline" 
+            className="w-full sm:w-auto"
+          >
+            <Edit3 className="w-4 h-4 mr-2" />
+            Test Canvas
+          </Button>
+          <Button onClick={handleAddWorkOrder} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
+            <Plus className="w-4 h-4 mr-2" />
+            Tambah Work Order
+          </Button>
+        </div>
       </div>
 
              {/* Filter Section */}

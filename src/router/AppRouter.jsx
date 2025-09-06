@@ -25,6 +25,7 @@ import ViewSalesOrderPage from "@/pages/sales-order/view";
 import ApprovalPage from "@/pages/approval";
 import WorkOrderPage from "@/pages/work-order";
 import AddWorkOrderPage from "@/pages/work-order/add";
+import CanvasTestingPage from "@/pages/CanvasTesting";
 
 const AppRouter = () => {
     return (
@@ -55,6 +56,7 @@ const AppRouter = () => {
         <Route path="/approval" element={<ApprovalPage />} />
         <Route path="/work-order" element={<WorkOrderPage />} />
         <Route path="/work-order/add" element={<AddWorkOrderPage />} />
+        <Route path="/canvas-testing" element={<CanvasTestingPage />} />
 
       </Routes>
     );
