@@ -26,6 +26,9 @@ import ApprovalPage from "@/pages/approval";
 import WorkOrderPage from "@/pages/work-order";
 import AddWorkOrderPage from "@/pages/work-order/add";
 import CanvasTestingPage from "@/pages/CanvasTesting";
+import GridStackTestingPage from "@/pages/GridStackTesting";
+import SimpleGridTestingPage from "@/pages/SimpleGridTesting";
+import CanvasGridTestingPage from "@/pages/CanvasGridTesting";
 
 const AppRouter = () => {
     return (
@@ -57,6 +60,9 @@ const AppRouter = () => {
         <Route path="/work-order" element={<WorkOrderPage />} />
         <Route path="/work-order/add" element={<AddWorkOrderPage />} />
         <Route path="/canvas-testing" element={<CanvasTestingPage />} />
+        <Route path="/gridstack-testing" element={<GridStackTestingPage />} />
+        <Route path="/simple-grid-testing" element={<SimpleGridTestingPage />} />
+        <Route path="/canvas-grid-testing" element={<CanvasGridTestingPage />} />
 
       </Routes>
     );

@@ -1716,13 +1716,17 @@ export default function CanvasTestingPage() {
   return (
     <div className="h-screen flex flex-col">
       <div className="p-4 bg-white border-b">
-        <h1 className="text-2xl font-bold mb-2">🎯 Smart Cut Planning System - Enhanced</h1>
-        <p className="text-gray-600">Sistem perencanaan cut cerdas dengan auto-placement, grouping, dan strict no-overlap</p>
-        <div className="mt-2 flex gap-4 text-sm">
-          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">🎯 Smart Placement</span>
-          <span className="bg-green-100 text-green-800 px-2 py-1 rounded">📐 2D/1D Area Calc</span>
-          <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">🔗 Grouping</span>
-          <span className="bg-red-100 text-red-800 px-2 py-1 rounded">❌ No Overlap</span>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold mb-2">🎯 Smart Cut Planning System - Enhanced</h1>
+            <p className="text-gray-600">Sistem perencanaan cut cerdas dengan auto-placement, grouping, dan strict no-overlap</p>
+            <div className="mt-2 flex gap-4 text-sm">
+              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">🎯 Smart Placement</span>
+              <span className="bg-green-100 text-green-800 px-2 py-1 rounded">📐 2D/1D Area Calc</span>
+              <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">🔗 Grouping</span>
+              <span className="bg-red-100 text-red-800 px-2 py-1 rounded">❌ No Overlap</span>
+            </div>
+          </div>
         </div>
       </div>
 
