@@ -120,12 +120,12 @@
 
 ## Master Data - Item Barang
 - `GET /api/item-barang` - List all item barang
-  - **Response:** `{ "data": [{ "id": "int", "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }] }`
+  - **Response:** `{ "data": [{ "id": "int", "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "quantity": "decimal", "quantity_tebal_sama": "decimal", "jenis_potongan": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }] }`
 - `POST /api/item-barang` - Create new item barang
-  - **Request:** `{ "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }`
+  - **Request:** `{ "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "quantity": "decimal", "quantity_tebal_sama": "decimal", "jenis_potongan": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }`
 - `GET /api/item-barang/{id}` - Get item barang by ID
 - `PUT /api/item-barang/{id}` - Update item barang
-  - **Request:** `{ "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }`
+  - **Request:** `{ "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "quantity": "decimal", "quantity_tebal_sama": "decimal", "jenis_potongan": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }`
 - `PATCH /api/item-barang/{id}` - Update item barang
 - `DELETE /api/item-barang/{id}/soft` - Soft delete item barang
 - `PATCH /api/item-barang/{id}/restore` - Restore soft deleted item barang
@@ -497,13 +497,19 @@
 ### Utility Endpoints
 
 #### 13. Get Saran Plat Dasar
-- **GET** `/api/work-order-planning/saran-plat-dasar`
-- **Description**: Mendapatkan saran plat dasar berdasarkan jenis, bentuk, grade barang dan tebal
-- **Query Parameters**:
-  - `jenis_barang_id`: ID jenis barang
-  - `bentuk_barang_id`: ID bentuk barang
-  - `grade_barang_id`: ID grade barang
-  - `tebal`: Tebal barang
+- **POST** `/api/work-order-planning/get-saran-plat-dasar`
+- **Description**: Mendapatkan saran plat dasar berdasarkan jenis, bentuk, grade barang, tebal, dan sisa_luas
+- **Request Body**:
+```json
+{
+  "jenis_barang_id": 1,
+  "bentuk_barang_id": 1,
+  "grade_barang_id": 1,
+  "tebal": 10,
+  "sisa_luas": 100
+}
+```
+- **Response**: List item barang yang memiliki jenis, bentuk, grade barang yang sama, tebal yang sama, dan sisa_luas lebih besar dari parameter, diurutkan berdasarkan sisa_luas (ascending)
 
 #### 14. Set Saran Plat Dasar
 - **POST** `/api/work-order-planning/saran-plat-dasar`

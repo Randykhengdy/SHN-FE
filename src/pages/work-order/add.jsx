@@ -11,6 +11,9 @@ import { useAlert } from '@/hooks/useAlert';
 import PageLayout from '@/components/PageLayout';
 import { workOrderService } from '@/services/workOrderService';
 import { request } from '@/lib/request';
+import { Table, TableHead, TableBody, TableRow, TableCell, TableHeader } from '@/components/Table';
+import PelaksanaModal from '@/components/modals/PelaksanaModal';
+import WorkOrderItemEditModal from '@/components/modals/WorkOrderItemEditModal';
 import { 
   getGudangOptions, 
   getJenisBarangOptions, 
@@ -40,20 +43,7 @@ export default function AddWorkOrderPage() {
   });
 
   // Work Order Items State
-  const [workOrderItems, setWorkOrderItems] = useState([
-    {
-      id: 1,
-      panjang: '',
-      lebar: '',
-      tebal: '',
-      qty: 1,
-      jenis_barang_id: '',
-      bentuk_barang_id: '',
-      grade_barang_id: '',
-      catatan: '',
-      pelaksana: []
-    }
-  ]);
+  const [workOrderItems, setWorkOrderItems] = useState([]);
 
   // Master Data State
   const [gudangList, setGudangList] = useState([]);
@@ -82,6 +72,98 @@ export default function AddWorkOrderPage() {
   const [loadingGradeBarang, setLoadingGradeBarang] = useState(false);
   const [loadingPelaksana, setLoadingPelaksana] = useState(false);
   const [loadingSalesOrder, setLoadingSalesOrder] = useState(false);
+
+  // UI State for pelaksana modal
+  const [pelaksanaModalOpen, setPelaksanaModalOpen] = useState(false);
+  const [pelaksanaModalItemId, setPelaksanaModalItemId] = useState(null);
+
+  // UI State for work order item edit modal
+  const [itemEditModalOpen, setItemEditModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+
+  const openPelaksanaModal = (itemId) => {
+    setPelaksanaModalItemId(itemId);
+    setPelaksanaModalOpen(true);
+  };
+
+  const savePelaksanaForItem = (rows) => {
+    if (!pelaksanaModalItemId) return;
+    updateWorkOrderItem(pelaksanaModalItemId, 'pelaksana', rows);
+  };
+
+  // Work Order Item Edit Modal functions
+  const openItemEditModal = (item) => {
+    setEditingItem(item);
+    setItemEditModalOpen(true);
+  };
+
+  // Check if item is new (not in workOrderItems yet)
+  const isNewItem = (item) => {
+    return !workOrderItems.some(workItem => workItem.id === item.id);
+  };
+
+  const closeItemEditModal = () => {
+    setItemEditModalOpen(false);
+    setEditingItem(null);
+  };
+
+  const saveItemEdit = (updatedItemData) => {
+    if (!editingItem) return;
+    
+    // Check if this is a new item (not in workOrderItems yet)
+    const existingItem = workOrderItems.find(item => item.id === editingItem.id);
+    
+    if (existingItem) {
+      // Update existing item
+      updateWorkOrderItem(editingItem.id, null, updatedItemData);
+    } else {
+      // Add new item
+      setWorkOrderItems(prev => [...prev, { ...editingItem, ...updatedItemData }]);
+    }
+  };
+
+  // Helper functions to get display values
+  const getJenisBarangName = (jenisBarangId) => {
+    // First try to get from selected sales order items
+    if (selectedSalesOrder && selectedSalesOrder.sales_order_items) {
+      const soItem = selectedSalesOrder.sales_order_items.find(item => item.jenis_barang_id === jenisBarangId);
+      if (soItem && soItem.jenis_barang) {
+        return soItem.jenis_barang.nama_jenis;
+      }
+    }
+    
+    // Fallback to master data list
+    const jenis = jenisBarangList.find(item => item.value === jenisBarangId);
+    return jenis ? jenis.label : 'Belum dipilih';
+  };
+
+  const getBentukBarangName = (bentukBarangId) => {
+    // First try to get from selected sales order items
+    if (selectedSalesOrder && selectedSalesOrder.sales_order_items) {
+      const soItem = selectedSalesOrder.sales_order_items.find(item => item.bentuk_barang_id === bentukBarangId);
+      if (soItem && soItem.bentuk_barang) {
+        return soItem.bentuk_barang.nama_bentuk;
+      }
+    }
+    
+    // Fallback to master data list
+    const bentuk = bentukBarangList.find(item => item.value === bentukBarangId);
+    return bentuk ? bentuk.label : 'Belum dipilih';
+  };
+
+  const getGradeBarangName = (gradeBarangId) => {
+    // First try to get from selected sales order items
+    if (selectedSalesOrder && selectedSalesOrder.sales_order_items) {
+      const soItem = selectedSalesOrder.sales_order_items.find(item => item.grade_barang_id === gradeBarangId);
+      if (soItem && soItem.grade_barang) {
+        return soItem.grade_barang.nama;
+      }
+    }
+    
+    // Fallback to master data list
+    const grade = gradeBarangList.find(item => item.value === gradeBarangId);
+    return grade ? grade.label : 'Belum dipilih';
+  };
 
 
 
@@ -130,7 +212,7 @@ export default function AddWorkOrderPage() {
           setLoadingSalesOrder(true);
           
           const [pelangganResponse, salesOrderResponse] = await Promise.all([
-            getPelangganOptions({ per_page: 100 }),
+            getPelangganOptions(),
             getSalesOrderOptions()
           ]);
           
@@ -269,35 +351,42 @@ export default function AddWorkOrderPage() {
     }
   };
 
-  // Add new work order item
+  // Add new work order item - now opens modal directly
   const addWorkOrderItem = () => {
     const newItem = {
       id: Date.now(),
-      panjang: '',
-      lebar: '',
-      tebal: '',
-      qty: 1,
+      panjang: '0',
+      lebar: '0',
+      tebal: '0',
+      qty: '0',
       jenis_barang_id: '',
       bentuk_barang_id: '',
       grade_barang_id: '',
       catatan: '',
       pelaksana: []
     };
-    setWorkOrderItems([...workOrderItems, newItem]);
+    setEditingItem(newItem);
+    setItemEditModalOpen(true);
   };
 
   // Remove work order item
   const removeWorkOrderItem = (itemId) => {
-    if (workOrderItems.length > 1) {
-      setWorkOrderItems(workOrderItems.filter(item => item.id !== itemId));
-    }
+    setWorkOrderItems(workOrderItems.filter(item => item.id !== itemId));
   };
 
   // Update work order item
   const updateWorkOrderItem = (itemId, field, value) => {
-    setWorkOrderItems(workOrderItems.map(item => 
-      item.id === itemId ? { ...item, [field]: value } : item
-    ));
+    if (field === null && typeof value === 'object') {
+      // Update entire item
+      setWorkOrderItems(workOrderItems.map(item => 
+        item.id === itemId ? { ...item, ...value } : item
+      ));
+    } else {
+      // Update specific field
+      setWorkOrderItems(workOrderItems.map(item => 
+        item.id === itemId ? { ...item, [field]: value } : item
+      ));
+    }
   };
 
   // Add pelaksana to item
@@ -357,6 +446,24 @@ export default function AddWorkOrderPage() {
   const getTotalLuasTercukupi = (itemId) => {
     const selected = selectedPlatDasar[itemId] || [];
     return selected.reduce((sum, item) => sum + item.sisa_luas, 0);
+  };
+
+  // Helper function to calculate required area based on dimension
+  const calculateRequiredArea = (item) => {
+    const panjang = parseFloat(item.panjang || 0);
+    const lebar = parseFloat(item.lebar || 0);
+    const qty = parseInt(item.qty || 0);
+    
+    // Get bentuk barang info to determine dimension
+    const bentukBarang = bentukBarangList.find(b => b.value === item.bentuk_barang_id);
+    
+    if (bentukBarang && bentukBarang.dimensi === '1D') {
+      // For 1D (shaft), only use panjang
+      return panjang * qty;
+    } else {
+      // For 2D (plat), use panjang × lebar
+      return panjang * lebar * qty;
+    }
   };
 
   const isLuasCukup = (itemId, totalDibutuhkan) => {
@@ -425,8 +532,15 @@ export default function AddWorkOrderPage() {
           jenis_barang_id: item.jenis_barang_id,
           bentuk_barang_id: item.bentuk_barang_id,
           grade_barang_id: item.grade_barang_id,
-          // plat_dasar_id is optional and will be set later when plat dasar is selected
           catatan: item.catatan,
+          // Add plat dasar data if selected
+          plat_dasar: selectedPlatDasar[item.id] ? selectedPlatDasar[item.id].map(plat => ({
+            plat_dasar_id: plat.id,
+            sisa_luas: plat.sisa_luas,
+            panjang: plat.panjang,
+            lebar: plat.lebar,
+            tebal: plat.tebal
+          })) : [],
           // Add required fields for pelaksana
           pelaksana: item.pelaksana.map(p => ({
             pelaksana_id: p.pelaksana_id,
@@ -444,7 +558,11 @@ export default function AddWorkOrderPage() {
       
       const response = await workOrderService.createWorkOrder(transformedData);
       
-      showAlert('Sukses', 'Work Order berhasil dibuat!', 'success', () => {
+      // Get the created work order ID from response
+      const workOrderId = response.data?.id || response.id;
+      const workOrderNumber = response.data?.nomor_wo || workOrderData.nomor_wo;
+      
+      showAlert('Sukses', `Work Order ${workOrderNumber} berhasil dibuat!\n\nID: ${workOrderId}\n\nKlik OK untuk melihat daftar Work Order.`, 'success', () => {
         navigate('/work-order');
       });
     } catch (error) {
@@ -619,239 +737,143 @@ export default function AddWorkOrderPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {workOrderItems.map((item, index) => (
-              <div key={item.id} className="border rounded-lg p-4 mb-4">
-                <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-medium text-gray-900">Item #{index + 1}</h4>
-                  {workOrderItems.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => removeWorkOrderItem(item.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Panjang (mm)
-                    </label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={item.panjang}
-                      onChange={(e) => updateWorkOrderItem(item.id, 'panjang', e.target.value)}
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Lebar (mm)
-                    </label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={item.lebar}
-                      onChange={(e) => updateWorkOrderItem(item.id, 'lebar', e.target.value)}
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Tebal (mm)
-                    </label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={item.tebal}
-                      onChange={(e) => updateWorkOrderItem(item.id, 'tebal', e.target.value)}
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Qty *
-                    </label>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={item.qty}
-                      onChange={(e) => updateWorkOrderItem(item.id, 'qty', parseInt(e.target.value))}
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <SearchSelect
-                      label="Jenis Barang *"
-                      options={jenisBarangList}
-                      value={item.jenis_barang_id ? item.jenis_barang_id.toString() : ''} 
-                      onValueChange={(value) => updateWorkOrderItem(item.id, 'jenis_barang_id', parseInt(value))}
-                      placeholder="Pilih jenis"
-                      loading={loadingJenisBarang}
-                    />
-                  </div>
-                  
-                  <div>
-                    <SearchSelect
-                      label="Bentuk Barang *"
-                      options={bentukBarangList}
-                      value={item.bentuk_barang_id ? item.bentuk_barang_id.toString() : ''} 
-                      onValueChange={(value) => updateWorkOrderItem(item.id, 'bentuk_barang_id', parseInt(value))}
-                      placeholder="Pilih bentuk"
-                      loading={loadingBentukBarang}
-                    />
-                  </div>
-                  
-                  <div>
-                    <SearchSelect
-                      label="Grade Barang *"
-                      options={gradeBarangList}
-                      value={item.grade_barang_id ? item.grade_barang_id.toString() : ''} 
-                      onValueChange={(value) => updateWorkOrderItem(item.id, 'grade_barang_id', parseInt(value))}
-                      placeholder="Pilih grade"
-                      loading={loadingGradeBarang}
-                    />
-                  </div>
-                </div>
-                
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Catatan Item
-                  </label>
-                  <Input
-                    placeholder="Catatan untuk item ini..."
-                    value={item.catatan}
-                    onChange={(e) => updateWorkOrderItem(item.id, 'catatan', e.target.value)}
-                  />
-                </div>
-
-                {/* Plat Dasar Section */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Plat Dasar
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openPlatDasarModal(item)}
-                      disabled={!item.jenis_barang_id || !item.bentuk_barang_id || !item.grade_barang_id || !item.tebal}
-                      className="text-xs"
-                    >
-                      <Package className="w-3 h-3 mr-1" />
-                      Pilih Plat Dasar
-                    </Button>
-                    
-                    {selectedPlatDasar[item.id] && selectedPlatDasar[item.id].length > 0 && (
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-xs">
-                          {selectedPlatDasar[item.id].length} item dipilih
-                        </Badge>
-                        {(() => {
-                          const totalDibutuhkan = parseFloat(item.panjang || 0) * parseFloat(item.lebar || 0) * item.qty;
-                          const isCukup = isLuasCukup(item.id, totalDibutuhkan);
-                          return (
-                            <Badge variant={isCukup ? "default" : "destructive"} className="text-xs">
-                              {isCukup ? "✓ Cukup" : "✗ Kurang"}
-                            </Badge>
-                          );
-                        })()}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Pelaksana Section */}
-                <div className="border-t pt-4">
-                  <div className="flex justify-between items-center mb-4">
-                    <h5 className="font-medium text-gray-900 flex items-center gap-2">
-                      <Users className="w-4 h-4" />
-                      Pelaksana
-                    </h5>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => addPelaksanaToItem(item.id)}
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Tambah Pelaksana
-                    </Button>
-                  </div>
-                  
-                  {item.pelaksana.length === 0 ? (
-                    <p className="text-gray-500 text-sm">Belum ada pelaksana ditambahkan</p>
+            <div className="overflow-x-auto max-h-[55vh] overflow-y-auto">
+              <Table className="text-sm">
+                <TableHead>
+                  <TableRow>
+                    <TableHeader className="text-left w-10"></TableHeader>
+                    <TableHeader className="text-left">Panjang (mm)</TableHeader>
+                    <TableHeader className="text-left">Lebar (mm)</TableHeader>
+                    <TableHeader className="text-left">Tebal (mm)</TableHeader>
+                    <TableHeader className="text-left">Qty</TableHeader>
+                    <TableHeader className="text-left">Jenis</TableHeader>
+                    <TableHeader className="text-left">Bentuk</TableHeader>
+                    <TableHeader className="text-left">Grade</TableHeader>
+                    <TableHeader className="text-left">Catatan</TableHeader>
+                    <TableHeader className="text-left">Plat Dasar</TableHeader>
+                    <TableHeader className="text-left">Pelaksana</TableHeader>
+                    <TableHeader className="text-left w-16">Aksi</TableHeader>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {workOrderItems.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan="11" className="px-4 py-8 text-center text-gray-500">
+                        Belum ada item. Klik "Tambah Item" untuk menambahkan item pertama.
+                      </TableCell>
+                    </TableRow>
                   ) : (
-                    <div className="space-y-3">
-                      {item.pelaksana.map((pelaksana, pelaksanaIndex) => (
-                        <div key={pelaksana.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                          <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <div>
-                              <SearchSelect
-                                label="Pelaksana"
-                                options={pelaksanaList}
-                                value={pelaksana.pelaksana_id ? pelaksana.pelaksana_id.toString() : ''} 
-                                onValueChange={(value) => updatePelaksana(item.id, pelaksana.id, 'pelaksana_id', parseInt(value))}
-                                placeholder="Pilih pelaksana"
-                                loading={loadingPelaksana}
-                              />
-                            </div>
-                            
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">
-                                Qty
-                              </label>
-                              <Input
-                                type="number"
-                                min="1"
-                                value={pelaksana.qty}
-                                onChange={(e) => updatePelaksana(item.id, pelaksana.id, 'qty', parseInt(e.target.value))}
-                                className="h-8"
-                              />
-                            </div>
-                            
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">
-                                Catatan
-                              </label>
-                              <Input
-                                placeholder="Catatan pelaksana..."
-                                value={pelaksana.catatan}
-                                onChange={(e) => updatePelaksana(item.id, pelaksana.id, 'catatan', e.target.value)}
-                                className="h-8"
-                              />
-                            </div>
+                    workOrderItems.map((item, index) => (
+                    <React.Fragment key={item.id}>
+                      <TableRow>
+                        <TableCell className="text-left">#{index + 1}</TableCell>
+                        <TableCell className="text-left">
+                          <div className="px-3 py-2 bg-gray-50 rounded text-sm">
+                            {item.panjang ? `${item.panjang} mm` : '0 mm'}
                           </div>
-                          
+                        </TableCell>
+                        <TableCell className="text-left">
+                          <div className="px-3 py-2 bg-gray-50 rounded text-sm">
+                            {item.lebar ? `${item.lebar} mm` : '0 mm'}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-left">
+                          <div className="px-3 py-2 bg-gray-50 rounded text-sm">
+                            {item.tebal ? `${item.tebal} mm` : '0 mm'}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-left">
+                          <div className="px-3 py-2 bg-gray-50 rounded text-sm">
+                            {item.qty || '0'}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-left">
+                          <div className="px-3 py-2 bg-gray-50 rounded text-sm">
+                            {getJenisBarangName(item.jenis_barang_id)}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-left">
+                          <div className="px-3 py-2 bg-gray-50 rounded text-sm">
+                            {getBentukBarangName(item.bentuk_barang_id)}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-left">
+                          <div className="px-3 py-2 bg-gray-50 rounded text-sm">
+                            {getGradeBarangName(item.grade_barang_id)}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-left">
+                          <div className="px-3 py-2 bg-gray-50 rounded text-sm">
+                            {item.catatan || '-'}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-left">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openPlatDasarModal(item)}
+                              disabled={!item.jenis_barang_id || !item.bentuk_barang_id || !item.grade_barang_id || !item.tebal}
+                              className="text-xs"
+                            >
+                              <Package className="w-3 h-3 mr-1" />
+                              Pilih
+                            </Button>
+                            {selectedPlatDasar[item.id] && selectedPlatDasar[item.id].length > 0 && (
+                              <Badge variant="secondary" className="text-xs whitespace-nowrap">
+                                {(() => {
+                                  const totalDibutuhkan = calculateRequiredArea(item);
+                                  const isCukup = isLuasCukup(item.id, totalDibutuhkan);
+                                  return `${selectedPlatDasar[item.id].length} • ${isCukup ? 'Cukup' : 'Kurang'}`;
+                                })()}
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-left">
                           <Button
                             type="button"
-                            variant="destructive"
+                            variant="outline"
                             size="sm"
-                            onClick={() => removePelaksanaFromItem(item.id, pelaksana.id)}
-                            className="h-8 w-8 p-0"
+                            onClick={() => openPelaksanaModal(item.id)}
+                            className="text-xs"
                           >
-                            <Trash2 className="w-3 h-3" />
+                            <Users className="w-3 h-3 mr-1" />
+                            {`Kelola (${item.pelaksana.length})`}
                           </Button>
-                        </div>
-                      ))}
-                    </div>
+                        </TableCell>
+                        <TableCell className="text-left">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openItemEditModal(item)}
+                              className="text-xs"
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => removeWorkOrderItem(item.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      
+                    </React.Fragment>
+                    ))
                   )}
-                </div>
-              </div>
-            ))}
-            
-            <div className="flex justify-center">
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="flex justify-center mt-4">
               <Button
                 type="button"
                 variant="outline"
@@ -894,11 +916,43 @@ export default function AddWorkOrderPage() {
           bentukBarangId={currentItemData.bentuk_barang_id}
           gradeBarangId={currentItemData.grade_barang_id}
           tebal={parseFloat(currentItemData.tebal) || 0}
-          totalDibutuhkan={parseFloat(currentItemData.panjang || 0) * parseFloat(currentItemData.lebar || 0) * currentItemData.qty}
+          totalDibutuhkan={calculateRequiredArea(currentItemData)}
+          workOrderItem={currentItemData}
           onSelectionChange={handlePlatDasarSelection}
           onClose={closePlatDasarModal}
         />
       )}
+
+      {/* Pelaksana Modal */}
+      <PelaksanaModal
+        open={pelaksanaModalOpen}
+        onOpenChange={setPelaksanaModalOpen}
+        title="Kelola Pelaksana"
+        pelaksanaOptions={pelaksanaList}
+        value={workOrderItems.find(item => item.id === pelaksanaModalItemId)?.pelaksana || []}
+        onSave={savePelaksanaForItem}
+        loadingOptions={loadingPelaksana}
+      />
+
+      {/* Work Order Item Edit Modal */}
+      <WorkOrderItemEditModal
+        isOpen={itemEditModalOpen}
+        onClose={closeItemEditModal}
+        item={editingItem}
+        onSave={saveItemEdit}
+        selectedPlatDasar={editingItem ? selectedPlatDasar[editingItem.id] : []}
+        onPlatDasarChange={(plats) => {
+          if (editingItem) {
+            setSelectedPlatDasar(prev => ({
+              ...prev,
+              [editingItem.id]: plats
+            }));
+          }
+        }}
+        isLuasCukup={isLuasCukup}
+        selectedSalesOrder={selectedSalesOrder}
+        isNewItem={editingItem ? isNewItem(editingItem) : false}
+      />
     </PageLayout>
   );
 }

@@ -29,6 +29,7 @@ import CanvasTestingPage from "@/pages/CanvasTesting";
 import GridStackTestingPage from "@/pages/GridStackTesting";
 import SimpleGridTestingPage from "@/pages/SimpleGridTesting";
 import CanvasGridTestingPage from "@/pages/CanvasGridTesting";
+import WorkOrderPlatShaftCanvasPage from "@/pages/work-order/PlatShaftCanvasPage";
 
 const AppRouter = () => {
     return (
@@ -59,6 +60,7 @@ const AppRouter = () => {
         <Route path="/approval" element={<ApprovalPage />} />
         <Route path="/work-order" element={<WorkOrderPage />} />
         <Route path="/work-order/add" element={<AddWorkOrderPage />} />
+        <Route path="/work-order/plat-shaft-canvas" element={<WorkOrderPlatShaftCanvasPage />} />
         <Route path="/canvas-testing" element={<CanvasTestingPage />} />
         <Route path="/gridstack-testing" element={<GridStackTestingPage />} />
         <Route path="/simple-grid-testing" element={<SimpleGridTestingPage />} />

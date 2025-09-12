@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Info, Package, Ruler } from 'lucide-react';
+import { Info, Package, Ruler, Grid3X3 } from 'lucide-react';
+import PlatShaftCanvas from '@/components/PlatShaftCanvas';
 import { useAlert } from '@/hooks/useAlert';
 import { request } from '@/lib/request';
 
@@ -13,6 +14,7 @@ export default function SelectPlatShaftDasar({
   gradeBarangId, 
   tebal, 
   totalDibutuhkan,
+  workOrderItem,
   onSelectionChange,
   onClose 
 }) {
@@ -20,20 +22,68 @@ export default function SelectPlatShaftDasar({
   const [saranItems, setSaranItems] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingBentukBarang, setLoadingBentukBarang] = useState(false);
   const [totalTercukupi, setTotalTercukupi] = useState(0);
+  const [bentukBarangInfo, setBentukBarangInfo] = useState(null);
+  
+  // Canvas state
+  const [showCanvas, setShowCanvas] = useState(false);
+  const [selectedCanvasItem, setSelectedCanvasItem] = useState(null);
 
   // Load saran plat/shaft dasar
   useEffect(() => {
     if (jenisBarangId && bentukBarangId && gradeBarangId && tebal) {
+      loadBentukBarangInfo();
       loadSaranPlatDasar();
     }
   }, [jenisBarangId, bentukBarangId, gradeBarangId, tebal]);
 
+  // Load bentuk barang info to determine dimensi
+  const loadBentukBarangInfo = async () => {
+    setLoadingBentukBarang(true);
+    try {
+      const response = await request(`/bentuk-barang/${bentukBarangId}`);
+      if (response.success && response.data) {
+        setBentukBarangInfo(response.data);
+      }
+    } catch (error) {
+      console.error('Error loading bentuk barang info:', error);
+    } finally {
+      setLoadingBentukBarang(false);
+    }
+  };
+
   // Calculate total tercukupi when selection changes
   useEffect(() => {
-    const total = selectedItems.reduce((sum, item) => sum + item.sisa_luas, 0);
+    const total = selectedItems.reduce((sum, item) => sum + calculateSisaLuas(item), 0);
     setTotalTercukupi(total);
-  }, [selectedItems]);
+  }, [selectedItems, bentukBarangInfo]);
+
+  // Function to calculate sisa luas based on bentuk barang
+  const calculateSisaLuas = (item) => {
+    if (!bentukBarangInfo) {
+      const value = parseFloat(item.sisa_luas || 0);
+      return isNaN(value) ? 0 : value;
+    }
+    
+    // If bentuk barang is 1D, return panjang only
+    if (bentukBarangInfo.dimensi === '1D') {
+      const value = parseFloat(item.panjang || 0);
+      return isNaN(value) ? 0 : value;
+    }
+    
+    // If bentuk barang is 2D, return panjang x lebar
+    if (bentukBarangInfo.dimensi === '2D') {
+      const panjang = parseFloat(item.panjang || 0);
+      const lebar = parseFloat(item.lebar || 0);
+      const value = panjang * lebar;
+      return isNaN(value) ? 0 : value;
+    }
+    
+    // Fallback to original sisa_luas
+    const value = parseFloat(item.sisa_luas || 0);
+    return isNaN(value) ? 0 : value;
+  };
 
   const loadSaranPlatDasar = async () => {
     setLoading(true);
@@ -44,7 +94,8 @@ export default function SelectPlatShaftDasar({
           jenis_barang_id: jenisBarangId,
           bentuk_barang_id: bentukBarangId,
           grade_barang_id: gradeBarangId,
-          tebal: tebal
+          tebal: tebal,
+          sisa_luas: totalDibutuhkan
         })
       });
 
@@ -72,18 +123,34 @@ export default function SelectPlatShaftDasar({
 
   const handlePilih = () => {
     if (onSelectionChange) {
-      onSelectionChange(selectedItems);
+      // Add calculated sisa_luas to each selected item
+      const itemsWithCalculatedSisaLuas = selectedItems.map(item => ({
+        ...item,
+        sisa_luas: calculateSisaLuas(item)
+      }));
+      onSelectionChange(itemsWithCalculatedSisaLuas);
     }
     if (onClose) {
       onClose();
     }
   };
 
+  const handleOpenCanvas = (item) => {
+    setSelectedCanvasItem(item);
+    setShowCanvas(true);
+  };
+
+  const handleCanvasClose = () => {
+    setShowCanvas(false);
+    setSelectedCanvasItem(null);
+  };
+
   const isPilihDisabled = totalTercukupi < (totalDibutuhkan * 1.1); // 110% tolerance
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      {/* Main Modal */}
+      <div className={`bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto transition-all duration-300 ${showCanvas ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
         <Card>
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-xl">
@@ -105,11 +172,11 @@ export default function SelectPlatShaftDasar({
             </div>
 
             {/* Summary Requirements */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Ruler className="w-5 h-5 text-blue-600" />
-                  <span className="font-medium text-blue-800">Total panjang / luas dibutuhkan:</span>
+                  <span className="font-medium text-blue-800">Total {bentukBarangInfo?.dimensi === '1D' ? 'panjang' : 'luas'} dibutuhkan:</span>
                 </div>
                 <p className="text-blue-700">{totalDibutuhkan} × 110% (toleransi)</p>
               </div>
@@ -117,9 +184,22 @@ export default function SelectPlatShaftDasar({
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Package className="w-5 h-5 text-green-600" />
-                  <span className="font-medium text-green-800">Luas tercukupi:</span>
+                  <span className="font-medium text-green-800">{bentukBarangInfo?.dimensi === '1D' ? 'Panjang' : 'Luas'} tercukupi:</span>
                 </div>
-                <p className="text-green-700 text-xl font-semibold">{totalTercukupi}</p>
+                <p className="text-green-700 text-xl font-semibold">{totalTercukupi.toFixed(2)}</p>
+              </div>
+
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Info className="w-5 h-5 text-purple-600" />
+                  <span className="font-medium text-purple-800">Dimensi:</span>
+                </div>
+                <p className="text-purple-700 font-semibold">
+                  {loadingBentukBarang ? 'Loading...' : 
+                   bentukBarangInfo?.dimensi === '1D' ? '1D (Panjang saja)' : 
+                   bentukBarangInfo?.dimensi === '2D' ? '2D (Panjang × Lebar)' : 
+                   'Unknown'}
+                </p>
               </div>
             </div>
 
@@ -138,7 +218,10 @@ export default function SelectPlatShaftDasar({
                       Ukuran
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
-                      Sisa Luas
+                      Sisa {bentukBarangInfo?.dimensi === '1D' ? 'Panjang' : 'Luas'}
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
+                      Canvas
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
                       Gambar
@@ -178,9 +261,27 @@ export default function SelectPlatShaftDasar({
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <Badge variant="secondary" className="font-mono">
-                            {item.sisa_luas}
-                          </Badge>
+                          <div className="space-y-1">
+                            <Badge variant="secondary" className="font-mono">
+                              {calculateSisaLuas(item).toFixed(2)}
+                            </Badge>
+                            {bentukBarangInfo && (
+                              <div className="text-xs text-gray-500">
+                                {bentukBarangInfo.dimensi === '1D' ? 'Panjang' : 'Panjang × Lebar'}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenCanvas(item)}
+                            className="text-xs"
+                          >
+                            <Grid3X3 className="w-3 h-3 mr-1" />
+                            Canvas
+                          </Button>
                         </td>
                         <td className="px-4 py-3">
                           <div className="w-16 h-16 bg-gray-100 border border-gray-300 rounded-lg flex items-center justify-center text-gray-400 text-xs">
@@ -226,6 +327,16 @@ export default function SelectPlatShaftDasar({
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Canvas Overlay */}
+      <div className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-all duration-300 ${showCanvas ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
+        <PlatShaftCanvas
+          isOpen={showCanvas}
+          onClose={handleCanvasClose}
+          selectedItem={selectedCanvasItem}
+          workOrderItem={workOrderItem}
+        />
       </div>
     </div>
   );
