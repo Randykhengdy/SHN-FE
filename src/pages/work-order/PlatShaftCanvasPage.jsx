@@ -1261,259 +1261,260 @@ export default function PlatShaftCanvasPage({ hideTitle = false }) {
                     <span className="font-medium">Container:</span> {baseContainer.width}×{baseContainer.height}
                   </div>
                 
-                {/* Cell Occupancy */}
-                {(() => {
-                  const occupancy = baseContainer && baseContainer.width > 0 && baseContainer.height > 0 ? calculateCellOccupancy() : {
-                    total: 0,
-                    occupied: 0,
-                    empty: 0,
-                    percentage: 0
-                  };
-                  return (
-                    <>
-                      <div className="border-t pt-2 mt-2">
-                        <div className="text-sm font-medium text-gray-700 mb-1">Cell Occupancy</div>
-                        <div className="text-sm">
-                          <span className="font-medium text-green-600">Occupied:</span> {occupancy.occupied} cells
+                  {/* Cell Occupancy */}
+                  {(() => {
+                    const occupancy = baseContainer && baseContainer.width > 0 && baseContainer.height > 0 ? calculateCellOccupancy() : {
+                      total: 0,
+                      occupied: 0,
+                      empty: 0,
+                      percentage: 0
+                    };
+                    return (
+                      <>
+                        <div className="border-t pt-2 mt-2">
+                          <div className="text-sm font-medium text-gray-700 mb-1">Cell Occupancy</div>
+                          <div className="text-sm">
+                            <span className="font-medium text-green-600">Occupied:</span> {occupancy.occupied} cells
+                          </div>
+                          <div className="text-sm">
+                            <span className="font-medium text-gray-500">Empty:</span> {occupancy.empty} cells
+                          </div>
+                          <div className="text-sm">
+                            <span className="font-medium">Total:</span> {occupancy.total} cells
+                          </div>
+                          <div className="text-sm">
+                            <span className="font-medium">Usage:</span> {occupancy.percentage}%
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                            <div 
+                              className="bg-green-500 h-2 rounded-full transition-all duration-300" 
+                              style={{ width: `${occupancy.percentage}%` }}
+                            ></div>
+                          </div>
                         </div>
-                        <div className="text-sm">
-                          <span className="font-medium text-gray-500">Empty:</span> {occupancy.empty} cells
-                        </div>
-                        <div className="text-sm">
-                          <span className="font-medium">Total:</span> {occupancy.total} cells
-                        </div>
-                        <div className="text-sm">
-                          <span className="font-medium">Usage:</span> {occupancy.percentage}%
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                          <div 
-                            className="bg-green-500 h-2 rounded-full transition-all duration-300" 
-                            style={{ width: `${occupancy.percentage}%` }}
-                          ></div>
-                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* Base Container Controls */}
+              <div className="bg-white rounded-lg p-3 border">
+                <h3 className="text-sm font-medium mb-3">Base Container</h3>
+                <div className="space-y-2">
+                  <div className="text-sm text-gray-600">
+                    <span className="font-medium">Size:</span> {baseContainer.width}×{baseContainer.height} units
+                  </div>
+                  {workOrderData && (
+                    <div className="text-xs text-blue-600 mt-1">
+                      Saran Plat: {workOrderData.platPanjang} × {workOrderData.platLebar}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs text-gray-600">Width</label>
+                      <div className="w-full h-6 text-xs border rounded px-1 bg-gray-50 flex items-center text-gray-700">
+                        {baseContainer.width}
                       </div>
-                    </>
-                  );
-                })()}
-              </div>
-            </div>
-
-            {/* Base Container Controls */}
-            <div className="bg-white rounded-lg p-3 border">
-              <h3 className="text-sm font-medium mb-3">Base Container</h3>
-              <div className="space-y-2">
-                <div className="text-sm text-gray-600">
-                  <span className="font-medium">Size:</span> {baseContainer.width}×{baseContainer.height} units
-                </div>
-                {workOrderData && (
-                  <div className="text-xs text-blue-600 mt-1">
-                    Saran Plat: {workOrderData.platPanjang} × {workOrderData.platLebar}
-                  </div>
-                )}
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-xs text-gray-600">Width</label>
-                    <div className="w-full h-6 text-xs border rounded px-1 bg-gray-50 flex items-center text-gray-700">
-                      {baseContainer.width}
                     </div>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-600">Height</label>
-                    <div className="w-full h-6 text-xs border rounded px-1 bg-gray-50 flex items-center text-gray-700">
-                      {baseContainer.height}
+                    <div>
+                      <label className="text-xs text-gray-600">Height</label>
+                      <div className="w-full h-6 text-xs border rounded px-1 bg-gray-50 flex items-center text-gray-700">
+                        {baseContainer.height}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Box Size Controls */}
-            <div className="bg-white rounded-lg p-3 border">
-              <h3 className="text-sm font-medium mb-3">New Box Size</h3>
-              <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-xs text-gray-600">Width</label>
-                    <div className="w-full h-6 text-xs border rounded px-1 bg-gray-50 flex items-center text-gray-700">
-                      {newBoxSize.width}
+              {/* Box Size Controls */}
+              <div className="bg-white rounded-lg p-3 border">
+                <h3 className="text-sm font-medium mb-3">New Box Size</h3>
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs text-gray-600">Width</label>
+                      <div className="w-full h-6 text-xs border rounded px-1 bg-gray-50 flex items-center text-gray-700">
+                        {newBoxSize.width}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-600">Height</label>
+                      <div className="w-full h-6 text-xs border rounded px-1 bg-gray-50 flex items-center text-gray-700">
+                        {newBoxSize.height}
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <label className="text-xs text-gray-600">Height</label>
-                    <div className="w-full h-6 text-xs border rounded px-1 bg-gray-50 flex items-center text-gray-700">
-                      {newBoxSize.height}
+                  <div className="text-xs text-gray-500">
+                    Size: {newBoxSize.width}×{newBoxSize.height} units
+                  </div>
+                  {workOrderData && (
+                    <div className="text-xs text-green-600 mt-1">
+                      WO Item: {workOrderData.itemPanjang} × {workOrderData.itemLebar}
                     </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="bg-white rounded-lg p-3 border">
+                <h3 className="text-sm font-medium mb-3">Actions</h3>
+                <div className="space-y-2">
+                  <Button
+                    onClick={fillAllBoxes}
+                    className="w-full h-8 text-sm bg-blue-600 hover:bg-blue-700"
+                  >
+                    Fill All ({workOrderData ? workOrderData.itemQty : 0} boxes)
+                  </Button>
+                  <Button
+                    onClick={addBox}
+                    className="w-full h-8 text-sm bg-green-600 hover:bg-green-700"
+                  >
+                    Add New Box
+                  </Button>
+                  <Button
+                    onClick={clearAllBoxes}
+                    className="w-full h-8 text-sm bg-red-600 hover:bg-red-700"
+                  >
+                    Clear All Boxes
+                  </Button>
+                </div>
+              </div>
+
+              {/* Selection Controls */}
+              <div className="bg-white rounded-lg p-3 border">
+                <h3 className="text-sm font-medium mb-3">Selection & Delete</h3>
+                <div className="space-y-2">
+                  <div className="text-xs text-gray-600 mb-2">
+                    Selected: {selectedBoxIds.size} box(es)
+                  </div>
+                  <div className="grid grid-cols-2 gap-1">
+                    <Button
+                      onClick={selectAllBoxes}
+                      className="h-7 text-xs bg-blue-600 hover:bg-blue-700"
+                      disabled={!boxes || boxes.length === 0}
+                    >
+                      Select All
+                    </Button>
+                    <Button
+                      onClick={clearSelection}
+                      className="h-7 text-xs bg-gray-500 hover:bg-gray-600"
+                      disabled={selectedBoxIds.size === 0}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1">
+                    <Button
+                      onClick={toggleSelectedBoxesDisabled}
+                      className="h-8 text-sm bg-yellow-600 hover:bg-yellow-700"
+                      disabled={selectedBoxIds.size === 0}
+                    >
+                      🔒 Toggle Disable
+                    </Button>
+                    <Button
+                      onClick={deleteSelectedBoxes}
+                      className="h-8 text-sm bg-red-600 hover:bg-red-700"
+                      disabled={selectedBoxIds.size === 0}
+                    >
+                      🗑️ Delete
+                    </Button>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-2">
+                    Left-click: single select + drag | Right-click: multi select
                   </div>
                 </div>
-                <div className="text-xs text-gray-500">
-                  Size: {newBoxSize.width}×{newBoxSize.height} units
-                </div>
-                {workOrderData && (
-                  <div className="text-xs text-green-600 mt-1">
-                    WO Item: {workOrderData.itemPanjang} × {workOrderData.itemLebar}
+              </div>
+
+              {/* Data Management */}
+              <div className="bg-white rounded-lg p-3 border">
+                <h3 className="text-sm font-medium mb-3">Data Management</h3>
+                <div className="space-y-2">
+                  <Button
+                    onClick={downloadJSON}
+                    className="w-full h-8 text-sm bg-blue-600 hover:bg-blue-700"
+                  >
+                    📥 Download JSON
+                  </Button>
+                  <Button
+                    onClick={copyToClipboard}
+                    className="w-full h-8 text-sm bg-green-600 hover:bg-green-700"
+                  >
+                    📋 Copy to Clipboard
+                  </Button>
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept=".json"
+                      onChange={handleFileImport}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      id="file-import"
+                    />
+                    <Button
+                      className="w-full h-8 text-sm bg-purple-600 hover:bg-purple-700"
+                      asChild
+                    >
+                      <label htmlFor="file-import" className="cursor-pointer">
+                        📤 Import JSON
+                      </label>
+                    </Button>
                   </div>
-                )}
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="bg-white rounded-lg p-3 border">
-              <h3 className="text-sm font-medium mb-3">Actions</h3>
-              <div className="space-y-2">
-                <Button
-                  onClick={fillAllBoxes}
-                  className="w-full h-8 text-sm bg-blue-600 hover:bg-blue-700"
-                >
-                  Fill All ({workOrderData ? workOrderData.itemQty : 0} boxes)
-                </Button>
-                <Button
-                  onClick={addBox}
-                  className="w-full h-8 text-sm bg-green-600 hover:bg-green-700"
-                >
-                  Add New Box
-                </Button>
-                <Button
-                  onClick={clearAllBoxes}
-                  className="w-full h-8 text-sm bg-red-600 hover:bg-red-700"
-                >
-                  Clear All Boxes
-                </Button>
-              </div>
-            </div>
-
-            {/* Selection Controls */}
-            <div className="bg-white rounded-lg p-3 border">
-              <h3 className="text-sm font-medium mb-3">Selection & Delete</h3>
-              <div className="space-y-2">
-                <div className="text-xs text-gray-600 mb-2">
-                  Selected: {selectedBoxIds.size} box(es)
-                </div>
-                <div className="grid grid-cols-2 gap-1">
-                  <Button
-                    onClick={selectAllBoxes}
-                    className="h-7 text-xs bg-blue-600 hover:bg-blue-700"
-                    disabled={!boxes || boxes.length === 0}
-                  >
-                    Select All
-                  </Button>
-                  <Button
-                    onClick={clearSelection}
-                    className="h-7 text-xs bg-gray-500 hover:bg-gray-600"
-                    disabled={selectedBoxIds.size === 0}
-                  >
-                    Clear
-                  </Button>
-                </div>
-                <div className="grid grid-cols-2 gap-1">
-                  <Button
-                    onClick={toggleSelectedBoxesDisabled}
-                    className="h-8 text-sm bg-yellow-600 hover:bg-yellow-700"
-                    disabled={selectedBoxIds.size === 0}
-                  >
-                    🔒 Toggle Disable
-                  </Button>
-                  <Button
-                    onClick={deleteSelectedBoxes}
-                    className="h-8 text-sm bg-red-600 hover:bg-red-700"
-                    disabled={selectedBoxIds.size === 0}
-                  >
-                    🗑️ Delete
-                  </Button>
-                </div>
-                <div className="text-xs text-gray-500 mt-2">
-                  Left-click: single select + drag | Right-click: multi select
+                  <div className="text-xs text-gray-500 mt-2">
+                    Export/Import grid layout data for database storage
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Data Management */}
-            <div className="bg-white rounded-lg p-3 border">
-              <h3 className="text-sm font-medium mb-3">Data Management</h3>
-              <div className="space-y-2">
-                <Button
-                  onClick={downloadJSON}
-                  className="w-full h-8 text-sm bg-blue-600 hover:bg-blue-700"
-                >
-                  📥 Download JSON
-                </Button>
-                <Button
-                  onClick={copyToClipboard}
-                  className="w-full h-8 text-sm bg-green-600 hover:bg-green-700"
-                >
-                  📋 Copy to Clipboard
-                </Button>
-                <div className="relative">
-                  <input
-                    type="file"
-                    accept=".json"
-                    onChange={handleFileImport}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    id="file-import"
-                  />
-                  <Button
-                    className="w-full h-8 text-sm bg-purple-600 hover:bg-purple-700"
-                    asChild
-                  >
-                    <label htmlFor="file-import" className="cursor-pointer">
-                      📤 Import JSON
-                    </label>
-                  </Button>
-                </div>
-                <div className="text-xs text-gray-500 mt-2">
-                  Export/Import grid layout data for database storage
+              {/* Zoom Controls */}
+              <div className="bg-white rounded-lg p-3 border">
+                <h3 className="text-sm font-medium mb-3">Zoom Controls</h3>
+                <div className="space-y-2">
+                  <div className="text-sm text-gray-600">
+                    <span className="font-medium">Zoom:</span> {Math.round(zoom * 100)}%
+                  </div>
+                  <div className="flex space-x-1">
+                    <Button
+                      onClick={zoomOut}
+                      className="flex-1 h-8 text-sm bg-gray-600 hover:bg-gray-700"
+                    >
+                      Zoom Out
+                    </Button>
+                    <Button
+                      onClick={resetZoom}
+                      className="flex-1 h-8 text-sm bg-gray-500 hover:bg-gray-600"
+                    >
+                      Reset
+                    </Button>
+                    <Button
+                      onClick={zoomIn}
+                      className="flex-1 h-8 text-sm bg-gray-600 hover:bg-gray-700"
+                    >
+                      Zoom In
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Zoom Controls */}
-            <div className="bg-white rounded-lg p-3 border">
-              <h3 className="text-sm font-medium mb-3">Zoom Controls</h3>
-              <div className="space-y-2">
-                <div className="text-sm text-gray-600">
-                  <span className="font-medium">Zoom:</span> {Math.round(zoom * 100)}%
+              {/* Instructions */}
+              <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                <h3 className="text-sm font-medium mb-2 text-blue-800">How to Use</h3>
+                <div className="text-xs text-blue-700 space-y-1">
+                  <div>• Click and drag any box to move it</div>
+                  <div>• Click and drag container border to move it</div>
+                  <div>• Boxes inside container move together</div>
+                  <div>• Left-click boxes to select (single) and drag them</div>
+                  <div>• Right-click boxes to toggle selection (multi)</div>
+                  <div>• Toggle Disable to lock/unlock boxes</div>
+                  <div>• Disabled boxes cannot be moved</div>
+                  <div>• Press Delete key to remove selected boxes</div>
+                  <div>• Click and drag empty area to pan</div>
+                  <div>• Mouse wheel to zoom in/out</div>
+                  <div>• Ctrl+Click or Middle mouse to pan</div>
+                  <div>• Boxes snap to grid positions</div>
+                  <div>• Each grid cell is {gridSize}px × {gridSize}px</div>
+                  <div>• Canvas rendering for smooth performance</div>
+                  <div>• Supports 500+ boxes without lag</div>
                 </div>
-                <div className="flex space-x-1">
-                  <Button
-                    onClick={zoomOut}
-                    className="flex-1 h-8 text-sm bg-gray-600 hover:bg-gray-700"
-                  >
-                    Zoom Out
-                  </Button>
-                  <Button
-                    onClick={resetZoom}
-                    className="flex-1 h-8 text-sm bg-gray-500 hover:bg-gray-600"
-                  >
-                    Reset
-                  </Button>
-                  <Button
-                    onClick={zoomIn}
-                    className="flex-1 h-8 text-sm bg-gray-600 hover:bg-gray-700"
-                  >
-                    Zoom In
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Instructions */}
-            <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-              <h3 className="text-sm font-medium mb-2 text-blue-800">How to Use</h3>
-              <div className="text-xs text-blue-700 space-y-1">
-                <div>• Click and drag any box to move it</div>
-                <div>• Click and drag container border to move it</div>
-                <div>• Boxes inside container move together</div>
-                <div>• Left-click boxes to select (single) and drag them</div>
-                <div>• Right-click boxes to toggle selection (multi)</div>
-                <div>• Toggle Disable to lock/unlock boxes</div>
-                <div>• Disabled boxes cannot be moved</div>
-                <div>• Press Delete key to remove selected boxes</div>
-                <div>• Click and drag empty area to pan</div>
-                <div>• Mouse wheel to zoom in/out</div>
-                <div>• Ctrl+Click or Middle mouse to pan</div>
-                <div>• Boxes snap to grid positions</div>
-                <div>• Each grid cell is {gridSize}px × {gridSize}px</div>
-                <div>• Canvas rendering for smooth performance</div>
-                <div>• Supports 500+ boxes without lag</div>
               </div>
             </div>
           </div>
