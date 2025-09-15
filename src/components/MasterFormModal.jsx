@@ -150,19 +150,20 @@ export default function MasterFormModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg lg:max-w-xl">
+      <DialogContent className="sm:max-w-4xl lg:max-w-6xl max-h-[90vh] overflow-y-auto w-[95vw]">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {fields.map((field) => {
-            // Skip fields that should be hidden on edit
-            if (editData && field.hideOnEdit) {
-              return null;
-            }
-            
-            return (
-            <div key={field.name} className="grid grid-cols-1 gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {fields.map((field) => {
+              // Skip fields that should be hidden on edit
+              if (editData && field.hideOnEdit) {
+                return null;
+              }
+              
+              return (
+              <div key={field.name} className={`space-y-2 ${field.colSpan === 2 ? 'md:col-span-2' : ''}`}>
               <Label htmlFor={field.name} className="text-sm font-medium text-gray-700">
                 {field.label}
               </Label>
@@ -276,6 +277,7 @@ export default function MasterFormModal({
             </div>
           );
           })}
+          </div>
 
           {error && (
             <div className="text-red-600 text-sm p-3 bg-red-50 border border-red-200 rounded-md">

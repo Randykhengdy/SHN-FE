@@ -120,12 +120,12 @@
 
 ## Master Data - Item Barang
 - `GET /api/item-barang` - List all item barang
-  - **Response:** `{ "data": [{ "id": "int", "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "quantity": "decimal", "quantity_tebal_sama": "decimal", "jenis_potongan": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }] }`
+  - **Response:** `{ "data": [{ "id": "int", "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "quantity": "decimal", "quantity_tebal_sama": "decimal", "jenis_potongan": "string", "is_edit": "boolean", "is_edit_by": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }] }`
 - `POST /api/item-barang` - Create new item barang
-  - **Request:** `{ "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "quantity": "decimal", "quantity_tebal_sama": "decimal", "jenis_potongan": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }`
+  - **Request:** `{ "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "quantity": "decimal", "quantity_tebal_sama": "decimal", "jenis_potongan": "string", "is_edit": "boolean", "is_edit_by": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }`
 - `GET /api/item-barang/{id}` - Get item barang by ID
 - `PUT /api/item-barang/{id}` - Update item barang
-  - **Request:** `{ "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "quantity": "decimal", "quantity_tebal_sama": "decimal", "jenis_potongan": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }`
+  - **Request:** `{ "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "quantity": "decimal", "quantity_tebal_sama": "decimal", "jenis_potongan": "string", "is_edit": "boolean", "is_edit_by": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }`
 - `PATCH /api/item-barang/{id}` - Update item barang
 - `DELETE /api/item-barang/{id}/soft` - Soft delete item barang
 - `PATCH /api/item-barang/{id}/restore` - Restore soft deleted item barang
@@ -498,7 +498,7 @@
 
 #### 13. Get Saran Plat Dasar
 - **POST** `/api/work-order-planning/get-saran-plat-dasar`
-- **Description**: Mendapatkan saran plat dasar berdasarkan jenis, bentuk, grade barang, tebal, dan sisa_luas
+- **Description**: Mendapatkan saran plat dasar berdasarkan jenis, bentuk, grade barang, tebal, dan sisa_luas. Hanya menampilkan item yang tidak sedang diedit (is_edit = false atau null)
 - **Request Body**:
 ```json
 {
@@ -509,7 +509,7 @@
   "sisa_luas": 100
 }
 ```
-- **Response**: List item barang yang memiliki jenis, bentuk, grade barang yang sama, tebal yang sama, dan sisa_luas lebih besar dari parameter, diurutkan berdasarkan sisa_luas (ascending)
+- **Response**: List item barang yang memiliki jenis, bentuk, grade barang yang sama, tebal yang sama, sisa_luas lebih besar dari parameter, dan tidak sedang diedit (is_edit = false atau null), diurutkan berdasarkan sisa_luas (ascending)
 
 #### 14. Set Saran Plat Dasar
 - **POST** `/api/work-order-planning/saran-plat-dasar`
@@ -535,18 +535,25 @@
 - **Response**: List saran plat dasar dengan relasi item barang, diurutkan berdasarkan is_selected (true di atas) dan created_at
 
 #### 17. Add Saran Plat Dasar
-- **POST** `/api/work-order-planning/item/{itemId}/saran-plat-dasar`
-- **Description**: Menambahkan saran plat/shaft dasar baru ke item
+- **POST** `/api/work-order-planning/saran-plat-dasar`
+- **Description**: Menambahkan saran plat/shaft dasar baru ke item dengan canvas file
 - **Request Body**:
 ```json
 {
+  "wo_planning_item_id": 123,
   "item_barang_id": 1,
-  "is_selected": true
+  "is_selected": true,
+  "canvas_data": "{\"shapes\":[{\"type\":\"rectangle\",\"x\":10,\"y\":20,\"width\":100,\"height\":50}]}"
 }
 ```
+- **Parameters**:
+  - `item_id` (required): ID work order planning item
+  - `item_barang_id` (required): ID item barang yang akan dijadikan saran
+  - `is_selected` (optional, boolean): Apakah saran ini dipilih (default: false)
+  - `canvas_data` (optional, json): Data canvas dalam format JSON string (bebas, bisa berisi shapes, coordinates, annotations, dll)
 
 #### 18. Update Saran Plat Dasar
-- **PUT/PATCH** `/api/work-order-planning/item/{itemId}/saran-plat-dasar/{saranId}`
+- **PATCH** `/api/work-order-planning/saran-plat-dasar/{saranId}`
 - **Description**: Mengupdate saran plat/shaft dasar
 - **Request Body**:
 ```json
@@ -556,13 +563,49 @@
 ```
 
 #### 19. Remove Saran Plat Dasar
-- **DELETE** `/api/work-order-planning/item/{itemId}/saran-plat-dasar/{saranId}`
+- **DELETE** `/api/work-order-planning/saran-plat-dasar/{saranId}`
 - **Description**: Menghapus saran plat/shaft dasar dari item
 
 #### 20. Set Selected Plat Dasar
-- **PATCH** `/api/work-order-planning/item/{itemId}/saran-plat-dasar/{saranId}/select`
+- **PATCH** `/api/work-order-planning/saran-plat-dasar/{saranId}/select`
 - **Description**: Set saran plat dasar sebagai yang dipilih (is_selected = true)
 - **Note**: Otomatis akan set semua saran lain menjadi false dan update plat_dasar_id di work order planning item
+
+### Canvas File Management
+
+#### 21. Get Canvas File Data
+- **GET** `/api/work-order-planning/saran-plat-dasar/{saranId}/canvas`
+- **Description**: Mendapatkan data canvas file untuk saran plat dasar
+- **Response**: JSON data canvas dengan file path
+```json
+{
+  "success": true,
+  "data": {
+    "canvas_data": {...},
+    "file_path": "canvas/123/canvas.json"
+  }
+}
+```
+
+#### 22. Download Canvas File
+- **GET** `/api/work-order-planning/saran-plat-dasar/{saranId}/canvas/download`
+- **Description**: Download canvas file sebagai file
+- **Response**: File download (canvas.json)
+
+#### 23. Get Canvas File by Item Barang ID
+- **GET** `/api/work-order-planning/item-barang/{itemBarangId}/canvas`
+- **Description**: Mendapatkan canvas data berdasarkan item barang ID
+- **Response**: JSON data canvas dengan item barang ID
+```json
+{
+  "success": true,
+  "data": {
+    "item_barang_id": 123,
+    "canvas_data": {...},
+    "file_path": "canvas/456/canvas.json"
+  }
+}
+```
 
 ## Notes
 
@@ -574,3 +617,12 @@
 - Ketika `is_selected = true` diset, otomatis akan update `plat_dasar_id` di work order planning item
 - Semua operasi pelaksana dan saran plat dasar menggunakan soft delete
 - Relasi yang di-load secara otomatis: jenis barang, bentuk barang, grade barang, plat dasar, pelaksana, dan saran plat dasar
+
+### Canvas File Notes
+
+- Canvas data disimpan sebagai file JSON di `storage/app/public/canvas/{item_id}/canvas.json`
+- Path file disimpan di database field `canvas_file` di tabel `trx_saran_plat_shaft_dasar` dan `ref_item_barang`
+- File canvas akan di-timpa setiap upload baru untuk item yang sama
+- Format path: `canvas/{item_id}/canvas.json`
+- Canvas data dapat diakses via API atau langsung dari storage URL
+- **Canvas data format bebas**: Bisa berisi shapes, coordinates, annotations, metadata, atau struktur JSON apapun yang dibutuhkan untuk mapping/visualization

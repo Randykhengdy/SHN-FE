@@ -210,51 +210,6 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     }
   }, [workOrderData?.itemQty, workOrderData?.workOrderItem?.id, workOrderData?.itemId, workOrderData]);
 
-  // Keyboard controls for canvas panning
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Only handle arrow keys when canvas is focused
-      if (!canvasRef.current || document.activeElement !== canvasRef.current) return;
-      
-      const panSpeed = 20; // pixels per key press
-      
-      switch (e.key) {
-        case 'ArrowLeft':
-          e.preventDefault();
-          setPanOffset(prev => ({ ...prev, x: prev.x + panSpeed }));
-          break;
-        case 'ArrowRight':
-          e.preventDefault();
-          setPanOffset(prev => ({ ...prev, x: prev.x - panSpeed }));
-          break;
-        case 'ArrowUp':
-          e.preventDefault();
-          setPanOffset(prev => ({ ...prev, y: prev.y + panSpeed }));
-          break;
-        case 'ArrowDown':
-          e.preventDefault();
-          setPanOffset(prev => ({ ...prev, y: prev.y - panSpeed }));
-          break;
-        case 'Home':
-          e.preventDefault();
-          setPanOffset({ x: 0, y: 0 });
-          break;
-        case 'End':
-          e.preventDefault();
-          resetZoom();
-          break;
-      }
-    };
-
-    // Add event listener
-    document.addEventListener('keydown', handleKeyDown);
-    
-    // Cleanup
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, []);
-
   
   // Generate initial boxes based on work order quantity
   const generateInitialBoxes = useCallback((quantity, itemWidth, itemHeight) => {
@@ -1047,21 +1002,14 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     ) : [];
     const currentQuantity = currentWoItemBoxes.length;
     
-    // Check if already reached target quantity
-    const targetQuantity = parseInt(workOrderData?.itemQty) || 0;
-    if (currentQuantity >= targetQuantity) {
-      showAlert('Warning', `Maximum quantity reached! (${currentQuantity}/${targetQuantity})`, 'warning');
-      return;
-    }
-    
     // Calculate total used quantity across all saran plats for this WO item
     const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
     const woItemData = totalQuantityData.find(item => 
       item.WoItemID === currentWoItemId || item.WoItemID === parseInt(currentWoItemId)
     );
     
-    // Get target quantity from storage or fallback to workOrderData (use same variable)
-    const storageTargetQuantity = woItemData?.TargetQuantity || targetQuantity;
+    // Get target quantity from storage or fallback to workOrderData
+    const targetQuantity = woItemData?.TargetQuantity || parseInt(workOrderData?.itemQty) || 0;
     
     let totalUsedQuantity = 0;
     if (woItemData && woItemData.WOQuantity && Array.isArray(woItemData.WOQuantity)) {
@@ -1071,7 +1019,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     }
     
     // Calculate remaining: target - total used + current (to avoid double counting current saran plat)
-    const remaining = Math.max(0, storageTargetQuantity - totalUsedQuantity + currentQuantity);
+    const remaining = Math.max(0, targetQuantity - totalUsedQuantity + currentQuantity);
     
     if (remaining <= 0) {
       showAlert('Error', 'No remaining quantity to add!', 'error');
@@ -1201,33 +1149,47 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   }, [showAlert, totalQuantity, workOrderData?.workOrderItem?.id, workOrderData?.itemId]);
 
   const fillAllBoxes = useCallback(() => {
-    // Get current work order unique ID
-    const currentWorkOrderUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId;
-    
-    // Count boxes with same workItemUniqueId (same color)
+    // Calculate current boxes for current WO item only
+    const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
     const currentWoItemBoxes = boxes ? boxes.filter(box => 
-      box.workItemUniqueId === currentWorkOrderUniqueId
+      box.woItemId === currentWoItemId || box.woItemId === parseInt(currentWoItemId)
     ) : [];
     const currentQuantity = currentWoItemBoxes.length;
     
-    // Get target quantity from workOrderData
-    const targetQuantity = parseInt(workOrderData?.itemQty) || 0;
+    // Calculate total used quantity across all saran plats for this WO item
+    const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
+    const woItemData = totalQuantityData.find(item => 
+      item.WoItemID === currentWoItemId || item.WoItemID === parseInt(currentWoItemId)
+    );
+    
+    // Get target quantity from storage or fallback to workOrderData
+    const targetQuantity = woItemData?.TargetQuantity || parseInt(workOrderData?.itemQty) || 0;
+    
+    let totalUsedQuantity = 0;
+    if (woItemData && woItemData.WOQuantity && Array.isArray(woItemData.WOQuantity)) {
+      totalUsedQuantity = woItemData.WOQuantity.reduce((total, saranItem) => {
+        return total + (parseInt(saranItem.Quantity) || 0);
+      }, 0);
+    }
+    
+    // Calculate remaining: target - total used + current (to avoid double counting current saran plat)
+    const remaining = Math.max(0, targetQuantity - totalUsedQuantity + currentQuantity);
     
     console.log('Fill All Boxes - Current State:', {
       targetQuantity: targetQuantity,
       currentQuantity: currentQuantity,
-      currentWorkOrderUniqueId: currentWorkOrderUniqueId,
-      totalBoxesInCanvas: boxes ? boxes.length : 0
+      totalUsedQuantity: totalUsedQuantity,
+      remaining: remaining,
+      currentWoItemId: currentWoItemId,
+      woItemData: woItemData
     });
 
-    // Check if already reached target quantity
-    if (currentQuantity >= targetQuantity) {
-      showAlert('Warning', `Maximum quantity already reached! (${currentQuantity}/${targetQuantity})`, 'warning');
+    if (remaining <= 0) {
+      showAlert('Info', 'No remaining quantity to fill!', 'info');
       return;
     }
 
-    // Calculate how many boxes to add
-    const boxesToFill = targetQuantity - currentQuantity;
+    const boxesToFill = remaining;
 
     if (boxesToFill <= 0) {
       showAlert('Info', 'All boxes already filled!', 'info');
@@ -2326,7 +2288,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       <div className="flex-1 flex">
         {/* Controls Panel */}
         {sidebarVisible && (
-          <div className="w-80 bg-gray-50 border-r h-full flex flex-col overflow-hidden">
+          <div className="w-80 bg-gray-50 border-r h-full flex flex-col">
             {/* Tab Navigation */}
             <div className="bg-white border-b">
               <div className="flex">
@@ -2350,26 +2312,30 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                 >
                   ⚡ Actions
                 </button>
+                <button
+                  onClick={() => setActiveTab('tools')}
+                  className={`flex-1 px-3 py-2 text-xs font-medium ${
+                    activeTab === 'tools'
+                      ? 'bg-blue-100 text-blue-700 border-b-2 border-blue-500'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  🔧 Tools
+                </button>
               </div>
             </div>
 
             {/* Tab Content */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+            <div className="flex-1 overflow-y-auto">
               <div className="p-4 space-y-4">
                 {/* Stats Tab */}
                 {activeTab === 'stats' && (
                   <>
-                    {/* Save & Back to Modal Buttons */}
+                    {/* Back to Modal Button */}
                     <div className="bg-white rounded-lg p-3 border">
                       <Button
-                        onClick={saveCanvasLayout}
-                        className="w-full h-10 text-sm bg-blue-600 hover:bg-blue-700 font-medium mb-2"
-                      >
-                        💾 Save
-                      </Button>
-                      <Button
                         onClick={onClose}
-                        className="w-full h-10 text-sm bg-gray-600 hover:bg-gray-700"
+                        className="w-full h-8 text-sm bg-gray-600 hover:bg-gray-700"
                       >
                         ← Back to Modal
                       </Button>
@@ -2383,22 +2349,29 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                           <span className="font-medium">Total Boxes:</span> {(() => {
                             const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
                             
-                            // Count actual boxes in canvas for current work item
-                            const currentWoItemBoxes = boxes ? boxes.filter(box => 
-                              box.woItemId === currentWoItemId || box.woItemId === parseInt(currentWoItemId)
-                            ) : [];
-                            const actualBoxCount = currentWoItemBoxes.length;
+                            // Calculate total used quantity across all saran plats for this WO item
+                            const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
+                            const woItemData = totalQuantityData.find(item => 
+                              item.WoItemID === currentWoItemId || item.WoItemID === parseInt(currentWoItemId)
+                            );
                             
-                            // Get target quantity from workOrderData
-                            const targetQuantity = parseInt(workOrderData?.itemQty) || 0;
+                            let totalUsedQuantity = 0;
+                            if (woItemData && woItemData.WOQuantity && Array.isArray(woItemData.WOQuantity)) {
+                              totalUsedQuantity = woItemData.WOQuantity.reduce((total, saranItem) => {
+                                return total + (parseInt(saranItem.Quantity) || 0);
+                              }, 0);
+                            }
+                            
+                            // Get target quantity from storage or fallback to workOrderData
+                            const targetQuantity = woItemData?.TargetQuantity || parseInt(workOrderData?.itemQty) || 0;
                             
                             console.log('Total Boxes Display:', {
                               currentWoItemId,
-                              actualBoxCount: actualBoxCount,
+                              totalUsedQuantity: totalUsedQuantity,
                               targetQuantity,
-                              totalBoxesInCanvas: boxes ? boxes.length : 0
+                              woItemData: woItemData
                             });
-                            return `${actualBoxCount}/${targetQuantity}`;
+                            return `${totalUsedQuantity}/${targetQuantity}`;
                           })()}
                         </div>
                         <div className="text-sm">
@@ -2570,36 +2543,72 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                       </div>
                     </div>
 
-                    {/* Zoom Controls */}
+                    {/* Save & Load Actions */}
                     <div className="bg-white rounded-lg p-3 border">
-                      <h3 className="text-sm font-medium mb-3">Zoom Controls</h3>
+                      <h3 className="text-sm font-medium mb-3">Save & Load</h3>
                       <div className="space-y-2">
-                        <div className="text-sm text-gray-600">
-                          <span className="font-medium">Zoom:</span> {Math.round(zoom * 100)}%
-                        </div>
-                        <div className="flex space-x-1">
-                          <Button
-                            onClick={zoomOut}
-                            className="flex-1 h-8 text-sm bg-gray-600 hover:bg-gray-700"
-                          >
-                            Zoom Out
-                          </Button>
-                          <Button
-                            onClick={resetZoom}
-                            className="flex-1 h-8 text-sm bg-gray-500 hover:bg-gray-600"
-                          >
-                            Reset
-                          </Button>
-                          <Button
-                            onClick={zoomIn}
-                            className="flex-1 h-8 text-sm bg-gray-600 hover:bg-gray-700"
-                          >
-                            Zoom In
-                          </Button>
+                        <Button
+                          onClick={saveCanvasLayout}
+                          className="w-full h-10 text-sm bg-blue-600 hover:bg-blue-700 font-medium"
+                        >
+                          💾 Save
+                        </Button>
+                        <Button
+                          onClick={loadCanvasLayout}
+                          className="w-full h-8 text-sm bg-gray-600 hover:bg-gray-700"
+                        >
+                          📂 Load
+                        </Button>
+                        <div className="text-xs text-gray-500 mt-2">
+                          Saved temporarily | Will be sent to server when work order is saved
                         </div>
                       </div>
                     </div>
 
+                    {/* Selection Controls */}
+                    <div className="bg-white rounded-lg p-3 border">
+                      <h3 className="text-sm font-medium mb-3">Selection & Delete</h3>
+                      <div className="space-y-2">
+                        <div className="text-xs text-gray-600 mb-2">
+                          Selected: {selectedBoxIds.size} box(es)
+                        </div>
+                        <div className="grid grid-cols-2 gap-1">
+                          <Button
+                            onClick={selectAllBoxes}
+                            className="h-7 text-xs bg-blue-600 hover:bg-blue-700"
+                            disabled={!boxes || boxes.length === 0}
+                          >
+                            Select All
+                          </Button>
+                          <Button
+                            onClick={clearSelection}
+                            className="h-7 text-xs bg-gray-500 hover:bg-gray-600"
+                            disabled={selectedBoxIds.size === 0}
+                          >
+                            Clear
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1">
+                          <Button
+                            onClick={toggleSelectedBoxesDisabled}
+                            className="h-8 text-sm bg-yellow-600 hover:bg-yellow-700"
+                            disabled={selectedBoxIds.size === 0}
+                          >
+                            🔒 Toggle Disable
+                          </Button>
+                          <Button
+                            onClick={deleteSelectedBoxes}
+                            className="h-8 text-sm bg-red-600 hover:bg-red-700"
+                            disabled={selectedBoxIds.size === 0}
+                          >
+                            🗑️ Delete
+                          </Button>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-2">
+                          Left-click: single select + drag | Right-click: multi select
+                        </div>
+                      </div>
+                    </div>
                   </>
                 )}
 
@@ -2666,7 +2675,6 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
             <canvas
               ref={canvasRef}
               className="w-full h-full"
-              tabIndex={0}
               style={{ 
                 background: '#f9fafb',
                 cursor: isDragging ? 'grabbing' : 

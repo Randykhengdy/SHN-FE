@@ -45,6 +45,30 @@ export default function AddWorkOrderPage() {
   // Work Order Items State
   const [workOrderItems, setWorkOrderItems] = useState([]);
 
+  // Work Order ID State - generate new ID every time page is opened
+  const [workOrderId, setWorkOrderId] = useState(() => {
+    // Clear all WO_ storage first
+    console.log('Clearing all WO_ storage before generating new ID');
+    const keys = Object.keys(localStorage);
+    const woKeys = keys.filter(key => key.startsWith('WO_'));
+    woKeys.forEach(key => {
+      localStorage.removeItem(key);
+      console.log('Removed storage key:', key);
+    });
+    console.log(`Cleared ${woKeys.length} WO_ storage keys`);
+    
+    // Always generate a new work order ID when opening add WO page
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 8);
+    const newWorkOrderId = `wo_${timestamp}_${random}`;
+    
+    // Store the new ID in localStorage for this session
+    localStorage.setItem('WO_current_work_order_id', newWorkOrderId);
+    
+    console.log('Generated new work order ID:', newWorkOrderId);
+    return newWorkOrderId;
+  });
+
   // Master Data State
   const [gudangList, setGudangList] = useState([]);
   const [pelangganList, setPelangganList] = useState([]);
@@ -167,6 +191,15 @@ export default function AddWorkOrderPage() {
 
 
 
+  // Sync workOrderId with localStorage on component mount
+  useEffect(() => {
+    const storedWorkOrderId = localStorage.getItem('WO_current_work_order_id');
+    if (storedWorkOrderId && storedWorkOrderId !== workOrderId) {
+      console.log('Syncing workOrderId with localStorage:', storedWorkOrderId);
+      setWorkOrderId(storedWorkOrderId);
+    }
+  }, []);
+
   // Load master data on component mount
   useEffect(() => {
     const loadMasterData = async () => {
@@ -211,13 +244,13 @@ export default function AddWorkOrderPage() {
           setLoadingPelanggan(true);
           setLoadingSalesOrder(true);
           
-          const [pelangganResponse, salesOrderResponse] = await Promise.all([
-            getPelangganOptions(),
-            getSalesOrderOptions()
+          const [salesOrderResponse, pelangganResponse] = await Promise.all([
+            getSalesOrderOptions(),
+            getPelangganOptions()
           ]);
           
-          console.log('Pelanggan response:', pelangganResponse);
           console.log('Sales Order response:', salesOrderResponse);
+          console.log('Pelanggan response:', pelangganResponse);
           
           // getPelangganOptions sudah mengembalikan data yang sudah di-map
           if (pelangganResponse && Array.isArray(pelangganResponse)) {
@@ -266,6 +299,10 @@ export default function AddWorkOrderPage() {
     loadMasterData();
   }, []);
 
+  // Note: We don't clear workOrderId on unmount anymore
+  // It will only be cleared when work order is successfully saved
+  // This ensures the ID persists when opening modals within the same page
+
   // Function to load Sales Order detail and populate items
   const loadSalesOrderDetail = async (salesOrderId) => {
     if (!salesOrderId) return;
@@ -300,18 +337,26 @@ export default function AddWorkOrderPage() {
       
       if (itemsData && itemsData.length > 0) {
         // Transform Sales Order items to Work Order items
-        const transformedItems = itemsData.map((item, index) => ({
-          id: Date.now() + index,
-          panjang: item.panjang || item.length || 0,
-          lebar: item.lebar || item.width || 0,
-          tebal: item.tebal || item.ketebalan || item.thickness || 0,
-          qty: item.qty || item.quantity || item.jumlah || 1,
-          jenis_barang_id: item.jenis_barang_id || item.jenis_barang?.id,
-          bentuk_barang_id: item.bentuk_barang_id || item.bentuk_barang?.id,
-          grade_barang_id: item.grade_barang_id || item.grade_barang?.id,
-          catatan: item.catatan || item.note || item.notes || '',
-          pelaksana: []
-        }));
+        const transformedItems = itemsData.map((item, index) => {
+          // Generate unique workOrderUniqueId for each WO item
+          const timestamp = Date.now() + index;
+          const random = Math.random().toString(36).substring(2, 8);
+          const workOrderUniqueId = `wo_item_${timestamp}_${random}`;
+          
+          return {
+            id: timestamp,
+            workOrderUniqueId: workOrderUniqueId, // Add workOrderUniqueId to each WO item
+            panjang: item.panjang || item.length || 0,
+            lebar: item.lebar || item.width || 0,
+            tebal: item.tebal || item.ketebalan || item.thickness || 0,
+            qty: item.qty || item.quantity || item.jumlah || 1,
+            jenis_barang_id: item.jenis_barang_id || item.jenis_barang?.id,
+            bentuk_barang_id: item.bentuk_barang_id || item.bentuk_barang?.id,
+            grade_barang_id: item.grade_barang_id || item.grade_barang?.id,
+            catatan: item.catatan || item.note || item.notes || '',
+            pelaksana: []
+          };
+        });
         
         console.log('Transformed Work Order items:', transformedItems);
         setWorkOrderItems(transformedItems);
@@ -425,6 +470,12 @@ export default function AddWorkOrderPage() {
 
   // Plat Dasar functions
   const openPlatDasarModal = (item) => {
+    console.log('Opening modal work order item:', {
+      item: item,
+      workOrderId: workOrderId,
+      workOrderUniqueId: item.workOrderUniqueId
+    });
+    
     setCurrentItemData(item);
     setShowPlatDasarModal(true);
   };
@@ -469,6 +520,100 @@ export default function AddWorkOrderPage() {
   const isLuasCukup = (itemId, totalDibutuhkan) => {
     const totalTercukupi = getTotalLuasTercukupi(itemId);
     return totalTercukupi >= (totalDibutuhkan * 1.1); // 110% tolerance
+  };
+
+   
+
+  // Function to save saran plat dasar
+  const saveSaranPlatDasar = async (workOrderId, workOrderItems) => {
+    try {
+      console.log('=== SAVING SARAN PLAT DASAR ===');
+      console.log('Work Order ID:', workOrderId);
+      console.log('Work Order Items:', workOrderItems);
+      
+      // Get used saran plats from localStorage
+      const usedSaranPlats = JSON.parse(localStorage.getItem('WO_used_saran_plats') || '[]');
+      console.log('Used saran plats:', usedSaranPlats);
+      
+      if (usedSaranPlats.length === 0) {
+        console.log('No saran plats to save');
+        return;
+      }
+      
+      // Get canvas layouts for each saran plat
+      const saranPlatData = [];
+      
+      for (const saranItemId of usedSaranPlats) {
+        // Canvas layout disimpan dengan workOrderUniqueId (temp), bukan workOrderId (database)
+        const workOrderUniqueId = localStorage.getItem('WO_current_work_order_id');
+        const canvasLayoutKey = workOrderUniqueId ? `WO_canvas_layout_${saranItemId}_${workOrderUniqueId}` : `WO_canvas_layout_${saranItemId}`;
+        
+        let canvasLayoutData = localStorage.getItem(canvasLayoutKey);
+        
+        // Fallback: cari semua key yang cocok jika tidak ditemukan
+        // if (!canvasLayoutData) {
+        //   const allKeys = Object.keys(localStorage);
+        //   const canvasKeys = allKeys.filter(key => key.startsWith(`WO_canvas_layout_${saranItemId}_`));
+        //   console.log(`Found ${canvasKeys.length} canvas keys for saran item ${saranItemId}:`, canvasKeys);
+          
+        //   if (canvasKeys.length > 0) {
+        //     canvasLayoutData = localStorage.getItem(canvasKeys[0]);
+        //     console.log(`Using canvas data from key: ${canvasKeys[0]}`);
+        //   }
+        // }
+        
+        console.log(`Looking for canvas data for saran item ${saranItemId}:`);
+        console.log(`- Using key: ${canvasLayoutKey}`);
+        console.log(`- Result:`, canvasLayoutData ? 'Found' : 'Not found');
+        
+        if (canvasLayoutData) {
+          const canvasLayout = JSON.parse(canvasLayoutData);
+          
+          // Find corresponding work order item
+          const workOrderItem = workOrderItems.find(item => {
+            // Check if this saran item is used in this work order item
+            return canvasLayout.boxes && canvasLayout.boxes.some(box => 
+              box.workItemUniqueId && box.workItemUniqueId.includes(workOrderId)
+            );
+          });
+          
+    
+            saranPlatData.push({
+              wo_planning_item_id: workOrderId,
+              item_barang_id: parseInt(saranItemId),
+              is_selected: true, // Mark as selected since it's being used
+              canvas_data: JSON.stringify(canvasLayout)
+            });
+    
+        }
+      }
+      
+      console.log('Saran plat data to save:', saranPlatData);
+      
+      // Save each saran plat dasar
+      for (const saranData of saranPlatData) {
+        try {
+          console.log('🚀 Calling API for saran data:', saranData);
+          const response = await workOrderService.saveSaranPlatDasar(
+            saranData.wo_planning_item_id,
+            saranData.item_barang_id,
+            saranData.is_selected,
+            saranData.canvas_data
+          );
+          console.log('✅ Saved saran plat dasar:', saranData.item_barang_id, response);
+        } catch (error) {
+          console.error('❌ Error saving saran plat dasar for item:', saranData.item_barang_id, error);
+          console.error('Error details:', error.response?.data || error.message);
+          // Continue with other items even if one fails
+        }
+      }
+      
+      console.log('✅ All saran plat dasar saved successfully');
+      
+    } catch (error) {
+      console.error('❌ Error saving saran plat dasar:', error);
+      throw error;
+    }
   };
 
   // Handle form submission
@@ -561,6 +706,20 @@ export default function AddWorkOrderPage() {
       // Get the created work order ID from response
       const workOrderId = response.data?.id || response.id;
       const workOrderNumber = response.data?.nomor_wo || workOrderData.nomor_wo;
+      const workOrderItemsResponse = response.data?.items || [];
+      
+      // Save saran plat dasar
+      try {
+        console.log('🚀 Calling saveSaranPlatDasar...');
+        await saveSaranPlatDasar(workOrderId, workOrderItemsResponse);
+        console.log('✅ saveSaranPlatDasar completed');
+      } catch (error) {
+        console.error('❌ Error saving saran plat dasar:', error);
+        // Don't throw error here, just log it
+      }
+      
+      // Clear the stored work order ID since work order is now saved
+      // localStorage.removeItem('WO_current_work_order_id');
       
       showAlert('Sukses', `Work Order ${workOrderNumber} berhasil dibuat!\n\nID: ${workOrderId}\n\nKlik OK untuk melihat daftar Work Order.`, 'success', () => {
         navigate('/work-order');
@@ -918,6 +1077,7 @@ export default function AddWorkOrderPage() {
           tebal={parseFloat(currentItemData.tebal) || 0}
           totalDibutuhkan={calculateRequiredArea(currentItemData)}
           workOrderItem={currentItemData}
+          workOrderId={workOrderId}
           onSelectionChange={handlePlatDasarSelection}
           onClose={closePlatDasarModal}
         />
