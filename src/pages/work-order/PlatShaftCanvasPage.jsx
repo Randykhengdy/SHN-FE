@@ -1380,86 +1380,111 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       });
     }
     
-    // Place new boxes in perfect grid layout
-    for (let i = 0; i < boxesToAdd; i++) {
-      const boxId = newId + i;
+    // Place new boxes with collision detection and position finding (optimized for speed)
+    const placeBoxesWithDelay = async () => {
+      console.log(`Starting to place ${boxesToAdd} boxes...`);
       
-      // Calculate position in perfect grid (no spacing) - use exact grid positioning
-      const row = Math.floor(i / maxBoxesPerRow);
-      const col = i % maxBoxesPerRow;
-      
-      const x = baseContainer.x + (col * newBoxSize.width);
-      const y = baseContainer.y + (row * newBoxSize.height);
-      
-      // Check if this position is completely available
-      let canPlace = true;
-      for (let checkY = y; checkY < y + newBoxSize.height && canPlace; checkY++) {
-        for (let checkX = x; checkX < x + newBoxSize.width && canPlace; checkX++) {
-          if (checkX >= baseContainer.width || checkY >= baseContainer.height || grid[checkY][checkX]) {
-            canPlace = false;
-          }
-        }
-      }
-      
-      if (canPlace) {
-        // Mark this position as occupied
-        for (let markY = y; markY < y + newBoxSize.height; markY++) {
-          for (let markX = x; markX < x + newBoxSize.width; markX++) {
-            if (markX >= 0 && markX < baseContainer.width && markY >= 0 && markY < baseContainer.height) {
-              grid[markY][markX] = true;
+      for (let i = 0; i < boxesToAdd; i++) {
+        const boxId = newId + i;
+        let placed = false;
+        
+        // Try to find a position for this box (optimized with step size)
+        const stepSize = Math.max(1, Math.floor(newBoxSize.width / 2)); // Skip some positions for speed
+        for (let y = baseContainer.y; y <= baseContainer.y + baseContainer.height - newBoxSize.height && !placed; y += stepSize) {
+          for (let x = baseContainer.x; x <= baseContainer.x + baseContainer.width - newBoxSize.width && !placed; x += stepSize) {
+            // Quick check first - if any corner is occupied, skip this position
+            if (grid[y][x] || grid[y + newBoxSize.height - 1][x] || 
+                grid[y][x + newBoxSize.width - 1] || grid[y + newBoxSize.height - 1][x + newBoxSize.width - 1]) {
+              continue; // Skip this position immediately
+            }
+            
+            // Check if this position is completely available (only if corners are free)
+            let canPlace = true;
+            for (let checkY = y; checkY < y + newBoxSize.height && canPlace; checkY++) {
+              for (let checkX = x; checkX < x + newBoxSize.width && canPlace; checkX++) {
+                if (checkX >= baseContainer.width || checkY >= baseContainer.height || grid[checkY][checkX]) {
+                  canPlace = false;
+                }
+              }
+            }
+            
+            if (canPlace) {
+              // Mark this position as occupied
+              for (let markY = y; markY < y + newBoxSize.height; markY++) {
+                for (let markX = x; markX < x + newBoxSize.width; markX++) {
+                  if (markX >= 0 && markX < baseContainer.width && markY >= 0 && markY < baseContainer.height) {
+                    grid[markY][markX] = true;
+                  }
+                }
+              }
+              
+              const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
+              const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
+              const workOrderId = workOrderData?.workOrderId || 'unknown';
+              const saranId = workOrderData?.selectedItem?.id || 'unknown';
+              
+              newBoxes.push({
+                id: boxId,
+                x: x,
+                y: y,
+                width: newBoxSize.width,
+                height: newBoxSize.height,
+                color: '#10b981', // Always green for new boxes
+                isDisabled: false,
+                woItemId: woItemId,
+                workOrderId: workOrderId,
+                saranId: saranId,
+                isSave: false, // Will be true when saving
+                workItemUniqueId: workItemUniqueId // Set workItemUniqueId to storage
+              });
+              
+              placed = true; // Mark as placed and break out of loops
             }
           }
         }
         
-        const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
-        const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
-        const workOrderId = workOrderData?.workOrderId || 'unknown';
-        const saranId = workOrderData?.selectedItem?.id || 'unknown';
+        // If couldn't place this box, log it
+        if (!placed) {
+          console.warn(`Could not place box ${boxId} - no available space`);
+        }
         
-        newBoxes.push({
-          id: boxId,
-          x: x,
-          y: y,
-          width: newBoxSize.width,
-          height: newBoxSize.height,
-          color: '#10b981', // Always green for new boxes
-          isDisabled: false,
-          woItemId: woItemId,
-          workOrderId: workOrderId,
-          saranId: saranId,
-          isSave: false, // Will be true when saving
-          workItemUniqueId: workItemUniqueId // Set workItemUniqueId to storage
-        });
+        // Add small delay every 20 boxes to prevent UI freezing (minimal delay)
+        if ((i + 1) % 20 === 0) {
+          console.log(`Placed ${i + 1}/${boxesToAdd} boxes...`);
+          await new Promise(resolve => setTimeout(resolve, 2)); // 2ms delay (minimal)
+        }
       }
-    }
-
-    if (newBoxes.length > 0) {
-      setBoxes(prevBoxes => {
-        const updatedBoxes = [...(prevBoxes || []), ...newBoxes];
-        return updatedBoxes;
-      });
       
-      // Calculate remaining quantity correctly
-      const totalBoxes = (boxes ? boxes.length : 0) + newBoxes.length;
-      const newRemaining = Math.max(0, totalQuantity - totalBoxes);
-      
-      console.log('Fill All - Final Calculation:', {
-        totalQuantity: totalQuantity,
-        currentBoxes: boxes ? boxes.length : 0,
-        newBoxes: newBoxes.length,
-        totalBoxes: totalBoxes,
-        newRemaining: newRemaining
-      });
-      
-      // Update remaining quantity with calculated value
-      
-      const message = boxesToAdd < boxesToFill 
-        ? `Added ${newBoxes.length} boxes! Total: ${totalBoxes}/${targetQuantity} (${newRemaining} remaining - not enough space)`
-        : `Added ${newBoxes.length} boxes! Total: ${totalBoxes}/${targetQuantity} (${newRemaining} remaining)`;
-      showAlert('Success', message, 'success');
-    } else {
-      showAlert('Error', 'No space available for new boxes!', 'error');
-    }
+      // Update boxes after all are placed
+      if (newBoxes.length > 0) {
+        setBoxes(prevBoxes => {
+          const updatedBoxes = [...(prevBoxes || []), ...newBoxes];
+          return updatedBoxes;
+        });
+        
+        // Calculate remaining quantity correctly
+        const totalBoxes = (boxes ? boxes.length : 0) + newBoxes.length;
+        const newRemaining = Math.max(0, totalQuantity - totalBoxes);
+        
+        console.log('Fill All - Final Calculation:', {
+          totalQuantity: totalQuantity,
+          currentBoxes: boxes ? boxes.length : 0,
+          newBoxes: newBoxes.length,
+          totalBoxes: totalBoxes,
+          newRemaining: newRemaining
+        });
+        
+        const message = newBoxes.length < boxesToFill 
+          ? `Added ${newBoxes.length} boxes! Total: ${totalBoxes}/${targetQuantity} (${newRemaining} remaining - not enough space)`
+          : `Added ${newBoxes.length} boxes! Total: ${totalBoxes}/${targetQuantity} (${newRemaining} remaining)`;
+        showAlert('Success', message, 'success');
+      } else {
+        showAlert('Error', 'No space available for new boxes!', 'error');
+      }
+    };
+    
+    // Start placing boxes with delay
+    placeBoxesWithDelay();
   }, [boxes, newBoxSize, baseContainer, showAlert, workOrderData?.itemQty, workOrderData?.workOrderItem?.id, workOrderData?.itemId]);
   
   const updateBaseContainer = useCallback((width, height) => {
