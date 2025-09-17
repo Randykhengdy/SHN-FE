@@ -62,7 +62,7 @@ const PelaksanaModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl max-h-[92vh] overflow-visible w-[90vw]">
+      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-visible w-[95vw]">
         <DialogHeader className="pb-6 pt-2">
           <DialogTitle className="text-2xl font-semibold text-gray-900">{title}</DialogTitle>
         </DialogHeader>
@@ -89,14 +89,14 @@ const PelaksanaModal = ({
 
           {/* Table Section */}
           <div className="border rounded-lg overflow-hidden bg-white shadow-sm">
-            <div className="overflow-x-auto max-h-[70vh] overflow-y-auto px-2">
+            <div className="overflow-x-auto max-h-[75vh] overflow-y-auto px-2">
               <Table>
                 <TableHeader className="bg-gray-50 sticky top-0 z-10">
                   <TableRow className="border-b">
-                    <TableHead className="text-left font-semibold text-gray-700 py-3 px-4">Pelaksana</TableHead>
-                    <TableHead className="text-left font-semibold text-gray-700 py-3 px-4 w-24">Qty</TableHead>
-                    <TableHead className="text-left font-semibold text-gray-700 py-3 px-4">Catatan</TableHead>
-                    <TableHead className="text-center font-semibold text-gray-700 py-3 px-4 w-16">Aksi</TableHead>
+                    <TableHead className="text-left font-semibold text-gray-700 py-3 px-4 w-1/3">Pelaksana</TableHead>
+                    <TableHead className="text-left font-semibold text-gray-700 py-3 px-4 w-32">Qty</TableHead>
+                    <TableHead className="text-left font-semibold text-gray-700 py-3 px-4 w-1/3">Catatan</TableHead>
+                    <TableHead className="text-center font-semibold text-gray-700 py-3 px-4 w-20">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

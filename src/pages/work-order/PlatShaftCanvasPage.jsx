@@ -2515,31 +2515,31 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
             </div>
 
             {/* Tab Content */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden" style={{ maxHeight: 'calc(100vh - 200px)' }}>
-              <div className="p-3 space-y-3">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden" style={{ maxHeight: 'calc(100vh - 120px)' }}>
+              <div className="p-1.5 space-y-1.5">
                 {/* Stats Tab */}
                 {activeTab === 'stats' && (
                   <>
                     {/* Save & Back to Modal Buttons */}
-                    <div className="bg-white rounded-lg p-2 border">
+                    <div className="bg-white rounded-lg p-1 border">
                       <Button
                         onClick={saveCanvasLayout}
-                        className="w-full h-10 text-sm bg-blue-600 hover:bg-blue-700 font-medium mb-2"
+                        className="w-full h-8 text-sm bg-blue-600 hover:bg-blue-700 font-medium mb-1"
                       >
                         💾 Save
                       </Button>
                       <Button
                         onClick={onClose}
-                        className="w-full h-10 text-sm bg-gray-600 hover:bg-gray-700"
+                        className="w-full h-8 text-sm bg-gray-600 hover:bg-gray-700"
                       >
                         ← Back to Modal
                       </Button>
                     </div>
 
                     {/* Grid Statistics */}
-                    <div className="bg-white rounded-lg p-2 border">
-                      <h3 className="text-sm font-medium mb-2">Grid Statistics</h3>
-                      <div className="space-y-2">
+                    <div className="bg-white rounded-lg p-1 border">
+                      <h3 className="text-sm font-medium mb-1">Grid Statistics</h3>
+                      <div className="space-y-1">
                         <div className="text-sm">
                           <span className="font-medium">Total Boxes:</span> {(() => {
                             const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
@@ -2615,7 +2615,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                           };
                           return (
                             <>
-                              <div className="border-t pt-2 mt-2">
+                              <div className="border-t pt-1 mt-1">
                                 <div className="text-sm font-medium text-gray-700 mb-1">Cell Occupancy</div>
                                 <div className="text-sm">
                                   <span className="font-medium text-green-600">Occupied:</span> {occupancy.occupied} cells
@@ -2644,9 +2644,9 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
 
 
                     {/* Base Container Info */}
-                    <div className="bg-white rounded-lg p-2 border">
-                      <h3 className="text-sm font-medium mb-2">Base Container</h3>
-                      <div className="space-y-2">
+                    <div className="bg-white rounded-lg p-1 border">
+                      <h3 className="text-sm font-medium mb-1">Base Container</h3>
+                      <div className="space-y-1">
                         <div className="text-sm text-gray-600">
                           <span className="font-medium">Size:</span> {baseContainer.width}×{baseContainer.height} units
                         </div>
@@ -2673,9 +2673,9 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                     </div>
 
                     {/* Box Size Info */}
-                    <div className="bg-white rounded-lg p-2 border">
-                      <h3 className="text-sm font-medium mb-2">Box Size</h3>
-                      <div className="space-y-2">
+                    <div className="bg-white rounded-lg p-1 border">
+                      <h3 className="text-sm font-medium mb-1">Box Size</h3>
+                      <div className="space-y-1">
                         <div className="grid grid-cols-2 gap-2">
                           <div>
                             <label className="text-xs text-gray-600">Width</label>
@@ -2707,9 +2707,9 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                 {activeTab === 'actions' && (
                   <>
                     {/* Box Actions */}
-                    <div className="bg-white rounded-lg p-2 border">
-                      <h3 className="text-sm font-medium mb-2">Box Actions</h3>
-                      <div className="space-y-2">
+                    <div className="bg-white rounded-lg p-1 border">
+                      <h3 className="text-sm font-medium mb-1">Box Actions</h3>
+                      <div className="space-y-1">
                         <Button
                           onClick={fillAllBoxes}
                           className="w-full h-8 text-sm bg-blue-600 hover:bg-blue-700"
@@ -2732,9 +2732,9 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                     </div>
 
                     {/* Zoom Controls */}
-                    <div className="bg-white rounded-lg p-2 border">
-                      <h3 className="text-sm font-medium mb-2">Zoom Controls</h3>
-                      <div className="space-y-2">
+                    <div className="bg-white rounded-lg p-1 border">
+                      <h3 className="text-sm font-medium mb-1">Zoom Controls</h3>
+                      <div className="space-y-1">
                         <div className="text-sm text-gray-600">
                           <span className="font-medium">Zoom:</span> {Math.round(zoom * 100)}%
                         </div>
@@ -2768,9 +2768,9 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                 {activeTab === 'tools' && (
                   <>
                     {/* Zoom Controls */}
-                    <div className="bg-white rounded-lg p-2 border">
-                      <h3 className="text-sm font-medium mb-2">Zoom Controls</h3>
-                      <div className="space-y-2">
+                    <div className="bg-white rounded-lg p-1 border">
+                      <h3 className="text-sm font-medium mb-1">Zoom Controls</h3>
+                      <div className="space-y-1">
                         <div className="text-sm text-gray-600">
                           <span className="font-medium">Zoom:</span> {Math.round(zoom * 100)}%
                         </div>
@@ -2798,8 +2798,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                     </div>
 
                     {/* Keyboard Controls Info */}
-                    <div className="bg-white rounded-lg p-2 border">
-                      <h3 className="text-sm font-medium mb-2">Keyboard Controls</h3>
+                    <div className="bg-white rounded-lg p-1 border">
+                      <h3 className="text-sm font-medium mb-1">Keyboard Controls</h3>
                       <div className="space-y-1 text-xs text-gray-600">
                         <div>• <span className="font-medium">Arrow Keys:</span> Pan canvas</div>
                         <div>• <span className="font-medium">Home:</span> Reset position</div>
