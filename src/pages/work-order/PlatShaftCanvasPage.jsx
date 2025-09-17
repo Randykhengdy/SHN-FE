@@ -53,6 +53,33 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   // Colors for boxes
   const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#8b5cf6'];
   
+  // Debug function to show all canvas layouts in localStorage
+  const debugCanvasLayouts = useCallback(() => {
+    const allKeys = Object.keys(localStorage);
+    const canvasKeys = allKeys.filter(key => key.startsWith('WO_canvas_layout_'));
+    
+    console.log('=== ALL CANVAS LAYOUTS IN LOCALSTORAGE ===');
+    console.log('Total canvas keys found:', canvasKeys.length);
+    
+    canvasKeys.forEach(key => {
+      try {
+        const data = localStorage.getItem(key);
+        if (data) {
+          const parsed = JSON.parse(data);
+          console.log(`Key: ${key}`, {
+            hasBoxes: parsed.boxes && parsed.boxes.length > 0,
+            boxCount: parsed.boxes ? parsed.boxes.length : 0,
+            version: parsed.version || '1.0',
+            timestamp: parsed.timestamp
+          });
+        }
+      } catch (error) {
+        console.error(`Error parsing key ${key}:`, error);
+      }
+    });
+    console.log('=== END CANVAS LAYOUTS DEBUG ===');
+  }, []);
+  
   // Load canvas data from API
   const loadCanvasFromAPI = useCallback(async (itemBarangId) => {
     try {
@@ -137,19 +164,70 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         console.log('Loaded workOrderData from sessionStorage:', data);
         setWorkOrderData(data);
         
+        // Debug: Show all canvas layouts in localStorage
+        debugCanvasLayouts();
+        
         // Check if canvas data exists in localStorage first
         if (data.selectedItem && data.selectedItem.id) {
           const itemBarangId = data.selectedItem.id;
-          const workOrderUniqueId = localStorage.getItem('WO_current_work_order_item_id');
-          const canvasKey = workOrderUniqueId ? `WO_canvas_layout_${itemBarangId}_${workOrderUniqueId}` : `WO_canvas_layout_${itemBarangId}`;
-          const existingCanvasData = localStorage.getItem(canvasKey);
           
-          if (existingCanvasData) {
-            console.log('Canvas data found in localStorage, using cached data');
-            // Canvas data will be loaded by existing localStorage logic below
+          // Check if this saran plat is in WO_used_saran_plats
+          const usedSaranPlats = JSON.parse(localStorage.getItem('WO_used_saran_plats') || '[]');
+          const isSaranPlatUsed = usedSaranPlats.includes(itemBarangId.toString()) || usedSaranPlats.includes(parseInt(itemBarangId));
+          
+          console.log('Canvas load check:', {
+            itemBarangId,
+            isSaranPlatUsed,
+            usedSaranPlats
+          });
+          
+          if (isSaranPlatUsed) {
+            // If saran plat is used, search for existing canvas layout
+            const allKeys = Object.keys(localStorage);
+            
+            // Search for canvas keys that start with WO_canvas_layout_{itemBarangId}_
+            const canvasKeys = allKeys.filter(key => 
+              key.startsWith(`WO_canvas_layout_${itemBarangId}_`)
+            );
+            
+            console.log('Searching for canvas keys:', {
+              itemBarangId,
+              searchPattern: `WO_canvas_layout_${itemBarangId}_`,
+              allKeys: allKeys.filter(key => key.startsWith('WO_canvas_layout_')),
+              foundKeys: canvasKeys
+            });
+            
+            if (canvasKeys.length > 0) {
+              // Use the first found key (or could be the latest one)
+              const canvasKey = canvasKeys[0];
+              const existingCanvasData = localStorage.getItem(canvasKey);
+              
+              console.log('Using canvas key:', canvasKey, 'hasData:', !!existingCanvasData);
+              
+              if (existingCanvasData) {
+                console.log('Found existing canvas data for used saran plat, loading from localStorage');
+                // Canvas data will be loaded by existing localStorage logic below
+              } else {
+                console.log('Canvas key found but no data, loading from API');
+                loadCanvasFromAPI(itemBarangId);
+              }
+            } else {
+              console.log('No canvas keys found for used saran plat, loading from API');
+              loadCanvasFromAPI(itemBarangId);
+            }
           } else {
-            console.log('No canvas data in localStorage, skipping API load for now');
-            // loadCanvasFromAPI(itemBarangId); // Disabled for testing
+            // If saran plat is not used, try normal flow
+            const workOrderUniqueId = localStorage.getItem('WO_current_work_order_item_id');
+            const canvasKey = workOrderUniqueId ? `WO_canvas_layout_${itemBarangId}_${workOrderUniqueId}` : `WO_canvas_layout_${itemBarangId}`;
+            const existingCanvasData = localStorage.getItem(canvasKey);
+            
+            if (existingCanvasData) {
+              console.log('Canvas data found in localStorage, using cached data');
+              // Canvas data will be loaded by existing localStorage logic below
+            } else {
+              console.log('No canvas data in localStorage, loading from API');
+              loadCanvasFromAPI(itemBarangId);
+            }
           }
         }
         
@@ -751,6 +829,13 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     const mousePos = getMousePos(e);
     const gridPos = getGridPos(mousePos);
     
+    // Handle panning for middle mouse or Ctrl+Left
+    if (e.button === 1 || (e.button === 0 && e.ctrlKey)) {
+      setIsPanning(true);
+      setLastPanPos(mousePos);
+      return;
+    }
+    
     // Check if clicking on container boundary first
     if (isMouseOverContainer(mousePos)) {
       setIsDraggingContainer(true);
@@ -815,7 +900,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       setLeftClickPanStart(mousePos);
       setLastPanPos(mousePos);
     }
-  }, [boxes, getMousePos, getGridPos, gridSize, zoom, isMouseOverBox, isMouseOverContainer, baseContainer]);
+  }, [boxes, getMousePos, getGridPos, gridSize, zoom, isMouseOverBox, isMouseOverContainer, baseContainer, workOrderData, showAlert]);
 
   // Right-click handler for selection
   const handleRightClick = useCallback((e) => {
@@ -1048,16 +1133,6 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   }, [zoom, panOffset, getMousePos]);
 
   // Pan functionality
-  const handleMouseDownPan = useCallback((e) => {
-    if (e.button === 1 || (e.button === 0 && e.ctrlKey)) { // Middle mouse or Ctrl+Left
-      e.preventDefault();
-      e.stopPropagation();
-      
-      const mousePos = getMousePos(e);
-      setIsPanning(true);
-      setLastPanPos(mousePos);
-    }
-  }, [getMousePos]);
 
   const handleMouseMovePan = useCallback((e) => {
     if (isPanning) {
@@ -1239,7 +1314,9 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       targetQuantity: targetQuantity,
       currentQuantity: currentQuantity,
       currentWorkOrderUniqueId: currentWorkOrderUniqueId,
-      totalBoxesInCanvas: boxes ? boxes.length : 0
+      totalBoxesInCanvas: boxes ? boxes.length : 0,
+      workOrderData: workOrderData,
+      boxes: boxes?.map(box => ({ id: box.id, workItemUniqueId: box.workItemUniqueId, woItemId: box.woItemId }))
     });
 
     // Check if already reached target quantity
@@ -2313,7 +2390,6 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     
     // Mouse events
     canvas.addEventListener('mousedown', handleMouseDown);
-    canvas.addEventListener('mousedown', handleMouseDownPan);
     canvas.addEventListener('contextmenu', handleRightClick);
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mousemove', handleMouseMovePan);
@@ -2331,7 +2407,6 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     
     return () => {
       canvas.removeEventListener('mousedown', handleMouseDown);
-      canvas.removeEventListener('mousedown', handleMouseDownPan);
       canvas.removeEventListener('contextmenu', handleRightClick);
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mousemove', handleMouseMovePan);
@@ -2345,7 +2420,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handleMouseDown, handleMouseMove, handleMouseUp, handleMouseDownPan, handleMouseMovePan, handleMouseUpPan, handleWheel, handleTouchStart, handleTouchMove, handleTouchEnd, handleKeyDown, handleRightClick]);
+  }, [handleMouseDown, handleMouseMove, handleMouseUp, handleMouseMovePan, handleMouseUpPan, handleWheel, handleTouchStart, handleTouchMove, handleTouchEnd, handleKeyDown, handleRightClick]);
   
   return (
     <div className="h-screen flex flex-col">

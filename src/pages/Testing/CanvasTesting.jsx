@@ -660,6 +660,13 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     const mousePos = getMousePos(e);
     const gridPos = getGridPos(mousePos);
     
+    // Handle panning for middle mouse or Ctrl+Left
+    if (e.button === 1 || (e.button === 0 && e.ctrlKey)) {
+      setIsPanning(true);
+      setLastPanPos(mousePos);
+      return;
+    }
+    
     // Check if clicking on container boundary first
     if (isMouseOverContainer(mousePos)) {
       setIsDraggingContainer(true);
@@ -724,7 +731,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       setLeftClickPanStart(mousePos);
       setLastPanPos(mousePos);
     }
-  }, [boxes, getMousePos, getGridPos, gridSize, zoom, isMouseOverBox, isMouseOverContainer, baseContainer]);
+  }, [boxes, getMousePos, getGridPos, gridSize, zoom, isMouseOverBox, isMouseOverContainer, baseContainer, workOrderData, showAlert]);
 
   // Right-click handler for selection
   const handleRightClick = useCallback((e) => {
@@ -957,16 +964,6 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   }, [zoom, panOffset, getMousePos]);
 
   // Pan functionality
-  const handleMouseDownPan = useCallback((e) => {
-    if (e.button === 1 || (e.button === 0 && e.ctrlKey)) { // Middle mouse or Ctrl+Left
-      e.preventDefault();
-      e.stopPropagation();
-      
-      const mousePos = getMousePos(e);
-      setIsPanning(true);
-      setLastPanPos(mousePos);
-    }
-  }, [getMousePos]);
 
   const handleMouseMovePan = useCallback((e) => {
     if (isPanning) {
