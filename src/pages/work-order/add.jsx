@@ -569,6 +569,15 @@ export default function AddWorkOrderPage() {
         if (canvasLayoutData) {
           const canvasLayout = JSON.parse(canvasLayoutData);
           
+          // Change all box colors to red before saving
+          if (canvasLayout.boxes && Array.isArray(canvasLayout.boxes)) {
+            canvasLayout.boxes = canvasLayout.boxes.map(box => ({
+              ...box,
+              color: "#ef4444" // Red color
+            }));
+            console.log(`Changed ${canvasLayout.boxes.length} boxes to red color for saran item ${saranItemId}`);
+          }
+          
           // Find corresponding work order item
           const workOrderItem = workOrderItems.find(item => {
             // Check if this saran item is used in this work order item

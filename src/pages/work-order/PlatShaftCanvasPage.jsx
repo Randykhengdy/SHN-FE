@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAlert } from '@/hooks/useAlert';
+import { request } from '@/lib/request';
 
 const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCanvasSaved }, ref) => {
   const { showAlert } = useAlert();
@@ -52,6 +53,79 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   // Colors for boxes
   const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#8b5cf6'];
   
+  // Load canvas data from API
+  const loadCanvasFromAPI = useCallback(async (itemBarangId) => {
+    try {
+      console.log('Loading canvas data from API for item barang ID:', itemBarangId);
+      const result = await request(`/item-barang/${itemBarangId}/canvas`, {
+        method: 'GET'
+      });
+      
+      console.log('Canvas data loaded from API:', result);
+      
+      if (result.success && result.data && result.data.canvas_data) {
+        const canvasData = result.data.canvas_data;
+        
+        // Load canvas data
+        if (canvasData.boxes && Array.isArray(canvasData.boxes)) {
+          setBoxes(canvasData.boxes);
+          console.log('Loaded boxes from API:', canvasData.boxes.length);
+        }
+        
+        if (canvasData.baseContainer) {
+          setBaseContainer(canvasData.baseContainer);
+          console.log('Loaded base container from API:', canvasData.baseContainer);
+        }
+        
+        if (canvasData.gridSize) {
+          setGridSize(canvasData.gridSize);
+        }
+        
+        if (canvasData.zoom) {
+          setZoom(canvasData.zoom);
+        }
+        
+        if (canvasData.panOffset) {
+          setPanOffset(canvasData.panOffset);
+        }
+        
+        showAlert('Success', 'Canvas data loaded from server!', 'success');
+      } else if (result.boxes && Array.isArray(result.boxes)) {
+        // Handle direct response format (without success wrapper)
+        console.log('Loading canvas data from direct response format');
+        
+        if (result.boxes) {
+          setBoxes(result.boxes);
+          console.log('Loaded boxes from API:', result.boxes.length);
+        }
+        
+        if (result.baseContainer) {
+          setBaseContainer(result.baseContainer);
+          console.log('Loaded base container from API:', result.baseContainer);
+        }
+        
+        if (result.gridSize) {
+          setGridSize(result.gridSize);
+        }
+        
+        if (result.zoom) {
+          setZoom(result.zoom);
+        }
+        
+        if (result.panOffset) {
+          setPanOffset(result.panOffset);
+        }
+        
+        showAlert('Success', 'Canvas data loaded from server!', 'success');
+      } else {
+        console.log('No canvas data found in API response');
+      }
+    } catch (error) {
+      console.error('Error loading canvas from API:', error);
+      // Don't show error alert, just log it - canvas will use default state
+    }
+  }, [showAlert]);
+
   // Load work order data from sessionStorage
   useEffect(() => {
     if (isInitialized) return; // Prevent multiple initializations
@@ -62,6 +136,22 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         const data = JSON.parse(storedData);
         console.log('Loaded workOrderData from sessionStorage:', data);
         setWorkOrderData(data);
+        
+        // Check if canvas data exists in localStorage first
+        if (data.selectedItem && data.selectedItem.id) {
+          const itemBarangId = data.selectedItem.id;
+          const workOrderUniqueId = localStorage.getItem('WO_current_work_order_item_id');
+          const canvasKey = workOrderUniqueId ? `WO_canvas_layout_${itemBarangId}_${workOrderUniqueId}` : `WO_canvas_layout_${itemBarangId}`;
+          const existingCanvasData = localStorage.getItem(canvasKey);
+          
+          if (existingCanvasData) {
+            console.log('Canvas data found in localStorage, using cached data');
+            // Canvas data will be loaded by existing localStorage logic below
+          } else {
+            console.log('No canvas data in localStorage, skipping API load for now');
+            // loadCanvasFromAPI(itemBarangId); // Disabled for testing
+          }
+        }
         
         // Update base container dimensions (Saran Plat)
         const platWidth = data.platPanjang || 20;
@@ -192,7 +282,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         showAlert('Error', 'Failed to load work order data', 'error');
       }
     }
-  }, [isInitialized, showAlert]);
+  }, [isInitialized, showAlert, loadCanvasFromAPI]);
 
   // Sync totalQuantity with workOrderData.itemQty (target quantity for current WO item)
   useEffect(() => {
@@ -210,50 +300,6 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     }
   }, [workOrderData?.itemQty, workOrderData?.workOrderItem?.id, workOrderData?.itemId, workOrderData]);
 
-  // Keyboard controls for canvas panning
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Only handle arrow keys when canvas is focused
-      if (!canvasRef.current || document.activeElement !== canvasRef.current) return;
-      
-      const panSpeed = 20; // pixels per key press
-      
-      switch (e.key) {
-        case 'ArrowLeft':
-          e.preventDefault();
-          setPanOffset(prev => ({ ...prev, x: prev.x + panSpeed }));
-          break;
-        case 'ArrowRight':
-          e.preventDefault();
-          setPanOffset(prev => ({ ...prev, x: prev.x - panSpeed }));
-          break;
-        case 'ArrowUp':
-          e.preventDefault();
-          setPanOffset(prev => ({ ...prev, y: prev.y + panSpeed }));
-          break;
-        case 'ArrowDown':
-          e.preventDefault();
-          setPanOffset(prev => ({ ...prev, y: prev.y - panSpeed }));
-          break;
-        case 'Home':
-          e.preventDefault();
-          setPanOffset({ x: 0, y: 0 });
-          break;
-        case 'End':
-          e.preventDefault();
-          resetZoom();
-          break;
-      }
-    };
-
-    // Add event listener
-    document.addEventListener('keydown', handleKeyDown);
-    
-    // Cleanup
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, []);
 
   
   // Generate initial boxes based on work order quantity
@@ -1054,30 +1100,6 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       return;
     }
     
-    // Calculate total used quantity across all saran plats for this WO item
-    const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
-    const woItemData = totalQuantityData.find(item => 
-      item.WoItemID === currentWoItemId || item.WoItemID === parseInt(currentWoItemId)
-    );
-    
-    // Get target quantity from storage or fallback to workOrderData (use same variable)
-    const storageTargetQuantity = woItemData?.TargetQuantity || targetQuantity;
-    
-    let totalUsedQuantity = 0;
-    if (woItemData && woItemData.WOQuantity && Array.isArray(woItemData.WOQuantity)) {
-      totalUsedQuantity = woItemData.WOQuantity.reduce((total, saranItem) => {
-        return total + (parseInt(saranItem.Quantity) || 0);
-      }, 0);
-    }
-    
-    // Calculate remaining: target - total used + current (to avoid double counting current saran plat)
-    const remaining = Math.max(0, storageTargetQuantity - totalUsedQuantity + currentQuantity);
-    
-    if (remaining <= 0) {
-      showAlert('Error', 'No remaining quantity to add!', 'error');
-      return;
-    }
-    
     if (newBoxSize.width > baseContainer.width || newBoxSize.height > baseContainer.height) {
       showAlert('Error', `Box size (${newBoxSize.width}×${newBoxSize.height}) is too big for container (${baseContainer.width}×${baseContainer.height})`, 'error');
       return;
@@ -1355,13 +1377,13 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       // Update remaining quantity with calculated value
       
       const message = boxesToAdd < boxesToFill 
-        ? `Added ${newBoxes.length} boxes! Total: ${totalBoxes}/${totalQuantity} (${newRemaining} remaining - not enough space)`
-        : `Added ${newBoxes.length} boxes! Total: ${totalBoxes}/${totalQuantity} (${newRemaining} remaining)`;
+        ? `Added ${newBoxes.length} boxes! Total: ${totalBoxes}/${targetQuantity} (${newRemaining} remaining - not enough space)`
+        : `Added ${newBoxes.length} boxes! Total: ${totalBoxes}/${targetQuantity} (${newRemaining} remaining)`;
       showAlert('Success', message, 'success');
     } else {
       showAlert('Error', 'No space available for new boxes!', 'error');
     }
-  }, [totalQuantity, boxes, newBoxSize, baseContainer, showAlert, workOrderData?.itemQty, workOrderData?.workOrderItem?.id, workOrderData?.itemId]);
+  }, [boxes, newBoxSize, baseContainer, showAlert, workOrderData?.itemQty, workOrderData?.workOrderItem?.id, workOrderData?.itemId]);
   
   const updateBaseContainer = useCallback((width, height) => {
     setBaseContainer(prev => ({ ...prev, width, height }));
@@ -1488,8 +1510,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       ) : [];
       const arrangedQuantity = currentWoItemBoxes.length;
       
-      // Update totalQuantity state to reflect actual arranged quantity
-      setTotalQuantity(arrangedQuantity);
+      // Don't update totalQuantity state - it should remain as target quantity
+      // setTotalQuantity(arrangedQuantity);
       
       console.log('Calculating arranged quantity for save:', {
         woItemId: woItemId,
@@ -2233,6 +2255,45 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
 
   // Keyboard event handler
   const handleKeyDown = useCallback((e) => {
+    // Canvas panning controls (always active when canvas exists)
+    if (canvasRef.current) {
+      const panSpeed = 20; // pixels per key press
+      
+      switch (e.key) {
+        case 'ArrowLeft':
+          e.preventDefault();
+          console.log('Arrow Left pressed - panning left');
+          setPanOffset(prev => ({ ...prev, x: prev.x + panSpeed }));
+          return;
+        case 'ArrowRight':
+          e.preventDefault();
+          console.log('Arrow Right pressed - panning right');
+          setPanOffset(prev => ({ ...prev, x: prev.x - panSpeed }));
+          return;
+        case 'ArrowUp':
+          e.preventDefault();
+          console.log('Arrow Up pressed - panning up');
+          setPanOffset(prev => ({ ...prev, y: prev.y + panSpeed }));
+          return;
+        case 'ArrowDown':
+          e.preventDefault();
+          console.log('Arrow Down pressed - panning down');
+          setPanOffset(prev => ({ ...prev, y: prev.y - panSpeed }));
+          return;
+        case 'Home':
+          e.preventDefault();
+          console.log('Home pressed - reset position');
+          setPanOffset({ x: 0, y: 0 });
+          return;
+        case 'End':
+          e.preventDefault();
+          console.log('End pressed - reset zoom');
+          resetZoom();
+          return;
+      }
+    }
+    
+    // General keyboard shortcuts
     if (e.key === 'Delete' || e.key === 'Backspace') {
       if (selectedBoxIds.size > 0) {
         deleteSelectedBoxes();
@@ -2243,7 +2304,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       e.preventDefault();
       selectAllBoxes();
     }
-  }, [selectedBoxIds, deleteSelectedBoxes, selectAllBoxes]);
+  }, [selectedBoxIds, deleteSelectedBoxes, selectAllBoxes, resetZoom]);
 
   // Event listeners
   useEffect(() => {
@@ -2355,12 +2416,12 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
 
             {/* Tab Content */}
             <div className="flex-1 overflow-y-auto overflow-x-hidden" style={{ maxHeight: 'calc(100vh - 200px)' }}>
-              <div className="p-4 space-y-4">
+              <div className="p-3 space-y-3">
                 {/* Stats Tab */}
                 {activeTab === 'stats' && (
                   <>
                     {/* Save & Back to Modal Buttons */}
-                    <div className="bg-white rounded-lg p-3 border">
+                    <div className="bg-white rounded-lg p-2 border">
                       <Button
                         onClick={saveCanvasLayout}
                         className="w-full h-10 text-sm bg-blue-600 hover:bg-blue-700 font-medium mb-2"
@@ -2376,8 +2437,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                     </div>
 
                     {/* Grid Statistics */}
-                    <div className="bg-white rounded-lg p-3 border">
-                      <h3 className="text-sm font-medium mb-3">Grid Statistics</h3>
+                    <div className="bg-white rounded-lg p-2 border">
+                      <h3 className="text-sm font-medium mb-2">Grid Statistics</h3>
                       <div className="space-y-2">
                         <div className="text-sm">
                           <span className="font-medium">Total Boxes:</span> {(() => {
@@ -2483,8 +2544,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
 
 
                     {/* Base Container Info */}
-                    <div className="bg-white rounded-lg p-3 border">
-                      <h3 className="text-sm font-medium mb-3">Base Container</h3>
+                    <div className="bg-white rounded-lg p-2 border">
+                      <h3 className="text-sm font-medium mb-2">Base Container</h3>
                       <div className="space-y-2">
                         <div className="text-sm text-gray-600">
                           <span className="font-medium">Size:</span> {baseContainer.width}×{baseContainer.height} units
@@ -2512,8 +2573,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                     </div>
 
                     {/* Box Size Info */}
-                    <div className="bg-white rounded-lg p-3 border">
-                      <h3 className="text-sm font-medium mb-3">Box Size</h3>
+                    <div className="bg-white rounded-lg p-2 border">
+                      <h3 className="text-sm font-medium mb-2">Box Size</h3>
                       <div className="space-y-2">
                         <div className="grid grid-cols-2 gap-2">
                           <div>
@@ -2546,8 +2607,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                 {activeTab === 'actions' && (
                   <>
                     {/* Box Actions */}
-                    <div className="bg-white rounded-lg p-3 border">
-                      <h3 className="text-sm font-medium mb-3">Box Actions</h3>
+                    <div className="bg-white rounded-lg p-2 border">
+                      <h3 className="text-sm font-medium mb-2">Box Actions</h3>
                       <div className="space-y-2">
                         <Button
                           onClick={fillAllBoxes}
@@ -2571,8 +2632,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                     </div>
 
                     {/* Zoom Controls */}
-                    <div className="bg-white rounded-lg p-3 border">
-                      <h3 className="text-sm font-medium mb-3">Zoom Controls</h3>
+                    <div className="bg-white rounded-lg p-2 border">
+                      <h3 className="text-sm font-medium mb-2">Zoom Controls</h3>
                       <div className="space-y-2">
                         <div className="text-sm text-gray-600">
                           <span className="font-medium">Zoom:</span> {Math.round(zoom * 100)}%
@@ -2607,8 +2668,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                 {activeTab === 'tools' && (
                   <>
                     {/* Zoom Controls */}
-                    <div className="bg-white rounded-lg p-3 border">
-                      <h3 className="text-sm font-medium mb-3">Zoom Controls</h3>
+                    <div className="bg-white rounded-lg p-2 border">
+                      <h3 className="text-sm font-medium mb-2">Zoom Controls</h3>
                       <div className="space-y-2">
                         <div className="text-sm text-gray-600">
                           <span className="font-medium">Zoom:</span> {Math.round(zoom * 100)}%
@@ -2636,6 +2697,21 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                       </div>
                     </div>
 
+                    {/* Keyboard Controls Info */}
+                    <div className="bg-white rounded-lg p-2 border">
+                      <h3 className="text-sm font-medium mb-2">Keyboard Controls</h3>
+                      <div className="space-y-1 text-xs text-gray-600">
+                        <div>• <span className="font-medium">Arrow Keys:</span> Pan canvas</div>
+                        <div>• <span className="font-medium">Home:</span> Reset position</div>
+                        <div>• <span className="font-medium">End:</span> Reset zoom</div>
+                        <div>• <span className="font-medium">Delete:</span> Delete selected</div>
+                        <div>• <span className="font-medium">Ctrl+A:</span> Select all</div>
+                        <div>• <span className="font-medium">Escape:</span> Deselect all</div>
+                        <div className="text-xs text-blue-600 mt-1">
+                          💡 Arrow keys work anywhere on the page
+                        </div>
+                      </div>
+                    </div>
 
                   </>
                 )}

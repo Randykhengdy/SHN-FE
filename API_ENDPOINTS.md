@@ -132,6 +132,11 @@
 - `DELETE /api/item-barang/{id}/force` - Force delete item barang
 - `GET /api/item-barang/with-trashed/all` - Get all item barang including deleted
 - `GET /api/item-barang/with-trashed/trashed` - Get only deleted item barang
+- `GET /api/item-barang/{itemBarangId}/canvas` - Get canvas data by item barang ID
+  - **Description**: Mendapatkan canvas data berdasarkan item barang ID dari tabel saran plat dasar (bukan dari work order planning)
+  - **Note**: API ini ada di endpoint `item-barang`, bukan `work-order-planning`. Canvas data diambil dari tabel `trx_saran_plat_shaft_dasar` berdasarkan `item_barang_id`
+  - **Response**: JSON canvas data langsung (tanpa wrapper object)
+  - **Example**: `GET /api/item-barang/1/canvas` akan mengembalikan canvas data untuk item barang ID 1
 
 ## Master Data - Jenis Transaksi Kas
 - `GET /api/jenis-transaksi-kas` - List all jenis transaksi kas
@@ -498,18 +503,29 @@
 
 #### 13. Get Saran Plat Dasar
 - **POST** `/api/work-order-planning/get-saran-plat-dasar`
-- **Description**: Mendapatkan saran plat dasar berdasarkan jenis, bentuk, grade barang, tebal, dan sisa_luas. Hanya menampilkan item yang tidak sedang diedit (is_edit = false atau null)
+- **Description**: Mendapatkan saran plat dasar berdasarkan array kriteria (jenis, bentuk, grade barang, tebal, dan sisa_luas). Hanya menampilkan item yang tidak sedang diedit (is_edit = false atau null)
 - **Request Body**:
 ```json
 {
-  "jenis_barang_id": 1,
-  "bentuk_barang_id": 1,
-  "grade_barang_id": 1,
-  "tebal": 10,
-  "sisa_luas": 100
+  "criteria": [
+    {
+      "jenis_barang_id": 1,
+      "bentuk_barang_id": 1,
+      "grade_barang_id": 1,
+      "tebal": 10,
+      "sisa_luas": 100
+    },
+    {
+      "jenis_barang_id": 2,
+      "bentuk_barang_id": 1,
+      "grade_barang_id": 1,
+      "tebal": 15,
+      "sisa_luas": 150
+    }
+  ]
 }
 ```
-- **Response**: List item barang yang memiliki jenis, bentuk, grade barang yang sama, tebal yang sama, sisa_luas lebih besar dari parameter, dan tidak sedang diedit (is_edit = false atau null), diurutkan berdasarkan sisa_luas (ascending)
+- **Response**: List item barang yang memenuhi salah satu kriteria dalam array, dengan jenis, bentuk, grade barang yang sama, tebal yang sama, sisa_luas lebih besar dari parameter, dan tidak sedang diedit (is_edit = false atau null), diurutkan berdasarkan sisa_luas (ascending). Duplikasi dihilangkan berdasarkan ID item barang.
 
 #### 14. Set Saran Plat Dasar
 - **POST** `/api/work-order-planning/saran-plat-dasar`
@@ -547,7 +563,7 @@
 }
 ```
 - **Parameters**:
-  - `item_id` (required): ID work order planning item
+  - `wo_planning_item_id` (required): ID work order planning item
   - `item_barang_id` (required): ID item barang yang akan dijadikan saran
   - `is_selected` (optional, boolean): Apakah saran ini dipilih (default: false)
   - `canvas_data` (optional, json): Data canvas dalam format JSON string (bebas, bisa berisi shapes, coordinates, annotations, dll)
@@ -571,41 +587,6 @@
 - **Description**: Set saran plat dasar sebagai yang dipilih (is_selected = true)
 - **Note**: Otomatis akan set semua saran lain menjadi false dan update plat_dasar_id di work order planning item
 
-### Canvas File Management
-
-#### 21. Get Canvas File Data
-- **GET** `/api/work-order-planning/saran-plat-dasar/{saranId}/canvas`
-- **Description**: Mendapatkan data canvas file untuk saran plat dasar
-- **Response**: JSON data canvas dengan file path
-```json
-{
-  "success": true,
-  "data": {
-    "canvas_data": {...},
-    "file_path": "canvas/123/canvas.json"
-  }
-}
-```
-
-#### 22. Download Canvas File
-- **GET** `/api/work-order-planning/saran-plat-dasar/{saranId}/canvas/download`
-- **Description**: Download canvas file sebagai file
-- **Response**: File download (canvas.json)
-
-#### 23. Get Canvas File by Item Barang ID
-- **GET** `/api/work-order-planning/item-barang/{itemBarangId}/canvas`
-- **Description**: Mendapatkan canvas data berdasarkan item barang ID
-- **Response**: JSON data canvas dengan item barang ID
-```json
-{
-  "success": true,
-  "data": {
-    "item_barang_id": 123,
-    "canvas_data": {...},
-    "file_path": "canvas/456/canvas.json"
-  }
-}
-```
 
 ## Notes
 
