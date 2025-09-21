@@ -1,0 +1,524 @@
+import React, { useState, useEffect, useCallback } from "react";
+import { Plus, Search, Filter, Download, FileText, Eye, Trash2, ArrowRight, Calendar, RefreshCw } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { purchaseOrderService } from "@/services/purchaseOrderService";
+import { useAlert } from "@/hooks/useAlert";
+import { isAdmin } from "@/lib/utils";
+import CustomAlert from "@/components/modals/CustomAlert";
+import PageLayout from "@/components/PageLayout";
+
+const statusOptions = [
+  { value: "all", label: "Semua Status" },
+  { value: "draft", label: "Draft" },
+  { value: "confirmed", label: "Confirmed" },
+  { value: "in-progress", label: "In Progress" },
+  { value: "partial-wo", label: "Partial WO" },
+  { value: "completed", label: "Completed" }
+];
+
+const periodOptions = [
+  { value: "all", label: "Semua Periode" },
+  { value: "today", label: "Hari Ini" },
+  { value: "week", label: "Minggu Ini" },
+  { value: "month", label: "Bulan Ini" },
+  { value: "quarter", label: "Kuartal Ini" },
+  { value: "year", label: "Tahun Ini" }
+];
+
+export default function PurchaseOrderPage() {
+  const navigate = useNavigate();
+  const { showAlert, AlertComponent } = useAlert();
+  
+  const [purchaseOrders, setPurchaseOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [periodFilter, setPeriodFilter] = useState("all");
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  
+  // Delete modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedPO, setSelectedPO] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Load purchase orders from API
+  const loadPurchaseOrders = useCallback(async () => {
+    try {
+      setLoading(true);
+      const result = await purchaseOrderService.getAll();
+      
+      // Transform API data to match our UI structure
+      const transformedData = result.data.map(po => ({
+        id: po.id,
+        noPo: po.nomor_po,
+        supplier: po.supplier?.nama_supplier || 'N/A',
+        tanggalPo: formatDate(po.tanggal_po),
+        tanggalPenerimaan: formatDate(po.tanggal_penerimaan),
+        tanggalJatuhTempo: formatDate(po.tanggal_jatuh_tempo),
+        tanggalPembayaran: formatDate(po.tanggal_pembayaran),
+        jumlahItem: po.purchase_order_items?.length || 0,
+        totalAmount: parseFloat(po.total_amount) || 0,
+        status: po.status || "Draft",
+        catatan: po.catatan || '',
+        items: po.purchase_order_items || []
+      }));
+      
+      // Apply filters
+      let filteredData = transformedData;
+      
+      if (searchTerm) {
+        filteredData = filteredData.filter(po => 
+          po.noPo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          po.supplier.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      }
+      
+      if (statusFilter !== "all") {
+        filteredData = filteredData.filter(po => po.status.toLowerCase() === statusFilter);
+      }
+      
+      // Apply pagination
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const paginatedData = filteredData.slice(startIndex, endIndex);
+      
+      setPurchaseOrders(paginatedData);
+      setTotalItems(filteredData.length);
+    } catch (error) {
+      console.error('Error loading purchase orders:', error);
+      showAlert("Error", "Gagal memuat data Purchase Order", "error");
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, itemsPerPage, searchTerm, statusFilter, periodFilter]);
+
+  // Load purchase orders from API
+  useEffect(() => {
+    loadPurchaseOrders();
+  }, [loadPurchaseOrders]);
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
+  // Calculate summary statistics
+  const totalPO = totalItems;
+  const totalNilai = purchaseOrders.reduce((sum, po) => sum + po.totalAmount, 0);
+  const rataRataPerPO = totalPO > 0 ? totalNilai / totalPO : 0;
+
+  // Calculate status breakdown
+  const statusBreakdown = {
+    Draft: purchaseOrders.filter(po => po.status === "Draft").length,
+    Confirmed: purchaseOrders.filter(po => po.status === "Confirmed").length,
+    "In Progress": purchaseOrders.filter(po => po.status === "In Progress").length,
+    "Partial WO": purchaseOrders.filter(po => po.status === "Partial WO").length,
+    Completed: purchaseOrders.filter(po => po.status === "Completed").length
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "Draft": return "bg-orange-100 text-orange-800";
+      case "Confirmed": return "bg-blue-100 text-blue-800";
+      case "In Progress": return "bg-yellow-100 text-yellow-800";
+      case "Partial WO": return "bg-purple-100 text-purple-800";
+      case "Completed": return "bg-green-100 text-green-800";
+      default: return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0
+    }).format(amount);
+  };
+
+  // Handle delete PO
+  const handleDeletePO = (po) => {
+    setSelectedPO(po);
+    setShowDeleteModal(true);
+  };
+
+  // Handle delete confirmation
+  const handleDeleteConfirm = async () => {
+    // Prevent multiple delete operations
+    if (isDeleting) {
+      console.log('⏭️ Already processing delete operation');
+      return;
+    }
+    
+    try {
+      setIsDeleting(true);
+      
+      // Call delete API - use soft delete
+      const response = await purchaseOrderService.delete(selectedPO.id);
+      
+      console.log('✅ Purchase Order deleted:', response);
+      
+      // Close modal first
+      setShowDeleteModal(false);
+      
+      // Show success message and reload data after alert closes
+      showAlert("Sukses", "Purchase Order berhasil dihapus!", "success", () => {
+        loadPurchaseOrders();
+      });
+      
+    } catch (error) {
+      console.error('❌ Error deleting Purchase Order:', error);
+      showAlert("Error", "Gagal menghapus Purchase Order", "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+
+
+  const handleClearFilter = () => {
+    setSearchTerm("");
+    setStatusFilter("all");
+    setPeriodFilter("all");
+    setCurrentPage(1);
+  };
+
+  const handleExport = () => {
+    // TODO: Implement export functionality
+    console.log("Exporting purchase orders...");
+  };
+
+  const handleTestConvert = () => {
+    // TODO: Implement test convert functionality
+    console.log("Testing convert...");
+  };
+
+  const handleView = (id) => {
+    navigate(`/purchase-order/view/${id}`);
+  };
+
+  const handleAddNew = () => {
+    navigate('/purchase-order/add');
+  };
+
+  // Pagination calculations
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startItem = (currentPage - 1) * itemsPerPage + 1;
+  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+  return (
+    <PageLayout title="Purchase Order (PO)" category="TRANSAKSI">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+        <div className="bg-white rounded-lg px-4 py-2 border border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-800">Daftar Purchase Order</h2>
+        </div>
+        <Button onClick={handleAddNew} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
+          <Plus className="w-4 h-4 mr-2" />
+          Tambah Purchase Order
+        </Button>
+      </div>
+
+        {/* Filter and Search */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-lg">Filter dan Pencarian</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Cari PO:
+                </label>
+                <Input
+                  placeholder="Cari berdasarkan No PO, nama supplier..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status:
+                </label>
+                <Select value={statusFilter} onValueChange={(value) => {
+                  setStatusFilter(value);
+                  setCurrentPage(1);
+                }}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Periode:
+                </label>
+                <Select value={periodFilter} onValueChange={(value) => {
+                  setPeriodFilter(value);
+                  setCurrentPage(1);
+                }}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {periodOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={loadPurchaseOrders} 
+                  disabled={loading}
+                  className="w-full"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={handleClearFilter}>
+                Clear Filter
+              </Button>
+              <Button variant="outline" onClick={handleExport}>
+                <Download className="w-4 h-4 mr-2" />
+                Export
+              </Button>
+              <Button variant="outline" onClick={handleTestConvert}>
+                <FileText className="w-4 h-4 mr-2" />
+                Test Convert
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Purchase Order Table */}
+        <Card className="mb-6">
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50">
+                    <TableHead className="font-semibold">No PO</TableHead>
+                    <TableHead className="font-semibold">Supplier</TableHead>
+                    <TableHead className="font-semibold">Tanggal PO</TableHead>
+                    <TableHead className="font-semibold">Tanggal Penerimaan</TableHead>
+                    <TableHead className="font-semibold">Tanggal Jatuh Tempo</TableHead>
+                    <TableHead className="font-semibold">Tanggal Pembayaran</TableHead>
+                    <TableHead className="font-semibold text-center">Jumlah Item</TableHead>
+                    <TableHead className="font-semibold">Total Amount</TableHead>
+                    <TableHead className="font-semibold">Status</TableHead>
+                    <TableHead className="font-semibold text-center">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center py-8">
+                        <div className="flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                          <span className="ml-2">Loading data...</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : purchaseOrders.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+                        Tidak ada data Purchase Order
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    purchaseOrders.map((po) => (
+                      <TableRow key={po.id} className="hover:bg-gray-50">
+                        <TableCell className="font-medium">{po.noPo}</TableCell>
+                        <TableCell>{po.supplier}</TableCell>
+                        <TableCell>{po.tanggalPo}</TableCell>
+                        <TableCell>{po.tanggalPenerimaan}</TableCell>
+                        <TableCell>{po.tanggalJatuhTempo}</TableCell>
+                        <TableCell>{po.tanggalPembayaran}</TableCell>
+                        <TableCell className="text-center">{po.jumlahItem}</TableCell>
+                        <TableCell className="font-semibold">{formatCurrency(po.totalAmount)}</TableCell>
+                        <TableCell>
+                          <Badge className={getStatusColor(po.status)}>
+                            {po.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                            <Button size="sm" variant="outline" onClick={() => handleView(po.id)}>
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            {isAdmin() && (
+                              <Button 
+                                size="sm" 
+                                variant="destructive" 
+                                onClick={() => handleDeletePO(po)}
+                                title="Hapus Purchase Order"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            
+            {/* Pagination */}
+            {purchaseOrders.length > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 bg-white border-t border-gray-200 gap-4">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-700">
+                    Menampilkan {startItem}-{endItem} dari {totalItems} data
+                  </span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setItemsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="border border-gray-300 rounded px-2 py-1 text-sm"
+                  >
+                    <option value={5}>5 per halaman</option>
+                    <option value={10}>10 per halaman</option>
+                    <option value={25}>25 per halaman</option>
+                    <option value={50}>50 per halaman</option>
+                  </select>
+                </div>
+                
+                {totalPages > 1 && (
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setCurrentPage(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    >
+                      Sebelumnya
+                    </button>
+                    
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`px-3 py-1 text-sm border rounded ${
+                            currentPage === pageNum
+                              ? 'bg-blue-500 text-white border-blue-500'
+                              : 'border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                    
+                    <button
+                      onClick={() => setCurrentPage(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    >
+                      Selanjutnya
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Summary and Status Breakdown */}
+        <Card className="bg-white border-green-200">
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Summary Statistics */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Ringkasan</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Total PO:</span>
+                    <span className="font-semibold">{totalPO}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Rata-rata per PO:</span>
+                    <span className="font-semibold">{formatCurrency(rataRataPerPO)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Breakdown */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Breakdown Status</h3>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(statusBreakdown).map(([status, count]) => (
+                    <Badge key={status} className={getStatusColor(status)}>
+                      {status}: {count}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+                 {/* Delete Confirmation Modal */}
+         <CustomAlert
+           open={showDeleteModal}
+           onOpenChange={setShowDeleteModal}
+           title="Konfirmasi Hapus"
+            message={`Yakin ingin menghapus Purchase Order "${selectedPO?.noPo}"?`}
+           type="warning"
+           showCancel={true}
+           confirmText={isDeleting ? "Menghapus..." : "Ya, Hapus"}
+           cancelText="Tidak"
+           onConfirm={handleDeleteConfirm}
+         />
+         
+        
+        {/* Alert Modal Component */}
+        <AlertComponent />
+      </PageLayout>
+  );
+}

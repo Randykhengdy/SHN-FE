@@ -6,9 +6,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Eye, Trash2, RefreshCw, Download, Filter } from 'lucide-react';
+import { Plus, Search, Eye, Trash2, RefreshCw, Download, Filter, X } from 'lucide-react';
+import { workOrderService } from '@/services/workOrderService';
 import { useAlert } from '@/hooks/useAlert';
+import { isAdmin } from '@/lib/utils';
 import CustomAlert from '@/components/modals/CustomAlert';
+import DeleteRequestModal from '@/components/modals/DeleteRequestModal';
 import PageLayout from '@/components/PageLayout';
 
 const statusOptions = [
@@ -30,13 +33,14 @@ const periodOptions = [
 
 export default function WorkOrderPage() {
   const navigate = useNavigate();
-  const { showAlert } = useAlert();
+  const { showAlert, AlertComponent } = useAlert();
   
   // State
   const [workOrders, setWorkOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [periodFilter, setPeriodFilter] = useState('all');
@@ -46,54 +50,95 @@ export default function WorkOrderPage() {
   const [filterSoNumber, setFilterSoNumber] = useState('');
   const [filterCustomer, setFilterCustomer] = useState('');
   const [filterWarehouse, setFilterWarehouse] = useState('');
+  
+  // Delete modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteModalType, setDeleteModalType] = useState('admin'); // 'admin' or 'request'
+  const [selectedWO, setSelectedWO] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false); // Prevent multiple delete operations
+  
+  // Delete request modal state
+  const [showDeleteRequestModal, setShowDeleteRequestModal] = useState(false);
 
-  // Mock data for now
-  const mockWorkOrders = [
-    {
-      id: 1,
-      woNumber: 'WO-20250812-745',
-      soNumber: 'SO-20250812-745',
-      customer: 'CV Sukses Mandiri',
-      warehouse: 'Gudang Cabang 1 - Jakarta Selatan',
-      itemCount: 7,
-      status: 'On Progress',
-      createdAt: '2025-08-12'
-    },
-    {
-      id: 2,
-      woNumber: 'WO-20250812-746',
-      soNumber: 'SO-20250812-746',
-      customer: 'PT Maju Bersama',
-      warehouse: 'Gudang Pusat - Jakarta Utara',
-      itemCount: 12,
-      status: 'Pending',
-      createdAt: '2025-08-12'
-    }
-  ];
-
+  // Load work orders from API
   const loadWorkOrders = useCallback(async () => {
-    setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      // const response = await workOrderService.getWorkOrders({
-      //   page: currentPage,
-      //   limit: itemsPerPage,
-      //   search: searchTerm,
-      //   status: statusFilter,
-      //   period: periodFilter
-      // });
+      setLoading(true);
+      const result = await workOrderService.getWorkOrders();
       
-      // For now, use mock data
-      setTimeout(() => {
-        setWorkOrders(mockWorkOrders);
-        setLoading(false);
-      }, 500);
+      // Transform API data to match our UI structure
+      const transformedData = result.data.map(wo => ({
+        id: wo.id,
+        woNumber: wo.nomor_wo || 'N/A',
+        soNumber: wo.sales_order?.nomor_so || 'N/A',
+        customer: wo.sales_order?.pelanggan?.nama_pelanggan || 'N/A',
+        warehouse: wo.sales_order?.gudang?.nama_gudang || 'N/A',
+        itemCount: wo.workOrderItems?.length || 0,
+        status: wo.status || "Pending",
+        createdAt: formatDate(wo.created_at),
+        deleteRequestStatus: wo.delete_requested_by ? 'delete_requested' : null,
+        deleteRequestedAt: wo.delete_requested_at || null,
+        deleteReason: wo.delete_reason || null,
+        deleteRequestedBy: wo.delete_requested_by?.name || null,
+        items: wo.workOrderItems || []
+      }));
+      
+      // Apply filters
+      let filteredData = transformedData;
+      
+      if (filterWoNumber) {
+        filteredData = filteredData.filter(wo => 
+          wo.woNumber.toLowerCase().includes(filterWoNumber.toLowerCase())
+        );
+      }
+      
+      if (filterSoNumber) {
+        filteredData = filteredData.filter(wo => 
+          wo.soNumber.toLowerCase().includes(filterSoNumber.toLowerCase())
+        );
+      }
+      
+      if (filterCustomer) {
+        filteredData = filteredData.filter(wo => 
+          wo.customer.toLowerCase().includes(filterCustomer.toLowerCase())
+        );
+      }
+      
+      if (filterWarehouse) {
+        filteredData = filteredData.filter(wo => 
+          wo.warehouse.toLowerCase().includes(filterWarehouse.toLowerCase())
+        );
+      }
+      
+      if (statusFilter !== "all") {
+        filteredData = filteredData.filter(wo => wo.status.toLowerCase() === statusFilter.toLowerCase());
+      }
+      
+      // Apply pagination
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const paginatedData = filteredData.slice(startIndex, endIndex);
+      
+      setWorkOrders(paginatedData);
+      setTotalItems(filteredData.length);
     } catch (error) {
       console.error('Error loading work orders:', error);
-      showAlert('Error', 'Gagal memuat data Work Order', 'error');
+      showAlert("Error", "Gagal memuat data Work Order", "error");
+    } finally {
       setLoading(false);
     }
-  }, [currentPage, itemsPerPage, searchTerm, statusFilter, periodFilter, showAlert]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, itemsPerPage, filterWoNumber, filterSoNumber, filterCustomer, filterWarehouse, statusFilter, periodFilter]);
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
 
   useEffect(() => {
     loadWorkOrders();
@@ -107,18 +152,97 @@ export default function WorkOrderPage() {
     navigate(`/work-order/view/${woNumber}`);
   };
 
-  const handleDelete = (woNumber) => {
-    showAlert(
-      'Konfirmasi Hapus',
-      `Apakah Anda yakin ingin menghapus Work Order ${woNumber}?`,
-      'warning',
-      () => {
-        // TODO: Implement delete logic
-        showAlert('Sukses', 'Work Order berhasil dihapus!', 'success', () => {
+  // Handle delete WO (admin only)
+  const handleDeleteWO = (wo) => {
+    setSelectedWO(wo);
+    setDeleteModalType('admin');
+    setShowDeleteModal(true);
+  };
+
+  // Handle request delete WO (non-admin)
+  const handleRequestDeleteWO = (wo) => {
+    setSelectedWO(wo);
+    setShowDeleteRequestModal(true);
+  };
+
+  // Handle delete confirmation (admin)
+  const handleDeleteConfirm = async () => {
+    // Prevent multiple delete operations
+    if (isDeleting) {
+      console.log('⏭️ Already processing delete operation');
+      return;
+    }
+    
+    try {
+      setIsDeleting(true);
+      
+      // Call delete API - use soft delete
+      const response = await workOrderService.softDeleteWorkOrder(selectedWO.id);
+      
+      console.log('✅ Work Order deleted:', response);
+      
+      // Close modal first
+      setShowDeleteModal(false);
+      
+      // Show success message and reload data after alert closes
+      showAlert("Sukses", "Work Order berhasil dihapus!", "success", () => {
+        loadWorkOrders();
+      });
+      
+    } catch (error) {
+      console.error('❌ Error deleting Work Order:', error);
+      showAlert("Error", "Gagal menghapus Work Order", "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Handle request delete confirmation (non-admin)
+  const handleRequestDeleteConfirm = async (reason) => {
+    try {
+      // Call request delete API
+      const response = await workOrderService.requestDeleteWorkOrder(selectedWO.id, reason);
+      
+      console.log('✅ Delete request submitted:', response);
+      
+      // Close modal first
+      setShowDeleteRequestModal(false);
+      
+      // Show success message and reload data after alert closes
+      showAlert(
+        "Sukses", 
+        "Permintaan hapus berhasil diajukan!\n\n" +
+        "📧 Admin akan meninjau permintaan Anda.\n" +
+        "📋 Alasan: " + reason, 
+        "success",
+        () => {
           loadWorkOrders();
-        });
-      }
-    );
+        }
+      );
+      
+    } catch (error) {
+      console.error('❌ Error requesting delete:', error);
+      showAlert("Error", "Gagal mengajukan permintaan hapus", "error");
+    }
+  };
+
+  // Handle cancel delete request (non-admin)
+  const handleCancelDeleteRequest = async (wo) => {
+    try {
+      // Call cancel delete request API
+      const response = await workOrderService.cancelDeleteRequest(wo.id);
+      
+      console.log('✅ Delete request cancelled:', response);
+      
+      // Show success message and reload data after alert closes
+      showAlert("Sukses", "Permintaan hapus berhasil dibatalkan!", "success", () => {
+        loadWorkOrders();
+      });
+      
+    } catch (error) {
+      console.error('❌ Error cancelling delete request:', error);
+      showAlert("Error", "Gagal membatalkan permintaan hapus", "error");
+    }
   };
 
   const handleClearFilter = () => {
@@ -136,15 +260,10 @@ export default function WorkOrderPage() {
     showAlert('Info', 'Fitur export akan segera tersedia', 'info');
   };
 
-  const filteredWorkOrders = workOrders.filter(wo => {
-    const matchesWoNumber = !filterWoNumber || wo.woNumber.toLowerCase().includes(filterWoNumber.toLowerCase());
-    const matchesSoNumber = !filterSoNumber || wo.soNumber.toLowerCase().includes(filterSoNumber.toLowerCase());
-    const matchesCustomer = !filterCustomer || wo.customer.toLowerCase().includes(filterCustomer.toLowerCase());
-    const matchesWarehouse = !filterWarehouse || wo.warehouse.toLowerCase().includes(filterWarehouse.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || wo.status === statusFilter;
-    
-    return matchesWoNumber && matchesSoNumber && matchesCustomer && matchesWarehouse && matchesStatus;
-  });
+  // Pagination calculations
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startItem = (currentPage - 1) * itemsPerPage + 1;
+  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -280,14 +399,14 @@ export default function WorkOrderPage() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ) : filteredWorkOrders.length === 0 ? (
+                ) : workOrders.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                       Tidak ada data Work Order
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredWorkOrders.map((wo) => (
+                  workOrders.map((wo) => (
                     <TableRow key={wo.id} className="hover:bg-gray-50">
                       <TableCell className="font-medium">{wo.woNumber}</TableCell>
                       <TableCell>{wo.soNumber}</TableCell>
@@ -295,9 +414,15 @@ export default function WorkOrderPage() {
                       <TableCell>{wo.warehouse}</TableCell>
                       <TableCell className="text-center">{wo.itemCount}</TableCell>
                       <TableCell>
-                        <Badge className={getStatusColor(wo.status)}>
-                          {wo.status}
-                        </Badge>
+                        {wo.deleteRequestStatus === 'delete_requested' ? (
+                          <Badge className="bg-orange-100 text-orange-800">
+                            🗑️ Delete Requested
+                          </Badge>
+                        ) : (
+                          <Badge className={getStatusColor(wo.status)}>
+                            {wo.status}
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col sm:flex-row gap-2 justify-center">
@@ -309,14 +434,34 @@ export default function WorkOrderPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleDelete(wo.woNumber)}
-                            className="flex items-center gap-1"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          {isAdmin() ? (
+                            <Button 
+                              size="sm" 
+                              variant="destructive" 
+                              onClick={() => handleDeleteWO(wo)}
+                              title="Hapus Work Order (Admin)"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          ) : wo.deleteRequestStatus === 'delete_requested' ? (
+                            <Button 
+                              size="sm" 
+                              className="bg-yellow-600 hover:bg-yellow-700" 
+                              onClick={() => handleCancelDeleteRequest(wo)}
+                              title="Batalkan Permintaan Hapus"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          ) : (
+                            <Button 
+                              size="sm" 
+                              className="bg-orange-600 hover:bg-orange-700" 
+                              onClick={() => handleRequestDeleteWO(wo)}
+                              title="Ajukan Permintaan Hapus"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -325,8 +470,103 @@ export default function WorkOrderPage() {
               </TableBody>
             </Table>
           </div>
+          {/* Pagination */}
+          {workOrders.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 bg-white border-t border-gray-200 gap-4">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-700">
+                  Menampilkan {startItem}-{endItem} dari {totalItems} data
+                </span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="border border-gray-300 rounded px-2 py-1 text-sm"
+                >
+                  <option value={5}>5 per halaman</option>
+                  <option value={10}>10 per halaman</option>
+                  <option value={25}>25 per halaman</option>
+                  <option value={50}>50 per halaman</option>
+                </select>
+              </div>
+              
+              {totalPages > 1 && (
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Sebelumnya
+                  </button>
+                  
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`px-3 py-1 text-sm border rounded ${
+                          currentPage === pageNum
+                            ? 'bg-blue-500 text-white border-blue-500'
+                            : 'border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                  
+                  <button
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Selanjutnya
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
-             </Card>
-     </PageLayout>
-   );
- }
+      </Card>
+
+      {/* Delete Confirmation Modal */}
+      <CustomAlert
+        open={showDeleteModal}
+        onOpenChange={setShowDeleteModal}
+        title="Konfirmasi Hapus"
+        message={`Yakin ingin menghapus Work Order "${selectedWO?.woNumber}"?`}
+        type="warning"
+        showCancel={true}
+        confirmText={isDeleting ? "Menghapus..." : "Ya, Hapus"}
+        cancelText="Tidak"
+        onConfirm={handleDeleteConfirm}
+      />
+      
+      {/* Delete Request Modal */}
+      <DeleteRequestModal
+        open={showDeleteRequestModal}
+        onOpenChange={setShowDeleteRequestModal}
+        workOrder={selectedWO}
+        onConfirm={handleRequestDeleteConfirm}
+        onCancel={() => setShowDeleteRequestModal(false)}
+      />
+     
+      {/* Alert Modal Component */}
+      <AlertComponent />
+    </PageLayout>
+  );
+}

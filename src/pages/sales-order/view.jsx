@@ -203,9 +203,9 @@ export default function ViewSalesOrderPage() {
             
             return {
               id: item.id,
-              jenisBarang: item.jenis_barang?.nama_jenis_barang || 'N/A',
+              jenisBarang: item.jenis_barang?.nama_bentuk || 'N/A',
               bentukBarang: item.bentuk_barang?.nama_bentuk_barang || 'N/A',
-              gradeBarang: item.grade_barang?.nama_grade_barang || 'N/A',
+              gradeBarang: item.grade_barang?.nama || 'N/A',
               panjang: item.panjang || item.length || 0,
               lebar: item.lebar || item.width || 0,
               diameter: item.diameter || 0,

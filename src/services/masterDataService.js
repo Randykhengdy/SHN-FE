@@ -3,7 +3,8 @@ import {
   jenisBarangService, 
   bentukBarangService, 
   gradeBarangService,
-  pelangganService
+  pelangganService,
+  supplierService
 } from './master-data';
 import { request } from '@/lib/request';
 
@@ -191,6 +192,51 @@ export const getPelaksanaOptions = async () => {
       searchKey: `${item.nama_pelaksana || item.nama || ''} ${item.jabatan || ''}`.trim()
     }));
   }, 'PelaksanaService');
+};
+
+// Fetch Supplier options
+export const getSupplierOptions = async () => {
+  checkMemoryUsage();
+  return await safeApiCall(async () => {
+    console.log('🔄 [SupplierService] Starting to fetch supplier data...');
+    
+    try {
+      const response = await supplierService.getAll();
+      console.log('📡 [SupplierService] Raw response:', response);
+      console.log('📡 [SupplierService] Response data:', response.data);
+      console.log('📡 [SupplierService] Response data type:', typeof response.data);
+      console.log('📡 [SupplierService] Response data length:', response.data?.length);
+      
+      if (!response.data || !Array.isArray(response.data)) {
+        console.error('❌ [SupplierService] Invalid response data format:', response);
+        return [];
+      }
+      
+      const mappedData = response.data.map(item => {
+        const mapped = {
+          value: item.id?.toString(),
+          label: item.nama_supplier ? `${item.nama_supplier}` : item.nama || 'Unknown',
+          searchKey: `${item.nama_supplier || item.nama || ''} ${item.alamat || ''}`.trim(),
+          // Keep the original item data for selection
+          id: item.id,
+          nama: item.nama_supplier || item.nama,
+          kode: item.kode_supplier || item.kode,
+          telepon: item.telepon,
+          email: item.email,
+          alamat: item.alamat
+        };
+        console.log('🔄 [SupplierService] Mapping item:', item, '→', mapped);
+        return mapped;
+      });
+      
+      console.log('✅ [SupplierService] Final mapped data:', mappedData);
+      return mappedData;
+      
+    } catch (error) {
+      console.error('❌ [SupplierService] Error in getSupplierOptions:', error);
+      throw error;
+    }
+  }, 'SupplierService');
 };
 
 // Fetch Pelanggan options
