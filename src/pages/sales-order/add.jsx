@@ -250,7 +250,7 @@ export default function AddSalesOrderPage() {
       if (selectedShape.dimensi === "1D") {
         dimensiString = `${itemLength} x ${itemWidth}`;
       } else {
-        dimensiString = `${itemLength} x ${itemDiameter}`;
+        dimensiString = `${itemLength} x ${itemWidth} x ${itemDiameter}`;
       }
 
       const newItem = {

@@ -14,11 +14,15 @@ export default function ItemBarangPage() {
       subtitle="Master Data"
       service={itemBarangService}
       fields={[
-        { name: "kode_barang", label: "Kode Barang", maxLength: 16 },
-        { name: "nama_item_barang", label: "Nama Item Barang", maxLength: 64 },
+        { name: "kode_barang", label: "Kode Barang", maxLength: 70 },
+        { name: "nama_item_barang", label: "Nama Item Barang", maxLength: 255 },
         { name: "jenis_barang_id", label: "Jenis Barang", type: "select", optionsService: jenisBarangService, optionLabel: "nama_jenis" },
         { name: "bentuk_barang_id", label: "Bentuk Barang", type: "select", optionsService: bentukBarangService, optionLabel: "nama_bentuk" },
         { name: "grade_barang_id", label: "Grade Barang", type: "select", optionsService: gradeBarangService, optionLabel: "nama" },
+        { name: "panjang", label: "Panjang", type: "number" },
+        { name: "lebar", label: "Lebar", type: "number" },
+        { name: "tebal", label: "Tebal", type: "number" },
+        { name: "sisa_luas", label: "Panjang/Luas", type: "number" },
       ]}
       columns={[
         { key: "id", label: "ID", align: "center", width: "5rem", maxWidth: "5rem" },
@@ -27,6 +31,10 @@ export default function ItemBarangPage() {
         { key: "jenis_barang.nama_jenis", label: "Jenis Barang", align: "center", width: "12rem", maxWidth: "12rem" },
         { key: "bentuk_barang.nama_bentuk", label: "Bentuk Barang", align: "center", width: "12rem", maxWidth: "12rem" },
         { key: "grade_barang.nama", label: "Grade Barang", align: "center", width: "12rem", maxWidth: "12rem" },
+        { key: "panjang", label: "Panjang", align: "center", width: "12rem", maxWidth: "12rem" },
+        { key: "lebar", label: "Lebar", align: "center", width: "12rem", maxWidth: "12rem" },
+        { key: "tebal", label: "Tebal", align: "center", width: "12rem", maxWidth: "12rem" },
+        { key: "sisa_luas", label: "Panjang/Luas", align: "center", width: "12rem", maxWidth: "12rem" },
       ]}
     />
   );

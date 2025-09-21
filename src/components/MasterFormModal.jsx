@@ -150,11 +150,12 @@ export default function MasterFormModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg lg:max-w-xl">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-lg lg:max-w-xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="flex-1 overflow-y-auto px-1">
+          <form onSubmit={handleSubmit} className="space-y-4">
           {fields.map((field) => {
             // Skip fields that should be hidden on edit
             if (editData && field.hideOnEdit) {
@@ -277,21 +278,22 @@ export default function MasterFormModal({
           );
           })}
 
-          {error && (
-            <div className="text-red-600 text-sm p-3 bg-red-50 border border-red-200 rounded-md">
-              ❌ {error}
-            </div>
-          )}
-          
-          <DialogFooter className="flex gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={onClose} disabled={saveLoading}>
-              Batal
-            </Button>
-            <Button type="submit" disabled={saveLoading}>
-              {saveLoading ? "Menyimpan..." : (editData ? "Update" : "Simpan")}
-            </Button>
-          </DialogFooter>
-        </form>
+            {error && (
+              <div className="text-red-600 text-sm p-3 bg-red-50 border border-red-200 rounded-md">
+                ❌ {error}
+              </div>
+            )}
+          </form>
+        </div>
+        
+        <DialogFooter className="flex-shrink-0 flex gap-2 pt-4 border-t border-gray-200">
+          <Button type="button" variant="outline" onClick={onClose} disabled={saveLoading}>
+            Batal
+          </Button>
+          <Button type="submit" disabled={saveLoading} onClick={handleSubmit}>
+            {saveLoading ? "Menyimpan..." : (editData ? "Update" : "Simpan")}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
