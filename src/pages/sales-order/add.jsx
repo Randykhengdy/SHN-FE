@@ -523,11 +523,11 @@ export default function AddSalesOrderPage() {
                 Data Pelanggan yang Dipilih:
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><strong>Nama:</strong> {selectedCustomer.nama}</div>
-                <div><strong>Kode:</strong> {selectedCustomer.kode}</div>
-                <div><strong>Telepon:</strong> {selectedCustomer.telepon}</div>
-                <div><strong>Email:</strong> {selectedCustomer.email}</div>
-                <div className="col-span-2"><strong>Alamat:</strong> {selectedCustomer.alamat}</div>
+                <div><strong>Nama:</strong> {selectedCustomer.nama_pelanggan || 'Tidak tersedia'}</div>
+                <div><strong>Kode:</strong> {selectedCustomer.kode || 'Tidak tersedia'}</div>
+                <div><strong>Telepon:</strong> {selectedCustomer.telepon_hp || 'Tidak tersedia'}</div>
+                <div><strong>Email:</strong> {selectedCustomer.email || 'Tidak tersedia'}</div>
+                <div className="col-span-2"><strong>Alamat:</strong> {selectedCustomer.kota || 'Tidak tersedia'}</div>
               </div>
             </div>
           )}

@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CustomAlert from "@/components/modals/CustomAlert";
+import { pelangganService } from "@/services/master-data/pelangganService";
 
 export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer }) {
   const [activeTab, setActiveTab] = useState("existing");
@@ -30,36 +31,36 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
     alamat: ""
   });
 
-  // Mock data untuk existing customers
+  // Load customers from service
   useEffect(() => {
-    const mockCustomers = [
-      {
-        id: 1,
-        kode: "CUST001",
-        nama: "PT Maju Bersama",
-        telepon: "021-5550123",
-        email: "info@majubersama.com",
-        alamat: "Jl. Sudirman No. 123, Jakarta Pusat"
-      },
-      {
-        id: 2,
-        kode: "CUST002",
-        nama: "CV Sukses Mandiri",
-        telepon: "021-5550456",
-        email: "contact@suksesmandiri.co.id",
-        alamat: "Jl. Thamrin No. 456, Jakarta Pusat"
-      },
-      {
-        id: 3,
-        kode: "CUST003",
-        nama: "UD Berkah Jaya",
-        telepon: "021-5550789",
-        email: "berkah@jaya.com",
-        alamat: "Jl. Gatot Subroto No. 789, Jakarta Selatan"
+    const loadCustomers = async () => {
+      try {
+        setLoading(true);
+        const response = await pelangganService.getAll();
+        
+        if (response && response.data) {
+          setCustomers(response.data);
+          setFilteredCustomers(response.data);
+        } else {
+          console.warn('No customer data received from service');
+          setCustomers([]);
+          setFilteredCustomers([]);
+        }
+      } catch (error) {
+        console.error('Error loading customers:', error);
+        showAlert(
+          "Error", 
+          "Gagal memuat data pelanggan. Silakan coba lagi.", 
+          "error"
+        );
+        setCustomers([]);
+        setFilteredCustomers([]);
+      } finally {
+        setLoading(false);
       }
-    ];
-    setCustomers(mockCustomers);
-    setFilteredCustomers(mockCustomers);
+    };
+
+    loadCustomers();
   }, []);
 
   // Filter customers based on search query
@@ -68,8 +69,8 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
       setFilteredCustomers(customers);
     } else {
       const filtered = customers.filter(customer =>
-        customer.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        customer.kode.toLowerCase().includes(searchQuery.toLowerCase())
+        (customer.nama_pelanggan && customer.nama_pelanggan.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (customer.kode && customer.kode.toLowerCase().includes(searchQuery.toLowerCase()))
       );
       setFilteredCustomers(filtered);
     }
@@ -92,7 +93,7 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
     setAlertOpen(true);
   };
 
-  const handleSaveNewCustomer = () => {
+  const handleSaveNewCustomer = async () => {
     if (!newCustomer.kode || !newCustomer.nama) {
       showAlert(
         "Data Tidak Lengkap", 
@@ -112,38 +113,55 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
       return;
     }
 
-    const newCustomerData = {
-      id: Date.now(),
-      ...newCustomer
-    };
+    try {
+      setLoading(true);
+      
+      // Save to backend using service
+      const response = await pelangganService.create(newCustomer);
+      
+      if (response && response.data) {
+        const newCustomerData = response.data;
+        
+        // Add to customers list
+        setCustomers(prev => [...prev, newCustomerData]);
+        
+        // Select the new customer
+        onCustomerSelect(newCustomerData);
+        
+        // Reset form
+        setNewCustomer({
+          kode: "",
+          nama: "",
+          telepon: "",
+          email: "",
+          alamat: ""
+        });
 
-    // Add to customers list
-    setCustomers(prev => [...prev, newCustomerData]);
-    
-    // Select the new customer
-    onCustomerSelect(newCustomerData);
-    
-    // Reset form
-    setNewCustomer({
-      kode: "",
-      nama: "",
-      telepon: "",
-      email: "",
-      alamat: ""
-    });
-
-    // Switch to existing tab
-    setActiveTab("existing");
-    
-         console.log("New customer saved:", newCustomerData);
-     
-     // Show success alert
-     showAlert(
-       "Berhasil!", 
-       "Pelanggan baru berhasil ditambahkan dan dipilih.", 
-       "success"
-     );
-   };
+        // Switch to existing tab
+        setActiveTab("existing");
+        
+        console.log("New customer saved:", newCustomerData);
+       
+        // Show success alert
+        showAlert(
+          "Berhasil!", 
+          "Pelanggan baru berhasil ditambahkan dan dipilih.", 
+          "success"
+        );
+      } else {
+        throw new Error('Invalid response from server');
+      }
+    } catch (error) {
+      console.error('Error saving new customer:', error);
+      showAlert(
+        "Error", 
+        "Gagal menyimpan pelanggan baru. Silakan coba lagi.", 
+        "error"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
    // Clear selected customer when switching to new tab
    const handleTabChange = (value) => {
@@ -200,41 +218,46 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
               <div className="space-y-2">
                 <Label>Daftar Pelanggan</Label>
                 <div className="max-h-60 overflow-y-auto border rounded-md">
-                {filteredCustomers.length === 0 ? (
-                  <div className="p-4 text-center text-gray-500">
-                    {searchQuery ? "Tidak ada pelanggan yang ditemukan" : "Tidak ada data pelanggan"}
-                  </div>
-                ) : (
-                  <div className="divide-y">
-                    {filteredCustomers.map((customer) => (
-                      <div
-                        key={customer.id}
-                        className={`p-3 cursor-pointer hover:bg-gray-50 transition-colors ${
-                          selectedCustomer?.id === customer.id ? 'bg-blue-50 border-l-4 border-blue-500' : ''
-                        }`}
-                        onClick={() => handleCustomerSelect(customer)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="font-medium">{customer.nama}</div>
-                            <div className="text-sm text-gray-600">
-                              {customer.kode} • {customer.telepon}
+                  {loading ? (
+                    <div className="p-4 text-center text-gray-500">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                      Memuat data pelanggan...
+                    </div>
+                  ) : filteredCustomers.length === 0 ? (
+                    <div className="p-4 text-center text-gray-500">
+                      {searchQuery ? "Tidak ada pelanggan yang ditemukan" : "Tidak ada data pelanggan"}
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {filteredCustomers.map((customer) => (
+                        <div
+                          key={customer.id}
+                          className={`p-3 cursor-pointer hover:bg-gray-50 transition-colors ${
+                            selectedCustomer?.id === customer.id ? 'bg-blue-50 border-l-4 border-blue-500' : ''
+                          }`}
+                          onClick={() => handleCustomerSelect(customer)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="font-medium">{customer.nama_pelanggan || 'Nama tidak tersedia'}</div>
+                              <div className="text-sm text-gray-600">
+                                {customer.kode || 'Kode tidak tersedia'} • {customer.telepon_hp || 'Telepon tidak tersedia'}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">{customer.kota || 'Kota tidak tersedia'}</div>
                             </div>
-                            <div className="text-xs text-gray-500 mt-1">{customer.alamat}</div>
+                            {selectedCustomer?.id === customer.id && (
+                              <div className="text-green-600 text-sm font-medium">
+                                ✓ Selected
+                              </div>
+                            )}
                           </div>
-                          {selectedCustomer?.id === customer.id && (
-                            <div className="text-green-600 text-sm font-medium">
-                              ✓ Selected
-                            </div>
-                          )}
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
           </TabsContent>
 
           <TabsContent value="new" className="space-md">
@@ -303,10 +326,20 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
                </Button>
                <Button
                  onClick={handleSaveNewCustomer}
+                 disabled={loading}
                  className="flex items-center gap-2 px-6"
                >
-                 <Plus className="h-4 w-4" />
-                 Simpan & Pilih
+                 {loading ? (
+                   <>
+                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                     Menyimpan...
+                   </>
+                 ) : (
+                   <>
+                     <Plus className="h-4 w-4" />
+                     Simpan & Pilih
+                   </>
+                 )}
                </Button>
              </div>
           </TabsContent>
