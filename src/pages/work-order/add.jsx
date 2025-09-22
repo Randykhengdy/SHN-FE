@@ -27,7 +27,7 @@ import {
 
 export default function AddWorkOrderPage() {
   const navigate = useNavigate();
-  const { showAlert } = useAlert();
+  const { showAlert, AlertComponent } = useAlert();
   
   // Work Order Planning State
   const [workOrderData, setWorkOrderData] = useState({
@@ -635,14 +635,21 @@ export default function AddWorkOrderPage() {
       return;
     }
 
-    // Check if there are pelaksana but no id_pelaksana at top level
-    const hasPelaksana = workOrderItems.some(item => item.pelaksana.length > 0);
-    if (hasPelaksana) {
-      const firstPelaksanaId = workOrderItems.find(item => item.pelaksana.length > 0)?.pelaksana[0]?.pelaksana_id;
-      if (!firstPelaksanaId) {
-        showAlert('Error', 'Mohon lengkapi data pelaksana untuk semua item', 'error');
-        return;
+    // Validasi pelaksana - cek item mana yang belum ada pelaksana
+    const itemsWithoutPelaksana = [];
+    workOrderItems.forEach((item, index) => {
+      if (!item.pelaksana || item.pelaksana.length === 0) {
+        itemsWithoutPelaksana.push(`Item ${index + 1}`);
       }
+    });
+
+    if (itemsWithoutPelaksana.length > 0) {
+      showAlert(
+        'Validasi Pelaksana', 
+        `Item berikut belum memiliki pelaksana:\n${itemsWithoutPelaksana.join(', ')}\n\nSetiap item harus memiliki minimal 1 pelaksana.`, 
+        'warning'
+      );
+      return;
     }
 
     // Validate items
@@ -652,13 +659,32 @@ export default function AddWorkOrderPage() {
         return;
       }
       
-      // Validate pelaksana if exists
+      // Validate pelaksana - setiap item harus memiliki minimal 1 pelaksana
+      if (!item.pelaksana || item.pelaksana.length === 0) {
+        showAlert('Error', `Item ${index + 1}: Setiap item harus memiliki minimal 1 pelaksana`, 'error');
+        return;
+      }
+      
       for (let pelaksana of item.pelaksana) {
         if (!pelaksana.pelaksana_id) {
-          showAlert('Error', 'Mohon lengkapi data pelaksana', 'error');
+          showAlert('Error', `Item ${index + 1}: Mohon lengkapi data pelaksana`, 'error');
           return;
         }
       }
+    }
+
+    // Konfirmasi sebelum save
+    const confirmSave = window.confirm(
+      `Konfirmasi Simpan Work Order\n\n` +
+      `Nomor WO: ${workOrderData.nomor_wo}\n` +
+      `Tanggal WO: ${workOrderData.tanggal_wo}\n` +
+      `Jumlah Item: ${workOrderItems.length}\n` +
+      `Total Pelaksana: ${workOrderItems.reduce((total, item) => total + item.pelaksana.length, 0)}\n\n` +
+      `Apakah Anda yakin ingin menyimpan Work Order ini?`
+    );
+
+    if (!confirmSave) {
+      return;
     }
 
     setLoading(true);
@@ -671,10 +697,18 @@ export default function AddWorkOrderPage() {
         id_sales_order: workOrderData.sales_order_id,
         id_pelanggan: workOrderData.pelanggan_id,
         id_gudang: workOrderData.gudang_id,
-        // Add id_pelaksana field at the top level as required by API
-        id_pelaksana: workOrderItems.some(item => item.pelaksana.length > 0) 
-          ? workOrderItems[0].pelaksana[0]?.pelaksana_id || null 
-          : null,
+        // Add id_pelaksana field at the top level as required by API (array of all pelaksana IDs)
+        id_pelaksana: (() => {
+          const allPelaksanaIds = [];
+          workOrderItems.forEach(item => {
+            item.pelaksana.forEach(pelaksana => {
+              if (pelaksana.pelaksana_id && !allPelaksanaIds.includes(pelaksana.pelaksana_id)) {
+                allPelaksanaIds.push(pelaksana.pelaksana_id);
+              }
+            });
+          });
+          return allPelaksanaIds.length > 0 ? allPelaksanaIds : null;
+        })(),
         prioritas: workOrderData.prioritas,
         catatan: workOrderData.catatan,
         status: workOrderData.status,
@@ -735,7 +769,17 @@ export default function AddWorkOrderPage() {
       });
     } catch (error) {
       console.error('Error creating work order:', error);
-      showAlert('Error', 'Gagal membuat Work Order', 'error');
+      
+      // Extract error message from API response
+      let errorMessage = 'Gagal membuat Work Order';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      showAlert('Error', errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -1122,6 +1166,9 @@ export default function AddWorkOrderPage() {
         selectedSalesOrder={selectedSalesOrder}
         isNewItem={editingItem ? isNewItem(editingItem) : false}
       />
+      
+      {/* Alert Component */}
+      <AlertComponent />
     </PageLayout>
   );
 }

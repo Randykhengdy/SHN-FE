@@ -62,127 +62,117 @@ const PelaksanaModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-visible w-[95vw]">
-        <DialogHeader className="pb-6 pt-2">
-          <DialogTitle className="text-2xl font-semibold text-gray-900">{title}</DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-6 overflow-hidden">
-          {/* Header Section */}
-          <div className="flex justify-between items-center bg-gray-50 px-4 py-3 rounded-lg border">
-            <div className="flex items-center space-x-2">
+      <DialogContent className="w-[90vw] max-w-5xl h-[85vh] flex flex-col">
+        {/* Header */}
+        <DialogHeader className="pb-2">
+          <DialogTitle className="text-xl font-bold">{title}</DialogTitle>
+          <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
               <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span className="text-sm font-medium text-gray-700">
-                Total pelaksana: <span className="text-blue-600 font-semibold">{rows.length}</span>
-              </span>
+              <span>Total pelaksana: <span className="font-bold text-blue-600">{rows.length}</span></span>
             </div>
             <Button 
-              type="button" 
-              size="md" 
               onClick={addRow}
-              className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm px-4 py-2"
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700"
             >
-              <Plus className="w-5 h-5 mr-2" /> 
+              <Plus className="w-4 h-4 mr-1" />
               Tambah Pelaksana
             </Button>
           </div>
+        </DialogHeader>
 
-          {/* Table Section */}
-          <div className="border rounded-lg overflow-hidden bg-white shadow-sm">
-            <div className="overflow-x-auto max-h-[75vh] overflow-y-auto px-2">
-              <Table>
-                <TableHeader className="bg-gray-50 sticky top-0 z-10">
-                  <TableRow className="border-b">
-                    <TableHead className="text-left font-semibold text-gray-700 py-3 px-4 w-1/3">Pelaksana</TableHead>
-                    <TableHead className="text-left font-semibold text-gray-700 py-3 px-4 w-32">Qty</TableHead>
-                    <TableHead className="text-left font-semibold text-gray-700 py-3 px-4 w-1/3">Catatan</TableHead>
-                    <TableHead className="text-center font-semibold text-gray-700 py-3 px-4 w-20">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rows.map((r, index) => (
-                    <TableRow key={r.id} className="border-b hover:bg-gray-50 transition-colors">
-                      <TableCell className="text-left py-3 px-4">
-                        <div className="relative w-full">
-                          <SearchSelect
-                            label=""
-                            options={pelaksanaOptions}
-                            value={r.pelaksana_id ? r.pelaksana_id.toString() : ""}
-                            onValueChange={(val) => updateRow(r.id, "pelaksana_id", parseInt(val))}
-                            placeholder="Pilih pelaksana"
-                            searchPlaceholder="Cari pelaksana..."
-                            loading={loadingOptions}
-                            usePortal={true}
-                            dropdownMaxHeight={350}
-                            className="w-full"
-                          />
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-left py-3 px-4">
-                        <Input
-                          type="number"
-                          min="1"
-                          value={r.qty}
-                          onChange={(e) => updateRow(r.id, "qty", parseInt(e.target.value))}
-                          className="h-9 w-full text-center border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                        />
-                      </TableCell>
-                      <TableCell className="text-left py-3 px-4">
-                        <Input
-                          placeholder="Masukkan catatan..."
-                          value={r.catatan}
-                          onChange={(e) => updateRow(r.id, "catatan", e.target.value)}
-                          className="h-9 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                        />
-                      </TableCell>
-                      <TableCell className="text-center py-3 px-4">
-                        <Button 
-                          type="button" 
-                          variant="destructive" 
-                          size="icon" 
-                          onClick={() => removeRow(r.id)} 
-                          className="h-8 w-8 hover:bg-red-600"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {rows.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-12">
-                        <div className="flex flex-col items-center space-y-3">
-                          <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
-                            <Plus className="w-6 h-6 text-gray-400" />
-                          </div>
-                          <div className="text-gray-500">
-                            <p className="font-medium">Belum ada pelaksana</p>
-                            <p className="text-sm">Klik "Tambah Pelaksana" untuk menambahkan</p>
-                          </div>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+        {/* Content */}
+        <div className="flex-1 overflow-hidden">
+          {rows.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-gray-500">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <Plus className="w-8 h-8" />
+              </div>
+              <h3 className="text-lg font-medium mb-1">Belum ada pelaksana</h3>
+              <p className="text-sm text-center">Klik tombol "Tambah Pelaksana" untuk menambahkan pelaksana</p>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-2 overflow-y-auto h-full">
+              {rows.map((row, index) => (
+                <div key={row.id} className="bg-white border rounded-lg p-3">
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    {/* Pelaksana */}
+                    <div className="col-span-6">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Pelaksana
+                      </label>
+                      <SearchSelect
+                        options={pelaksanaOptions}
+                        value={row.pelaksana_id ? row.pelaksana_id.toString() : ""}
+                        onValueChange={(val) => updateRow(row.id, "pelaksana_id", parseInt(val))}
+                        placeholder="Pilih pelaksana"
+                        searchPlaceholder="Cari pelaksana..."
+                        loading={loadingOptions}
+                        usePortal={false}
+                        dropdownMaxHeight={200}
+                        className="w-full"
+                      />
+                    </div>
+
+                    {/* Qty */}
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Qty
+                      </label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={row.qty}
+                        onChange={(e) => updateRow(row.id, "qty", parseInt(e.target.value) || 1)}
+                        className="h-8 text-center"
+                      />
+                    </div>
+
+                    {/* Catatan */}
+                    <div className="col-span-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Catatan
+                      </label>
+                      <Input
+                        placeholder="Masukkan catatan..."
+                        value={row.catatan}
+                        onChange={(e) => updateRow(row.id, "catatan", e.target.value)}
+                        className="h-8"
+                      />
+                    </div>
+
+                    {/* Aksi */}
+                    <div className="col-span-1 flex justify-center">
+                      <Button 
+                        variant="destructive" 
+                        size="icon"
+                        onClick={() => removeRow(row.id)}
+                        className="h-8 w-8"
+                        title="Hapus pelaksana"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        <DialogFooter className="pt-6 border-t bg-gray-50 -mx-6 -mb-6 px-6 py-4">
-          <div className="flex justify-end space-x-3">
+        {/* Footer */}
+        <DialogFooter className="flex-shrink-0 pt-4 border-t">
+          <div className="flex justify-end gap-3">
             <Button 
-              type="button" 
               variant="outline" 
               onClick={() => onOpenChange(false)}
-              className="px-6 py-2 text-base"
             >
               Tutup
             </Button>
             <Button 
-              type="button" 
               onClick={handleSave}
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-base font-medium"
+              className="bg-blue-600 hover:bg-blue-700"
             >
               Simpan Perubahan
             </Button>

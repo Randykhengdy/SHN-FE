@@ -3,25 +3,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import SearchSelect from '@/components/ui/search-select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { X, Package, Users } from 'lucide-react';
+import { X } from 'lucide-react';
 import { 
   getJenisBarangOptions, 
   getBentukBarangOptions, 
-  getGradeBarangOptions,
-  getPelaksanaOptions
+  getGradeBarangOptions
 } from '@/services/masterDataService';
-import PelaksanaModal from './PelaksanaModal';
 
 export default function WorkOrderItemEditModal({ 
   isOpen, 
   onClose, 
   item, 
   onSave,
-  selectedPlatDasar,
-  onPlatDasarChange,
-  isLuasCukup,
-  selectedSalesOrder,
   isNewItem = false
 }) {
   const [formData, setFormData] = useState({
@@ -32,24 +25,18 @@ export default function WorkOrderItemEditModal({
     jenis_barang_id: '',
     bentuk_barang_id: '',
     grade_barang_id: '',
-    catatan: '',
-    pelaksana: []
+    catatan: ''
   });
 
   // Master Data State
   const [jenisBarangList, setJenisBarangList] = useState([]);
   const [bentukBarangList, setBentukBarangList] = useState([]);
   const [gradeBarangList, setGradeBarangList] = useState([]);
-  const [pelaksanaList, setPelaksanaList] = useState([]);
 
   // Loading State
   const [loadingJenisBarang, setLoadingJenisBarang] = useState(false);
   const [loadingBentukBarang, setLoadingBentukBarang] = useState(false);
   const [loadingGradeBarang, setLoadingGradeBarang] = useState(false);
-  const [loadingPelaksana, setLoadingPelaksana] = useState(false);
-
-  // Pelaksana Modal State
-  const [pelaksanaModalOpen, setPelaksanaModalOpen] = useState(false);
 
   // Initialize form data when item changes
   useEffect(() => {
@@ -62,8 +49,7 @@ export default function WorkOrderItemEditModal({
         jenis_barang_id: item.jenis_barang_id || '',
         bentuk_barang_id: item.bentuk_barang_id || '',
         grade_barang_id: item.grade_barang_id || '',
-        catatan: item.catatan || '',
-        pelaksana: item.pelaksana || []
+        catatan: item.catatan || ''
       });
     }
   }, [item]);
@@ -79,27 +65,23 @@ export default function WorkOrderItemEditModal({
     setLoadingJenisBarang(true);
     setLoadingBentukBarang(true);
     setLoadingGradeBarang(true);
-    setLoadingPelaksana(true);
 
     try {
-      const [jenisBarang, bentukBarang, gradeBarang, pelaksana] = await Promise.all([
+      const [jenisBarang, bentukBarang, gradeBarang] = await Promise.all([
         getJenisBarangOptions(),
         getBentukBarangOptions(),
-        getGradeBarangOptions(),
-        getPelaksanaOptions()
+        getGradeBarangOptions()
       ]);
 
       setJenisBarangList(jenisBarang);
       setBentukBarangList(bentukBarang);
       setGradeBarangList(gradeBarang);
-      setPelaksanaList(pelaksana);
     } catch (error) {
       console.error('Error loading master data:', error);
     } finally {
       setLoadingJenisBarang(false);
       setLoadingBentukBarang(false);
       setLoadingGradeBarang(false);
-      setLoadingPelaksana(false);
     }
   };
 
@@ -110,45 +92,9 @@ export default function WorkOrderItemEditModal({
     }));
   };
 
-  // Helper function to calculate required area based on dimension
-  const calculateRequiredArea = (item) => {
-    const panjang = parseFloat(item.panjang || 0);
-    const lebar = parseFloat(item.lebar || 0);
-    const qty = parseInt(item.qty || 0);
-    
-    // Get bentuk barang info to determine dimension
-    const bentukBarang = bentukBarangList.find(b => b.value === item.bentuk_barang_id);
-    
-    if (bentukBarang && bentukBarang.dimensi === '1D') {
-      // For 1D (shaft), only use panjang
-      return panjang * qty;
-    } else {
-      // For 2D (plat), use panjang × lebar
-      return panjang * lebar * qty;
-    }
-  };
-
   const handleSave = () => {
     onSave(formData);
     onClose();
-  };
-
-  const openPlatDasarModal = () => {
-    // This would open the plat dasar selection modal
-    // For now, we'll just show a placeholder
-    console.log('Open plat dasar modal for item:', item.id);
-  };
-
-  const openPelaksanaModal = () => {
-    setPelaksanaModalOpen(true);
-  };
-
-  const savePelaksana = (rows) => {
-    setFormData(prev => ({
-      ...prev,
-      pelaksana: rows
-    }));
-    setPelaksanaModalOpen(false);
   };
 
   if (!isOpen) return null;
@@ -285,52 +231,6 @@ export default function WorkOrderItemEditModal({
               />
             </div>
 
-            {/* Plat Dasar and Pelaksana Section */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Plat Dasar
-                </label>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={openPlatDasarModal}
-                    disabled={!formData.jenis_barang_id || !formData.bentuk_barang_id || !formData.grade_barang_id || !formData.tebal}
-                    className="text-xs"
-                  >
-                    <Package className="w-3 h-3 mr-1" />
-                    Pilih Plat Dasar
-                  </Button>
-                  {selectedPlatDasar && selectedPlatDasar.length > 0 && (
-                    <Badge variant="secondary" className="text-xs whitespace-nowrap">
-                      {(() => {
-                        const totalDibutuhkan = calculateRequiredArea(formData);
-                        const isCukup = isLuasCukup ? isLuasCukup(item.id, totalDibutuhkan) : false;
-                        return `${selectedPlatDasar.length} • ${isCukup ? 'Cukup' : 'Kurang'}`;
-                      })()}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Pelaksana
-                </label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={openPelaksanaModal}
-                  className="text-xs"
-                >
-                  <Users className="w-3 h-3 mr-1" />
-                  Kelola Pelaksana ({formData.pelaksana.length})
-                </Button>
-              </div>
-            </div>
-
             {/* Action Buttons */}
             <div className="flex justify-end gap-3 pt-4 border-t">
               <Button
@@ -350,16 +250,6 @@ export default function WorkOrderItemEditModal({
           </CardContent>
         </Card>
       </div>
-
-      {/* Pelaksana Modal */}
-      <PelaksanaModal
-        isOpen={pelaksanaModalOpen}
-        onClose={() => setPelaksanaModalOpen(false)}
-        onSave={savePelaksana}
-        initialData={formData.pelaksana}
-        pelaksanaList={pelaksanaList}
-        loadingPelaksana={loadingPelaksana}
-      />
     </div>
   );
 }

@@ -378,7 +378,7 @@
 
 #### 3. Create Work Order Planning
 - **POST** `/api/work-order-planning`
-- **Description**: Membuat work order planning baru
+- **Description**: Membuat work order planning baru dengan support multiple pelaksana per item
 - **Request Body**:
 ```json
 {
@@ -387,7 +387,6 @@
   "id_sales_order": 1,
   "id_pelanggan": 1,
   "id_gudang": 1,
-  "id_pelaksana": 1,
   "prioritas": "HIGH",
   "status": "DRAFT",
   "items": [
@@ -400,11 +399,29 @@
       "jenis_barang_id": 1,
       "bentuk_barang_id": 1,
       "grade_barang_id": 1,
-      "catatan": "Catatan item"
+      "catatan": "Catatan item",
+      "id_pelaksana": [1, 2, 3]
+    },
+    {
+      "qty": 5,
+      "panjang": 80.00,
+      "lebar": 40.00,
+      "tebal": 1.50,
+      "plat_dasar_id": 2,
+      "jenis_barang_id": 2,
+      "bentuk_barang_id": 1,
+      "grade_barang_id": 2,
+      "catatan": "Item kedua",
+      "id_pelaksana": [2, 4]
     }
   ]
 }
 ```
+- **Notes**:
+  - `id_pelaksana` sekarang berada di dalam setiap item dan menerima array of integers (multiple pelaksana per item)
+  - Setiap item bisa memiliki pelaksana yang berbeda
+  - Pelaksana akan ditambahkan ke tabel `trx_work_order_planning_pelaksana` untuk setiap item
+  - Response akan include relasi `workOrderPlanningItems.hasManyPelaksana.pelaksana`
 
 #### 4. Update Work Order Planning
 - **PUT/PATCH** `/api/work-order-planning/{id}`
@@ -591,6 +608,7 @@
 ## Notes
 
 - Semua endpoint memerlukan authentication dan authorization (middleware `checkrole`)
+- **Multiple Pelaksana Support**: Field `id_pelaksana` dalam create work order sekarang berada di dalam setiap item dan menerima array of integers untuk multiple pelaksana per item
 - Field `pelaksana` dalam update item akan mengganti semua pelaksana yang ada dengan yang baru
 - Field `saran_plat_dasar` dalam update item akan mengganti semua saran plat dasar yang ada dengan yang baru
 - Jika tidak ada field `pelaksana` atau `saran_plat_dasar` dalam request, data yang ada tidak akan berubah
@@ -598,6 +616,7 @@
 - Ketika `is_selected = true` diset, otomatis akan update `plat_dasar_id` di work order planning item
 - Semua operasi pelaksana dan saran plat dasar menggunakan soft delete
 - Relasi yang di-load secara otomatis: jenis barang, bentuk barang, grade barang, plat dasar, pelaksana, dan saran plat dasar
+- **Pelaksana Assignment**: Setiap item dapat memiliki pelaksana yang berbeda melalui field `id_pelaksana` di dalam item
 
 ### Canvas File Notes
 
