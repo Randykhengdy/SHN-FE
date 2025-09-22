@@ -98,5 +98,36 @@ export const workOrderService = {
   // Force delete work order (admin only)
   forceDeleteWorkOrder: async (id) => {
     return request(`${BASE_URL}/${id}/force`, { method: 'DELETE' });
+  },
+
+  // Save saran plat dasar for work order item
+  saveSaranPlatDasar: async (itemId, itemBarangId, isSelected = false, canvasData = null) => {
+    const requestData = {
+      wo_planning_item_id: itemId,
+      item_barang_id: itemBarangId,
+      is_selected: isSelected,
+      canvas_data: canvasData
+    };
+    
+    console.log('🚀 API Request to saveSaranPlatDasar:', requestData);
+    
+    try {
+      const response = await request(`${BASE_URL}/saran-plat-dasar`, {
+        method: 'POST',
+        body: JSON.stringify(requestData)
+      });
+      
+      console.log('✅ API Response from saveSaranPlatDasar:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ API Error in saveSaranPlatDasar:', error);
+      console.error('Error response:', error.response?.data);
+      throw error;
+    }
+  },
+
+  // Get canvas data by item barang ID
+  getCanvasDataByItemBarangId: async (itemBarangId) => {
+    return request(`${BASE_URL}/item-barang/${itemBarangId}/canvas`, { method: 'GET' });
   }
 };

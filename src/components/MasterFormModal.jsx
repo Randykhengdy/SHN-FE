@@ -150,20 +150,20 @@ export default function MasterFormModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg lg:max-w-xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader className="flex-shrink-0">
+      <DialogContent className="sm:max-w-4xl lg:max-w-6xl max-h-[90vh] overflow-y-auto w-[95vw]">
+        <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto px-1">
-          <form onSubmit={handleSubmit} className="space-y-4">
-          {fields.map((field) => {
-            // Skip fields that should be hidden on edit
-            if (editData && field.hideOnEdit) {
-              return null;
-            }
-            
-            return (
-            <div key={field.name} className="grid grid-cols-1 gap-2">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {fields.map((field) => {
+              // Skip fields that should be hidden on edit
+              if (editData && field.hideOnEdit) {
+                return null;
+              }
+              
+              return (
+              <div key={field.name} className={`space-y-2 ${field.colSpan === 2 ? 'md:col-span-2' : ''}`}>
               <Label htmlFor={field.name} className="text-sm font-medium text-gray-700">
                 {field.label}
               </Label>
@@ -277,23 +277,23 @@ export default function MasterFormModal({
             </div>
           );
           })}
+          </div>
 
-            {error && (
-              <div className="text-red-600 text-sm p-3 bg-red-50 border border-red-200 rounded-md">
-                ❌ {error}
-              </div>
-            )}
-          </form>
-        </div>
-        
-        <DialogFooter className="flex-shrink-0 flex gap-2 pt-4 border-t border-gray-200">
-          <Button type="button" variant="outline" onClick={onClose} disabled={saveLoading}>
-            Batal
-          </Button>
-          <Button type="submit" disabled={saveLoading} onClick={handleSubmit}>
-            {saveLoading ? "Menyimpan..." : (editData ? "Update" : "Simpan")}
-          </Button>
-        </DialogFooter>
+          {error && (
+            <div className="text-red-600 text-sm p-3 bg-red-50 border border-red-200 rounded-md">
+              ❌ {error}
+            </div>
+          )}
+          
+          <DialogFooter className="flex gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={onClose} disabled={saveLoading}>
+              Batal
+            </Button>
+            <Button type="submit" disabled={saveLoading}>
+              {saveLoading ? "Menyimpan..." : (editData ? "Update" : "Simpan")}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
