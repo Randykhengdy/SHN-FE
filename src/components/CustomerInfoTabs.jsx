@@ -25,7 +25,7 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
   // New customer form state
   const [newCustomer, setNewCustomer] = useState({
     kode: "",
-    nama: "",
+    nama_pelanggan: "",
     telepon: "",
     email: "",
     alamat: ""
@@ -94,7 +94,7 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
   };
 
   const handleSaveNewCustomer = async () => {
-    if (!newCustomer.kode || !newCustomer.nama) {
+    if (!newCustomer.kode || !newCustomer.nama_pelanggan) {
       showAlert(
         "Data Tidak Lengkap", 
         "Kode dan Nama Pelanggan wajib diisi!", 
@@ -117,7 +117,7 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
       setLoading(true);
       
       // Save to backend using service
-      const response = await pelangganService.create(newCustomer);
+      const response = await pelangganService.createWithoutValidation(newCustomer);
       
       if (response && response.data) {
         const newCustomerData = response.data;
@@ -131,7 +131,7 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
         // Reset form
         setNewCustomer({
           kode: "",
-          nama: "",
+          nama_pelanggan: "",
           telepon: "",
           email: "",
           alamat: ""
@@ -273,11 +273,11 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="nama">Nama Pelanggan *</Label>
+                <Label htmlFor="nama_pelanggan">Nama Pelanggan *</Label>
                 <Input
-                  id="nama"
-                  value={newCustomer.nama}
-                  onChange={(e) => handleNewCustomerChange('nama', e.target.value)}
+                  id="nama_pelanggan"
+                  value={newCustomer.nama_pelanggan}
+                  onChange={(e) => handleNewCustomerChange('nama_pelanggan', e.target.value)}
                   placeholder="Masukkan nama pelanggan"
                   className="form-input-standard"
                 />

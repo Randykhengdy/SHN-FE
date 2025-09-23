@@ -6,12 +6,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Eye, Trash2, RefreshCw, Download, Filter, Edit3, Palette } from 'lucide-react';
+import { Plus, Search, Eye, Trash2, RefreshCw, Download, Filter, Edit3, Palette, X } from 'lucide-react';
 import { useAlert } from '@/hooks/useAlert';
 import { isAdmin } from '@/lib/utils';
 import CustomAlert from '@/components/modals/CustomAlert';
 import DeleteRequestModal from '@/components/modals/DeleteRequestModal';
 import PageLayout from '@/components/PageLayout';
+import { workOrderService } from '@/services/workOrderService';
 
 const statusOptions = [
   { value: "all", label: "Semua Status" },
@@ -147,8 +148,8 @@ export default function WorkOrderPage() {
     navigate('/work-order/add');
   };
 
-  const handleViewDetail = (woNumber) => {
-    navigate(`/work-order/view/${woNumber}`);
+  const handleViewDetail = (id) => {
+    navigate(`/work-order/view/${id}`);
   };
 
   // Handle delete WO (admin only)
@@ -446,7 +447,7 @@ export default function WorkOrderPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleViewDetail(wo.woNumber)}
+                            onClick={() => handleViewDetail(wo.id)}
                             className="flex items-center gap-1"
                           >
                             <Eye className="w-4 h-4" />

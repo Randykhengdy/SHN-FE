@@ -24,11 +24,15 @@ import ViewSalesOrderPage from "@/pages/sales-order/view";
 import ApprovalPage from "@/pages/approval";
 import WorkOrderPage from "@/pages/work-order";
 import AddWorkOrderPage from "@/pages/work-order/add";
+import ViewWorkOrderPage from "@/pages/work-order/view";
 import CanvasTestingPage from "@/pages/CanvasTesting";
 import GridStackTestingPage from "@/pages/GridStackTesting";
 import SimpleGridTestingPage from "@/pages/SimpleGridTesting";
 import CanvasGridTestingPage from "@/pages/CanvasGridTesting";
 import WorkOrderPlatShaftCanvasPage from "@/pages/work-order/PlatShaftCanvasPage";
+import PurchaseOrderPage from "@/pages/purchase-order";
+import AddPurchaseOrderPage from "@/pages/purchase-order/add";
+import ViewPurchaseOrderPage from "@/pages/purchase-order/view";
 
 const AppRouter = () => {
     return (
@@ -58,12 +62,15 @@ const AppRouter = () => {
         <Route path="/approval" element={<ApprovalPage />} />
         <Route path="/work-order" element={<WorkOrderPage />} />
         <Route path="/work-order/add" element={<AddWorkOrderPage />} />
+        <Route path="/work-order/view/:id" element={<ViewWorkOrderPage />} />
         <Route path="/work-order/plat-shaft-canvas" element={<WorkOrderPlatShaftCanvasPage />} />
         <Route path="/canvas-testing" element={<CanvasTestingPage />} />
         <Route path="/gridstack-testing" element={<GridStackTestingPage />} />
         <Route path="/simple-grid-testing" element={<SimpleGridTestingPage />} />
         <Route path="/canvas-grid-testing" element={<CanvasGridTestingPage />} />
-
+        <Route path="/purchase-order" element={<PurchaseOrderPage />} />
+        <Route path="/purchase-order/add" element={<AddPurchaseOrderPage />} />
+        <Route path="/purchase-order/view/:id" element={<ViewPurchaseOrderPage />} />
       </Routes>
     );
 };

@@ -1974,6 +1974,49 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     setPanOffset({ x: 0, y: 0 });
   }, []);
 
+  const zoomFit = useCallback(() => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    
+    if (!canvas || !container) return;
+    
+    // Get canvas dimensions
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
+    
+    // Get base container dimensions in grid units
+    const containerWidth = baseContainer.width;
+    const containerHeight = baseContainer.height;
+    
+    // Calculate scale factors for both dimensions
+    const scaleX = canvasWidth / (containerWidth * gridSize);
+    const scaleY = canvasHeight / (containerHeight * gridSize);
+    
+    // Choose the smaller scale to ensure the container fits completely
+    const newZoom = Math.min(scaleX, scaleY);
+    
+    // Apply the new zoom
+    setZoom(newZoom);
+    
+    // Center the container on canvas
+    const containerPixelWidth = containerWidth * gridSize * newZoom;
+    const containerPixelHeight = containerHeight * gridSize * newZoom;
+    
+    let centerX = (canvasWidth - containerPixelWidth) / 2;
+    let centerY = (canvasHeight - containerPixelHeight) / 2;
+    
+    // Tambahan kondisi berdasarkan perbandingan panjang dan lebar
+    if (containerWidth > containerHeight) {
+      // Jika panjang lebih besar dari lebar, posisikan di tengah secara vertikal
+      centerY = (canvasHeight - containerPixelHeight) / 2;
+    } else if (containerHeight > containerWidth) {
+      // Jika lebar lebih besar dari panjang, posisikan di tengah secara horizontal
+      centerX = (canvasWidth - containerPixelWidth) / 2;
+    }
+    
+    setPanOffset({ x: centerX, y: centerY });
+  }, [baseContainer, gridSize]);
+
   // Enhanced save system - only save canvas data with required info
   const generateSaveData = useCallback(() => {
     // Get current work order info for reference
@@ -2585,7 +2628,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   React.useImperativeHandle(ref, () => ({
     getCanvasDataForAPI,
     getUsedSaranPlats,
-    isSaranPlatUsed
+    isSaranPlatUsed,
+    zoomFit
   }));
 
 
@@ -2816,7 +2860,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         cancelAnimationFrame(animationFrameId);
       }
     };
-  }, [draw, animationFrameId]);
+  }, [draw, animationFrameId, zoomFit]);
   
   // Update remainingQuantity when totalQuantity changes and no boxes exist
 
@@ -3333,30 +3377,40 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
 
                     {/* Zoom Controls */}
                     <div className="bg-white rounded-lg p-1 border">
-                      <h3 className="text-sm font-medium mb-1">Zoom Controls</h3>
+                      <h3 className="text-sm font-medium mb-1">Kontrol Zoom</h3>
                       <div className="space-y-1">
                         <div className="text-sm text-gray-600">
                           <span className="font-medium">Zoom:</span> {Math.round(zoom * 100)}%
                         </div>
-                        <div className="flex space-x-1">
-                          <Button
-                            onClick={zoomOut}
-                            className="flex-1 h-8 text-sm bg-gray-600 hover:bg-gray-700"
-                          >
-                            Zoom Out
-                          </Button>
-                          <Button
-                            onClick={resetZoom}
-                            className="flex-1 h-8 text-sm bg-gray-500 hover:bg-gray-600"
-                          >
-                            Reset
-                          </Button>
-                          <Button
-                            onClick={zoomIn}
-                            className="flex-1 h-8 text-sm bg-gray-600 hover:bg-gray-700"
-                          >
-                            Zoom In
-                          </Button>
+                        <div className="space-y-1">
+                          <div className="flex space-x-1">
+                            <Button
+                              onClick={zoomOut}
+                              className="flex-1 h-8 text-sm bg-gray-600 hover:bg-gray-700"
+                            >
+                              Zoom Out
+                            </Button>
+                            <Button
+                              onClick={resetZoom}
+                              className="flex-1 h-8 text-sm bg-gray-500 hover:bg-gray-600"
+                            >
+                              Reset
+                            </Button>
+                            <Button
+                              onClick={zoomIn}
+                              className="flex-1 h-8 text-sm bg-gray-600 hover:bg-gray-700"
+                            >
+                              Zoom In
+                            </Button>
+                          </div>
+                          <div className="flex">
+                            <Button
+                              onClick={zoomFit}
+                              className="w-full h-8 text-sm bg-blue-600 hover:bg-blue-700"
+                            >
+                              Zoom Fit
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>

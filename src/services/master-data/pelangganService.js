@@ -30,6 +30,13 @@ export const pelangganService = {
     });
   },
 
+  async createWithoutValidation(data) {
+    return request("/pelanggan/without-validation", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
   async update(id, data) {
     return request(`/pelanggan/${id}`, {
       method: "PUT",
