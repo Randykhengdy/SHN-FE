@@ -60,6 +60,24 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     // Update quantity
     saranItem.Quantity = quantity;
     
+    // Validate total quantity doesn't exceed TargetQuantity (only for current WO item)
+    const totalUsedQuantity = woItemData.WOQuantity.reduce((total, item) => total + (parseInt(item.Quantity) || 0), 0);
+    const targetQuantity = woItemData.TargetQuantity || 0;
+    
+    if (totalUsedQuantity > targetQuantity) {
+      console.warn(`Total quantity (${totalUsedQuantity}) exceeds TargetQuantity (${targetQuantity}) for WO Item ${woItemId}. Adjusting...`);
+      
+      // Adjust current saran item quantity to fit within target
+      const otherQuantity = woItemData.WOQuantity
+        .filter(item => item.ItemId !== saranItemId && item.ItemId !== parseInt(saranItemId))
+        .reduce((total, item) => total + (parseInt(item.Quantity) || 0), 0);
+      
+      const maxAllowedQuantity = Math.max(0, targetQuantity - otherQuantity);
+      saranItem.Quantity = Math.min(quantity, maxAllowedQuantity);
+      
+      console.log(`Adjusted quantity to ${saranItem.Quantity} (max allowed: ${maxAllowedQuantity}) for saran item ${saranItemId}`);
+    }
+    
     // Remove saran items with 0 quantity
     woItemData.WOQuantity = woItemData.WOQuantity.filter(item => item.Quantity > 0);
     
@@ -214,7 +232,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     console.log('=== END CANVAS LAYOUTS DEBUG ===');
   }, []);
   
-  // Load canvas data from API
+  // Load canvas data from API (for loading data only, not saving)
   const loadCanvasFromAPI = useCallback(async (itemBarangId) => {
     try {
       console.log('Loading canvas data from API for item barang ID:', itemBarangId);
@@ -387,16 +405,16 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         setTotalQuantity(0); // Start with 0, will be updated when boxes are added
         
         // Check if there's cached data for this work order item
-        const workOrderId = data.workOrderId || 'unknown';
+        const workOrderUniqueId = localStorage.getItem('WO_current_work_order_id') || 'unknown';
         const saranId = data.selectedItem?.id || 'unknown';
-        const cacheKey = `WO_canvas_layout_${saranId}_${workOrderId}`;
+        const cacheKey = `WO_canvas_layout_${saranId}_${workOrderUniqueId}`;
         
         // Check if current work order ID matches stored ID
         const storedWorkOrderId = localStorage.getItem('WO_current_work_order_id');
-        const isCurrentWorkOrder = storedWorkOrderId === workOrderId;
+        const isCurrentWorkOrder = storedWorkOrderId === workOrderUniqueId;
         
         console.log('Work Order ID Comparison:', {
-          current: workOrderId,
+          current: workOrderUniqueId,
           stored: storedWorkOrderId,
           isCurrent: isCurrentWorkOrder,
           cacheKey: cacheKey,
@@ -504,9 +522,32 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       
       // Read from WO_total_quantity to get shared quantity data
       const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
-      const woItemData = totalQuantityData.find(item => 
+      let woItemData = totalQuantityData.find(item => 
         item.WoItemID === woItemId || item.WoItemID === parseInt(woItemId)
       );
+      
+      // If WO item doesn't exist, create it with PreviousQuantity
+      if (!woItemData) {
+        woItemData = {
+          WoItemID: woItemId,
+          TargetQuantity: targetQuantity,
+          PreviousQuantity: 0,
+          WOQuantity: []
+        };
+        totalQuantityData.push(woItemData);
+        localStorage.setItem('WO_total_quantity', JSON.stringify(totalQuantityData));
+      }
+      
+      // Save PreviousQuantity for rollback (current saran plat only)
+      const currentSaranId = workOrderData?.selectedItem?.id;
+      if (currentSaranId) {
+        const currentSaranItem = woItemData.WOQuantity.find(item => 
+          item.ItemId === currentSaranId || item.ItemId === parseInt(currentSaranId)
+        );
+        woItemData.PreviousQuantity = currentSaranItem ? (parseInt(currentSaranItem.Quantity) || 0) : 0;
+        localStorage.setItem('WO_total_quantity', JSON.stringify(totalQuantityData));
+        console.log('Saved PreviousQuantity (current saran plat):', woItemData.PreviousQuantity);
+      }
       
       // Calculate total used quantity across all saran plats for this WO item
       let totalUsedQuantity = 0;
@@ -1733,7 +1774,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     }
 
     // Calculate how many boxes to add (limited by remaining quantity)
-    const boxesToFill = Math.min(remainingQuantity, targetQuantity - currentQuantity);
+    const boxesToFill = remainingQuantity;
 
     if (boxesToFill <= 0) {
       showAlert('Info', 'All boxes already filled!', 'info');
@@ -2057,16 +2098,16 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     const saveData = generateSaveData();
     
     // Generate unique key for localStorage
-    const workOrderId = workOrderData?.workOrderId || 'unknown';
+    const workOrderUniqueId = localStorage.getItem('WO_current_work_order_id') || 'unknown';
     const saranId = workOrderData?.selectedItem?.id || 'unknown';
-    const storageKey = `WO_canvas_layout_${saranId}_${workOrderId}`;
+    const storageKey = `WO_canvas_layout_${saranId}_${workOrderUniqueId}`;
     
     // Check if current work order ID matches stored ID
     const storedWorkOrderId = localStorage.getItem('WO_current_work_order_id');
-    const isCurrentWorkOrder = storedWorkOrderId === workOrderId;
+    const isCurrentWorkOrder = storedWorkOrderId === workOrderUniqueId;
     
     console.log('Saving Canvas Layout:', {
-      current: workOrderId,
+      current: workOrderUniqueId,
       stored: storedWorkOrderId,
       isCurrent: isCurrentWorkOrder,
       storageKey: storageKey
@@ -2177,16 +2218,41 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     }
   }, [generateSaveData, workOrderData, showAlert, onClose]);
 
-  // Handle close with quantity recalculation (UI only, no save)
+  // Handle close with rollback to PreviousQuantity
   const handleClose = useCallback(() => {
-    // Recalculate quantity in UI only (no save to localStorage)
-    setForceUpdate(prev => prev + 1);
+    // Rollback to PreviousQuantity (current saran plat only)
+    const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
+    const currentSaranId = workOrderData?.selectedItem?.id;
+    
+    if (currentWoItemId && currentSaranId) {
+      const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
+      const woItemData = totalQuantityData.find(item => 
+        item.WoItemID === currentWoItemId || item.WoItemID === parseInt(currentWoItemId)
+      );
+      
+      if (woItemData && woItemData.PreviousQuantity !== undefined) {
+        // Find current saran item and rollback to PreviousQuantity
+        const saranItem = woItemData.WOQuantity.find(item => 
+          item.ItemId === currentSaranId || item.ItemId === parseInt(currentSaranId)
+        );
+        
+        if (saranItem) {
+          saranItem.Quantity = woItemData.PreviousQuantity;
+          
+          // Remove saran items with 0 quantity
+          woItemData.WOQuantity = woItemData.WOQuantity.filter(item => item.Quantity > 0);
+          
+          localStorage.setItem('WO_total_quantity', JSON.stringify(totalQuantityData));
+          console.log(`Rolled back to PreviousQuantity: ${woItemData.PreviousQuantity}`);
+        }
+      }
+    }
     
     // Call original onClose if provided
     if (onClose) {
       onClose();
     }
-  }, [onClose]);
+  }, [onClose, workOrderData]);
 
   // Function to add saran item ID to used saran plats (simple format)
   const addSaranItemIdToUsedSaranPlats = useCallback((saranItemId) => {
@@ -2277,8 +2343,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   const loadAdditionalBoxesFromOtherWOItems = useCallback(() => {
     const saranId = workOrderData?.selectedItem?.id || 'unknown';
     const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
-    const currentWorkOrderId = workOrderData?.workOrderId;
-    const currentWorkOrderUniqueId = localStorage.getItem('WO_current_work_order_item_id') || currentWorkOrderId;
+    const currentWorkOrderUniqueId = localStorage.getItem('WO_current_work_order_id') || 'unknown';
     
     // Get all canvas layouts for this saran plat
     const keys = Object.keys(localStorage);
@@ -2322,8 +2387,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               
               // Determine color based on workItemUniqueId comparison
               let boxColor = '#10b981'; // Default green
-              if (box.isSave === true) {
-                boxColor = '#ef4444'; // Red for saved boxes
+              if (box.isSave === true || box.isDisabled === true) {
+                boxColor = '#ef4444'; // Red for saved boxes (preserve red from database)
               } else if (workItemUniqueId && workItemUniqueId !== '' && workItemUniqueId !== currentWorkOrderUniqueId) {
                 boxColor = '#f59e0b'; // Yellow for different workOrderUniqueId
               }
@@ -2387,8 +2452,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   const loadAllBoxesForSaranPlat = useCallback(() => {
     const saranId = workOrderData?.selectedItem?.id || 'unknown';
     const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
-    const currentWorkOrderId = workOrderData?.workOrderId; // This is the current workOrderId
-    const currentWorkOrderUniqueId = localStorage.getItem('WO_current_work_order_item_id') || currentWorkOrderId; // Get workOrderUniqueId from storage
+    const currentWorkOrderUniqueId = localStorage.getItem('WO_current_work_order_id') || 'unknown';
     
     // Get all canvas layouts for this saran plat
     const allBoxes = [];
@@ -2431,8 +2495,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               
               // Determine color based on workItemUniqueId comparison
               let boxColor = '#10b981'; // Default green
-              if (box.isSave === true) {
-                boxColor = '#ef4444'; // Red for saved boxes
+              if (box.isSave === true || box.isDisabled === true) {
+                boxColor = '#ef4444'; // Red for saved boxes (preserve red from database)
               } else if (workItemUniqueId && workItemUniqueId !== '' && workItemUniqueId !== currentWorkOrderUniqueId) {
                 boxColor = '#f59e0b'; // Yellow for different workOrderUniqueId
               }
@@ -2488,9 +2552,9 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   // Load from localStorage
   const loadCanvasLayout = useCallback(() => {
     // Load base container and boxes from current WO item
-    const workOrderId = workOrderData?.workOrderId || 'unknown';
+    const workOrderUniqueId = localStorage.getItem('WO_current_work_order_id') || 'unknown';
     const saranId = workOrderData?.selectedItem?.id || 'unknown';
-    const storageKey = `WO_canvas_layout_${saranId}_${workOrderId}`;
+    const storageKey = `WO_canvas_layout_${saranId}_${workOrderUniqueId}`;
     
     try {
       const savedData = localStorage.getItem(storageKey);
@@ -2518,8 +2582,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               
               // Determine color based on workItemUniqueId comparison
               let boxColor = '#10b981'; // Default green
-              if (box.isSave === true) {
-                boxColor = '#ef4444'; // Red for saved boxes
+              if (box.isSave === true || box.isDisabled === true) {
+                boxColor = '#ef4444'; // Red for saved boxes (preserve red from database)
               } else if (workItemUniqueId && workItemUniqueId !== '' && workItemUniqueId !== currentWorkOrderUniqueId) {
                 boxColor = '#f59e0b'; // Yellow for different workOrderUniqueId
               }
@@ -2613,7 +2677,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         const boxesWithDefaults = canvasData.boxes.map(box => ({
           ...box,
           isDisabled: box.isDisabled !== undefined ? box.isDisabled : true, // Default: boxes from cache are disabled
-          woItemId: box.woItemId || workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown'
+          // Preserve original woItemId - don't change it to current work order
+          woItemId: box.woItemId || 'unknown'
         }));
         setBoxes(boxesWithDefaults);
         if (canvasData.gridSize) setGridSize(canvasData.gridSize);
@@ -2632,7 +2697,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         const boxesWithDefaults = data.boxes.map(box => ({
           ...box,
           isDisabled: box.isDisabled !== undefined ? box.isDisabled : true, // Default: boxes from cache are disabled
-          woItemId: box.woItemId || workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown'
+          // Preserve original woItemId - don't change it to current work order
+          woItemId: box.woItemId || 'unknown'
         }));
         setBoxes(boxesWithDefaults);
         if (data.gridSize) setGridSize(data.gridSize);
@@ -3062,7 +3128,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                           <span className="font-medium">Quantity Added:</span> {(() => {
                             const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
                             
-                            // Get total quantity added from all saran plats for this WO item
+                            // Get total quantity from all saran plats for this WO item
                             const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
                             const woItemData = totalQuantityData.find(item => 
                               item.WoItemID === currentWoItemId || item.WoItemID === parseInt(currentWoItemId)
@@ -3075,6 +3141,12 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                                 return total + (parseInt(saranItem.Quantity) || 0);
                               }, 0);
                             }
+                            
+                            console.log('Quantity Added for WO Item (All Saran Plats):', {
+                              currentWoItemId: currentWoItemId,
+                              woItemData: woItemData,
+                              totalAddedQuantity: totalAddedQuantity
+                            });
                             
                             return `${totalAddedQuantity}`;
                           })()}

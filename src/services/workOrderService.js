@@ -101,9 +101,9 @@ export const workOrderService = {
   },
 
   // Save saran plat dasar for work order item
-  saveSaranPlatDasar: async (itemId, itemBarangId, isSelected = false, canvasData = null) => {
+  saveSaranPlatDasar: async (woItemUniqueIds, itemBarangId, isSelected = false, canvasData = null) => {
     const requestData = {
-      wo_planning_item_id: itemId,
+      wo_planning_item_id: woItemUniqueIds, // Array of wo_item_unique_id
       item_barang_id: itemBarangId,
       is_selected: isSelected,
       canvas_data: canvasData

@@ -525,18 +525,19 @@ export default function AddWorkOrderPage() {
    
 
   // Function to save saran plat dasar
-  const saveSaranPlatDasar = async (workOrderId, workOrderItems) => {
+  const saveSaranPlatDasar = async (workOrderId, workOrderItemsResponse) => {
     try {
       console.log('=== SAVING SARAN PLAT DASAR ===');
       console.log('Work Order ID:', workOrderId);
-      console.log('Work Order Items:', workOrderItems);
+      console.log('Work Order Items Response:', workOrderItemsResponse);
       
       // Get used saran plats from localStorage
       const usedSaranPlats = JSON.parse(localStorage.getItem('WO_used_saran_plats') || '[]');
       console.log('Used saran plats:', usedSaranPlats);
       
       if (usedSaranPlats.length === 0) {
-        console.log('No saran plats to save');
+        console.log('❌ No saran plats to save - usedSaranPlats is empty');
+        console.log('usedSaranPlats:', usedSaranPlats);
         return;
       }
       
@@ -544,60 +545,78 @@ export default function AddWorkOrderPage() {
       const saranPlatData = [];
       
       for (const saranItemId of usedSaranPlats) {
-        // Canvas layout disimpan dengan workOrderUniqueId (temp), bukan workOrderId (database)
+        console.log(`Processing saran plat ${saranItemId}...`);
+        
+        // Check which WO items use this saran plat
+        const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
+        const woItemsUsingThisSaranPlat = totalQuantityData.filter(woItem => 
+          woItem.WOQuantity && woItem.WOQuantity.some(saranItem => 
+            saranItem.ItemId === parseInt(saranItemId) || saranItem.ItemId === saranItemId
+          )
+        );
+        
+        console.log(`Saran plat ${saranItemId} is used in WO items:`, woItemsUsingThisSaranPlat.map(item => item.WoItemID));
+        
+        if (woItemsUsingThisSaranPlat.length === 0) {
+          console.log(`❌ No WO items found using saran plat ${saranItemId}`);
+          continue;
+        }
+        
+        // Get all woItemUniqueIds from localStorage
+        const woItemUniqueIds = JSON.parse(localStorage.getItem('WO_item_unique_ids') || '[]');
+        
+        if (woItemUniqueIds.length === 0) {
+          console.log('❌ No woItemUniqueIds found in localStorage');
+          continue;
+        }
+        
+        console.log(`=== SAVING SARAN PLAT ${saranItemId} ===`);
+        console.log(`woItemUniqueIds:`, woItemUniqueIds);
+        console.log(`WO items using this saran plat:`, woItemsUsingThisSaranPlat.map(item => item.WoItemID));
+        
+        // Get canvas data from localStorage
         const workOrderUniqueId = localStorage.getItem('WO_current_work_order_id');
-        const canvasLayoutKey = workOrderUniqueId ? `WO_canvas_layout_${saranItemId}_${workOrderUniqueId}` : `WO_canvas_layout_${saranItemId}`;
+        const canvasLayoutKey = `WO_canvas_layout_${saranItemId}_${workOrderUniqueId}`;
+        const canvasLayoutData = localStorage.getItem(canvasLayoutKey);
         
-        let canvasLayoutData = localStorage.getItem(canvasLayoutKey);
+        console.log(`Canvas layout key: ${canvasLayoutKey}`);
+        console.log(`Canvas data exists:`, !!canvasLayoutData);
         
-        // Fallback: cari semua key yang cocok jika tidak ditemukan
-        // if (!canvasLayoutData) {
-        //   const allKeys = Object.keys(localStorage);
-        //   const canvasKeys = allKeys.filter(key => key.startsWith(`WO_canvas_layout_${saranItemId}_`));
-        //   console.log(`Found ${canvasKeys.length} canvas keys for saran item ${saranItemId}:`, canvasKeys);
-          
-        //   if (canvasKeys.length > 0) {
-        //     canvasLayoutData = localStorage.getItem(canvasKeys[0]);
-        //     console.log(`Using canvas data from key: ${canvasKeys[0]}`);
-        //   }
-        // }
-        
-        console.log(`Looking for canvas data for saran item ${saranItemId}:`);
-        console.log(`- Using key: ${canvasLayoutKey}`);
-        console.log(`- Result:`, canvasLayoutData ? 'Found' : 'Not found');
-        
+        let processedCanvasData = null;
         if (canvasLayoutData) {
           const canvasLayout = JSON.parse(canvasLayoutData);
           
-          // Change all box colors to red before saving
+          // Change all box colors to red before saving (mark as saved to database)
           if (canvasLayout.boxes && Array.isArray(canvasLayout.boxes)) {
             canvasLayout.boxes = canvasLayout.boxes.map(box => ({
               ...box,
-              color: "#ef4444" // Red color
+              color: "#ef4444", // Red color for saved boxes
+              isDisabled: true, // Mark as disabled/saved
+              isSave: true // Mark as saved to database
             }));
             console.log(`Changed ${canvasLayout.boxes.length} boxes to red color for saran item ${saranItemId}`);
           }
           
-          // Find corresponding work order item
-          const workOrderItem = workOrderItems.find(item => {
-            // Check if this saran item is used in this work order item
-            return canvasLayout.boxes && canvasLayout.boxes.some(box => 
-              box.workItemUniqueId && box.workItemUniqueId.includes(workOrderId)
-            );
-          });
-          
-    
-            saranPlatData.push({
-              wo_planning_item_id: workOrderId,
-              item_barang_id: parseInt(saranItemId),
-              is_selected: true, // Mark as selected since it's being used
-              canvas_data: JSON.stringify(canvasLayout)
-            });
-    
+          processedCanvasData = JSON.stringify(canvasLayout);
         }
+        
+        // Always add saran plat data for all WO items
+        saranPlatData.push({
+          wo_planning_item_id: woItemUniqueIds, // Send array of woItemUniqueIds
+          item_barang_id: parseInt(saranItemId),
+          is_selected: true,
+          canvas_data: processedCanvasData // Use processed canvas data with red boxes
+        });
+        
+        console.log(`✅ Added saran plat data for saran item ${saranItemId} with ${woItemUniqueIds.length} WO items`);
       }
       
       console.log('Saran plat data to save:', saranPlatData);
+      
+      if (saranPlatData.length === 0) {
+        console.log('❌ No saran plat data to save - saranPlatData is empty');
+        return;
+      }
       
       // Save each saran plat dasar
       for (const saranData of saranPlatData) {
@@ -689,8 +708,17 @@ export default function AddWorkOrderPage() {
 
     setLoading(true);
     try {
+      // Get existing unique IDs from localStorage
+      const existingWoUniqueId = localStorage.getItem('WO_current_work_order_id');
+      const woUniqueId = existingWoUniqueId || `WO-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      
+      // Get existing woItemUniqueIds from WO_total_quantity (convert to string)
+      const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
+      const existingWoItemIds = totalQuantityData.map(item => item.WoItemID.toString());
+      
       // Transform data to match API expected format
       const transformedData = {
+        wo_unique_id: woUniqueId,
         nomor_wo: workOrderData.nomor_wo,
         tanggal_wo: workOrderData.tanggal_wo,
         tanggal_target: workOrderData.tanggal_target,
@@ -712,7 +740,8 @@ export default function AddWorkOrderPage() {
         prioritas: workOrderData.prioritas,
         catatan: workOrderData.catatan,
         status: workOrderData.status,
-        items: workOrderItems.map(item => ({
+        items: workOrderItems.map((item, index) => ({
+          wo_item_unique_id: existingWoItemIds[index] || `WOI-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
           qty: item.qty,
           panjang: parseFloat(item.panjang) || 0,
           lebar: parseFloat(item.lebar) || 0,
@@ -750,6 +779,12 @@ export default function AddWorkOrderPage() {
       const workOrderId = response.data?.id || response.id;
       const workOrderNumber = response.data?.nomor_wo || workOrderData.nomor_wo;
       const workOrderItemsResponse = response.data?.items || [];
+      
+      // Store array of woItemUniqueIds for saran plat dasar
+      localStorage.setItem('WO_item_unique_ids', JSON.stringify(existingWoItemIds));
+      
+      console.log('WO Unique ID:', woUniqueId);
+      console.log('WO Item Unique IDs:', existingWoItemIds.length > 0 ? existingWoItemIds : transformedData.items.map(item => item.wo_item_unique_id));
       
       // Save saran plat dasar
       try {
