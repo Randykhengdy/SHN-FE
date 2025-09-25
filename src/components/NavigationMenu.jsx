@@ -33,7 +33,7 @@ export default function NavigationMenu() {
     },
     {
       label: "Purchase Order",
-      path: "/input-po",
+      path: "/purchase-order",
       icon: ShoppingCart,
       category: "transaksi"
     },

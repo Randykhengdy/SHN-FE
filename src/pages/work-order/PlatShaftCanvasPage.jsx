@@ -182,6 +182,12 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [activeTab, setActiveTab] = useState('stats');
   
+  // JPG generation state
+  const [isGeneratingJPG, setIsGeneratingJPG] = useState(false);
+  const [jpgProgress, setJpgProgress] = useState(0);
+  const [jpgStatus, setJpgStatus] = useState('');
+  const [usePNG, setUsePNG] = useState(false); // Option to use PNG for smaller files
+  
   // Interaction state
   const [isDragging, setIsDragging] = useState(false);
   const [draggedBoxId, setDraggedBoxId] = useState(null);
@@ -1570,168 +1576,328 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       return;
     }
 
+    // Prevent multiple simultaneous generations
+    if (isGeneratingJPG) {
+      showAlert('Warning', 'JPG generation sedang berlangsung, silakan tunggu...', 'warning');
+      return;
+    }
+
+    // Check if container is too large to prevent memory issues
+    const containerWidth = containerRef.current.offsetWidth;
+    const containerHeight = containerRef.current.offsetHeight;
+    const maxDimension = 8000; // Maximum dimension to prevent memory issues
+    
+    if (containerWidth > maxDimension || containerHeight > maxDimension) {
+      showAlert('Warning', `Canvas terlalu besar (${containerWidth}x${containerHeight}). Mencoba dengan ukuran yang lebih kecil...`, 'warning');
+    }
+    
+    // Determine optimal format based on canvas size and content
+    const canvasArea = containerWidth * containerHeight;
+    const shouldUsePNG = canvasArea < 1000000 && usePNG; // Use PNG for smaller canvases with solid colors
+    const format = shouldUsePNG ? 'png' : 'jpeg';
+    const quality = shouldUsePNG ? 1.0 : 0.6; // PNG uses lossless compression
+
+    // Set generation state
+    setIsGeneratingJPG(true);
+    setJpgProgress(0);
+    setJpgStatus('Memulai proses...');
+
     try {
       showAlert('Info', 'Generating JPG...', 'info');
       
-      // Try dom-to-image first (better for large containers)
+      let dataURL = null;
+      let method = '';
+      
+      // Method 1: Try dom-to-image first (better for large containers)
       try {
+        console.log('Trying dom-to-image method...');
+        setJpgProgress(10);
+        setJpgStatus('Mencoba metode dom-to-image...');
+        
         const domToImage = (await import('dom-to-image')).default;
         
-        const dataURL = await domToImage.toJpeg(containerRef.current, {
-          quality: 0.9,
-          bgcolor: '#ffffff',
-          width: containerRef.current.offsetWidth,
-          height: containerRef.current.offsetHeight,
-          style: {
-            transform: 'scale(1)',
-            transformOrigin: 'top left'
-          }
-        });
+        // Calculate safe dimensions
+        const safeWidth = Math.min(containerWidth, maxDimension);
+        const safeHeight = Math.min(containerHeight, maxDimension);
         
-        // Create download link
+        setJpgProgress(20);
+        setJpgStatus('Memproses canvas dengan dom-to-image...');
+        
+        if (format === 'png') {
+          dataURL = await domToImage.toPng(containerRef.current, {
+            bgcolor: '#ffffff',
+            width: safeWidth,
+            height: safeHeight,
+            style: {
+              transform: 'scale(1)',
+              transformOrigin: 'top left'
+            },
+            filter: (node) => {
+              // Skip problematic elements
+              if (node.classList?.contains('ignore-capture')) {
+                return false;
+              }
+              return true;
+            }
+          });
+        } else {
+          dataURL = await domToImage.toJpeg(containerRef.current, {
+            quality: quality, // Dynamic quality based on format
+            bgcolor: '#ffffff',
+            width: safeWidth,
+            height: safeHeight,
+            style: {
+              transform: 'scale(1)',
+              transformOrigin: 'top left'
+            },
+            filter: (node) => {
+              // Skip problematic elements
+              if (node.classList?.contains('ignore-capture')) {
+                return false;
+              }
+              return true;
+            }
+          });
+        }
+        
+        method = 'dom-to-image';
+        setJpgProgress(50);
+        setJpgStatus('dom-to-image berhasil!');
+        console.log('dom-to-image success');
+        
+      } catch (domError) {
+        console.log('dom-to-image failed:', domError);
+        
+        // Method 2: Try html2canvas with reduced settings
+        try {
+          console.log('Trying html2canvas method...');
+          setJpgProgress(30);
+          setJpgStatus('Mencoba metode html2canvas...');
+          
+          const html2canvas = (await import('html2canvas')).default;
+          
+          // Calculate safe scale to prevent memory issues
+          const containerRect = containerRef.current.getBoundingClientRect();
+          const viewportWidth = window.innerWidth;
+          const viewportHeight = window.innerHeight;
+          const maxScale = Math.min(
+            viewportWidth / containerWidth, 
+            viewportHeight / containerHeight, 
+            0.8 // Limit scale to prevent memory issues
+          );
+          const scale = Math.max(0.3, maxScale); // Minimum scale 0.3
+          
+          console.log('Scaling calculation:', {
+            containerWidth,
+            containerHeight,
+            viewportWidth,
+            viewportHeight,
+            maxScale,
+            finalScale: scale
+          });
+          
+          const canvas = await html2canvas(containerRef.current, {
+            backgroundColor: '#ffffff',
+            scale: scale,
+            useCORS: true,
+            allowTaint: true,
+            width: Math.min(containerWidth, maxDimension),
+            height: Math.min(containerHeight, maxDimension),
+            scrollX: 0,
+            scrollY: 0,
+            windowWidth: Math.min(containerWidth, maxDimension),
+            windowHeight: Math.min(containerHeight, maxDimension),
+            x: containerRect.left,
+            y: containerRect.top,
+            removeContainer: true,
+            foreignObjectRendering: false,
+            logging: false, // Disable logging for better performance
+            ignoreElements: (element) => {
+              return element.classList?.contains('ignore-capture');
+            },
+            onclone: (clonedDoc) => {
+              // Simplified style injection to prevent crashes
+              const style = clonedDoc.createElement('style');
+              style.textContent = `
+                * {
+                  color: #000000 !important;
+                  background-color: #ffffff !important;
+                  border-color: #000000 !important;
+                }
+                .bg-green-500, .bg-green-600, .bg-green-700 {
+                  background-color: #10b981 !important;
+                }
+                .bg-blue-500, .bg-blue-600, .bg-blue-700 {
+                  background-color: #3b82f6 !important;
+                }
+                .bg-red-500, .bg-red-600, .bg-red-700 {
+                  background-color: #ef4444 !important;
+                }
+                .bg-purple-500, .bg-purple-600, .bg-purple-700 {
+                  background-color: #8b5cf6 !important;
+                }
+                .bg-gray-500, .bg-gray-600, .bg-gray-700 {
+                  background-color: #6b7280 !important;
+                }
+                .text-white { color: #ffffff !important; }
+                .text-black { color: #000000 !important; }
+                .border-gray-300 { border-color: #d1d5db !important; }
+                .border-gray-400 { border-color: #9ca3af !important; }
+                .canvas-container {
+                  overflow: visible !important;
+                  max-width: none !important;
+                  max-height: none !important;
+                }
+              `;
+              clonedDoc.head.appendChild(style);
+            }
+          });
+          
+          dataURL = canvas.toDataURL(`image/${format}`, quality);
+          method = 'html2canvas';
+          setJpgProgress(50);
+          setJpgStatus('html2canvas berhasil!');
+          console.log('html2canvas success');
+          
+        } catch (html2canvasError) {
+          console.log('html2canvas failed:', html2canvasError);
+          
+          // Method 3: Try with minimal settings
+          try {
+            console.log('Trying html2canvas with minimal settings...');
+            const html2canvas = (await import('html2canvas')).default;
+            
+            const canvas = await html2canvas(containerRef.current, {
+              backgroundColor: '#ffffff',
+              scale: 0.5, // Fixed low scale
+              useCORS: false,
+              allowTaint: false,
+              logging: false,
+              removeContainer: true,
+              foreignObjectRendering: false
+            });
+            
+            dataURL = canvas.toDataURL(`image/${format}`, quality);
+            method = 'html2canvas-minimal';
+            setJpgProgress(50);
+            setJpgStatus('html2canvas minimal berhasil!');
+            console.log('html2canvas minimal success');
+            
+          } catch (minimalError) {
+            console.error('All capture methods failed:', minimalError);
+            throw new Error('Semua metode capture gagal. Canvas mungkin terlalu kompleks atau besar.');
+          }
+        }
+      }
+      
+      if (!dataURL) {
+        throw new Error('Gagal menghasilkan data gambar');
+      }
+      
+      console.log('DataURL generated successfully:', dataURL.substring(0, 50) + '...');
+      setJpgProgress(70);
+      setJpgStatus('Mengompres file...');
+      
+      // Compress the image further if it's too large
+      let finalDataURL = dataURL;
+      const originalSize = dataURL.length;
+      console.log('Original dataURL size:', originalSize, 'characters');
+      
+      // If dataURL is too large (> 2MB), compress it further
+      if (originalSize > 2000000) {
+        console.log('File terlalu besar, mengompres lebih lanjut...');
+        setJpgStatus('Mengompres file yang besar...');
+        
+        try {
+          // Create a canvas to recompress the image
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Calculate new dimensions (reduce by 50% if too large)
+            const maxWidth = 2000;
+            const maxHeight = 2000;
+            let { width, height } = img;
+            
+            if (width > maxWidth || height > maxHeight) {
+              const ratio = Math.min(maxWidth / width, maxHeight / height);
+              width *= ratio;
+              height *= ratio;
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            // Draw with lower quality
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'low';
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Convert to format with lower quality
+            finalDataURL = canvas.toDataURL(`image/${format}`, format === 'png' ? 1.0 : 0.5);
+            console.log('Compressed dataURL size:', finalDataURL.length, 'characters');
+            
+            // Continue with download
+            downloadFile(finalDataURL, method);
+          };
+          img.src = dataURL;
+          return; // Exit early, download will be handled in img.onload
+        } catch (compressError) {
+          console.log('Compression failed, using original:', compressError);
+          // Continue with original dataURL
+        }
+      }
+      
+      // If not too large, proceed with download
+      downloadFile(finalDataURL, method);
+      
+      function downloadFile(dataURL, method) {
+        setJpgProgress(80);
+        setJpgStatus('Menyiapkan download...');
+        
+        // Create download with simplified approach
         const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-        const filename = `canvas-layout-${timestamp}.jpg`;
+        const fileExtension = format === 'png' ? 'png' : 'jpg';
+        const filename = `canvas-layout-${timestamp}.${fileExtension}`;
+        
+        // Simple and reliable download method
+        console.log('Creating download link for:', filename);
         const link = document.createElement('a');
         link.download = filename;
         link.href = dataURL;
+        link.style.display = 'none';
         
-        // Trigger download
+        // Add to DOM, click, and remove
         document.body.appendChild(link);
+        console.log('Triggering download...');
         link.click();
         document.body.removeChild(link);
+        console.log('Download triggered successfully');
         
-        showAlert('Success', `JPG generated and downloaded as: ${filename}`, 'success');
-        return;
-        
-      } catch (domError) {
-        console.log('dom-to-image failed, trying html2canvas:', domError);
+        setJpgProgress(100);
+        setJpgStatus('Download berhasil!');
+        showAlert('Success', `JPG berhasil dibuat dengan metode ${method}: ${filename}`, 'success');
       }
-      
-      // Fallback to html2canvas
-      const html2canvas = (await import('html2canvas')).default;
-      
-      // Log container dimensions for debugging
-      console.log('Container dimensions:', {
-        offsetWidth: containerRef.current.offsetWidth,
-        offsetHeight: containerRef.current.offsetHeight,
-        scrollWidth: containerRef.current.scrollWidth,
-        scrollHeight: containerRef.current.scrollHeight,
-        clientWidth: containerRef.current.clientWidth,
-        clientHeight: containerRef.current.clientHeight,
-        usedForCapture: {
-          width: containerRef.current.offsetWidth,
-          height: containerRef.current.offsetHeight
-        }
-      });
-      
-      // Get container dimensions and calculate scaling
-      const containerRect = containerRef.current.getBoundingClientRect();
-      const containerWidth = containerRef.current.offsetWidth;
-      const containerHeight = containerRef.current.offsetHeight;
-      
-      // Calculate scale based on container size vs viewport
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      const maxScale = Math.min(viewportWidth / containerWidth, viewportHeight / containerHeight, 1);
-      const scale = Math.max(0.5, maxScale); // Minimum scale 0.5
-      
-      console.log('Scaling calculation:', {
-        containerWidth,
-        containerHeight,
-        viewportWidth,
-        viewportHeight,
-        maxScale,
-        finalScale: scale
-      });
-      
-      const canvas = await html2canvas(containerRef.current, {
-        backgroundColor: '#ffffff',
-        scale: scale, // Dynamic scaling
-        useCORS: true,
-        allowTaint: true,
-        width: containerWidth,
-        height: containerHeight,
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: containerWidth,
-        windowHeight: containerHeight,
-        x: containerRect.left,
-        y: containerRect.top,
-        removeContainer: true,
-        foreignObjectRendering: false,
-        ignoreElements: (element) => {
-          // Skip elements that might cause color parsing issues
-          return element.classList?.contains('ignore-capture');
-        },
-        onclone: (clonedDoc) => {
-          // Convert oklch colors to hex in cloned document
-          const style = clonedDoc.createElement('style');
-          style.textContent = `
-            * {
-              color: #000000 !important;
-              background-color: #ffffff !important;
-              border-color: #000000 !important;
-            }
-            .bg-green-500, .bg-green-600, .bg-green-700 {
-              background-color: #10b981 !important;
-            }
-            .bg-blue-500, .bg-blue-600, .bg-blue-700 {
-              background-color: #3b82f6 !important;
-            }
-            .bg-red-500, .bg-red-600, .bg-red-700 {
-              background-color: #ef4444 !important;
-            }
-            .bg-purple-500, .bg-purple-600, .bg-purple-700 {
-              background-color: #8b5cf6 !important;
-            }
-            .bg-gray-500, .bg-gray-600, .bg-gray-700 {
-              background-color: #6b7280 !important;
-            }
-            .text-white {
-              color: #ffffff !important;
-            }
-            .text-black {
-              color: #000000 !important;
-            }
-            .border-gray-300 {
-              border-color: #d1d5db !important;
-            }
-            .border-gray-400 {
-              border-color: #9ca3af !important;
-            }
-            /* Ensure container shows full content */
-            .canvas-container {
-              overflow: visible !important;
-              max-width: none !important;
-              max-height: none !important;
-            }
-          `;
-          clonedDoc.head.appendChild(style);
-        }
-      });
-      
-      // Convert to JPG
-      const dataURL = canvas.toDataURL('image/jpeg', 0.9);
-      
-      // Create download link
-      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-      const filename = `canvas-layout-${timestamp}.jpg`;
-      const link = document.createElement('a');
-      link.download = filename;
-      link.href = dataURL;
-      
-      // Trigger download
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      showAlert('Success', `JPG generated and downloaded as: ${filename}`, 'success');
       
     } catch (error) {
       console.error('Error generating JPG:', error);
-      showAlert('Error', 'Failed to generate JPG. Please try again.', 'error');
+      setJpgStatus('Error: ' + error.message);
+      showAlert('Error', `Gagal membuat JPG: ${error.message}`, 'error');
+    } finally {
+      // Cleanup and reset state
+      setIsGeneratingJPG(false);
+      setTimeout(() => {
+        setJpgProgress(0);
+        setJpgStatus('');
+      }, 2000); // Keep status for 2 seconds then clear
+      
+      // Force garbage collection if available
+      if (window.gc) {
+        setTimeout(() => window.gc(), 1000);
+      }
     }
-  }, [showAlert]);
+  }, [showAlert, isGeneratingJPG]);
 
   const fillAllBoxes = useCallback(() => {
     const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
@@ -2014,6 +2180,49 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     setZoom(1);
     setPanOffset({ x: 0, y: 0 });
   }, []);
+
+  const zoomFit = useCallback(() => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    
+    if (!canvas || !container) return;
+    
+    // Get canvas dimensions
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
+    
+    // Get base container dimensions in grid units
+    const containerWidth = baseContainer.width;
+    const containerHeight = baseContainer.height;
+    
+    // Calculate scale factors for both dimensions
+    const scaleX = canvasWidth / (containerWidth * gridSize);
+    const scaleY = canvasHeight / (containerHeight * gridSize);
+    
+    // Choose the smaller scale to ensure the container fits completely
+    const newZoom = Math.min(scaleX, scaleY);
+    
+    // Apply the new zoom
+    setZoom(newZoom);
+    
+    // Center the container on canvas
+    const containerPixelWidth = containerWidth * gridSize * newZoom;
+    const containerPixelHeight = containerHeight * gridSize * newZoom;
+    
+    let centerX = (canvasWidth - containerPixelWidth) / 2;
+    let centerY = (canvasHeight - containerPixelHeight) / 2;
+    
+    // Tambahan kondisi berdasarkan perbandingan panjang dan lebar
+    if (containerWidth > containerHeight) {
+      // Jika panjang lebih besar dari lebar, posisikan di tengah secara vertikal
+      centerY = (canvasHeight - containerPixelHeight) / 2;
+    } else if (containerHeight > containerWidth) {
+      // Jika lebar lebih besar dari panjang, posisikan di tengah secara horizontal
+      centerX = (canvasWidth - containerPixelWidth) / 2;
+    }
+    
+    setPanOffset({ x: centerX, y: centerY });
+  }, [baseContainer, gridSize]);
 
   // Enhanced save system - only save canvas data with required info
   const generateSaveData = useCallback(() => {
@@ -2649,7 +2858,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   React.useImperativeHandle(ref, () => ({
     getCanvasDataForAPI,
     getUsedSaranPlats,
-    isSaranPlatUsed
+    isSaranPlatUsed,
+    zoomFit
   }));
 
 
@@ -2882,7 +3092,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         cancelAnimationFrame(animationFrameId);
       }
     };
-  }, [draw, animationFrameId]);
+  }, [draw, animationFrameId, zoomFit]);
   
   // Update remainingQuantity when totalQuantity changes and no boxes exist
 
@@ -3393,42 +3603,82 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                         >
                           Clear All Boxes
                         </Button>
-                        <Button
-                          onClick={generateJPG}
-                          className="w-full h-8 text-sm bg-purple-600 hover:bg-purple-700"
-                        >
-                          <Camera className="w-4 h-4 mr-1" />
-                          Generate JPG
-                        </Button>
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id="usePNG"
+                              checked={usePNG}
+                              onChange={(e) => setUsePNG(e.target.checked)}
+                              className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500"
+                            />
+                            <label htmlFor="usePNG" className="text-xs text-gray-600">
+                              Gunakan PNG (lebih kecil untuk canvas kecil)
+                            </label>
+                          </div>
+                          <Button
+                            onClick={generateJPG}
+                            disabled={isGeneratingJPG}
+                            className={`w-full h-8 text-sm ${isGeneratingJPG ? 'bg-gray-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700'}`}
+                          >
+                            <Camera className="w-4 h-4 mr-1" />
+                            {isGeneratingJPG ? 'Generating...' : `Generate ${usePNG ? 'PNG' : 'JPG'}`}
+                          </Button>
+                        </div>
+                        
+                        {/* Progress indicator */}
+                        {isGeneratingJPG && (
+                          <div className="mt-2 space-y-1">
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                                style={{ width: `${jpgProgress}%` }}
+                              ></div>
+                            </div>
+                            <div className="text-xs text-gray-600 text-center">
+                              {jpgStatus}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     {/* Zoom Controls */}
                     <div className="bg-white rounded-lg p-1 border">
-                      <h3 className="text-sm font-medium mb-1">Zoom Controls</h3>
+                      <h3 className="text-sm font-medium mb-1">Kontrol Zoom</h3>
                       <div className="space-y-1">
                         <div className="text-sm text-gray-600">
                           <span className="font-medium">Zoom:</span> {Math.round(zoom * 100)}%
                         </div>
-                        <div className="flex space-x-1">
-                          <Button
-                            onClick={zoomOut}
-                            className="flex-1 h-8 text-sm bg-gray-600 hover:bg-gray-700"
-                          >
-                            Zoom Out
-                          </Button>
-                          <Button
-                            onClick={resetZoom}
-                            className="flex-1 h-8 text-sm bg-gray-500 hover:bg-gray-600"
-                          >
-                            Reset
-                          </Button>
-                          <Button
-                            onClick={zoomIn}
-                            className="flex-1 h-8 text-sm bg-gray-600 hover:bg-gray-700"
-                          >
-                            Zoom In
-                          </Button>
+                        <div className="space-y-1">
+                          <div className="flex space-x-1">
+                            <Button
+                              onClick={zoomOut}
+                              className="flex-1 h-8 text-sm bg-gray-600 hover:bg-gray-700"
+                            >
+                              Zoom Out
+                            </Button>
+                            <Button
+                              onClick={resetZoom}
+                              className="flex-1 h-8 text-sm bg-gray-500 hover:bg-gray-600"
+                            >
+                              Reset
+                            </Button>
+                            <Button
+                              onClick={zoomIn}
+                              className="flex-1 h-8 text-sm bg-gray-600 hover:bg-gray-700"
+                            >
+                              Zoom In
+                            </Button>
+                          </div>
+                          <div className="flex">
+                            <Button
+                              onClick={zoomFit}
+                              className="w-full h-8 text-sm bg-blue-600 hover:bg-blue-700"
+                            >
+                              Zoom Fit
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>

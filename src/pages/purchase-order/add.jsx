@@ -6,12 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import CustomerInfoTabs from "@/components/CustomerInfoTabs";
+// import CustomerInfoTabs from "@/components/CustomerInfoTabs"; // Commented out - akan diganti dengan supplier selection
 import DataTableModal from "@/components/modals/DataTableModal";
 import SearchSelect from "@/components/ui/search-select";
 import { 
-  getTermOptions, 
-  getGudangOptions, 
+  getSupplierOptions,
   getJenisBarangOptions, 
   getBentukBarangOptions, 
   getGradeBarangOptions, 
@@ -23,62 +22,56 @@ import { request } from "@/lib/request";
 import { API_ENDPOINTS } from "@/config/api";
 import SalesOrderLayout from "@/components/SalesOrderLayout";
 
-export default function AddSalesOrderPage() {
+export default function AddPurchaseOrderPage() {
   const { showAlert, AlertComponent } = useAlert();
   const { isUserAdmin, hasRole } = useRole();
   
   // Master data state
-  const [termOptions, setTermOptions] = useState([]);
-  const [warehouseOptions, setWarehouseOptions] = useState([]);
+  const [supplierOptions, setSupplierOptions] = useState([]);
   const [itemTypeOptions, setItemTypeOptions] = useState([]);
   const [itemShapeOptions, setItemShapeOptions] = useState([]);
   const [itemGradeOptions, setItemGradeOptions] = useState([]);
   const [unitOptions, setUnitOptions] = useState([]);
 
   // Loading states
-  const [loadingTerm, setLoadingTerm] = useState(false);
-  const [loadingWarehouse, setLoadingWarehouse] = useState(false);
+  const [loadingSupplier, setLoadingSupplier] = useState(false);
   const [loadingItemType, setLoadingItemType] = useState(false);
   const [loadingItemShape, setLoadingItemShape] = useState(false);
   const [loadingItemGrade, setLoadingItemGrade] = useState(false);
   const [loadingUnit, setLoadingUnit] = useState(false);
 
-  // Customer Information
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
-  const [customerEmail, setCustomerEmail] = useState("");
-  const [customerAddress, setCustomerAddress] = useState("");
+  // Supplier Information
+  const [selectedSupplier, setSelectedSupplier] = useState(null);
+  const [supplierName, setSupplierName] = useState("");
+  const [supplierPhone, setSupplierPhone] = useState("");
+  const [supplierEmail, setSupplierEmail] = useState("");
+  const [supplierAddress, setSupplierAddress] = useState("");
 
   // Load master data on component mount
   useEffect(() => {
     const loadMasterData = async () => {
       try {
-        setLoadingTerm(true);
-        setLoadingWarehouse(true);
+        setLoadingSupplier(true);
         setLoadingItemType(true);
         setLoadingItemShape(true);
         setLoadingItemGrade(true);
         setLoadingUnit(true);
 
         const [
-          terms,
-          gudang,
+          suppliers,
           jenisBarang,
           bentukBarang,
           gradeBarang,
           units
         ] = await Promise.all([
-          getTermOptions(),
-          getGudangOptions(),
+          getSupplierOptions(),
           getJenisBarangOptions(),
           getBentukBarangOptions(),
           getGradeBarangOptions(),
           getUnitOptions()
         ]);
 
-        setTermOptions(terms);
-        setWarehouseOptions(gudang);
+        setSupplierOptions(suppliers);
         setItemTypeOptions(jenisBarang);
         setItemShapeOptions(bentukBarang);
         setItemGradeOptions(gradeBarang);
@@ -86,8 +79,7 @@ export default function AddSalesOrderPage() {
       } catch (error) {
         console.error('Error loading master data:', error);
       } finally {
-        setLoadingTerm(false);
-        setLoadingWarehouse(false);
+        setLoadingSupplier(false);
         setLoadingItemType(false);
         setLoadingItemShape(false);
         setLoadingItemGrade(false);
@@ -98,12 +90,14 @@ export default function AddSalesOrderPage() {
     loadMasterData();
   }, []);
 
-  // Sales Order Details
-  const [soNumber, setSoNumber] = useState("");
-  const [soDate, setSoDate] = useState(new Date().toISOString().split('T')[0]);
-  const [deliveryDate, setDeliveryDate] = useState(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-  const [termOfPayment, setTermOfPayment] = useState("cash");
-  const [originWarehouse, setOriginWarehouse] = useState("");
+  // Purchase Order Details
+  const [poNumber, setPoNumber] = useState("");
+  const [poDate, setPoDate] = useState(new Date().toISOString().split('T')[0]);
+  const [tanggalPenerimaan, setTanggalPenerimaan] = useState("");
+  const [tanggalJatuhTempo, setTanggalJatuhTempo] = useState(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+  const [tanggalPembayaran, setTanggalPembayaran] = useState("");
+  const [status, setStatus] = useState("draft");
+  const [catatan, setCatatan] = useState("");
 
   // Item Input Form
   const [itemLength, setItemLength] = useState("");
@@ -204,14 +198,14 @@ export default function AddSalesOrderPage() {
     }).format(amount);
   };
 
-  const handleCustomerSelect = (customer) => {
-    if (!customer) return;
+  const handleSupplierSelect = (supplier) => {
+    if (!supplier) return;
     
-    setSelectedCustomer(customer);
-    setCustomerName(customer.nama || "");
-    setCustomerPhone(customer.telepon || "");
-    setCustomerEmail(customer.email || "");
-    setCustomerAddress(customer.alamat || "");
+    setSelectedSupplier(supplier);
+    setSupplierName(supplier.nama || "");
+    setSupplierPhone(supplier.telepon || "");
+    setSupplierEmail(supplier.email || "");
+    setSupplierAddress(supplier.alamat || "");
   };
 
   const handleAddItem = () => {
@@ -250,31 +244,44 @@ export default function AddSalesOrderPage() {
       if (selectedShape.dimensi === "1D") {
         dimensiString = `${itemLength} x ${itemWidth}`;
       } else {
-        dimensiString = `${itemLength} x ${itemWidth} x ${itemDiameter}`;
+        dimensiString = `${itemLength} x ${itemDiameter}`;
       }
+
+      // Calculate subtotal untuk backend
+      const length = parseFloat(itemLength) || 0;
+      const width = parseFloat(itemWidth) || 0;
+      const area = length * width;
+      const qty = parseInt(itemQty);
+      const hargaSatuan = parseFloat(itemPrice) || 0;
+      const subtotalBeforeDiscount = area * hargaSatuan * qty;
+      const discountAmount = subtotalBeforeDiscount * (parseFloat(itemDiscount) || 0) / 100;
+      const subtotal = subtotalBeforeDiscount - discountAmount;
 
       const newItem = {
         id: Date.now(),
+        // Display fields untuk table
         jenisBarang: itemTypeOptions.find(opt => opt.value === itemType)?.label || itemType,
         bentuk: selectedShape.nama,
         grade: itemGradeOptions.find(opt => opt.value === itemGrade)?.label || itemGrade,
         dimensi: dimensiString,
-        qty: parseInt(itemQty),
+        qty: qty,
         luasPerItem: itemArea,
-        harga: itemPricePerUnit,
-        satuan: unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit,
+        hargaDisplay: itemPricePerUnit,
+        satuanDisplay: unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit,
         diskon: `${itemDiscount}%`,
         total: itemTotal,
-        jenisBarangId: itemType,
-        bentukBarangId: selectedShape.id,
-        gradeBarangId: itemGrade,
-        panjang: parseFloat(itemLength) || 0,
-        lebar: parseFloat(itemWidth) || 0,
+        // Backend fields - sesuai dengan validasi backend
+        jenis_barang_id: itemType, // ID jenis barang
+        bentuk_barang_id: selectedShape.id, // ID bentuk barang
+        grade_barang_id: itemGrade, // ID grade barang
+        qty: qty,
+        panjang: length,
+        lebar: width,
         tebal: parseFloat(itemDiameter) || 0,
-        harga: parseFloat(itemPrice) || 0,
-        satuan: itemUnit,
-        diskonPercent: parseFloat(itemDiscount) || 0,
-        catatan: itemNotes
+        harga: hargaSatuan, // harga per satuan
+        satuan: itemUnit, // satuan
+        diskon: parseFloat(itemDiscount) || 0, // persentase diskon
+        catatan: itemNotes || null
       };
 
       setItems([...items, newItem]);
@@ -300,54 +307,84 @@ export default function AddSalesOrderPage() {
     setItems(items.filter(item => item.id !== id));
   };
 
-  const handleTestSimpanSO = async () => {
-    console.log("Testing save SO...");
+  const handleTestSimpanPO = async () => {
+    console.log("Testing save PO...");
+    
+    // Validasi input wajib
+    if (!poNumber) {
+      showAlert("Peringatan", "Nomor PO harus diisi", "warning");
+      return;
+    }
+    
+    if (!selectedSupplier) {
+      showAlert("Peringatan", "Supplier harus dipilih", "warning");
+      return;
+    }
+    
+    if (items.length === 0) {
+      showAlert("Peringatan", "Minimal harus ada 1 item", "warning");
+      return;
+    }
     
     try {
-      const salesOrderData = {
-        nomor_so: soNumber,
-        tanggal_so: soDate,
-        tanggal_pengiriman: deliveryDate,
-        syarat_pembayaran: termOfPayment,
-        gudang_id: parseInt(originWarehouse) || 1,
-        pelanggan_id: selectedCustomer?.id || 1,
-        subtotal: subtotal || 0,
-        total_diskon: totalDiscount || 0,
-        ppn_percent: 11.0,
-        ppn_amount: ppn || 0,
-        total_harga_so: totalHargaSO || 0,
+      // Calculate total amount dari semua items
+      const totalAmount = items.reduce((sum, item) => {
+        const length = item.panjang || 0;
+        const width = item.lebar || 0;
+        const area = length * width;
+        const qty = item.qty || 0;
+        const harga = item.harga || 0;
+        const diskon = item.diskon || 0;
+        
+        const subtotalBeforeDiscount = area * harga * qty;
+        const discountAmount = subtotalBeforeDiscount * (diskon / 100);
+        const subtotal = subtotalBeforeDiscount - discountAmount;
+        
+        return sum + subtotal;
+      }, 0);
+      
+      const purchaseOrderData = {
+        nomor_po: poNumber,
+        tanggal_po: poDate,
+        tanggal_penerimaan: tanggalPenerimaan,
+        tanggal_jatuh_tempo: tanggalJatuhTempo,
+        tanggal_pembayaran: tanggalPembayaran,
+        id_supplier: selectedSupplier.id,
+        total_amount: totalAmount,
+        status: status,
+        catatan: catatan || null,
         items: items.map(item => ({
-          panjang: parseFloat(item.panjang) || 0,
-          lebar: parseFloat(item.lebar) || 0,
-          tebal: parseFloat(item.tebal) || 0,
-          qty: parseInt(item.qty) || 0,
-          jenis_barang_id: parseInt(item.jenisBarangId) || 0,
-          bentuk_barang_id: parseInt(item.bentukBarangId) || 0,
-          grade_barang_id: parseInt(item.gradeBarangId) || 0,
-          harga: parseFloat(item.harga) || 0,
+          qty: item.qty,
+          panjang: item.panjang,
+          lebar: item.lebar,
+          tebal: item.tebal,
+          jenis_barang_id: item.jenis_barang_id,
+          bentuk_barang_id: item.bentuk_barang_id,
+          grade_barang_id: item.grade_barang_id,
+          harga: item.harga,
           satuan: item.satuan,
-          diskon: parseFloat(item.diskonPercent) || 0,
-          catatan: item.catatan || ""
+          diskon: item.diskon,
+          catatan: item.catatan
         }))
       };
       
-      console.log("Data yang akan dikirim ke API:", salesOrderData);
+      console.log("Data yang akan dikirim ke API:", purchaseOrderData);
       
-      const result = await request(API_ENDPOINTS.salesOrder, {
+      const result = await request(API_ENDPOINTS.purchaseOrder, {
         method: 'POST',
-        body: JSON.stringify(salesOrderData)
+        body: JSON.stringify(purchaseOrderData)
       });
       
-      console.log("✅ Sales Order berhasil disimpan:", result);
-      showAlert("Sukses", "Sales Order berhasil disimpan!", "success");
+      console.log("✅ Purchase Order berhasil disimpan:", result);
+      showAlert("Sukses", "Purchase Order berhasil disimpan!", "success");
       
       setTimeout(() => {
         window.history.back();
       }, 2000);
       
     } catch (error) {
-      console.error("❌ Error saving Sales Order:", error);
-      showAlert("Error", "Terjadi kesalahan saat menyimpan Sales Order", "error");
+      console.error("❌ Error saving Purchase Order:", error);
+      showAlert("Error", "Terjadi kesalahan saat menyimpan Purchase Order", "error");
     }
   };
 
@@ -361,28 +398,30 @@ export default function AddSalesOrderPage() {
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
     const timestamp = Date.now().toString().slice(-3);
-    setSoNumber(`SO-${year}${month}${day}-${timestamp}`);
+    setPoNumber(`PO-${year}${month}${day}-${timestamp}`);
     
-    setCustomerName("PT Jaya Makmur Sejahtera");
-    setCustomerPhone("08123456789");
-    setCustomerEmail("info@jayamakmur.com");
-    setCustomerAddress("Jl. Raya Jakarta No. 123, Jakarta Selatan");
+    setSupplierName("PT Supplier Baja Sejahtera");
+    setSupplierPhone("08123456789");
+    setSupplierEmail("info@supplier-baja.com");
+    setSupplierAddress("Jl. Industri Baja No. 456, Bekasi");
     
-    setSelectedCustomer({
-      id: 1,
-      nama: "PT Jaya Makmur Sejahtera",
-      kode: "CUST-001",
-      telepon: "08123456789",
-      email: "info@jayamakmur.com",
-      alamat: "Jl. Raya Jakarta No. 123, Jakarta Selatan"
-    });
+    if (supplierOptions.length > 0) {
+      const firstSupplier = supplierOptions[0];
+      setSelectedSupplier(firstSupplier);
+    } else {
+      setSelectedSupplier({
+        id: 1,
+        nama: "PT Supplier Baja Sejahtera",
+        kode: "SUPP-001",
+        telepon: "08123456789",
+        email: "info@supplier-baja.com",
+        alamat: "Jl. Industri Baja No. 456, Bekasi"
+      });
+    }
 
-    if (warehouseOptions.length > 0) {
-      setOriginWarehouse(warehouseOptions[0].value);
-    }
-    if (termOptions.length > 0) {
-      setTermOfPayment(termOptions[0].value);
-    }
+    // Set default status dan catatan
+    setStatus("draft");
+    setCatatan("Auto-filled Purchase Order untuk testing");
 
     const autoItems = [
       {
@@ -390,22 +429,23 @@ export default function AddSalesOrderPage() {
         jenisBarang: itemTypeOptions.length > 0 ? itemTypeOptions[0].label : "Plat Besi",
         bentuk: "Persegi",
         grade: itemGradeOptions.length > 0 ? itemGradeOptions[0].label : "Grade A",
-        dimensi: "250 x 120",
+        dimensi: "2.50 x 1.20",
         qty: 3,
-        luasPerItem: "300 m²",
+        luasPerItem: "3.00 m²",
         hargaDisplay: "Rp 75,000/m²",
         satuanDisplay: unitOptions.length > 0 ? unitOptions[0].label : "Per Dimensi",
         diskon: "5%",
         total: "Rp 213,750",
-        jenisBarangId: itemTypeOptions.length > 0 ? itemTypeOptions[0].value : "1",
-        bentukBarangId: 2,
-        gradeBarangId: itemGradeOptions.length > 0 ? itemGradeOptions[0].value : "1",
-        panjang: 250,
-        lebar: 120,
-        tebal: 50,
+        // Backend fields - sesuai dengan validasi backend
+        jenis_barang_id: itemTypeOptions.length > 0 ? itemTypeOptions[0].value : 1,
+        bentuk_barang_id: 1, // ID bentuk barang persegi
+        grade_barang_id: itemGradeOptions.length > 0 ? itemGradeOptions[0].value : 1,
+        panjang: 2.50,
+        lebar: 1.20,
+        tebal: 0.50,
         harga: 75000,
-        satuan: unitOptions.length > 0 ? unitOptions[0].value : "PER_DIMENSI",
-        diskonPercent: 5,
+        satuan: "per-dimensi",
+        diskon: 5,
         catatan: "Auto-filled item 1 😄"
       },
       {
@@ -413,22 +453,23 @@ export default function AddSalesOrderPage() {
         jenisBarang: itemTypeOptions.length > 1 ? itemTypeOptions[1].label : "Besi Beton",
         bentuk: "Bulat",
         grade: itemGradeOptions.length > 1 ? itemGradeOptions[1].label : "Grade B",
-        dimensi: "600 x 12",
+        dimensi: "6.00 x 0.12",
         qty: 2,
-        luasPerItem: "72 m²",
+        luasPerItem: "0.72 m²",
         hargaDisplay: "Rp 45,000/m²",
         satuanDisplay: unitOptions.length > 0 ? unitOptions[0].label : "Per Dimensi",
         diskon: "3%",
         total: "Rp 62,856",
-        jenisBarangId: itemTypeOptions.length > 1 ? itemTypeOptions[1].value : "2",
-        bentukBarangId: 1,
-        gradeBarangId: itemGradeOptions.length > 1 ? itemGradeOptions[1].value : "2",
-        panjang: 60,
-        lebar: 12,
-        tebal: 12,
+        // Backend fields - sesuai dengan validasi backend
+        jenis_barang_id: itemTypeOptions.length > 1 ? itemTypeOptions[1].value : 2,
+        bentuk_barang_id: 2, // ID bentuk barang bulat
+        grade_barang_id: itemGradeOptions.length > 1 ? itemGradeOptions[1].value : 2,
+        panjang: 6.00,
+        lebar: 0.12,
+        tebal: 0.12,
         harga: 45000,
-        satuan: unitOptions.length > 0 ? unitOptions[0].value : "PER_DIMENSI",
-        diskonPercent: 3,
+        satuan: "per-dimensi",
+        diskon: 3,
         catatan: "Auto-filled item 2 🎯"
       }
     ];
@@ -461,8 +502,18 @@ export default function AddSalesOrderPage() {
   // Calculate summary
   const subtotal = items.reduce((sum, item) => {
     try {
-      const total = parseInt(item.total.replace(/[^\d]/g, '')) || 0;
-      return sum + total;
+      const length = item.panjang || 0;
+      const width = item.lebar || 0;
+      const area = length * width;
+      const qty = item.qty || 0;
+      const harga = item.harga || 0;
+      const diskon = item.diskon || 0;
+      
+      const subtotalBeforeDiscount = area * harga * qty;
+      const discountAmount = subtotalBeforeDiscount * (diskon / 100);
+      const subtotal = subtotalBeforeDiscount - discountAmount;
+      
+      return sum + subtotal;
     } catch (error) {
       console.error('Error calculating subtotal:', error);
       return sum;
@@ -471,25 +522,33 @@ export default function AddSalesOrderPage() {
 
   const totalDiscount = items.reduce((sum, item) => {
     try {
-      const total = parseInt(item.total.replace(/[^\d]/g, '')) || 0;
-      const discountPercent = parseInt(item.diskon.replace('%', '')) || 0;
-      return sum + (total * discountPercent / 100);
+      const length = item.panjang || 0;
+      const width = item.lebar || 0;
+      const area = length * width;
+      const qty = item.qty || 0;
+      const harga = item.harga || 0;
+      const diskon = item.diskon || 0;
+      
+      const subtotalBeforeDiscount = area * harga * qty;
+      const discountAmount = subtotalBeforeDiscount * (diskon / 100);
+      
+      return sum + discountAmount;
     } catch (error) {
       console.error('Error calculating total discount:', error);
       return sum;
     }
   }, 0);
 
-  const ppn = (subtotal - totalDiscount) * 0.11;
-  const totalHargaSO = subtotal - totalDiscount + ppn;
+  const ppn = subtotal * 0.11;
+  const totalHargaSO = subtotal + ppn;
 
   return (
-    <SalesOrderLayout title="Sales Order (SO)" subtitle="TRANSAKSI">
+    <SalesOrderLayout title="Purchase Order (PO)" subtitle="TRANSAKSI">
       {/* Main Content Card */}
       <Card className="section-card">
         <CardHeader className="section-header">
           <div className="flex justify-between items-center">
-            <CardTitle className="page-title">Input Sales Order Baru</CardTitle>
+            <CardTitle className="page-title">Input Purchase Order Baru</CardTitle>
             <div className="flex space-sm">
               {isUserAdmin && (
                 <Button variant="outline" size="sm" onClick={handleAutoFill} className="btn-outline">
@@ -497,8 +556,8 @@ export default function AddSalesOrderPage() {
                 </Button>
               )}
               
-              <Button variant="default" size="sm" onClick={handleTestSimpanSO} className="btn-primary">
-                Simpan Sales Order
+              <Button variant="default" size="sm" onClick={handleTestSimpanPO} className="btn-primary">
+                Simpan Purchase Order
               </Button>
 
               <Button variant="secondary" size="sm" onClick={handleBackToList} className="btn-secondary">
@@ -510,87 +569,138 @@ export default function AddSalesOrderPage() {
         </CardHeader>
 
         <CardContent className="section-content space-md">
-          {/* Customer Information */}
-          <CustomerInfoTabs 
-            onCustomerSelect={handleCustomerSelect}
-            selectedCustomer={selectedCustomer}
-          />
+          {/* Supplier Information */}
+          <div className="grid-form m-lg">
+            <div className="col-span-2">
+              <SearchSelect
+                label="Supplier"
+                placeholder="Pilih Supplier"
+                searchPlaceholder="Cari supplier..."
+                value={selectedSupplier?.id || ""}
+                onValueChange={(value) => {
+                  const supplier = supplierOptions.find(opt => opt.value == value);
+                  if (supplier) {
+                    handleSupplierSelect(supplier);
+                  }
+                }}
+                options={supplierOptions}
+                loading={loadingSupplier}
+                required
+              />
+            </div>
+          </div>
 
-          {/* Display Selected Customer Info */}
-          {selectedCustomer && (
+          {/* Display Selected Supplier Info */}
+          {selectedSupplier && (
             <div className="p-4 bg-gray-50 border border-gray-200 rounded-md">
               <div className="text-sm font-medium text-gray-800 mb-2">
-                Data Pelanggan yang Dipilih:
+                Data Supplier yang Dipilih:
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><strong>Nama:</strong> {selectedCustomer.nama_pelanggan || 'Tidak tersedia'}</div>
-                <div><strong>Kode:</strong> {selectedCustomer.kode || 'Tidak tersedia'}</div>
-                <div><strong>Telepon:</strong> {selectedCustomer.telepon_hp || 'Tidak tersedia'}</div>
-                <div><strong>Email:</strong> {selectedCustomer.email || 'Tidak tersedia'}</div>
-                <div className="col-span-2"><strong>Alamat:</strong> {selectedCustomer.kota || 'Tidak tersedia'}</div>
+                <div><strong>Nama:</strong> {selectedSupplier.nama}</div>
+                <div><strong>Kode:</strong> {selectedSupplier.kode}</div>
+                <div><strong>Telepon:</strong> {selectedSupplier.telepon}</div>
+                <div><strong>Email:</strong> {selectedSupplier.email}</div>
+                <div className="col-span-2"><strong>Alamat:</strong> {selectedSupplier.alamat}</div>
               </div>
             </div>
           )}
 
           <div className="border-t pt-6">
-            {/* Sales Order Details */}
+            {/* Purchase Order Details */}
             <div className="grid-form m-lg">
               <div>
-                <Label htmlFor="soNumber">Nomor SO</Label>
+                <Label htmlFor="poNumber">Nomor PO *</Label>
                 <Input
-                  id="soNumber"
-                  value={soNumber}
-                  onChange={(e) => setSoNumber(e.target.value)}
-                  placeholder="Masukkan nomor SO atau klik Auto Fill"
+                  id="poNumber"
+                  value={poNumber}
+                  onChange={(e) => setPoNumber(e.target.value)}
+                  placeholder="Masukkan nomor PO atau klik Auto Fill"
+                  required
                 />
               </div>
               <div>
-                <Label htmlFor="soDate">Tanggal SO</Label>
+                <Label htmlFor="poDate">Tanggal PO *</Label>
                 <div className="relative">
                   <Input
-                    id="soDate"
+                    id="poDate"
                     type="date"
-                    value={soDate}
-                    onChange={(e) => setSoDate(e.target.value)}
+                    value={poDate}
+                    onChange={(e) => setPoDate(e.target.value)}
+                    required
                   />
                   <Calendar className="absolute right-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
                 </div>
               </div>
               <div>
-                <Label htmlFor="deliveryDate">Tanggal Pengiriman</Label>
+                <Label htmlFor="tanggalPenerimaan">Tanggal Penerimaan</Label>
                 <div className="relative">
                   <Input
-                    id="deliveryDate"
+                    id="tanggalPenerimaan"
                     type="date"
-                    value={deliveryDate}
-                    onChange={(e) => setDeliveryDate(e.target.value)}
+                    value={tanggalPenerimaan}
+                    onChange={(e) => setTanggalPenerimaan(e.target.value)}
                   />
                   <Calendar className="absolute right-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
                 </div>
               </div>
               <div>
+                <Label htmlFor="tanggalJatuhTempo">Tanggal Jatuh Tempo *</Label>
+                <div className="relative">
+                  <Input
+                    id="tanggalJatuhTempo"
+                    type="date"
+                    value={tanggalJatuhTempo}
+                    onChange={(e) => setTanggalJatuhTempo(e.target.value)}
+                    required
+                  />
+                  <Calendar className="absolute right-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="tanggalPembayaran">Tanggal Pembayaran</Label>
+                <div className="relative">
+                  <Input
+                    id="tanggalPembayaran"
+                    type="date"
+                    value={tanggalPembayaran}
+                    onChange={(e) => setTanggalPembayaran(e.target.value)}
+                  />
+                  <Calendar className="absolute right-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="status">Status *</Label>
                 <SearchSelect
-                  label="Term of Payment"
-                  placeholder="Pilih Term of Payment"
-                  searchPlaceholder="Cari term of payment..."
-                  value={termOfPayment}
-                  onValueChange={setTermOfPayment}
-                  options={termOptions}
-                  loading={loadingTerm}
+                  placeholder="Pilih Status"
+                  searchPlaceholder="Cari status..."
+                  value={status}
+                  onValueChange={setStatus}
+                  options={[
+                    { value: 'draft', label: 'Draft' },
+                    { value: 'pending', label: 'Pending' },
+                    { value: 'approved', label: 'Approved' },
+                    { value: 'rejected', label: 'Rejected' },
+                    { value: 'completed', label: 'Completed' }
+                  ]}
                   required
                 />
               </div>
-              <div>
-                <SearchSelect
-                  label="Asal Gudang"
-                  placeholder="Pilih Gudang"
-                  searchPlaceholder="Cari gudang..."
-                  value={originWarehouse}
-                  onValueChange={setOriginWarehouse}
-                  options={warehouseOptions}
-                  loading={loadingWarehouse}
-                  required
-                />
+            </div>
+            
+            {/* Catatan */}
+            <div className="mt-6">
+              <Label htmlFor="catatan">Catatan</Label>
+              <Textarea
+                id="catatan"
+                value={catatan}
+                onChange={(e) => setCatatan(e.target.value)}
+                placeholder="Masukkan catatan untuk Purchase Order (maksimal 500 karakter)..."
+                maxLength="500"
+                className="min-h-[100px] resize-y"
+              />
+              <div className="text-sm text-gray-500 mt-1">
+                {catatan.length}/500 karakter
               </div>
             </div>
           </div>
@@ -796,7 +906,7 @@ export default function AddSalesOrderPage() {
       <Card className="section-card">
         <CardHeader className="section-header">
           <div className="flex justify-between items-center">
-            <CardTitle className="page-title">Daftar Item dalam SO</CardTitle>
+            <CardTitle className="page-title">Daftar Item dalam PO</CardTitle>
           </div>
         </CardHeader>
         <CardContent className="section-content">
@@ -827,8 +937,8 @@ export default function AddSalesOrderPage() {
                   <TableCell className="table-cell-standard">{item.dimensi}</TableCell>
                   <TableCell className="table-cell-standard">{item.qty}</TableCell>
                   <TableCell className="table-cell-standard">{item.luasPerItem}</TableCell>
-                  <TableCell className="table-cell-standard">{item.harga}</TableCell>
-                  <TableCell className="table-cell-standard">{item.satuan}</TableCell>
+                  <TableCell className="table-cell-standard">{item.hargaDisplay}</TableCell>
+                  <TableCell className="table-cell-standard">{item.satuanDisplay}</TableCell>
                   <TableCell className="table-cell-standard">{item.diskon}</TableCell>
                   <TableCell className="table-cell-standard">{item.total}</TableCell>
                   <TableCell className="table-cell-standard">
@@ -872,8 +982,8 @@ export default function AddSalesOrderPage() {
               <div className="text-lg font-semibold">{formatCurrency(ppn)}</div>
             </div>
             <div>
-              <Label className="text-sm text-gray-600">Total Harga SO</Label>
-              <div className="text-xl font-bold text-green-700">{formatCurrency(totalHargaSO)}</div>
+              <Label className="text-sm text-gray-600">Total Harga PO</Label>
+              <div className="text-xl font-bold text-green-700">{formatCurrency(subtotal)}</div>
             </div>
           </div>
         </CardContent>
@@ -881,12 +991,12 @@ export default function AddSalesOrderPage() {
 
              {/* Action Buttons */}
        <div className="flex justify-center gap-4">
-         <Button size="lg" className="bg-green-600 hover:bg-green-700" onClick={handleTestSimpanSO}>
-           Simpan SO
+         <Button size="lg" className="bg-green-600 hover:bg-green-700" onClick={handleTestSimpanPO}>
+           Simpan PO
          </Button>
          {hasRole(['admin', 'manager', 'supervisor']) && (
            <Button size="lg" variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
-             Print SO
+             Print PO
            </Button>
          )}
        </div>

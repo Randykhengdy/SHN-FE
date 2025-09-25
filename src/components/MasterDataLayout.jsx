@@ -567,8 +567,8 @@ export default function MasterDataLayout({
       {/* Modal */}
       {customEditComponent === "RolePermissionEditor" ? (
         <div className={`fixed inset-0 bg-black/50 z-50 ${isModalOpen ? 'flex' : 'hidden'} items-center justify-center p-4`}>
-          <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
+          <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex-1 overflow-y-auto p-6">
               <RolePermissionEditor
                 role={editData}
                 onSave={(updatedRole) => {

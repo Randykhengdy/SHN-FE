@@ -16,6 +16,7 @@ export default function DeleteRequestModal({
   open, 
   onOpenChange, 
   salesOrder, 
+  workOrder,
   onConfirm, 
   onCancel 
 }) {
@@ -51,8 +52,8 @@ export default function DeleteRequestModal({
             🗑️ Ajukan Permintaan Hapus
           </DialogTitle>
           <DialogDescription>
-            Anda akan mengajukan permintaan hapus untuk Sales Order{" "}
-            <span className="font-semibold">{salesOrder?.noSo}</span>.
+            Anda akan mengajukan permintaan hapus untuk {salesOrder ? "Sales Order" : "Work Order"}{" "}
+            <span className="font-semibold">{salesOrder?.noSo || workOrder?.woNumber}</span>.
             <br />
             Admin akan meninjau permintaan Anda.
           </DialogDescription>

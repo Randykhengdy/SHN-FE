@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import AuthErrorAlert from "@/components/AuthErrorAlert";
 
 export default function MasterFormModal({
   isOpen,
@@ -26,6 +27,7 @@ export default function MasterFormModal({
   const [options, setOptions] = useState({});
   const [searchTerms, setSearchTerms] = useState({});
   const [openDropdowns, setOpenDropdowns] = useState({});
+  const [authError, setAuthError] = useState(false);
 
   useEffect(() => {
     const loadOptions = async () => {
@@ -36,9 +38,17 @@ export default function MasterFormModal({
             // Load options from service
             try {
               const res = await field.optionsService.getAll();
-              newOptions[field.name] = res.data;
+              newOptions[field.name] = res.data || [];
+              console.log(`✅ Loaded ${newOptions[field.name].length} options for ${field.name}`);
             } catch (error) {
-              console.error(`Error loading options for ${field.name}:`, error);
+              console.error(`❌ Error loading options for ${field.name}:`, error);
+              
+              // Check if it's an authentication error
+              if (error.message.includes('Token tidak valid') || error.message.includes('401') || error.message.includes('Session expired')) {
+                console.error('🔐 Authentication error - user needs to login again');
+                setAuthError(true);
+              }
+              
               newOptions[field.name] = [];
             }
           } else if (field.options) {
@@ -155,6 +165,33 @@ export default function MasterFormModal({
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {authError && (
+            <AuthErrorAlert 
+              onRefresh={() => {
+                setAuthError(false);
+                // Reload options
+                const loadOptions = async () => {
+                  const newOptions = {};
+                  for (const field of fields) {
+                    if (field.type === "select" && field.optionsService) {
+                      try {
+                        const res = await field.optionsService.getAll();
+                        newOptions[field.name] = res.data || [];
+                      } catch (error) {
+                        console.error(`Error reloading options for ${field.name}:`, error);
+                        newOptions[field.name] = [];
+                      }
+                    }
+                  }
+                  setOptions(newOptions);
+                };
+                loadOptions();
+              }}
+              onLogin={() => {
+                window.location.href = '/';
+              }}
+            />
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {fields.map((field) => {
               // Skip fields that should be hidden on edit
@@ -204,7 +241,7 @@ export default function MasterFormModal({
                                 return String(opt.id) === form[field.name];
                               }
                             });
-                            return option ? (option.label || option[field.optionLabel || "name"]) : `Pilih ${field.label}`;
+                            return option ? (option.label || option[field.optionLabel || "name"] || "N/A") : `Pilih ${field.label}`;
                           })()
                         : `Pilih ${field.label}`}
                     </span>
@@ -225,37 +262,45 @@ export default function MasterFormModal({
                         />
                       </div>
                       <div className="max-h-48 overflow-auto">
-                        {options[field.name]
-                          ?.filter(option => 
-                            !searchTerms[field.name] || 
-                            (option.label || option[field.optionLabel || "name"])
-                              .toLowerCase()
-                              .includes(searchTerms[field.name].toLowerCase())
-                          )
-                          ?.map((option) => (
-                            <div
-                              key={option.id || option.value}
-                              className={`cursor-pointer px-3 py-2 text-sm hover:bg-gray-100 ${
-                                form[field.name] === String(option.id || option.value) ? 'bg-blue-50 text-blue-600' : ''
-                              }`}
-                              onClick={() => {
-                                handleSelectChange(field.name, String(option.id || option.value));
-                                setOpenDropdowns(prev => ({ ...prev, [field.name]: false }));
-                                setSearchTerms(prev => ({ ...prev, [field.name]: "" }));
-                              }}
-                            >
-                              {option.label || option[field.optionLabel || "name"]}
-                            </div>
-                          ))}
-                        {options[field.name]
-                          ?.filter(option => 
-                            !searchTerms[field.name] || 
-                            (option.label || option[field.optionLabel || "name"])
-                              .toLowerCase()
-                              .includes(searchTerms[field.name].toLowerCase())
-                          )?.length === 0 && (
+                        {options[field.name] && options[field.name].length > 0 ? (
+                          options[field.name]
+                            ?.filter(option => {
+                              if (!searchTerms[field.name]) return true;
+                              
+                              const optionText = option.label || option[field.optionLabel || "name"];
+                              if (!optionText) return false;
+                              
+                              return optionText
+                                .toLowerCase()
+                                .includes(searchTerms[field.name].toLowerCase());
+                            })
+                            ?.map((option) => (
+                              <div
+                                key={option.id || option.value}
+                                className={`cursor-pointer px-3 py-2 text-sm hover:bg-gray-100 ${
+                                  form[field.name] === String(option.id || option.value) ? 'bg-blue-50 text-blue-600' : ''
+                                }`}
+                                onClick={() => {
+                                  handleSelectChange(field.name, String(option.id || option.value));
+                                  setOpenDropdowns(prev => ({ ...prev, [field.name]: false }));
+                                  setSearchTerms(prev => ({ ...prev, [field.name]: "" }));
+                                }}
+                              >
+                                {option.label || option[field.optionLabel || "name"] || "N/A"}
+                              </div>
+                            ))
+                        ) : (
                           <div className="px-3 py-2 text-sm text-gray-500">
-                            Tidak ada data ditemukan
+                            {options[field.name] === undefined ? (
+                              <div className="text-center">
+                                <div className="text-red-500 mb-1">⚠️ Gagal memuat data</div>
+                                <div className="text-xs text-gray-400">
+                                  Silakan refresh halaman atau login ulang
+                                </div>
+                              </div>
+                            ) : (
+                              "Tidak ada data tersedia"
+                            )}
                           </div>
                         )}
                       </div>

@@ -12,9 +12,9 @@ import { useRole } from "@/hooks/useRole";
 import RoleGuard from "@/components/RoleGuard";
 import { request } from "@/lib/request";
 import { API_ENDPOINTS } from "@/config/api";
-import SalesOrderLayout from "@/components/SalesOrderLayout";
+import PageLayout from "@/components/PageLayout";
 
-export default function ViewSalesOrderPage() {
+export default function ViewWorkOrderPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { showAlert, AlertComponent } = useAlert();
@@ -32,25 +32,26 @@ export default function ViewSalesOrderPage() {
   const [itemShapeOptions, setItemShapeOptions] = useState([]);
   const [itemGradeOptions, setItemGradeOptions] = useState([]);
 
-  // Sales Order Data
-  const [salesOrder, setSalesOrder] = useState(null);
+  // Work Order Data
+  const [workOrder, setWorkOrder] = useState(null);
 
   // Customer Information
   const [customerData, setCustomerData] = useState(null);
 
-  // Sales Order Details
-  const [soNumber, setSoNumber] = useState("");
-  const [soDate, setSoDate] = useState("");
-  const [deliveryDate, setDeliveryDate] = useState("");
-  const [termOfPayment, setTermOfPayment] = useState("");
-  const [originWarehouse, setOriginWarehouse] = useState("");
+  // Work Order Details
+  const [woNumber, setWoNumber] = useState("");
+  const [woDate, setWoDate] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [priority, setPriority] = useState("");
+  const [status, setStatus] = useState("");
+  const [assignedTo, setAssignedTo] = useState("");
 
   // Item List
   const [items, setItems] = useState([]);
   
 
 
-  // Load sales order data (includes all master data)
+  // Load work order data (includes all master data)
   useEffect(() => {
     const loadData = async () => {
       // Prevent duplicate calls using ref
@@ -64,59 +65,59 @@ export default function ViewSalesOrderPage() {
       try {
         setLoading(true);
 
-        // Load sales order data (includes master data)
-        console.log('🔧 Fetching sales order data for ID:', id);
-        console.log('🔧 API URL:', `${API_ENDPOINTS.salesOrder}/${id}`);
+        // Load work order data (includes master data)
+        console.log('🔧 Fetching work order data for ID:', id);
+        console.log('🔧 API URL:', `${API_ENDPOINTS.workOrder}/${id}`);
         
-        const response = await request(`${API_ENDPOINTS.salesOrder}/${id}`, {
+        const response = await request(`${API_ENDPOINTS.workOrder}/${id}`, {
           method: 'GET'
         });
 
-        console.log('🔍 Sales Order API Response:', response);
+        console.log('🔍 Work Order API Response:', response);
         
         // Handle different response structures
-        let soData = response.data || response;
+        let woData = response.data || response;
         
         // If response is an array, take the first item
-        if (Array.isArray(soData)) {
-          soData = soData[0];
+        if (Array.isArray(woData)) {
+          woData = woData[0];
         }
         
         // If still no data, try different possible structures
-        if (!soData && response.sales_order) {
-          soData = response.sales_order;
+        if (!woData && response.work_order) {
+          woData = response.work_order;
         }
-        if (!soData && response.salesOrder) {
-          soData = response.salesOrder;
-        }
-        
-        console.log('🔍 Sales Order Data:', soData);
-        
-        if (!soData) {
-          throw new Error('Sales order data not found in response');
+        if (!woData && response.workOrder) {
+          woData = response.workOrder;
         }
         
-        setSalesOrder(soData);
+        console.log('🔍 Work Order Data:', woData);
+        
+        if (!woData) {
+          throw new Error('Work order data not found in response');
+        }
+        
+        setWorkOrder(woData);
 
-        // Extract master data from sales order response
-        console.log('🔧 Extracting master data from sales order response...');
+        // Extract master data from work order response
+        console.log('🔧 Extracting master data from work order response...');
         
-        // Get customer data from sales order
-        const customerData = soData.pelanggan || soData.customer || soData.client;
+        // Get customer data from work order
+        const customerData = woData.pelanggan || woData.customer || woData.client;
         if (customerData) {
           console.log('🔍 Customer data found:', customerData);
           setCustomerData(customerData);
         }
 
-        // Get warehouse data from sales order
-        const warehouseData = soData.gudang || soData.warehouse;
+        // Get warehouse data from work order
+        const warehouseData = woData.gudang || woData.warehouse;
         if (warehouseData) {
           console.log('🔍 Warehouse data found:', warehouseData);
           setWarehouseOptions([warehouseData]);
         }
 
         // Extract master data from items
-        const itemsData = soData.salesOrderItems || soData.items || soData.sales_order_items || soData.orderItems || [];
+        const itemsData = woData.workOrderItems || woData.items || woData.work_order_items || woData.orderItems || [];
         console.log('🔍 Items data:', itemsData);
         
         // Collect unique master data from items
@@ -156,27 +157,26 @@ export default function ViewSalesOrderPage() {
         setItemShapeOptions(masterData.bentukBarang);
         setItemGradeOptions(masterData.gradeBarang);
 
-        // Set sales order details
-        console.log('🔍 Setting SO details:', {
-          nomor_so: soData.nomor_so,
-          tanggal_so: soData.tanggal_so,
-          tanggal_pengiriman: soData.tanggal_pengiriman,
-          syarat_pembayaran: soData.syarat_pembayaran,
+        // Set work order details
+        console.log('🔍 Setting WO details:', {
+          nomor_wo: woData.nomor_wo,
+          tanggal_wo: woData.tanggal_wo,
+          tanggal_selesai: woData.tanggal_selesai,
+          prioritas: woData.prioritas,
+          status: woData.status,
+          assigned_to: woData.assigned_to,
           gudang: warehouseData,
           gudang_nama: warehouseData?.nama_gudang,
           gudang_nama_alt: warehouseData?.nama,
           gudang_label: warehouseData?.label
         });
         
-        setSoNumber(soData.nomor_so || soData.so_number || soData.order_number || "");
-        setSoDate(formatDateForInput(soData.tanggal_so || soData.so_date || soData.order_date));
-        setDeliveryDate(formatDateForInput(soData.tanggal_pengiriman || soData.delivery_date));
-        setTermOfPayment(soData.syarat_pembayaran || soData.term_of_payment || "");
-        
-        // Set warehouse name from included data
-        const warehouseName = warehouseData?.nama_gudang || warehouseData?.nama || 
-                             warehouseData?.label || 'N/A';
-        setOriginWarehouse(warehouseName);
+        setWoNumber(woData.nomor_wo || woData.wo_number || woData.order_number || "");
+        setWoDate(formatDateForInput(woData.tanggal_wo || woData.wo_date || woData.order_date));
+        setDueDate(formatDateForInput(woData.tanggal_selesai || woData.due_date));
+        setPriority(woData.prioritas || woData.priority || "");
+        setStatus(woData.status || "");
+        setAssignedTo(woData.assigned_to || woData.assignedTo || "");
 
         // Process items with included master data
         if (itemsData && itemsData.length > 0) {
@@ -226,8 +226,8 @@ export default function ViewSalesOrderPage() {
           setItems([]);
         }
       } catch (error) {
-        console.error('Error loading sales order:', error);
-        showAlert("Error", "Gagal memuat data Sales Order", "error");
+        console.error('Error loading work order:', error);
+        showAlert("Error", "Gagal memuat data Work Order", "error");
       } finally {
         setLoading(false);
         isLoadingRef.current = false;
@@ -306,18 +306,18 @@ export default function ViewSalesOrderPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Memuat data Sales Order...</p>
+          <p className="mt-4 text-gray-600">Memuat data Work Order...</p>
         </div>
       </div>
     );
   }
 
-  if (!salesOrder) {
+  if (!workOrder) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-600">Sales Order tidak ditemukan</p>
-          <Button onClick={() => navigate('/sales-order')} className="mt-4">
+          <p className="text-gray-600">Work Order tidak ditemukan</p>
+          <Button onClick={() => navigate('/work-order')} className="mt-4">
             Kembali ke Daftar
           </Button>
         </div>
@@ -326,11 +326,11 @@ export default function ViewSalesOrderPage() {
   }
 
   return (
-    <SalesOrderLayout title="Detail Sales Order" subtitle="TRANSAKSI">
+    <PageLayout title="Detail Work Order" subtitle="PRODUKSI">
       <div className="flex items-center gap-4 mb-6">
         <Button 
           variant="outline" 
-          onClick={() => navigate('/sales-order')}
+          onClick={() => navigate('/work-order')}
           className="flex items-center gap-2"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -338,52 +338,60 @@ export default function ViewSalesOrderPage() {
         </Button>
       </div>
 
-        {/* Sales Order Information */}
+        {/* Work Order Information */}
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Eye className="w-5 h-5" />
-              Informasi Sales Order
+              Informasi Work Order
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
-                <Label className="text-sm font-medium text-gray-700">Nomor SO</Label>
+                <Label className="text-sm font-medium text-gray-700">Nomor WO</Label>
                 <Input 
-                  value={soNumber} 
+                  value={woNumber} 
                   disabled 
                   className="bg-gray-50"
                 />
               </div>
               <div>
-                <Label className="text-sm font-medium text-gray-700">Tanggal SO</Label>
+                <Label className="text-sm font-medium text-gray-700">Tanggal WO</Label>
                 <Input 
-                  value={soDate} 
+                  value={woDate} 
                   disabled 
                   className="bg-gray-50"
                 />
               </div>
               <div>
-                <Label className="text-sm font-medium text-gray-700">Tanggal Pengiriman</Label>
+                <Label className="text-sm font-medium text-gray-700">Tanggal Selesai</Label>
                 <Input 
-                  value={deliveryDate} 
+                  value={dueDate} 
                   disabled 
                   className="bg-gray-50"
                 />
               </div>
-                             <div>
-                 <Label className="text-sm font-medium text-gray-700">Syarat Pembayaran</Label>
-                 <Input 
-                   value={termOfPayment || 'N/A'} 
-                   disabled 
-                   className="bg-gray-50"
-                 />
-               </div>
               <div>
-                <Label className="text-sm font-medium text-gray-700">Asal Gudang</Label>
+                <Label className="text-sm font-medium text-gray-700">Prioritas</Label>
                 <Input 
-                  value={originWarehouse} 
+                  value={priority || 'N/A'} 
+                  disabled 
+                  className="bg-gray-50"
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Status</Label>
+                <Input 
+                  value={status || 'N/A'} 
+                  disabled 
+                  className="bg-gray-50"
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Ditugaskan ke</Label>
+                <Input 
+                  value={assignedTo || 'N/A'} 
                   disabled 
                   className="bg-gray-50"
                 />
@@ -547,16 +555,16 @@ export default function ViewSalesOrderPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Status:</span>
-                  <span className="font-semibold text-blue-600">Draft</span>
+                  <span className="font-semibold text-blue-600">{status || 'Draft'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Dibuat pada:</span>
-                  <span className="font-semibold">{formatDate(salesOrder.created_at)}</span>
+                  <span className="font-semibold">{formatDate(workOrder.created_at)}</span>
                 </div>
-                {salesOrder.updated_at && (
+                {workOrder.updated_at && (
                   <div className="flex justify-between">
                     <span className="text-gray-600">Diupdate pada:</span>
-                    <span className="font-semibold">{formatDate(salesOrder.updated_at)}</span>
+                    <span className="font-semibold">{formatDate(workOrder.updated_at)}</span>
                   </div>
                 )}
               </div>
@@ -566,19 +574,19 @@ export default function ViewSalesOrderPage() {
         
         {/* Action Buttons */}
         <div className="flex justify-center gap-4 mt-6">
-          <Button size="lg" variant="outline" onClick={() => navigate('/sales-order')}>
+          <Button size="lg" variant="outline" onClick={() => navigate('/work-order')}>
             Kembali ke List
           </Button>
           
           <RoleGuard roles={['admin', 'manager', 'supervisor']}>
             <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
-              Print SO
+              Print WO
             </Button>
           </RoleGuard>
         </div>
         
         {/* Alert Modal Component */}
         <AlertComponent />
-      </SalesOrderLayout>
+      </PageLayout>
   );
 }
