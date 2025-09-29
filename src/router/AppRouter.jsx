@@ -34,6 +34,8 @@ import PurchaseOrderPage from "@/pages/purchase-order";
 import AddPurchaseOrderPage from "@/pages/purchase-order/add";
 import ViewPurchaseOrderPage from "@/pages/purchase-order/view";
 
+import DashboardWorkshopPage from "@/pages/dashboard/workshop";
+
 const AppRouter = () => {
     return (
       <Routes>
@@ -71,6 +73,7 @@ const AppRouter = () => {
         <Route path="/purchase-order" element={<PurchaseOrderPage />} />
         <Route path="/purchase-order/add" element={<AddPurchaseOrderPage />} />
         <Route path="/purchase-order/view/:id" element={<ViewPurchaseOrderPage />} />
+        <Route path="/dashboard/workshop" element={<DashboardWorkshopPage />} />
       </Routes>
     );
 };

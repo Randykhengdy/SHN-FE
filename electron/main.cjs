@@ -172,6 +172,11 @@ function createWindow() {
           accelerator: 'CmdOrCtrl+D',
           click: () => mainWindow.webContents.send('navigate-to', '/dashboard')
         },
+        {
+          label: 'Dashboard Workshop',
+          accelerator: 'CmdOrCtrl+Shift+D',
+          click: () => mainWindow.webContents.send('navigate-to', '/dashboard/workshop')
+        },
         { type: 'separator' },
         {
           label: 'Exit',
