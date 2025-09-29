@@ -121,14 +121,14 @@ const DashboardWorkshopPage = () => {
                   // Logika warna teks berdasarkan kondisi
                   let textColor = "#ffffff"; // default putih
                   
-                  if (wo.real_selesai && wo.nomor_inv) {
-                    // Jika real_selesai dan nomor_inv sudah terisi -> hijau
+                  if (wo.close_wo_at && wo.nomor_inv) {
+                    // Jika close_wo_at dan nomor_inv sudah terisi -> hijau
                     textColor = "#10b981";
-                  } else if (!wo.real_selesai) {
-                    // Jika real_selesai belum terisi -> kuning
+                  } else if (!wo.close_wo_at) {
+                    // Jika close_wo_at belum terisi -> kuning
                     textColor = "#fff700"; // kuning sangat terang
-                  } else if (wo.real_selesai && !wo.nomor_inv) {
-                    // Jika real_selesai sudah terisi tapi nomor_inv belum -> putih
+                  } else if (wo.close_wo_at && !wo.nomor_inv) {
+                    // Jika close_wo_at sudah terisi tapi nomor_inv belum -> putih
                     textColor = "#ffffff";
                   }
 
@@ -171,11 +171,7 @@ const DashboardWorkshopPage = () => {
                       color: textColor,
                       fontSize: "13px",
                       lineHeight: "1.2"
-                    }}>{wo.waktu_wo ? new Date(wo.waktu_wo).toLocaleDateString("id-ID", { 
-                      day: "2-digit", 
-                      month: "2-digit", 
-                      year: "2-digit" 
-                    }) + " " + new Date(wo.waktu_wo).toLocaleTimeString("id-ID", { 
+                    }}>{wo.waktu_wo ? new Date(wo.waktu_wo).toLocaleTimeString("id-ID", { 
                       hour: "2-digit", 
                       minute: "2-digit" 
                     }) : "-"}</td>

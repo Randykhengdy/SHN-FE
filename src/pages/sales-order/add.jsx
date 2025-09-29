@@ -35,6 +35,12 @@ export default function AddSalesOrderPage() {
   const [itemGradeOptions, setItemGradeOptions] = useState([]);
   const [unitOptions, setUnitOptions] = useState([]);
 
+  // Handover method options
+  const handoverMethodOptions = [
+    { value: "pickup", label: "Pickup" },
+    { value: "delivery", label: "Delivery" }
+  ];
+
   // Loading states
   const [loadingTerm, setLoadingTerm] = useState(false);
   const [loadingWarehouse, setLoadingWarehouse] = useState(false);
@@ -104,6 +110,7 @@ export default function AddSalesOrderPage() {
   const [deliveryDate, setDeliveryDate] = useState(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
   const [termOfPayment, setTermOfPayment] = useState("cash");
   const [originWarehouse, setOriginWarehouse] = useState("");
+  const [handoverMethod, setHandoverMethod] = useState("pickup");
 
   // Item Input Form
   const [itemLength, setItemLength] = useState("");
@@ -310,6 +317,7 @@ export default function AddSalesOrderPage() {
         tanggal_pengiriman: deliveryDate,
         syarat_pembayaran: termOfPayment,
         gudang_id: parseInt(originWarehouse) || 1,
+        handover_method: handoverMethod,
         pelanggan_id: selectedCustomer?.id || 1,
         subtotal: subtotal || 0,
         total_diskon: totalDiscount || 0,
@@ -383,6 +391,7 @@ export default function AddSalesOrderPage() {
     if (termOptions.length > 0) {
       setTermOfPayment(termOptions[0].value);
     }
+    setHandoverMethod("pickup");
 
     const autoItems = [
       {
@@ -589,6 +598,17 @@ export default function AddSalesOrderPage() {
                   onValueChange={setOriginWarehouse}
                   options={warehouseOptions}
                   loading={loadingWarehouse}
+                  required
+                />
+              </div>
+              <div>
+                <SearchSelect
+                  label="Metode Penyerahan"
+                  placeholder="Pilih Metode Penyerahan"
+                  searchPlaceholder="Cari metode penyerahan..."
+                  value={handoverMethod}
+                  onValueChange={setHandoverMethod}
+                  options={handoverMethodOptions}
                   required
                 />
               </div>

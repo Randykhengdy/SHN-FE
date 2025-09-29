@@ -39,7 +39,8 @@ export default function AddWorkOrderPage() {
     sales_order_id: '',
     catatan: '',
     status: 'Pending',
-    prioritas: 'MEDIUM'
+    prioritas: 'MEDIUM',
+    handover_method: 'pickup'
   });
 
   // Work Order Items State
@@ -338,6 +339,7 @@ export default function AddWorkOrderPage() {
            gudang_id: soData.gudang_id || soData.gudang?.id,
            pelanggan_id: soData.pelanggan_id || soData.pelanggan?.id,
            catatan: soData.catatan || '',
+           handover_method: soData.handover_method || 'pickup', // Set handover method from SO
            tanggal_target: workOrderData.tanggal_wo // Set tanggal target sama dengan tanggal WO
          }));
         
@@ -668,6 +670,8 @@ export default function AddWorkOrderPage() {
       `Konfirmasi Simpan Work Order\n\n` +
       `Nomor WO: ${workOrderData.nomor_wo}\n` +
       `Tanggal WO: ${workOrderData.tanggal_wo}\n` +
+      `Prioritas: ${workOrderData.prioritas}\n` +
+      `Metode Penyerahan: ${workOrderData.handover_method === 'pickup' ? 'Pickup' : 'Delivery'}\n` +
       `Jumlah Item: ${workOrderItems.length}\n` +
       `Total Pelaksana: ${workOrderItems.reduce((total, item) => total + item.pelaksana.length, 0)}\n\n` +
       `Apakah Anda yakin ingin menyimpan Work Order ini?`
@@ -709,6 +713,7 @@ export default function AddWorkOrderPage() {
           return allPelaksanaIds.length > 0 ? allPelaksanaIds : null;
         })(),
         prioritas: workOrderData.prioritas,
+        handover_method: workOrderData.handover_method,
         catatan: workOrderData.catatan,
         status: workOrderData.status,
         items: workOrderItems.map((item, index) => ({
@@ -921,6 +926,23 @@ export default function AddWorkOrderPage() {
                   <option value="HIGH">Tinggi</option>
                   <option value="URGENT">Mendesak</option>
                 </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Metode Penyerahan
+                </label>
+                <select
+                  value={workOrderData.handover_method}
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-600 cursor-not-allowed"
+                >
+                  <option value="pickup">Pickup</option>
+                  <option value="delivery">Delivery</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Metode penyerahan otomatis diambil dari Sales Order yang dipilih
+                </p>
               </div>
               
               <div className="md:col-span-2">
