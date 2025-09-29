@@ -189,16 +189,16 @@ const DashboardWorkshopPage = () => {
                       hour: "2-digit", 
                       minute: "2-digit" 
                     }) : "-"}</td>
-                    <td style={{ 
-                      border: "1px solid #4a4a4a", 
-                      padding: "4px 6px",
-                      color: textColor,
-                      fontSize: "13px",
-                      lineHeight: "1.2"
-                    }}>{wo.real_selesai ? new Date(wo.real_selesai).toLocaleTimeString("id-ID", { 
-                      hour: "2-digit", 
-                      minute: "2-digit" 
-                    }) : "-"}</td>
+                     <td style={{ 
+                       border: "1px solid #4a4a4a", 
+                       padding: "4px 6px",
+                       color: textColor,
+                       fontSize: "13px",
+                       lineHeight: "1.2"
+                     }}>{wo.close_wo_at ? new Date(wo.close_wo_at).toLocaleTimeString("id-ID", { 
+                       hour: "2-digit", 
+                       minute: "2-digit" 
+                     }) : "-"}</td>
                     <td style={{ 
                       border: "1px solid #4a4a4a", 
                       padding: "4px 6px",
