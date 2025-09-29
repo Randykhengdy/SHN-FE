@@ -558,7 +558,7 @@ export default function AddWorkOrderPage() {
         console.log(`Saran plat ${saranItemId} is used in WO items:`, woItemsUsingThisSaranPlat.map(item => item.WoItemID));
         
         if (woItemsUsingThisSaranPlat.length === 0) {
-          console.log(`❌ No WO items found using saran plat ${saranItemId}`);
+          console.log(`❌ No WO items found using saran plat ${saranItemId} - skipping to preserve existing data`);
           continue;
         }
         
@@ -586,29 +586,64 @@ export default function AddWorkOrderPage() {
         if (canvasLayoutData) {
           const canvasLayout = JSON.parse(canvasLayoutData);
           
-          // Change all box colors to red before saving (mark as saved to database)
-          if (canvasLayout.boxes && Array.isArray(canvasLayout.boxes)) {
-            canvasLayout.boxes = canvasLayout.boxes.map(box => ({
-              ...box,
-              color: "#ef4444", // Red color for saved boxes
-              isDisabled: true, // Mark as disabled/saved
-              isSave: true // Mark as saved to database
-            }));
-            console.log(`Changed ${canvasLayout.boxes.length} boxes to red color for saran item ${saranItemId}`);
-          }
+          // Check if there are any boxes from current work order
+          const currentWorkOrderUniqueId = localStorage.getItem('WO_current_work_order_item_id') || localStorage.getItem('WO_current_work_order_id');
+          const currentWOBoxes = canvasLayout.boxes ? canvasLayout.boxes.filter(box => {
+            const boxWorkItemUniqueId = box.workItemUniqueId || 'unknown';
+            return boxWorkItemUniqueId === currentWorkOrderUniqueId;
+          }) : [];
           
-          processedCanvasData = JSON.stringify(canvasLayout);
+          // Only process canvas data if there are boxes from current work order
+          if (currentWOBoxes.length > 0) {
+            // Change box colors to red before saving, but preserve yellow boxes from other WO items
+            if (canvasLayout.boxes && Array.isArray(canvasLayout.boxes)) {
+              canvasLayout.boxes = canvasLayout.boxes.map(box => {
+                // Check if this box belongs to current work order or different work order
+                const boxWorkItemUniqueId = box.workItemUniqueId || 'unknown';
+                const isFromCurrentWO = boxWorkItemUniqueId === currentWorkOrderUniqueId;
+                
+                // Only change color to red if it's from current work order
+                // Preserve yellow color for boxes from other work orders
+                if (isFromCurrentWO) {
+                  return {
+                    ...box,
+                    color: "#ef4444", // Red color for saved boxes from current WO
+                    isDisabled: true, // Mark as disabled/saved
+                    isSave: true // Mark as saved to database
+                  };
+                } else {
+                  // Keep original color for boxes from other work orders (preserve yellow)
+                  return {
+                    ...box,
+                    // Don't change color, isDisabled, or isSave for boxes from other WO
+                  };
+                }
+              });
+              
+              console.log(`Changed ${currentWOBoxes.length} boxes to red color for saran item ${saranItemId} (preserved ${canvasLayout.boxes.length - currentWOBoxes.length} boxes from other WO items)`);
+            }
+            
+            processedCanvasData = JSON.stringify(canvasLayout);
+          } else {
+            // No boxes from current work order - don't save canvas data to preserve existing data
+            console.log(`No boxes from current WO for saran item ${saranItemId} - skipping canvas save to preserve existing data`);
+            processedCanvasData = null;
+          }
         }
         
-        // Always add saran plat data for all WO items
-        saranPlatData.push({
-          wo_planning_item_id: woItemUniqueIds, // Send array of woItemUniqueIds
-          item_barang_id: parseInt(saranItemId),
-          is_selected: true,
-          canvas_data: processedCanvasData // Use processed canvas data with red boxes
-        });
-        
-        console.log(`✅ Added saran plat data for saran item ${saranItemId} with ${woItemUniqueIds.length} WO items`);
+        // Only add saran plat data if there's canvas data from current work order
+        if (processedCanvasData) {
+          saranPlatData.push({
+            wo_planning_item_id: woItemUniqueIds, // Send array of woItemUniqueIds
+            item_barang_id: parseInt(saranItemId),
+            is_selected: true,
+            canvas_data: processedCanvasData // Use processed canvas data with red boxes
+          });
+          
+          console.log(`✅ Added saran plat data for saran item ${saranItemId} with ${woItemUniqueIds.length} WO items`);
+        } else {
+          console.log(`⏭️ Skipped saran plat data for saran item ${saranItemId} - no canvas data from current WO (preserving existing data)`);
+        }
       }
       
       console.log('Saran plat data to save:', saranPlatData);
