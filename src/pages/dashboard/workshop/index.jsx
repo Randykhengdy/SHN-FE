@@ -25,83 +25,82 @@ const DashboardWorkshopPage = () => {
 
   return (
     <div style={{ 
-      padding: "32px", 
+      padding: "0 0 32px 0", 
       backgroundColor: "#1a1a1a", 
       minHeight: "100vh",
       color: "#ffffff"
     }}>
-      <h1 style={{ 
-        color: "#ffffff", 
-        marginBottom: "24px",
-        fontSize: "28px",
-        fontWeight: "600"
-      }}>
-        PROGRESS SO - WO - INVOICE
-      </h1>
       {loading && <p style={{ color: "#a0a0a0", fontSize: "16px" }}>Memuat data...</p>}
       {error && <p style={{ color: "#ff6b6b", fontSize: "16px" }}>{error}</p>}
       {!loading && !error && (
         <div style={{ overflowX: "auto" }}>
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              background: "#2d2d2d",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
-              borderRadius: "8px",
-              overflow: "hidden"
-            }}
+           <table
+             style={{
+               width: "100%",
+               borderCollapse: "collapse",
+               background: "#2d2d2d",
+               boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+               borderRadius: "0",
+               overflow: "hidden"
+             }}
           >
             <thead>
               <tr style={{ background: "#3a3a3a" }}>
                 <th style={{ 
                   border: "1px solid #4a4a4a", 
-                  padding: "12px 16px",
+                  padding: "6px 8px",
                   color: "#000000",
                   fontWeight: "600",
-                  textAlign: "left"
+                  textAlign: "left",
+                  fontSize: "14px"
                 }}>No. SO</th>
                 <th style={{ 
                   border: "1px solid #4a4a4a", 
-                  padding: "12px 16px",
+                  padding: "6px 8px",
                   color: "#000000",
                   fontWeight: "600",
-                  textAlign: "left"
-                }}>Waktu SO</th>
+                  textAlign: "left",
+                  fontSize: "14px"
+                }}>Buat SO</th>
                 <th style={{ 
                   border: "1px solid #4a4a4a", 
-                  padding: "12px 16px",
+                  padding: "6px 8px",
                   color: "#000000",
                   fontWeight: "600",
-                  textAlign: "left"
+                  textAlign: "left",
+                  fontSize: "14px"
                 }}>No. WO</th>
                 <th style={{ 
                   border: "1px solid #4a4a4a", 
-                  padding: "12px 16px",
+                  padding: "6px 8px",
                   color: "#000000",
                   fontWeight: "600",
-                  textAlign: "left"
-                }}>Waktu WO</th>
+                  textAlign: "left",
+                  fontSize: "14px"
+                }}>Buat WO</th>
                 <th style={{ 
                   border: "1px solid #4a4a4a", 
-                  padding: "12px 16px",
+                  padding: "6px 8px",
                   color: "#000000",
                   fontWeight: "600",
-                  textAlign: "left"
+                  textAlign: "left",
+                  fontSize: "14px"
                 }}>Estimasi Selesai</th>
                 <th style={{ 
                   border: "1px solid #4a4a4a", 
-                  padding: "12px 16px",
+                  padding: "6px 8px",
                   color: "#000000",
                   fontWeight: "600",
-                  textAlign: "left"
-                }}>Real Selesai</th>
+                  textAlign: "left",
+                  fontSize: "14px"
+                }}>Close WO</th>
                 <th style={{ 
                   border: "1px solid #4a4a4a", 
-                  padding: "12px 16px",
+                  padding: "6px 8px",
                   color: "#000000",
                   fontWeight: "600",
-                  textAlign: "left"
+                  textAlign: "left",
+                  fontSize: "14px"
                 }}>No. Invoice</th>
               </tr>
             </thead>
@@ -140,38 +139,72 @@ const DashboardWorkshopPage = () => {
                     }}>
                     <td style={{ 
                       border: "1px solid #4a4a4a", 
-                      padding: "12px 16px",
-                      color: textColor
+                      padding: "4px 6px",
+                      color: textColor,
+                      fontSize: "13px",
+                      lineHeight: "1.2"
                     }}>{wo.nomor_so || "-"}</td>
                     <td style={{ 
                       border: "1px solid #4a4a4a", 
-                      padding: "12px 16px",
-                      color: textColor
-                    }}>{wo.waktu_so ? new Date(wo.waktu_so).toLocaleString("id-ID") : "-"}</td>
+                      padding: "4px 6px",
+                      color: textColor,
+                      fontSize: "13px",
+                      lineHeight: "1.2"
+                    }}>{wo.waktu_so ? new Date(wo.waktu_so).toLocaleDateString("id-ID", { 
+                      day: "2-digit", 
+                      month: "2-digit", 
+                      year: "2-digit" 
+                    }) + " " + new Date(wo.waktu_so).toLocaleTimeString("id-ID", { 
+                      hour: "2-digit", 
+                      minute: "2-digit" 
+                    }) : "-"}</td>
                     <td style={{ 
                       border: "1px solid #4a4a4a", 
-                      padding: "12px 16px",
-                      color: textColor
+                      padding: "4px 6px",
+                      color: textColor,
+                      fontSize: "13px",
+                      lineHeight: "1.2"
                     }}>{wo.nomor_wo || "-"}</td>
                     <td style={{ 
                       border: "1px solid #4a4a4a", 
-                      padding: "12px 16px",
-                      color: textColor
-                    }}>{wo.waktu_wo ? new Date(wo.waktu_wo).toLocaleString("id-ID") : "-"}</td>
+                      padding: "4px 6px",
+                      color: textColor,
+                      fontSize: "13px",
+                      lineHeight: "1.2"
+                    }}>{wo.waktu_wo ? new Date(wo.waktu_wo).toLocaleDateString("id-ID", { 
+                      day: "2-digit", 
+                      month: "2-digit", 
+                      year: "2-digit" 
+                    }) + " " + new Date(wo.waktu_wo).toLocaleTimeString("id-ID", { 
+                      hour: "2-digit", 
+                      minute: "2-digit" 
+                    }) : "-"}</td>
                     <td style={{ 
                       border: "1px solid #4a4a4a", 
-                      padding: "12px 16px",
-                      color: textColor
-                    }}>{wo.estimate_selesai ? new Date(wo.estimate_selesai).toLocaleString("id-ID") : "-"}</td>
+                      padding: "4px 6px",
+                      color: textColor,
+                      fontSize: "13px",
+                      lineHeight: "1.2"
+                    }}>{wo.estimate_selesai ? new Date(wo.estimate_selesai).toLocaleTimeString("id-ID", { 
+                      hour: "2-digit", 
+                      minute: "2-digit" 
+                    }) : "-"}</td>
                     <td style={{ 
                       border: "1px solid #4a4a4a", 
-                      padding: "12px 16px",
-                      color: textColor
-                    }}>{wo.real_selesai ? new Date(wo.real_selesai).toLocaleString("id-ID") : "-"}</td>
+                      padding: "4px 6px",
+                      color: textColor,
+                      fontSize: "13px",
+                      lineHeight: "1.2"
+                    }}>{wo.real_selesai ? new Date(wo.real_selesai).toLocaleTimeString("id-ID", { 
+                      hour: "2-digit", 
+                      minute: "2-digit" 
+                    }) : "-"}</td>
                     <td style={{ 
                       border: "1px solid #4a4a4a", 
-                      padding: "12px 16px",
-                      color: textColor
+                      padding: "4px 6px",
+                      color: textColor,
+                      fontSize: "13px",
+                      lineHeight: "1.2"
                     }}>{wo.nomor_inv || "-"}</td>
                   </tr>
                   );
