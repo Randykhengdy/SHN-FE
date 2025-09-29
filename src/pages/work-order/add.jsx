@@ -48,14 +48,11 @@ export default function AddWorkOrderPage() {
   // Work Order ID State - generate new ID every time page is opened
   const [workOrderId, setWorkOrderId] = useState(() => {
     // Clear all WO_ storage first
-    console.log('Clearing all WO_ storage before generating new ID');
     const keys = Object.keys(localStorage);
     const woKeys = keys.filter(key => key.startsWith('WO_'));
     woKeys.forEach(key => {
       localStorage.removeItem(key);
-      console.log('Removed storage key:', key);
     });
-    console.log(`Cleared ${woKeys.length} WO_ storage keys`);
     
     // Always generate a new work order ID when opening add WO page
     const timestamp = Date.now();
@@ -64,8 +61,6 @@ export default function AddWorkOrderPage() {
     
     // Store the new ID in localStorage for this session
     localStorage.setItem('WO_current_work_order_id', newWorkOrderId);
-    
-    console.log('Generated new work order ID:', newWorkOrderId);
     return newWorkOrderId;
   });
 
@@ -195,7 +190,6 @@ export default function AddWorkOrderPage() {
   useEffect(() => {
     const storedWorkOrderId = localStorage.getItem('WO_current_work_order_id');
     if (storedWorkOrderId && storedWorkOrderId !== workOrderId) {
-      console.log('Syncing workOrderId with localStorage:', storedWorkOrderId);
       setWorkOrderId(storedWorkOrderId);
     }
   }, []);
@@ -204,8 +198,6 @@ export default function AddWorkOrderPage() {
   useEffect(() => {
     const loadMasterData = async () => {
       try {
-        console.log('Loading master data...');
-        
         const [
           gudang,
           jenisBarang,
@@ -220,19 +212,7 @@ export default function AddWorkOrderPage() {
           getPelaksanaOptions()
         ]);
 
-        console.log('Gudang data:', gudang);
-        console.log('Jenis Barang data:', jenisBarang);
-        console.log('Bentuk Barang data:', bentukBarang);
-        console.log('Grade Barang data:', gradeBarang);
-        console.log('Pelaksana data:', pelaksana);
-
         // Set data directly like sales order does
-        console.log('Setting gudang list:', gudang);
-        console.log('Setting jenis barang list:', jenisBarang);
-        console.log('Setting bentuk barang list:', bentukBarang);
-        console.log('Setting grade barang list:', gradeBarang);
-        console.log('Setting pelaksana list:', pelaksana);
-        
         setGudangList(gudang);
         setJenisBarangList(jenisBarang);
         setBentukBarangList(bentukBarang);
@@ -248,14 +228,9 @@ export default function AddWorkOrderPage() {
             getSalesOrderOptions(),
             getPelangganOptions()
           ]);
-          
-          console.log('Sales Order response:', salesOrderResponse);
-          console.log('Pelanggan response:', pelangganResponse);
-          
           // getPelangganOptions sudah mengembalikan data yang sudah di-map
           if (pelangganResponse && Array.isArray(pelangganResponse)) {
             setPelangganList(pelangganResponse);
-            console.log('Pelanggan options:', pelangganResponse);
           } else if (pelangganResponse?.data && Array.isArray(pelangganResponse.data)) {
             // Fallback jika response masih dalam format lama
             const pelangganOptions = pelangganResponse.data.map(item => ({
@@ -264,7 +239,6 @@ export default function AddWorkOrderPage() {
               searchKey: `${item.nama_pelanggan || item.nama || ''} ${item.alamat || ''}`.trim()
             }));
             setPelangganList(pelangganOptions);
-            console.log('Pelanggan options (fallback):', pelangganOptions);
           }
           
           // Set sales order data
@@ -276,9 +250,6 @@ export default function AddWorkOrderPage() {
           setLoadingPelanggan(false);
           setLoadingSalesOrder(false);
         }
-        
-        console.log('State set - gudangList:', gudang);
-        console.log('State set - pelangganList:', pelangganList);
         
         // Debug: Log semua state setelah di-set
         setTimeout(() => {
@@ -856,7 +827,7 @@ export default function AddWorkOrderPage() {
                     const selectedSO = salesOrderList.find(so => so.value === value);
                     if (selectedSO) {
                       // Generate WO number from SO number
-                      const soNumber = selectedSO.label || selectedSO.value;
+                      const soNumber = selectedSO.nomor_so;
                       const woNumber = soNumber.replace(/^SO-/, 'WO-');
                       setWorkOrderData({
                         ...workOrderData, 
@@ -916,8 +887,6 @@ export default function AddWorkOrderPage() {
                   options={gudangList}
                   value={workOrderData.gudang_id ? workOrderData.gudang_id.toString() : ''} 
                   onValueChange={(value) => {
-                    console.log('Gudang selected:', value, 'Type:', typeof value);
-                    console.log('Available gudang options:', gudangList);
                     setWorkOrderData({...workOrderData, gudang_id: parseInt(value)});
                   }}
                   placeholder="Pilih gudang"
@@ -931,8 +900,6 @@ export default function AddWorkOrderPage() {
                   options={pelangganList}
                   value={workOrderData.pelanggan_id ? workOrderData.pelanggan_id.toString() : ''} 
                   onValueChange={(value) => {
-                    console.log('Pelanggan selected:', value, 'Type:', typeof value);
-                    console.log('Available pelanggan options:', pelangganList);
                     setWorkOrderData({...workOrderData, pelanggan_id: parseInt(value)});
                   }}
                   placeholder="Pilih pelanggan"
