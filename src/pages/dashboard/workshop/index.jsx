@@ -202,8 +202,8 @@ const DashboardWorkshopPage = () => {
                   let textColor = "#ffffff"; // default putih
                   
                   if (wo.close_wo_at && wo.nomor_inv) {
-                    // Jika close_wo_at dan nomor_inv sudah terisi -> hijau
-                    textColor = "#10b981";
+                    // Jika close_wo_at dan nomor_inv sudah terisi -> hijau neon (terang)
+                    textColor = "#39FF14";
                   } else if (!wo.close_wo_at) {
                     // Jika close_wo_at belum terisi -> kuning
                     textColor = "#fff700"; // kuning sangat terang
