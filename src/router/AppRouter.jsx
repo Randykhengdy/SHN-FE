@@ -33,6 +33,7 @@ import WorkOrderPlatShaftCanvasPage from "@/pages/work-order/PlatShaftCanvasPage
 import PurchaseOrderPage from "@/pages/purchase-order";
 import AddPurchaseOrderPage from "@/pages/purchase-order/add";
 import ViewPurchaseOrderPage from "@/pages/purchase-order/view";
+import FinanceInvoicePodPage from "@/pages/finance-invoice-pod";
 
 import DashboardWorkshopPage from "@/pages/dashboard/workshop";
 
@@ -74,6 +75,8 @@ const AppRouter = () => {
         <Route path="/purchase-order/add" element={<AddPurchaseOrderPage />} />
         <Route path="/purchase-order/view/:id" element={<ViewPurchaseOrderPage />} />
         <Route path="/dashboard/workshop" element={<DashboardWorkshopPage />} />
+
+        <Route path="/finance-invoice-pod" element={<FinanceInvoicePodPage />} />
       </Routes>
     );
 };
