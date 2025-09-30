@@ -5,23 +5,36 @@ const DashboardWorkshopPage = () => {
   const [workOrders, setWorkOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [fontSize, setFontSize] = useState(13); // Default font size
+
+  const fetchWorkOrders = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await workshopDashboardService.getDashboardData();
+      setWorkOrders(response.work_orders || []);
+    } catch (err) {
+      setError(err.message || "Terjadi kesalahan");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchWorkOrders = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await workshopDashboardService.getDashboardData();
-        setWorkOrders(response.work_orders || []);
-      } catch (err) {
-        setError(err.message || "Terjadi kesalahan");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchWorkOrders();
   }, []);
+
+  const handleRefresh = () => {
+    fetchWorkOrders();
+  };
+
+  const handleEnlargeText = () => {
+    setFontSize(prev => Math.min(prev + 2, 20)); // Max 20px
+  };
+
+  const handleEnsmallText = () => {
+    setFontSize(prev => Math.max(prev - 2, 10)); // Min 10px
+  };
 
   return (
     <div style={{ 
@@ -34,6 +47,73 @@ const DashboardWorkshopPage = () => {
       {error && <p style={{ color: "#ff6b6b", fontSize: "16px" }}>{error}</p>}
       {!loading && !error && (
         <div style={{ overflowX: "auto" }}>
+          {/* Control buttons row */}
+          <div style={{
+            display: "flex",
+            gap: "8px",
+            marginBottom: "4px"
+          }}>
+            <button
+              onClick={handleRefresh}
+              style={{
+                background: "#3a3a3a",
+                border: "1px solid #4a4a4a",
+                color: "#ffffff",
+                padding: "6px 8px",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontSize: "16px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "background-color 0.2s ease"
+              }}
+              onMouseOver={(e) => e.target.style.background = "#4a4a4a"}
+              onMouseOut={(e) => e.target.style.background = "#3a3a3a"}
+            >
+              🔄
+            </button>
+            <button
+              onClick={handleEnlargeText}
+              style={{
+                background: "#3a3a3a",
+                border: "1px solid #4a4a4a",
+                color: "#ffffff",
+                padding: "6px 8px",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontSize: "16px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "background-color 0.2s ease"
+              }}
+              onMouseOver={(e) => e.target.style.background = "#4a4a4a"}
+              onMouseOut={(e) => e.target.style.background = "#3a3a3a"}
+            >
+              🔍+
+            </button>
+            <button
+              onClick={handleEnsmallText}
+              style={{
+                background: "#3a3a3a",
+                border: "1px solid #4a4a4a",
+                color: "#ffffff",
+                padding: "6px 8px",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontSize: "16px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "background-color 0.2s ease"
+              }}
+              onMouseOver={(e) => e.target.style.background = "#4a4a4a"}
+              onMouseOut={(e) => e.target.style.background = "#3a3a3a"}
+            >
+              🔍-
+            </button>
+          </div>
            <table
              style={{
                width: "100%",
@@ -52,7 +132,7 @@ const DashboardWorkshopPage = () => {
                   color: "#000000",
                   fontWeight: "600",
                   textAlign: "left",
-                  fontSize: "14px"
+                  fontSize: `${fontSize + 1}px`
                 }}>No. SO</th>
                 <th style={{ 
                   border: "1px solid #4a4a4a", 
@@ -60,7 +140,7 @@ const DashboardWorkshopPage = () => {
                   color: "#000000",
                   fontWeight: "600",
                   textAlign: "left",
-                  fontSize: "14px"
+                  fontSize: `${fontSize + 1}px`
                 }}>Buat SO</th>
                 <th style={{ 
                   border: "1px solid #4a4a4a", 
@@ -68,7 +148,7 @@ const DashboardWorkshopPage = () => {
                   color: "#000000",
                   fontWeight: "600",
                   textAlign: "left",
-                  fontSize: "14px"
+                  fontSize: `${fontSize + 1}px`
                 }}>No. WO</th>
                 <th style={{ 
                   border: "1px solid #4a4a4a", 
@@ -76,7 +156,7 @@ const DashboardWorkshopPage = () => {
                   color: "#000000",
                   fontWeight: "600",
                   textAlign: "left",
-                  fontSize: "14px"
+                  fontSize: `${fontSize + 1}px`
                 }}>Buat WO</th>
                 <th style={{ 
                   border: "1px solid #4a4a4a", 
@@ -84,7 +164,7 @@ const DashboardWorkshopPage = () => {
                   color: "#000000",
                   fontWeight: "600",
                   textAlign: "left",
-                  fontSize: "14px"
+                  fontSize: `${fontSize + 1}px`
                 }}>Estimasi Selesai</th>
                 <th style={{ 
                   border: "1px solid #4a4a4a", 
@@ -92,7 +172,7 @@ const DashboardWorkshopPage = () => {
                   color: "#000000",
                   fontWeight: "600",
                   textAlign: "left",
-                  fontSize: "14px"
+                  fontSize: `${fontSize + 1}px`
                 }}>Close WO</th>
                 <th style={{ 
                   border: "1px solid #4a4a4a", 
@@ -100,7 +180,7 @@ const DashboardWorkshopPage = () => {
                   color: "#000000",
                   fontWeight: "600",
                   textAlign: "left",
-                  fontSize: "14px"
+                  fontSize: `${fontSize + 1}px`
                 }}>No. Invoice</th>
               </tr>
             </thead>
@@ -141,14 +221,14 @@ const DashboardWorkshopPage = () => {
                       border: "1px solid #4a4a4a", 
                       padding: "4px 6px",
                       color: textColor,
-                      fontSize: "13px",
+                      fontSize: `${fontSize}px`,
                       lineHeight: "1.2"
                     }}>{wo.nomor_so || "-"}</td>
                     <td style={{ 
                       border: "1px solid #4a4a4a", 
                       padding: "4px 6px",
                       color: textColor,
-                      fontSize: "13px",
+                      fontSize: `${fontSize}px`,
                       lineHeight: "1.2"
                     }}>{wo.waktu_so ? new Date(wo.waktu_so).toLocaleDateString("id-ID", { 
                       day: "2-digit", 
@@ -162,14 +242,14 @@ const DashboardWorkshopPage = () => {
                       border: "1px solid #4a4a4a", 
                       padding: "4px 6px",
                       color: textColor,
-                      fontSize: "13px",
+                      fontSize: `${fontSize}px`,
                       lineHeight: "1.2"
                     }}>{wo.nomor_wo || "-"}</td>
                     <td style={{ 
                       border: "1px solid #4a4a4a", 
                       padding: "4px 6px",
                       color: textColor,
-                      fontSize: "13px",
+                      fontSize: `${fontSize}px`,
                       lineHeight: "1.2"
                     }}>{wo.waktu_wo ? new Date(wo.waktu_wo).toLocaleTimeString("id-ID", { 
                       hour: "2-digit", 
@@ -179,7 +259,7 @@ const DashboardWorkshopPage = () => {
                       border: "1px solid #4a4a4a", 
                       padding: "4px 6px",
                       color: textColor,
-                      fontSize: "13px",
+                      fontSize: `${fontSize}px`,
                       lineHeight: "1.2"
                     }}>{wo.estimate_selesai ? new Date(wo.estimate_selesai).toLocaleTimeString("id-ID", { 
                       hour: "2-digit", 
@@ -189,7 +269,7 @@ const DashboardWorkshopPage = () => {
                        border: "1px solid #4a4a4a", 
                        padding: "4px 6px",
                        color: textColor,
-                       fontSize: "13px",
+                       fontSize: `${fontSize}px`,
                        lineHeight: "1.2"
                      }}>{wo.close_wo_at ? new Date(wo.close_wo_at).toLocaleTimeString("id-ID", { 
                        hour: "2-digit", 
@@ -199,7 +279,7 @@ const DashboardWorkshopPage = () => {
                       border: "1px solid #4a4a4a", 
                       padding: "4px 6px",
                       color: textColor,
-                      fontSize: "13px",
+                      fontSize: `${fontSize}px`,
                       lineHeight: "1.2"
                     }}>{wo.nomor_inv || "-"}</td>
                   </tr>
