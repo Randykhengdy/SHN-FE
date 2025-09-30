@@ -197,7 +197,7 @@ export default function FinanceInvoicePodPage() {
     <PageLayout title="Surat Jalan & Invoicing" category="FINANCE">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div className="bg-white rounded-lg px-4 py-2 border border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-800">Daftar Work Order untuk Invoice & POD</h2>
+          <h2 className="text-lg font-semibold text-gray-800">Surat Jalan & Invoicing</h2>
         </div>
         <Button onClick={loadWorkOrders} disabled={loading} className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
           <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
@@ -382,7 +382,7 @@ export default function FinanceInvoicePodPage() {
                                 ) : (
                                   <FileText className="w-4 h-4 mr-1" />
                                 )}
-                                <span className="hidden sm:inline">POD</span>
+                                <span className="hidden sm:inline">Surat Jalan</span>
                               </Button>
                             </>
                           )}
@@ -479,7 +479,7 @@ export default function FinanceInvoicePodPage() {
                   <FileText className="h-6 w-6 text-blue-600" />
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-blue-600">Total WO</p>
+                  <p className="text-sm font-medium text-blue-600">Total WO Selesai</p>
                   <p className="text-2xl font-semibold text-blue-900">{totalWO}</p>
                 </div>
               </div>
