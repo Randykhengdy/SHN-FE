@@ -3,6 +3,12 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@layer utilities {
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    @apply absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer;
+  }
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

@@ -33,6 +33,8 @@ import WorkOrderPlatShaftCanvasPage from "@/pages/work-order/PlatShaftCanvasPage
 import PurchaseOrderPage from "@/pages/purchase-order";
 import AddPurchaseOrderPage from "@/pages/purchase-order/add";
 import ViewPurchaseOrderPage from "@/pages/purchase-order/view";
+import MutasiStockPage from "@/pages/mutasi-stock";
+import AddMutasiStockPage from "@/pages/mutasi-stock/add";
 
 const AppRouter = () => {
     return (
@@ -71,6 +73,8 @@ const AppRouter = () => {
         <Route path="/purchase-order" element={<PurchaseOrderPage />} />
         <Route path="/purchase-order/add" element={<AddPurchaseOrderPage />} />
         <Route path="/purchase-order/view/:id" element={<ViewPurchaseOrderPage />} />
+        <Route path="/mutasi-stock" element={<MutasiStockPage/>} />
+        <Route path="/mutasi-stock/add" element={<AddMutasiStockPage />} />
       </Routes>
     );
 };
