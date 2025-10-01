@@ -38,10 +38,23 @@ export const financeInvoicePodService = {
     });
   },
 
-  // Print POD (Surat Jalan)
-  printPod: async (workOrderId) => {
-    return await request(`/invoice-pod/print-pod/${workOrderId}`, {
-      method: 'POST'
+  // Print POD (Surat Jalan) - using view-pod endpoint
+  printPod: async (nomorWo) => {
+    return await request('/invoice-pod/view-pod', {
+      method: 'POST',
+      body: JSON.stringify({
+        nomor_wo: nomorWo
+      })
+    });
+  },
+
+  // View invoice for printing
+  viewInvoice: async (nomorWo) => {
+    return await request('/invoice-pod/view-invoice', {
+      method: 'POST',
+      body: JSON.stringify({
+        nomor_wo: nomorWo
+      })
     });
   }
 };

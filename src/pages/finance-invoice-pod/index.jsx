@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { financeInvoicePodService } from "@/services/financeInvoicePodService";
 import { useAlert } from "@/hooks/useAlert";
 import PageLayout from "@/components/PageLayout";
+import { generatePodPrintContent, generateInvoicePrintContent, openPrintDialog } from "@/lib/printUtils";
 
 const filterOptions = [
   { value: "all", label: "Semua Status" },
@@ -125,32 +126,50 @@ export default function FinanceInvoicePodPage() {
   };
 
   // Handle print invoice
-  const handlePrintInvoice = async (workOrderId) => {
+  const handlePrintInvoice = async (nomorWo) => {
     try {
-      setActionLoading(prev => ({ ...prev, [`invoice_${workOrderId}`]: true }));
-      await financeInvoicePodService.printInvoice(workOrderId);
+      setActionLoading(prev => ({ ...prev, [`invoice_${nomorWo}`]: true }));
+      
+      // Get invoice data for printing
+      const result = await financeInvoicePodService.viewInvoice(nomorWo);
+      console.log('Invoice data:', result);
+      
+      // Create print content from invoice data
+      const printContent = generateInvoicePrintContent(result.data);
+      
+      // Open print dialog
+      openPrintDialog(printContent);
+      
       showAlert("Sukses", "Invoice berhasil di-print!", "success");
     } catch (error) {
       console.error('Error printing invoice:', error);
       showAlert("Error", "Gagal print Invoice", "error");
     } finally {
-      setActionLoading(prev => ({ ...prev, [`invoice_${workOrderId}`]: false }));
+      setActionLoading(prev => ({ ...prev, [`invoice_${nomorWo}`]: false }));
     }
   };
 
   // Handle print POD
-  const handlePrintPod = async (workOrderId) => {
+  const handlePrintPod = async (nomorWo) => {
     try {
-      setActionLoading(prev => ({ ...prev, [`pod_${workOrderId}`]: true }));
-      await financeInvoicePodService.printPod(workOrderId);
-      showAlert("Sukses", "POD (Surat Jalan) berhasil di-print!", "success");
+      setActionLoading(prev => ({ ...prev, [`pod_${nomorWo}`]: true }));
+      const result = await financeInvoicePodService.printPod(nomorWo);
+      console.log('POD data:', result);
+      
+      // Create print content from POD data
+      const printContent = generatePodPrintContent(result.data);
+      
+      // Open print dialog
+      openPrintDialog(printContent);
+      
     } catch (error) {
       console.error('Error printing POD:', error);
       showAlert("Error", "Gagal print POD", "error");
     } finally {
-      setActionLoading(prev => ({ ...prev, [`pod_${workOrderId}`]: false }));
+      setActionLoading(prev => ({ ...prev, [`pod_${nomorWo}`]: false }));
     }
   };
+
 
   const handleClearFilter = () => {
     setSearchTerm("");
@@ -359,31 +378,31 @@ export default function FinanceInvoicePodPage() {
                               <Button 
                                 size="sm" 
                                 variant="outline" 
-                                onClick={() => handlePrintInvoice(wo.id)}
-                                disabled={actionLoading[`invoice_${wo.id}`]}
+                                onClick={() => handlePrintInvoice(wo.nomorWo)}
+                                disabled={actionLoading[`invoice_${wo.nomorWo}`]}
                                 className={wo.hasGeneratedInvoice === 1 ? "bg-green-50 text-green-700 border-green-300" : ""}
                               >
-                                {actionLoading[`invoice_${wo.id}`] ? (
+                                {actionLoading[`invoice_${wo.nomorWo}`] ? (
                                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
                                 ) : (
                                   <Printer className="w-4 h-4 mr-1" />
                                 )}
-                                <span className="hidden sm:inline">Invoice</span>
+                                <span className="hidden sm:inline">Print Invoice</span>
                               </Button>
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                onClick={() => handlePrintPod(wo.id)}
-                                disabled={actionLoading[`pod_${wo.id}`]}
-                                className={wo.hasGeneratedPod === 1 ? "bg-blue-50 text-blue-700 border-blue-300" : ""}
-                              >
-                                {actionLoading[`pod_${wo.id}`] ? (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
-                                ) : (
-                                  <FileText className="w-4 h-4 mr-1" />
-                                )}
-                                <span className="hidden sm:inline">Surat Jalan</span>
-                              </Button>
+                               <Button 
+                                 size="sm" 
+                                 variant="outline" 
+                                 onClick={() => handlePrintPod(wo.nomorWo)}
+                                 disabled={actionLoading[`pod_${wo.nomorWo}`]}
+                                 className={wo.hasGeneratedPod === 1 ? "bg-blue-50 text-blue-700 border-blue-300" : ""}
+                               >
+                                 {actionLoading[`pod_${wo.nomorWo}`] ? (
+                                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+                                 ) : (
+                                   <FileText className="w-4 h-4 mr-1" />
+                                 )}
+                                 <span className="hidden sm:inline">Print Surat Jalan</span>
+                               </Button>
                             </>
                           )}
                         </div>
