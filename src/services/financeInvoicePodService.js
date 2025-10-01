@@ -25,9 +25,12 @@ export const financeInvoicePodService = {
   },
 
   // Generate invoice POD
-  generateInvoicePod: async (workOrderId) => {
-    return await request(`/invoice-pod/generate/${workOrderId}`, {
-      method: 'POST'
+  generateInvoicePod: async (nomorWo) => {
+    return await request('/invoice-pod/generate-invoice-pod', {
+      method: 'POST',
+      body: JSON.stringify({
+        nomor_wo: nomorWo
+      })
     });
   },
 

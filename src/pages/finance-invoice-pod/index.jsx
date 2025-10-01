@@ -110,18 +110,19 @@ export default function FinanceInvoicePodPage() {
   }, [loadWorkOrders]);
 
   // Handle generate invoice POD
-  const handleGenerateInvoicePod = async (workOrderId) => {
+  const handleGenerateInvoicePod = async (nomorWo) => {
     try {
-      setActionLoading(prev => ({ ...prev, [workOrderId]: true }));
-      await financeInvoicePodService.generateInvoicePod(workOrderId);
-      showAlert("Sukses", "Invoice POD berhasil di-generate!", "success", () => {
+      setActionLoading(prev => ({ ...prev, [nomorWo]: true }));
+      const result = await financeInvoicePodService.generateInvoicePod(nomorWo);
+      console.log('Generate result:', result);
+      showAlert("Sukses", `Invoice POD berhasil di-generate!<br/>Invoice: ${result.data.nomor_invoice}<br/>Surat Jalan: ${result.data.nomor_pod}`, "success", () => {
         loadWorkOrders();
       });
     } catch (error) {
       console.error('Error generating invoice POD:', error);
       showAlert("Error", "Gagal generate Invoice POD", "error");
     } finally {
-      setActionLoading(prev => ({ ...prev, [workOrderId]: false }));
+      setActionLoading(prev => ({ ...prev, [nomorWo]: false }));
     }
   };
 
@@ -193,18 +194,18 @@ export default function FinanceInvoicePodPage() {
 
   const getStatusBadge = (isGenerated, hasGeneratedInvoice, hasGeneratedPod) => {
     if (!isGenerated) {
-      return <Badge className="bg-orange-100 text-orange-800">Belum Generate</Badge>;
+      return <Badge className="bg-orange-100 text-orange-800">Not Generated</Badge>;
     }
     if (hasGeneratedInvoice === 1 && hasGeneratedPod === 1) {
-      return <Badge className="bg-green-100 text-green-800">Lengkap</Badge>;
+      return <Badge className="bg-green-100 text-green-800">All Document Printed</Badge>;
     }
     if (hasGeneratedInvoice === 1) {
-      return <Badge className="bg-blue-100 text-blue-800">Invoice Saja</Badge>;
+      return <Badge className="bg-blue-100 text-blue-800">Invoice Printed</Badge>;
     }
     if (hasGeneratedPod === 1) {
-      return <Badge className="bg-purple-100 text-purple-800">POD Saja</Badge>;
+      return <Badge className="bg-purple-100 text-purple-800">Surat Jalan Printed</Badge>;
     }
-    return <Badge className="bg-yellow-100 text-yellow-800">Generate Saja</Badge>;
+    return <Badge className="bg-yellow-100 text-yellow-800">Generated</Badge>;
   };
 
   // Pagination calculations
@@ -363,10 +364,10 @@ export default function FinanceInvoicePodPage() {
                             <Button 
                               size="sm" 
                               className="bg-green-600 hover:bg-green-700" 
-                              onClick={() => handleGenerateInvoicePod(wo.id)}
-                              disabled={actionLoading[wo.id]}
+                              onClick={() => handleGenerateInvoicePod(wo.nomorWo)}
+                              disabled={actionLoading[wo.nomorWo]}
                             >
-                              {actionLoading[wo.id] ? (
+                              {actionLoading[wo.nomorWo] ? (
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                               ) : (
                                 <FileText className="w-4 h-4 mr-1" />

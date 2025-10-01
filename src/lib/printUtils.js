@@ -18,11 +18,11 @@ export const generatePodPrintContent = (podData) => {
       <title>Surat Jalan - ${podData.nomor_pod}</title>
       <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
-        .header { display: flex; align-items: center; margin-bottom: 30px; position: relative; }
+        .header { display: flex; align-items: flex-start; margin-bottom: 30px; position: relative; min-height: 100px; padding-top: 10px; }
         .logo { width: 80px; height: auto; margin-right: 20px; object-fit: contain; }
-        .header-content { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; }
-        .company-name { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-        .document-title { font-size: 18px; font-weight: bold; margin-bottom: 20px; }
+        .header-content { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; top: 10px; }
+        .company-name { font-size: 24px; font-weight: bold; margin-bottom: 10px; line-height: 1.2; }
+        .document-title { font-size: 18px; font-weight: bold; margin-bottom: 20px; line-height: 1.2; }
         .info-section { margin-bottom: 20px; }
         .info-row { display: flex; margin-bottom: 5px; }
         .info-label { font-weight: bold; min-width: 200px; }
@@ -126,11 +126,11 @@ export const generateInvoicePrintContent = (invoiceData) => {
       <title>Invoice - ${invoiceData.nomor_invoice}</title>
       <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
-        .header { display: flex; align-items: center; margin-bottom: 30px; position: relative; }
+        .header { display: flex; align-items: flex-start; margin-bottom: 30px; position: relative; min-height: 100px; padding-top: 10px; }
         .logo { width: 80px; height: auto; margin-right: 20px; object-fit: contain; }
-        .header-content { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; }
-        .company-name { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-        .document-title { font-size: 18px; font-weight: bold; margin-bottom: 20px; }
+        .header-content { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; top: 10px; }
+        .company-name { font-size: 24px; font-weight: bold; margin-bottom: 10px; line-height: 1.2; }
+        .document-title { font-size: 18px; font-weight: bold; margin-bottom: 20px; line-height: 1.2; }
         .info-section { margin-bottom: 20px; }
         .info-row { display: flex; margin-bottom: 5px; }
         .info-label { font-weight: bold; min-width: 200px; }
