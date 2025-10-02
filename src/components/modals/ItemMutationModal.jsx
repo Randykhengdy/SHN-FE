@@ -30,9 +30,9 @@ const MutationModal = ({
 
         if (item) {
             // edit mode
-            setSelectedItemStock(item.barang_id);
-            setUnit(item.satuan);
-            setQuantity(item.qty);
+            setSelectedItemStock(item.item_barang_id);
+            setUnit(item.unit);
+            setQuantity(item.quantity);
         } else {
             // add mode
             setSelectedItemStock(null);
@@ -93,9 +93,9 @@ const MutationModal = ({
         }
 
         const result = {
-            barang_id: selectedItemStock,
-            satuan: unit,
-            qty: unit === 'bulk' ? parseInt(quantity) : 1
+            item_barang_id: selectedItemStock,
+            unit: unit,
+            quantity: unit === 'bulk' ? parseInt(quantity) : 1
         }
 
         onSave?.(result);

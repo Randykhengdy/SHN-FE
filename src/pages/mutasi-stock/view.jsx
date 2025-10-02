@@ -70,25 +70,27 @@ export default function ViewMutasiStockPage() {
         setItemMutationModalOpen(true);
     };
 
-    const handleRemoveItem = (id) => {
-        setMutasiStockData(prev => ({ ...prev, stock_mutation: prev.stock_mutation.filter(item => item.id !== id) }));
+    const handleRemoveItem = (indexToRemove) => {
+        setMutasiStockData(prev => ({
+            ...prev,
+            stock_mutation: prev.stock_mutation.filter((_, i) => i !== indexToRemove)
+        }));
     };
-
 
     const handleBackToList = () => {
         window.history.back();
     };
 
     const saveStockForMutation = (rows) => {
-        const data = { ...rows, barang: itemStockOptions.find(opt => opt.value === rows.barang_id)?.label };
+        const data = { ...rows, barang: itemStockOptions.find(opt => opt.value === rows.item_barang_id)?.label };
         setMutasiStockData(prev => {
-            const exists = prev.stock_mutation.some(item => item.barang_id === rows.barang_id && item.satuan === rows.satuan);
+            const exists = prev.stock_mutation.some(item => item.item_barang_id === rows.item_barang_id && item.unit === rows.unit);
 
             return {
                 ...prev,
                 stock_mutation: exists
                     ? prev.stock_mutation.map(item =>
-                        (item.barang_id === rows.barang_id && item.satuan === rows.satuan) ? { ...item, qty: item.qty + rows.qty } : item,
+                        (item.item_barang_id === rows.item_barang_id && item.unit === rows.unit) ? { ...item, quantity: item.quantity + rows.quantity } : item,
                     )
                     : [...prev.stock_mutation, data]
             };
@@ -181,8 +183,8 @@ export default function ViewMutasiStockPage() {
                                 <TableRow key={item.id}>
                                     <TableCell className="table-cell-standard">{index + 1}</TableCell>
                                     <TableCell className="table-cell-standard">{item.barang}</TableCell>
-                                    <TableCell className="table-cell-standard">{item.satuan}</TableCell>
-                                    <TableCell className="table-cell-standard">{item.qty}</TableCell>
+                                    <TableCell className="table-cell-standard">{item.unit}</TableCell>
+                                    <TableCell className="table-cell-standard">{item.quantity}</TableCell>
                                     <TableCell className="table-cell-standard">
                                         <div className="flex w-0 flex-0 gap-2">
                                             <Button
@@ -196,7 +198,7 @@ export default function ViewMutasiStockPage() {
                                             <Button
                                                 variant="destructive"
                                                 size="sm"
-                                                onClick={() => handleRemoveItem(item.id)}
+                                                onClick={() => handleRemoveItem(index)}
                                                 className="btn-danger"
                                             >
                                                 <Minus className="w-4 h-4" />
