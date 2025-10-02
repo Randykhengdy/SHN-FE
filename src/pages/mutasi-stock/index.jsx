@@ -105,10 +105,10 @@ export default function MutasiStockPage() {
 
     const getStatusColor = (status) => {
         switch (status) {
-            case "Requested": return "bg-blue-100 text-blue-800";
-            case "Lost": return "bg-yellow-100 text-yellow-800";
-            case "Partial Accepted": return "bg-purple-100 text-purple-800";
-            case "Accepted": return "bg-green-100 text-green-800";
+            case "requested": return "bg-blue-100 text-blue-800";
+            case "lost": return "bg-yellow-100 text-yellow-800";
+            case "partial accepted": return "bg-purple-100 text-purple-800";
+            case "accepted": return "bg-green-100 text-green-800";
             default: return "bg-gray-100 text-gray-800";
         }
     };
@@ -326,7 +326,7 @@ export default function MutasiStockPage() {
                                         <TableCell className="font-medium">{sm.requestDate}</TableCell>
                                         <TableCell>{sm.requestor}</TableCell>
                                         <TableCell>
-                                            <Badge className={getStatusColor(sm.status)}>
+                                            <Badge className={`${getStatusColor(sm.status)} capitalize`}>
                                                 {sm.status}
                                             </Badge>
                                         </TableCell>
