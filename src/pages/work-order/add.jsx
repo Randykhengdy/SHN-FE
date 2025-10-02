@@ -318,6 +318,7 @@ export default function AddWorkOrderPage() {
           return {
             id: timestamp,
             workOrderUniqueId: workOrderUniqueId, // Add workOrderUniqueId to each WO item
+            sales_order_item_id: item.id, // Add hidden sales order item ID
             panjang: item.panjang || item.length || 0,
             lebar: item.lebar || item.width || 0,
             tebal: item.tebal || item.ketebalan || item.thickness || 0,
@@ -349,6 +350,7 @@ export default function AddWorkOrderPage() {
         // Reset to default item if no items found
         setWorkOrderItems([{
           id: Date.now(),
+          sales_order_item_id: null, // No sales order item ID for manual items
           panjang: '',
           lebar: '',
           tebal: '',
@@ -373,6 +375,7 @@ export default function AddWorkOrderPage() {
   const addWorkOrderItem = () => {
     const newItem = {
       id: Date.now(),
+      sales_order_item_id: null, // No sales order item ID for manual items
       panjang: '0',
       lebar: '0',
       tebal: '0',
@@ -718,6 +721,7 @@ export default function AddWorkOrderPage() {
         status: workOrderData.status,
         items: workOrderItems.map((item, index) => ({
           wo_item_unique_id: existingWoItemIds[index] || `WOI-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+          sales_order_item_id: item.sales_order_item_id, // Include sales order item ID
           qty: item.qty,
           panjang: parseFloat(item.panjang) || 0,
           lebar: parseFloat(item.lebar) || 0,
