@@ -6,10 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAlert } from "@/hooks/useAlert";
-import { Download, Plus, RefreshCw } from "lucide-react";
-import { useCallback, useState } from "react";
+import { Download, Eye, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
+import { isAdmin } from "@/lib/utils";
 import { stockMutationService } from "@/services/mutationStockService";
 
 const statusOptions = [
@@ -49,6 +50,10 @@ export default function MutasiStockPage() {
     const [selectedStockMutation, setSelectedStockMutation] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
+    useEffect(() => {
+        loadStockMutation();
+    }, []);
+
 
     const loadStockMutation = useCallback(async () => {
         try {
@@ -79,6 +84,11 @@ export default function MutasiStockPage() {
         }
     }, [currentPage, itemsPerPage]);
 
+
+    // Pagination calculations
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const startItem = (currentPage - 1) * itemsPerPage + 1;
+    const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
     // Calculate summary statistics
     const totalStockMutation = totalItems;

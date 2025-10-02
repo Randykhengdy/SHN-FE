@@ -35,6 +35,7 @@ import AddPurchaseOrderPage from "@/pages/purchase-order/add";
 import ViewPurchaseOrderPage from "@/pages/purchase-order/view";
 import MutasiStockPage from "@/pages/mutasi-stock";
 import AddMutasiStockPage from "@/pages/mutasi-stock/add";
+import ViewMutasiStockPage from "@/pages/mutasi-stock/view";
 
 const AppRouter = () => {
     return (
@@ -75,6 +76,7 @@ const AppRouter = () => {
         <Route path="/purchase-order/view/:id" element={<ViewPurchaseOrderPage />} />
         <Route path="/mutasi-stock" element={<MutasiStockPage/>} />
         <Route path="/mutasi-stock/add" element={<AddMutasiStockPage />} />
+        <Route path="/mutasi-stock/view/:id" element={<ViewMutasiStockPage />} />
       </Routes>
     );
 };

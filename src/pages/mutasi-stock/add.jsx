@@ -32,7 +32,7 @@ export default function AddMutasiStockPage() {
     const [mutasiStockData, setMutasiStockData] = useState({
         gudang_tujuan_id: null,
         gudang_asal_id: null,
-        stockMutation: []
+        stock_mutation: []
     });
 
     // Load master data on component mount
@@ -69,7 +69,7 @@ export default function AddMutasiStockPage() {
     };
 
     const handleRemoveItem = (id) => {
-        setMutasiStockData(prev => ({ ...prev, stockMutation: prev.stockMutation.filter(item => item.id !== id) }));
+        setMutasiStockData(prev => ({ ...prev, stock_mutation: prev.stock_mutation.filter(item => item.id !== id) }));
     };
 
     const handleSimpanMutasi = async () => {
@@ -84,7 +84,7 @@ export default function AddMutasiStockPage() {
             messages += 'Mohon pilih gudang asal';
             isValid = false;
         }
-        if (mutasiStockData.stockMutation.length == 0 || mutasiStockData.stockMutation == null) {
+        if (mutasiStockData.stock_mutation.length == 0 || mutasiStockData.stock_mutation == null) {
             messages += (messages.length != 0) ? '\n' : '';
             messages += 'Mohon tambahkan item stock yang akan dimutasi';
             isValid = false;
@@ -120,15 +120,15 @@ export default function AddMutasiStockPage() {
     const saveStockForMutation = (rows) => {
         const data = { ...rows, barang: itemStockOptions.find(opt => opt.value === rows.barang_id)?.label };
         setMutasiStockData(prev => {
-            const exists = prev.stockMutation.some(item => item.barang_id === rows.barang_id && item.satuan === rows.satuan);
+            const exists = prev.stock_mutation.some(item => item.barang_id === rows.barang_id && item.satuan === rows.satuan);
 
             return {
                 ...prev,
-                stockMutation: exists
-                    ? prev.stockMutation.map(item =>
+                stock_mutation: exists
+                    ? prev.stock_mutation.map(item =>
                         (item.barang_id === rows.barang_id && item.satuan === rows.satuan) ? {...item, qty: item.qty + rows.qty} : item,
                     )
-                    : [...prev.stockMutation, data]
+                    : [...prev.stock_mutation, data]
             };
         });
     };
@@ -224,8 +224,8 @@ export default function AddMutasiStockPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {mutasiStockData.stockMutation.map((item, index) => (
-                                <TableRow key={item.id}>
+                            {mutasiStockData.stock_mutation.map((item, index) => (
+                                <TableRow key={index}>
                                     <TableCell className="table-cell-standard">{index + 1}</TableCell>
                                     <TableCell className="table-cell-standard">{item.barang}</TableCell>
                                     <TableCell className="table-cell-standard">{item.satuan}</TableCell>
@@ -252,7 +252,7 @@ export default function AddMutasiStockPage() {
                                     </TableCell>
                                 </TableRow>
                             ))}
-                            {mutasiStockData.stockMutation.length === 0 && (
+                            {mutasiStockData.stock_mutation.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={12} className="table-cell-standard text-center text-gray-500 py-8">
                                         Belum ada item yang ditambahkan

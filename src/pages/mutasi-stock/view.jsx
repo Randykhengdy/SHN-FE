@@ -10,8 +10,10 @@ import { API_ENDPOINTS } from "@/config/api";
 import PageLayout from "@/components/PageLayout";
 import MutationModal from "@/components/modals/ItemMutationModal";
 import { getGudangOptions, getItemBarangOptions } from "@/services/masterDataService";
+import { useParams } from "react-router-dom";
 
-export default function AddMutasiStockPage() {
+export default function ViewMutasiStockPage() {
+    const { id } = useParams();
     const { showAlert, AlertComponent } = useAlert();
 
     // Master data state
@@ -25,14 +27,14 @@ export default function AddMutasiStockPage() {
 
     // Modal state
     const [itemMutationModalOpen, setItemMutationModalOpen] = useState(false);
-    
+
     const [editingItem, setEditingItem] = useState(null);
 
     // Mutation stock data
     const [mutasiStockData, setMutasiStockData] = useState({
         gudang_tujuan_id: null,
         gudang_asal_id: null,
-        stockMutation: []
+        stock_mutation: []
     });
 
     // Load master data on component mount
@@ -69,7 +71,7 @@ export default function AddMutasiStockPage() {
     };
 
     const handleRemoveItem = (id) => {
-        setMutasiStockData(prev => ({ ...prev, stockMutation: prev.stockMutation.filter(item => item.id !== id) }));
+        setMutasiStockData(prev => ({ ...prev, stock_mutation: prev.stock_mutation.filter(item => item.id !== id) }));
     };
 
 
@@ -80,15 +82,15 @@ export default function AddMutasiStockPage() {
     const saveStockForMutation = (rows) => {
         const data = { ...rows, barang: itemStockOptions.find(opt => opt.value === rows.barang_id)?.label };
         setMutasiStockData(prev => {
-            const exists = prev.stockMutation.some(item => item.barang_id === rows.barang_id && item.satuan === rows.satuan);
+            const exists = prev.stock_mutation.some(item => item.barang_id === rows.barang_id && item.satuan === rows.satuan);
 
             return {
                 ...prev,
-                stockMutation: exists
-                    ? prev.stockMutation.map(item =>
-                        (item.barang_id === rows.barang_id && item.satuan === rows.satuan) ? {...item, qty: item.qty + rows.qty} : item,
+                stock_mutation: exists
+                    ? prev.stock_mutation.map(item =>
+                        (item.barang_id === rows.barang_id && item.satuan === rows.satuan) ? { ...item, qty: item.qty + rows.qty } : item,
                     )
-                    : [...prev.stockMutation, data]
+                    : [...prev.stock_mutation, data]
             };
         });
     };
@@ -175,7 +177,7 @@ export default function AddMutasiStockPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {mutasiStockData.stockMutation.map((item, index) => (
+                            {mutasiStockData.stock_mutation.map((item, index) => (
                                 <TableRow key={item.id}>
                                     <TableCell className="table-cell-standard">{index + 1}</TableCell>
                                     <TableCell className="table-cell-standard">{item.barang}</TableCell>
@@ -203,7 +205,7 @@ export default function AddMutasiStockPage() {
                                     </TableCell>
                                 </TableRow>
                             ))}
-                            {mutasiStockData.stockMutation.length === 0 && (
+                            {mutasiStockData.stock_mutation.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={12} className="table-cell-standard text-center text-gray-500 py-8">
                                         Belum ada item yang ditambahkan
@@ -219,8 +221,8 @@ export default function AddMutasiStockPage() {
                 // onOpenChange={setItemMutationModalOpen}
                 item={editingItem}
                 title="Form Item Mutasi"
-                // onSave={saveStockForMutation}
-                // loadingOptions={loadingStockItem}
+            // onSave={saveStockForMutation}
+            // loadingOptions={loadingStockItem}
             />
             {/* Alert Modal Component */}
             <AlertComponent />
