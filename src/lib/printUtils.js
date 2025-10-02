@@ -41,7 +41,7 @@ export const generatePodPrintContent = (podData) => {
       <div class="header">
         <img src="/src/assets/logo.png" alt="PT. SHN Logo" class="logo" />
         <div class="header-content">
-          <div class="company-name">PT. SHN</div>
+          <div class="company-name">PT. SURYA HARSA NAGARA</div>
           <div class="document-title">SURAT JALAN</div>
         </div>
       </div>
@@ -155,7 +155,7 @@ export const generateInvoicePrintContent = (invoiceData) => {
       <div class="header">
         <img src="/src/assets/logo.png" alt="PT. SHN Logo" class="logo" />
         <div class="header-content">
-          <div class="company-name">PT. SHN</div>
+          <div class="company-name">PT. SURYA HARSA NAGARA</div>
           <div class="document-title">INVOICE</div>
         </div>
       </div>
