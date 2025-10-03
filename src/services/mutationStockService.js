@@ -4,7 +4,8 @@ import { API_ENDPOINTS } from "@/config/api";
 export const stockMutationService = {
     // Get all stock mutations
     getAll: async (params = {}) => {
-        return await request(API_ENDPOINTS.stockMutation, {
+        const queryString = new URLSearchParams(params).toString();
+        return await request(`${API_ENDPOINTS.stockMutation}?${queryString}`, {
             method: 'GET',
             params
         });

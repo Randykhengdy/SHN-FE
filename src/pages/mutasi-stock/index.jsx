@@ -26,16 +26,10 @@ export default function MutasiStockPage() {
     const navigate = useNavigate();
     const [stockMutations, setStockMutations] = useState([]);
 
-    const todayDate = new Date();
-
-    const todayYearString = String(todayDate.getFullYear()).padStart(4, "0");
-    const todayMonthString = String(todayDate.getUTCMonth() + 1).padStart(2, "0");
-    const todayDateString = String(todayDate.getUTCDate()).padStart(2, "0");
-
     const { showAlert, AlertComponent } = useAlert();
 
-    const [startDate, setStartDate] = useState(`${todayYearString}-${todayMonthString}-${todayDateString}`);
-    const [endDate, setEndDate] = useState(`${todayYearString}-${todayMonthString}-${todayDateString}`);
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
     const [requestor, setRequestor] = useState("");
 
     const [statusFilter, setStatusFilter] = useState("all");
@@ -60,11 +54,12 @@ export default function MutasiStockPage() {
             setLoading(true);
             const result = await stockMutationService.getAll({ startDate: startDate, endDate: endDate, requestor: requestor, status: statusFilter });
 
+            console.log(result)
             // Transform API data to match our UI structure
             const transformedData = result.data.map(sm => ({
                 id: sm.id,
-                requestDate: formatDate(sm.requestDate),
-                requestor: sm.requestor?.nama_requestor || 'N/A',
+                requestDate: formatDate(sm.created_at),
+                requestor: sm.requestor?.username || 'N/A',
                 status: sm.status || "N/A",
                 // items: sm.stock_mutation_items || []
             }));
@@ -82,7 +77,7 @@ export default function MutasiStockPage() {
         } finally {
             setLoading(false);
         }
-    }, [currentPage, itemsPerPage]);
+    }, [currentPage, itemsPerPage, statusFilter, startDate, endDate, requestor]);
 
 
     // Pagination calculations
@@ -92,15 +87,15 @@ export default function MutasiStockPage() {
 
     // Calculate summary statistics
     const totalStockMutation = totalItems;
-    const totalNilai = stockMutations.reduce((sum, sm) => sum + sm.totalAmount, 0);
-    const rataRataPerStockMutation = totalStockMutation > 0 ? totalNilai / totalStockMutation : 0;
+    // const totalNilai = stockMutations.reduce((sum, sm) => sum + sm.totalAmount, 0);
+    // const rataRataPerStockMutation = totalStockMutation > 0 ? totalNilai / totalStockMutation : 0;
 
     // Calculate status breakdown
     const statusBreakdown = {
-        Requested: stockMutations.filter(po => po.status === "Requested").length,
-        Accepted: stockMutations.filter(po => po.status === "Accepted").length,
-        Lost: stockMutations.filter(po => po.status === "Lost").length,
-        "Partial Accepted": stockMutations.filter(po => po.status === "Partial Accepted").length,
+        requested: stockMutations.filter(po => po.status === "requested").length,
+        accepted: stockMutations.filter(po => po.status === "accepted").length,
+        lost: stockMutations.filter(po => po.status === "lost").length,
+        "partial accepted": stockMutations.filter(po => po.status === "partial accepted").length,
     };
 
     const getStatusColor = (status) => {
@@ -116,6 +111,9 @@ export default function MutasiStockPage() {
     const handleClearFilter = () => {
         setStatusFilter("all");
         setCurrentPage(1);
+        setStartDate('');
+        setEndDate('');
+        setRequestor("");
     };
 
 
@@ -438,10 +436,10 @@ export default function MutasiStockPage() {
                                 <span className="text-gray-600">Total Stock Mutation:</span>
                                 <span className="font-semibold">{totalStockMutation}</span>
                             </div>
-                            <div className="flex justify-between">
+                            {/* <div className="flex justify-between">
                                 <span className="text-gray-600">Rata-rata per Stock Mutation:</span>
                                 <span className="font-semibold">{formatCurrency(rataRataPerStockMutation)}</span>
-                            </div>
+                            </div> */}
                         </div>
                     </div>
 
@@ -450,7 +448,7 @@ export default function MutasiStockPage() {
                         <h3 className="text-lg font-semibold text-gray-800 mb-4">Breakdown Status</h3>
                         <div className="flex flex-wrap gap-2">
                             {Object.entries(statusBreakdown).map(([status, count]) => (
-                                <Badge key={status} className={getStatusColor(status)}>
+                                <Badge key={status} className={`${getStatusColor(status)} capitalize`}>
                                     {status}: {count}
                                 </Badge>
                             ))}
