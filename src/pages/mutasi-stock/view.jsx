@@ -11,6 +11,7 @@ import PageLayout from "@/components/PageLayout";
 import MutationModal from "@/components/modals/ItemMutationModal";
 import { getGudangOptions, getItemBarangOptions } from "@/services/masterDataService";
 import { useParams } from "react-router-dom";
+import { stockMutationService } from "@/services/mutationStockService";
 
 export default function ViewMutasiStockPage() {
     const { id } = useParams();
@@ -22,6 +23,8 @@ export default function ViewMutasiStockPage() {
     // Loading state
     const [loadingWarehouse, setLoadingWarehouse] = useState(false);
     const [loadingStockItem, setLoadingStockItem] = useState(false);
+    const [loading, setLoading] = useState(true);
+
     const [itemStockOptions, setItemStockOptions] = useState([]);
 
 
@@ -34,7 +37,7 @@ export default function ViewMutasiStockPage() {
     const [mutasiStockData, setMutasiStockData] = useState({
         gudang_tujuan_id: null,
         gudang_asal_id: null,
-        stock_mutation: []
+        stock_mutation_items: []
     });
 
     // Load master data on component mount
@@ -64,6 +67,22 @@ export default function ViewMutasiStockPage() {
         loadMasterData();
     }, []);
 
+    useEffect(() => {
+        loadStockMutation();
+    }, [id]);
+
+    const loadStockMutation = async () => {
+        try {
+            setLoading(true);
+            const result = await stockMutationService.getById(id);
+            setMutasiStockData(result.data);
+        } catch (error) {
+            console.error('Error loading purchase order:', error);
+            showAlert("Error", "Gagal memuat data Purchase Order", "error");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleEditItem = (item) => {
         setEditingItem(item);
@@ -100,6 +119,30 @@ export default function ViewMutasiStockPage() {
     const handleAddMutationItem = () => {
         setEditingItem(null);
         setItemMutationModalOpen(true);
+    }
+    if (loading) {
+        return (
+            <PageLayout title="Stock Mutation" category="TRANSAKSI">
+                <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="ml-2">Loading...</span>
+                </div>
+            </PageLayout>
+        );
+    }
+
+    if (!mutasiStockData) {
+        return (
+            <PageLayout title="Stock Mutation" category="TRANSAKSI">
+                <div className="text-center py-8">
+                    <p className="text-gray-500">Mutasi Stock tidak ditemukan</p>
+                    <Button onClick={handleBackToList} className="mt-4">
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Kembali ke List
+                    </Button>
+                </div>
+            </PageLayout>
+        );
     }
 
     return (
@@ -175,39 +218,18 @@ export default function ViewMutasiStockPage() {
                                 <TableHead className="table-header-cell-standard">Item Barang</TableHead>
                                 <TableHead className="table-header-cell-standard">Satuan</TableHead>
                                 <TableHead className="table-header-cell-standard">Qty</TableHead>
-                                <TableHead className="table-header-cell-standard">Aksi</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {mutasiStockData.stock_mutation.map((item, index) => (
+                            {mutasiStockData.stock_mutation_items.map((item, index) => (
                                 <TableRow key={item.id}>
                                     <TableCell className="table-cell-standard">{index + 1}</TableCell>
                                     <TableCell className="table-cell-standard">{item.barang}</TableCell>
                                     <TableCell className="table-cell-standard">{item.unit}</TableCell>
                                     <TableCell className="table-cell-standard">{item.quantity}</TableCell>
-                                    <TableCell className="table-cell-standard">
-                                        <div className="flex w-0 flex-0 gap-2">
-                                            <Button
-                                                variant="destructive"
-                                                size="sm"
-                                                onClick={() => handleEditItem(item)}
-                                                className="btn-primary"
-                                            >
-                                                <Pencil className="w-4 h-4" />
-                                            </Button>
-                                            <Button
-                                                variant="destructive"
-                                                size="sm"
-                                                onClick={() => handleRemoveItem(index)}
-                                                className="btn-danger"
-                                            >
-                                                <Minus className="w-4 h-4" />
-                                            </Button>
-                                        </div>
-                                    </TableCell>
                                 </TableRow>
                             ))}
-                            {mutasiStockData.stock_mutation.length === 0 && (
+                            {mutasiStockData.stock_mutation_items.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={12} className="table-cell-standard text-center text-gray-500 py-8">
                                         Belum ada item yang ditambahkan

@@ -20,8 +20,8 @@ export default function AddMutasiStockPage() {
     // Loading state
     const [loadingWarehouse, setLoadingWarehouse] = useState(false);
     const [loadingStockItem, setLoadingStockItem] = useState(false);
-    const [itemStockOptions, setItemStockOptions] = useState([]);
 
+    const [itemStockOptions, setItemStockOptions] = useState([]);
 
     // Modal state
     const [itemMutationModalOpen, setItemMutationModalOpen] = useState(false);
