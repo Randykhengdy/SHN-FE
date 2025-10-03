@@ -224,7 +224,7 @@ export default function ViewMutasiStockPage() {
                             {mutasiStockData.stock_mutation_items.map((item, index) => (
                                 <TableRow key={item.id}>
                                     <TableCell className="table-cell-standard">{index + 1}</TableCell>
-                                    <TableCell className="table-cell-standard">{item.barang}</TableCell>
+                                    <TableCell className="table-cell-standard">{item.item_barang.kode_barang + ' - ' + item.item_barang.nama_item_barang}</TableCell>
                                     <TableCell className="table-cell-standard">{item.unit}</TableCell>
                                     <TableCell className="table-cell-standard">{item.quantity}</TableCell>
                                 </TableRow>
