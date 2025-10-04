@@ -4,7 +4,8 @@ import {
   bentukBarangService, 
   gradeBarangService,
   pelangganService,
-  supplierService
+  supplierService,
+  itemBarangService
 } from './master-data';
 import { request } from '@/lib/request';
 
@@ -321,6 +322,20 @@ export const getSalesOrderOptions = async () => {
       gudang_nama: so.gudang?.nama_gudang
     }));
   }, 'SalesOrderOptionsService');
+};
+
+// Fetch Item Barang options
+export const getItemBarangOptions = async () => {
+  checkMemoryUsage();
+  return await safeApiCall(async () => {
+    const response = await itemBarangService.getAll();
+    // console.log('Raw item barang data:', response.data); // Debug log
+    return response.data.map(item => ({
+      value: item.id?.toString(),
+      label: item.kode_barang + ' - ' + item.nama_item_barang || 'Unknown',
+      searchKey: item.kode_barang || item.nama_item_barang || 'Unknown'
+    }));
+  }, 'ItemBarangService');
 };
 
 // Gudang

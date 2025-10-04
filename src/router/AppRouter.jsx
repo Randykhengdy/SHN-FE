@@ -36,6 +36,9 @@ import ViewPurchaseOrderPage from "@/pages/purchase-order/view";
 import FinanceInvoicePodPage from "@/pages/finance-invoice-pod";
 
 import DashboardWorkshopPage from "@/pages/dashboard/workshop";
+import MutasiStockPage from "@/pages/mutasi-stock";
+import AddMutasiStockPage from "@/pages/mutasi-stock/add";
+import ViewMutasiStockPage from "@/pages/mutasi-stock/view";
 
 const AppRouter = () => {
     return (
@@ -77,6 +80,9 @@ const AppRouter = () => {
         <Route path="/dashboard/workshop" element={<DashboardWorkshopPage />} />
 
         <Route path="/finance-invoice-pod" element={<FinanceInvoicePodPage />} />
+        <Route path="/mutasi-stock" element={<MutasiStockPage/>} />
+        <Route path="/mutasi-stock/add" element={<AddMutasiStockPage />} />
+        <Route path="/mutasi-stock/view/:id" element={<ViewMutasiStockPage />} />
       </Routes>
     );
 };
