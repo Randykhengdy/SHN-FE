@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { ArrowLeft, Calendar, Eye } from "lucide-react";
+import { ArrowLeft, Calendar, Eye, Edit, Save, X } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { useRole } from "@/hooks/useRole";
 import RoleGuard from "@/components/RoleGuard";
 import { request } from "@/lib/request";
 import { API_ENDPOINTS } from "@/config/api";
+import { workOrderService } from "@/services/workOrderService";
 import PageLayout from "@/components/PageLayout";
 
 export default function ViewWorkOrderPage() {
@@ -45,6 +46,11 @@ export default function ViewWorkOrderPage() {
   const [priority, setPriority] = useState("");
   const [status, setStatus] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
+  
+  // Edit state for WO number
+  const [isEditingWoNumber, setIsEditingWoNumber] = useState(false);
+  const [originalWoNumber, setOriginalWoNumber] = useState("");
+  const [savingWoNumber, setSavingWoNumber] = useState(false);
 
   // Item List
   const [items, setItems] = useState([]);
@@ -171,7 +177,9 @@ export default function ViewWorkOrderPage() {
           gudang_label: warehouseData?.label
         });
         
-        setWoNumber(woData.nomor_wo || woData.wo_number || woData.order_number || "");
+        const currentWoNumber = woData.nomor_wo || woData.wo_number || woData.order_number || "";
+        setWoNumber(currentWoNumber);
+        setOriginalWoNumber(currentWoNumber); // Store original for cancel functionality
         setWoDate(formatDateForInput(woData.tanggal_wo || woData.wo_date || woData.order_date));
         setDueDate(formatDateForInput(woData.tanggal_selesai || woData.due_date));
         setPriority(woData.prioritas || woData.priority || "");
@@ -299,6 +307,54 @@ export default function ViewWorkOrderPage() {
     return { subtotal, totalDiscount, ppnAmount, grandTotal };
   }, [items]);
 
+  // Handle WO Number Edit Functions
+  const handleEditWoNumber = () => {
+    setIsEditingWoNumber(true);
+  };
+
+  const handleCancelEditWoNumber = () => {
+    setWoNumber(originalWoNumber);
+    setIsEditingWoNumber(false);
+  };
+
+  const handleSaveWoNumber = async () => {
+    if (!woNumber.trim()) {
+      showAlert('Error', 'Nomor WO tidak boleh kosong', 'error');
+      return;
+    }
+
+    if (woNumber === originalWoNumber) {
+      setIsEditingWoNumber(false);
+      return;
+    }
+
+    setSavingWoNumber(true);
+    try {
+      console.log('🚀 Updating WO number:', { id, oldNumber: originalWoNumber, newNumber: woNumber });
+      
+      const updateData = {
+        nomor_wo: woNumber
+      };
+
+      await workOrderService.updateWorkOrder(id, updateData);
+      
+      setOriginalWoNumber(woNumber);
+      setIsEditingWoNumber(false);
+      
+      console.log('✅ WO number updated successfully');
+      showAlert('Success', `Nomor WO berhasil diubah menjadi "${woNumber}"`, 'success');
+      
+    } catch (error) {
+      console.error('❌ Error updating WO number:', error);
+      showAlert('Error', 'Gagal mengubah nomor WO: ' + (error.message || 'Unknown error'), 'error');
+      
+      // Reset to original value on error
+      setWoNumber(originalWoNumber);
+    } finally {
+      setSavingWoNumber(false);
+    }
+  };
+
 
 
   if (loading) {
@@ -349,12 +405,57 @@ export default function ViewWorkOrderPage() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
-                <Label className="text-sm font-medium text-gray-700">Nomor WO</Label>
-                <Input 
-                  value={woNumber} 
-                  disabled 
-                  className="bg-gray-50"
-                />
+                <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  Nomor WO
+                  {!isEditingWoNumber && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleEditWoNumber}
+                      className="h-6 w-6 p-0 hover:bg-blue-100"
+                      title="Edit Nomor WO"
+                    >
+                      <Edit className="h-3 w-3 text-blue-600" />
+                    </Button>
+                  )}
+                </Label>
+                {isEditingWoNumber ? (
+                  <div className="flex gap-2">
+                    <Input 
+                      value={woNumber} 
+                      onChange={(e) => setWoNumber(e.target.value)}
+                      placeholder="Masukkan nomor WO"
+                      className="focus:ring-2 focus:ring-blue-500"
+                      disabled={savingWoNumber}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSaveWoNumber}
+                      disabled={savingWoNumber}
+                      className="px-3 hover:bg-green-100 text-green-600"
+                      title="Simpan"
+                    >
+                      <Save className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleCancelEditWoNumber}
+                      disabled={savingWoNumber}
+                      className="px-3 hover:bg-red-100 text-red-600"
+                      title="Batal"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Input 
+                    value={woNumber} 
+                    disabled 
+                    className="bg-gray-50"
+                  />
+                )}
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">Tanggal WO</Label>

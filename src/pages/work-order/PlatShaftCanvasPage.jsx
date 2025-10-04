@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAlert } from '@/hooks/useAlert';
 import { request } from '@/lib/request';
-import { Camera, Image } from 'lucide-react';
+import { Camera, Image, ArrowLeft } from 'lucide-react';
 
 const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCanvasSaved }, ref) => {
   const { showAlert } = useAlert();
+  const navigate = useNavigate();
   
   // Canvas refs
   const canvasRef = useRef(null);
@@ -320,6 +322,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       try {
         const data = JSON.parse(storedData);
         console.log('Loaded workOrderData from sessionStorage:', data);
+        console.log('Selected item data:', data.selectedItem);
+        console.log('Work order item data:', data.workOrderItem);
         setWorkOrderData(data);
         
         // Debug: Show all canvas layouts in localStorage
@@ -390,8 +394,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         }
         
         // Update base container dimensions (Saran Plat)
-        const platWidth = data.platPanjang || 20;
-        const platHeight = data.platLebar || 20;
+        const platWidth = data.selectedItem?.platPanjang || data.platPanjang || 20;
+        const platHeight = data.selectedItem?.platLebar || data.platLebar || 20;
         setBaseContainer(prev => ({
           ...prev,
           width: platWidth,
@@ -399,8 +403,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         }));
         
         // Update box size (Work Order Item)
-        const itemWidth = data.itemPanjang || 1;
-        const itemHeight = data.itemLebar || 1;
+        const itemWidth = data.workOrderItem?.width || data.itemPanjang || 1;
+        const itemHeight = data.workOrderItem?.height || data.itemLebar || 1;
         setNewBoxSize({
           width: itemWidth,
           height: itemHeight
@@ -465,13 +469,17 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                 const workItemUniqueId = box.workItemUniqueId || 'unknown';
                 const isFromDifferentWO = boxWoItemId !== currentWoItemId;
                 
-                // Determine color based on workItemUniqueId comparison
-                let boxColor = '#10b981'; // Default green
-                if (box.isSave === true) {
-                  boxColor = '#ef4444'; // Red for saved boxes
-                } else if (workItemUniqueId && workItemUniqueId !== '' && workItemUniqueId !== currentWorkOrderUniqueId) {
-                  boxColor = '#f59e0b'; // Yellow for different workOrderUniqueId
-                }
+              // Determine color based on woItemId array check (simpler) - memoized to avoid repeated parsing
+              
+              
+              let boxColor = '#10b981'; // Default green
+              if (box.isSave === true) {
+                boxColor = '#ef4444'; // Red for saved boxes
+              } else if (boxWoItemId && boxWoItemId !== currentWoItemId && boxWoItemId !== parseInt(currentWoItemId)) {
+                boxColor = '#f59e0b'; // Yellow for different WO item
+              } else {
+                console.log('🟢 Box set to GREEN - in current WO items');
+              }
                 
                 return {
                   ...box,
@@ -795,41 +803,16 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         color: box.color
       });
     } else {
-      // Determine color based on workItemUniqueId comparison
-      const currentWorkOrderId = workOrderData?.workOrderId; // This is the current workOrderId
-      const currentWorkOrderUniqueId = localStorage.getItem('WO_current_work_order_item_id') || currentWorkOrderId; // Get workOrderUniqueId from storage
-      const boxWorkItemUniqueId = box.workItemUniqueId;
+      // Determine color based on woItemId comparison (simple logic)
+      const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
+      const boxWoItemId = box.woItemId;
       
-      console.log('Box color decision:', {
-        boxId: box.id,
-        currentWorkOrderId: currentWorkOrderId,
-        currentWorkOrderUniqueId: currentWorkOrderUniqueId,
-        boxWorkItemUniqueId: boxWorkItemUniqueId,
-        isSave: box.isSave,
-        hasWorkItemUniqueId: !!boxWorkItemUniqueId,
-        isSameWorkOrderUniqueId: boxWorkItemUniqueId === currentWorkOrderUniqueId,
-        isDifferentWorkOrderUniqueId: boxWorkItemUniqueId && currentWorkOrderUniqueId && boxWorkItemUniqueId !== currentWorkOrderUniqueId,
-        woItemId: box.woItemId,
-        workOrderData: workOrderData
-      });
-      
-      if (!boxWorkItemUniqueId || boxWorkItemUniqueId === '' || boxWorkItemUniqueId === currentWorkOrderUniqueId) {
-        // Green for boxes without workItemUniqueId or from current workOrderUniqueId (default hijau)
+      if (!boxWoItemId || boxWoItemId === currentWoItemId || boxWoItemId === parseInt(currentWoItemId)) {
+        // Green for boxes from current WO item or no woItemId
         ctx.fillStyle = '#10b981';
-        console.log('Box color: GREEN - Default/Current workOrderUniqueId', { 
-          boxWorkItemUniqueId, 
-          currentWorkOrderUniqueId, 
-          boxId: box.id,
-          reason: !boxWorkItemUniqueId ? 'No workItemUniqueId' : 'Same workOrderUniqueId'
-        });
       } else {
-        // Yellow for boxes from different workOrderUniqueId (workItemUniqueId beda + isSave false)
+        // Yellow for boxes from different WO item
         ctx.fillStyle = '#f59e0b';
-        console.log('Box color: YELLOW - Different workOrderUniqueId', { 
-          boxWorkItemUniqueId, 
-          currentWorkOrderUniqueId, 
-          boxId: box.id 
-        });
       }
     }
     
@@ -1510,6 +1493,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       targetQuantity,
       totalUsedQuantity,
       remainingQuantity,
+      workOrderData: workOrderData,
       explanation: `Current: ${currentQuantity}, Target: ${targetQuantity}, Used: ${totalUsedQuantity}, Remaining: ${remainingQuantity}`
     });
     
@@ -1565,17 +1549,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
           
           if (canPlace) {
             const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
-            const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
             const workOrderId = workOrderData?.workOrderId || 'unknown';
             const saranId = workOrderData?.selectedItem?.id || 'unknown';
-            
-            console.log('Creating new box - workOrderData check:', {
-              workOrderData: workOrderData,
-              workOrderId: workOrderId,
-              workItemUniqueId: workItemUniqueId,
-              woItemId: woItemId,
-              saranId: saranId
-            });
             
             newBox = {
               id: newId,
@@ -1589,8 +1564,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               woItemId: woItemId,
               workOrderId: workOrderId,
               saranId: saranId,
-              isSave: false, // Will be true when saving
-              workItemUniqueId: workItemUniqueId // Set workItemUniqueId to storage
+              isSave: false // Will be true when saving
             };
             console.log('Created new box with isSave and workItemUniqueId:', {
               boxId: newId,
@@ -1622,7 +1596,6 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
             
             if (canPlace) {
               const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
-              const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
               const workOrderId = workOrderData?.workOrderId || 'unknown';
               const saranId = workOrderData?.selectedItem?.id || 'unknown';
               
@@ -1638,8 +1611,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                 woItemId: woItemId,
                 workOrderId: workOrderId,
                 saranId: saranId,
-                isSave: false,
-                workItemUniqueId: workItemUniqueId
+                isSave: false
               };
               placed = true;
             }
@@ -1690,8 +1662,13 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     showAlert('Success', 'All boxes from current Work Order item cleared!', 'success');
   }, [showAlert, totalQuantity, workOrderData?.workOrderItem?.id, workOrderData?.itemId]);
 
-  const generateJPG = useCallback(async () => {
+  const generateJPG = useCallback(async (saveMode = 'download') => {
+    console.log('🎯 GENERATE JPG FUNCTION CALLED');
+    console.log('📋 Save mode:', saveMode);
+    console.log('📦 Container ref exists:', !!containerRef.current);
+    
     if (!containerRef.current) {
+      console.error('❌ Container not found!');
       showAlert('Error', 'Container not found!', 'error');
       return;
     }
@@ -1724,6 +1701,12 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
 
     try {
       showAlert('Info', 'Generating JPG...', 'info');
+      
+      // Wait a bit for canvas to fully render
+      console.log('Waiting for canvas to render...');
+      setJpgProgress(5);
+      setJpgStatus('Menunggu canvas render...');
+      await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms
       
       let dataURL = null;
       let method = '';
@@ -1970,34 +1953,111 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       }
       
       // If not too large, proceed with download
-      downloadFile(finalDataURL, method);
+      await downloadFile(finalDataURL, method);
       
-      function downloadFile(dataURL, method) {
+      async function downloadFile(dataURL, method) {
         setJpgProgress(80);
         setJpgStatus('Menyiapkan download...');
         
-        // Create download with simplified approach
+        // Create filename based on save mode
         const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
         const fileExtension = format === 'png' ? 'png' : 'jpg';
-        const filename = `canvas-layout-${timestamp}.${fileExtension}`;
         
-        // Simple and reliable download method
-        console.log('Creating download link for:', filename);
-        const link = document.createElement('a');
-        link.download = filename;
-        link.href = dataURL;
-        link.style.display = 'none';
+        let filename;
+        if (saveMode === 'preview') {
+          // For preview mode, use itemBarangId (saranId) format
+          const itemBarangId = workOrderData?.selectedItem?.id || 'unknown';
+          filename = `canvas-preview-ItemId-${itemBarangId}.${fileExtension}`;
+        } else {
+          // For download mode, use generic name
+          filename = `canvas-layout-${timestamp}.${fileExtension}`;
+        }
         
-        // Add to DOM, click, and remove
-        document.body.appendChild(link);
-        console.log('Triggering download...');
-        link.click();
-        document.body.removeChild(link);
-        console.log('Download triggered successfully');
+        // Save to app folder instead of downloads
+        console.log('Saving to app folder:', filename);
+        
+        if (saveMode === 'preview') {
+          // For preview mode, save to app folder using Electron API
+          try {
+            console.log('=== SAVE CANVAS DEBUG ===');
+            console.log('Save mode:', saveMode);
+            console.log('Filename:', filename);
+            console.log('DataURL length:', dataURL ? dataURL.length : 'null');
+            console.log('window.electronAPI exists:', !!window.electronAPI);
+            console.log('saveCanvasFile exists:', !!(window.electronAPI && window.electronAPI.saveCanvasFile));
+            
+            // Check if we're in Electron environment
+            if (window.electronAPI && window.electronAPI.saveCanvasFile) {
+              console.log('Calling Electron API to save canvas...');
+              const result = await window.electronAPI.saveCanvasFile(dataURL, filename);
+              console.log('Electron API result:', result);
+              
+              if (result.success) {
+                console.log('✅ CANVAS SAVE SUCCESS!');
+                console.log(`📁 File saved to: ${result.path}`);
+                console.log(`📄 Filename: ${filename}`);
+                console.log(`📊 DataURL length: ${dataURL.length} characters`);
+                console.log(`💾 Full path: public/canvas-previews/${filename}`);
+                showAlert('Success', `Canvas berhasil disimpan!\n\nFile: ${filename}\nLokasi: public/canvas-previews/`, 'success');
+              } else {
+                console.error('❌ CANVAS SAVE FAILED!');
+                console.error('Error details:', result.error);
+                console.error('Error message:', result.details);
+                // Fallback to download if Electron save fails
+                const link = document.createElement('a');
+                link.download = filename;
+                link.href = dataURL;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }
+            } else {
+              console.warn('Electron API not available, falling back to download');
+              console.log('Available window.electronAPI methods:', window.electronAPI ? Object.keys(window.electronAPI) : 'none');
+              // Fallback to download if not in Electron
+              const link = document.createElement('a');
+              link.download = filename;
+              link.href = dataURL;
+              link.style.display = 'none';
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }
+          } catch (error) {
+            console.error('Error saving to app folder:', error);
+            console.error('Error stack:', error.stack);
+            // Fallback to download
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = dataURL;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }
+        } else {
+          // For download mode, use normal download
+          const link = document.createElement('a');
+          link.download = filename;
+          link.href = dataURL;
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+        
+        console.log('File operation completed successfully');
         
         setJpgProgress(100);
         setJpgStatus('Download berhasil!');
-        showAlert('Success', `JPG berhasil dibuat dengan metode ${method}: ${filename}`, 'success');
+        
+        if (saveMode === 'preview') {
+          console.log(`Canvas preview saved to app folder: /canvas-previews/${filename}`);
+          // Don't show alert for preview mode to avoid interrupting save flow
+        } else {
+          showAlert('Success', `JPG berhasil dibuat dengan metode ${method}: ${filename}`, 'success');
+        }
       }
       
     } catch (error) {
@@ -2017,7 +2077,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         setTimeout(() => window.gc(), 1000);
       }
     }
-  }, [showAlert, isGeneratingJPG]);
+  }, [showAlert, isGeneratingJPG, workOrderData]);
 
   const fillAllBoxes = useCallback(() => {
     const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
@@ -2353,6 +2413,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     setPanOffset({ x: topLeftX, y: topLeftY });
   }, [baseContainer, gridSize]);
 
+
   // Enhanced save system - only save canvas data with required info
   const generateSaveData = useCallback(() => {
     // Get current work order info for reference
@@ -2458,7 +2519,33 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       });
       
       try {
-        localStorage.setItem(storageKey, JSON.stringify(saveData));
+        const jsonString = JSON.stringify(saveData);
+        const jsonSize = new Blob([jsonString]).size;
+        
+        console.log('Canvas JSON size:', {
+          sizeBytes: jsonSize,
+          sizeKB: Math.round(jsonSize / 1024),
+          totalBoxes: saveData.boxes?.length || 0,
+          storageKey: storageKey
+        });
+        
+        // Check localStorage size limit (usually 5-10MB)
+        if (jsonSize > 5 * 1024 * 1024) { // 5MB
+          console.warn('⚠️ Canvas JSON size is large:', jsonSize, 'bytes');
+        }
+        
+        localStorage.setItem(storageKey, jsonString);
+        
+        // Verify save integrity
+        const savedData = localStorage.getItem(storageKey);
+        if (savedData && savedData.length === jsonString.length) {
+          console.log('✅ Canvas saved successfully');
+        } else {
+          console.error('❌ Canvas save verification failed:', {
+            originalLength: jsonString.length,
+            savedLength: savedData?.length || 0
+          });
+        }
         
         // Update saran plat usage tracking
         const saranId = workOrderData?.selectedItem?.id || 'unknown';
@@ -2478,12 +2565,18 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         // Don't update totalQuantity state - it should remain as target quantity
         // setTotalQuantity(arrangedQuantity);
         
-        console.log('Calculating arranged quantity for save:', {
+        console.log('🔍 DEBUG: Calculating arranged quantity for save:', {
           woItemId: woItemId,
+          woItemIdType: typeof woItemId,
           totalBoxes: boxes ? boxes.length : 0,
           currentWoItemBoxes: currentWoItemBoxes.length,
           arrangedQuantity: arrangedQuantity,
-          saranId: saranId
+          saranId: saranId,
+          allBoxWoItemIds: boxes ? boxes.map(box => ({ id: box.id, woItemId: box.woItemId, type: typeof box.woItemId })) : [],
+          workOrderData: {
+            workOrderItem: workOrderData?.workOrderItem,
+            itemId: workOrderData?.itemId
+          }
         });
         
         // Get target quantity from WO item
@@ -2570,7 +2663,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         }
         
         const idStatus = isCurrentWorkOrder ? 'Current Work Order' : 'Different Work Order';
-        showAlert('Success', `Canvas saved for ${itemName}!\n\nID Status: ${idStatus}\nStorage Key: ${storageKey}`, 'success');
+        showAlert('Success', `Canvas saved for ${itemName}!\n\nID Status: ${idStatus}\nStorage Key: ${storageKey}\n\nJPG preview will be saved to /canvas-previews/ folder.`, 'success');
         
         // Recalculate quantity after save
         setForceUpdate(prev => prev + 1);
@@ -2580,16 +2673,47 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
           onCanvasSaved(workOrderData.selectedItem);
         }
         
-        // Close canvas and return to work order modal
-        if (onClose) {
-          onClose();
-        }
+        // Generate JPG for preview (save to folder) - wait for completion before closing
+        console.log('🖼️ GENERATING JPG FOR CANVAS PREVIEW...');
+        console.log('⏰ Will start JPG generation in 1 second...');
+        console.log('📦 Container ref before delay:', !!containerRef.current);
+        
+        setTimeout(async () => {
+          console.log('🚀 Starting JPG generation now...');
+          console.log('📦 Container ref after delay:', !!containerRef.current);
+          
+          // Check if container still exists before generating
+          if (!containerRef.current) {
+            console.error('❌ Container ref is null after delay - cannot generate JPG');
+            // Close modal even if JPG generation fails
+            if (onClose) {
+              onClose();
+            }
+            return;
+          }
+          
+          try {
+            await generateJPG('preview');
+            console.log('✅ JPG generation completed successfully');
+          } catch (jpgError) {
+            console.error('❌ Failed to generate JPG:', jpgError);
+            // Don't show error to user as JPG is optional for preview
+          }
+          
+          // Close canvas and return to work order modal AFTER JPG generation
+          if (onClose) {
+            onClose();
+          } else {
+            // For page usage, go back in browser history (closes modal)
+            window.history.back();
+          }
+        }, 500); // Wait 500ms for canvas to fully render after zoom fit
       } catch (error) {
         showAlert('Error', 'Failed to save canvas.', 'error');
         console.error('LocalStorage save error:', error);
       }
     }, 100); // Small delay to ensure zoom fit is applied
-  }, [generateSaveData, workOrderData, showAlert, onClose, zoomFit, boxes, setForceUpdate, onCanvasSaved]);
+  }, [generateSaveData, workOrderData, showAlert, onClose, zoomFit, boxes, setForceUpdate, onCanvasSaved, generateJPG]);
 
   // Handle close with rollback to PreviousQuantity
   const handleClose = useCallback(() => {
@@ -2621,9 +2745,12 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       }
     }
     
-    // Call original onClose if provided
+    // Call original onClose if provided (for modal usage)
     if (onClose) {
       onClose();
+    } else {
+      // For page usage, go back in browser history (closes modal)
+      window.history.back();
     }
   }, [onClose, workOrderData]);
 
@@ -2762,8 +2889,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               let boxColor = '#10b981'; // Default green
               if (box.isSave === true || box.isDisabled === true) {
                 boxColor = '#ef4444'; // Red for saved boxes (preserve red from database)
-              } else if (workItemUniqueId && workItemUniqueId !== '' && workItemUniqueId !== currentWorkOrderUniqueId) {
-                boxColor = '#f59e0b'; // Yellow for different workOrderUniqueId
+              } else if (boxWoItemId && boxWoItemId !== currentWoItemId && boxWoItemId !== parseInt(currentWoItemId)) {
+                boxColor = '#f59e0b'; // Yellow for different WO item
               }
               
               console.log('Additional box color decision:', {
@@ -2870,8 +2997,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               let boxColor = '#10b981'; // Default green
               if (box.isSave === true || box.isDisabled === true) {
                 boxColor = '#ef4444'; // Red for saved boxes (preserve red from database)
-              } else if (workItemUniqueId && workItemUniqueId !== '' && workItemUniqueId !== currentWorkOrderUniqueId) {
-                boxColor = '#f59e0b'; // Yellow for different workOrderUniqueId
+              } else if (boxWoItemId && boxWoItemId !== currentWoItemId && boxWoItemId !== parseInt(currentWoItemId)) {
+                boxColor = '#f59e0b'; // Yellow for different WO item
               }
               
               console.log('Box color decision during load:', {
@@ -2957,8 +3084,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               let boxColor = '#10b981'; // Default green
               if (box.isSave === true || box.isDisabled === true) {
                 boxColor = '#ef4444'; // Red for saved boxes (preserve red from database)
-              } else if (workItemUniqueId && workItemUniqueId !== '' && workItemUniqueId !== currentWorkOrderUniqueId) {
-                boxColor = '#f59e0b'; // Yellow for different workOrderUniqueId
+              } else if (boxWoItemId && boxWoItemId !== currentWoItemId && boxWoItemId !== parseInt(currentWoItemId)) {
+                boxColor = '#f59e0b'; // Yellow for different WO item
               }
               
               return {
@@ -3393,7 +3520,18 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         <div className="p-4 bg-white border-b">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              {/* Back button removed - handled by parent component */}
+              {/* Back button for page navigation */}
+              {!onClose && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClose}
+                  className="flex items-center gap-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Back
+                </Button>
+              )}
               <div className="flex-1">
                 <h1 className="text-2xl font-bold mb-2">🔧 Plat/Shaft Canvas System</h1>
                 <p className="text-gray-600">Advanced canvas system for work order item visualization</p>
@@ -3866,6 +4004,25 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                           >
                             <Camera className="w-4 h-4 mr-1" />
                             {isGeneratingJPG ? 'Generating...' : `Generate ${usePNG ? 'PNG' : 'JPG'}`}
+                          </Button>
+                          <Button
+                            onClick={async () => {
+                              console.log('=== TEST ELECTRON API ===');
+                              console.log('window.electronAPI:', window.electronAPI);
+                              if (window.electronAPI && window.electronAPI.saveCanvasFile) {
+                                console.log('Testing Electron API...');
+                                const testDataURL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+                                const result = await window.electronAPI.saveCanvasFile(testDataURL, 'test-image.png');
+                                console.log('Test result:', result);
+                                alert(`Test result: ${JSON.stringify(result)}`);
+                              } else {
+                                console.log('Electron API not available');
+                                alert('Electron API not available');
+                              }
+                            }}
+                            className="w-full h-8 text-sm bg-red-600 hover:bg-red-700 mt-2"
+                          >
+                            Test Electron API
                           </Button>
                         </div>
                         

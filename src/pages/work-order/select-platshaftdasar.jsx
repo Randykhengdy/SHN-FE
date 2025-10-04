@@ -44,9 +44,9 @@ export default function SelectPlatShaftDasar({
 
   // Set workOrderUniqueId to storage when this menu opens
   useEffect(() => {
-    if (workOrderItem?.workOrderUniqueId) {
-      localStorage.setItem('WO_current_work_order_item_id', workOrderItem.workOrderUniqueId);
-      console.log('Set workOrderUniqueId to storage when opening menu:', workOrderItem.workOrderUniqueId);
+    if (workOrderItem?.id) {
+      localStorage.setItem('WO_current_work_order_item_id', workOrderItem.id);
+      console.log('Set workOrderItem.id to storage when opening menu:', workOrderItem.id);
     }
     
     // Cleanup when component unmounts

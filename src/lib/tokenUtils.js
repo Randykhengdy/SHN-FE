@@ -56,8 +56,27 @@ export function willTokenExpireSoon(token, minutes = 5) {
 }
 
 // Fungsi untuk logout dan redirect
-export function logoutAndRedirect() {
+export function logoutAndRedirect(showNotification = true) {
   console.log('🚪 Logging out due to token expiration...');
+  
+  // Check if we're already on the login page to prevent infinite loops
+  const currentPath = window.location.hash ? window.location.hash.slice(1) : window.location.pathname;
+  const isOnLoginPage = currentPath === '/' || currentPath === '';
+  
+  // Show user notification if requested and not already on login page
+  if (showNotification && !isOnLoginPage) {
+    // Try to show a simple alert first
+    try {
+      if (window.confirm) {
+        // Use a non-blocking notification if possible
+        setTimeout(() => {
+          alert('Session expired. You will be redirected to login page.');
+        }, 100);
+      }
+    } catch (error) {
+      console.log('Could not show logout notification:', error);
+    }
+  }
   
   // Use authService logout untuk cleanup yang lebih baik
   authService.logout();
@@ -65,9 +84,30 @@ export function logoutAndRedirect() {
   // Clear all tokens using new storage utility
   clearAllTokens();
   
-  // Redirect ke login page
-  if (window.location.pathname !== '/') {
-    window.location.href = '/';
+  // Only redirect if we're not already on the login page
+  if (!isOnLoginPage) {
+    // Try to use React Router navigate if available (better for SPA)
+    if (window.__reactNavigate) {
+      console.log('🔄 Using React Router navigate for logout redirect');
+      window.__reactNavigate('/', { replace: true });
+      return;
+    }
+    
+    // Fallback: Redirect ke login page - support both hash routing and regular routing
+    console.log('🔄 Using window.location for logout redirect');
+    // For HashRouter, we need to set the hash
+    if (window.location.hash) {
+      window.location.hash = '#/';
+    } else {
+      window.location.href = '/';
+    }
+    
+    // Also reload to ensure clean state
+    setTimeout(() => {
+      window.location.reload();
+    }, 100);
+  } else {
+    console.log('🔄 Already on login page, skipping redirect to prevent loop');
   }
 }
 
@@ -75,6 +115,10 @@ export function logoutAndRedirect() {
 export async function checkAndRefreshToken() {
   const token = getToken();
   const refreshToken = getRefreshToken();
+  
+  // Check if we're on login page to prevent unnecessary logout calls
+  const currentPath = window.location.hash ? window.location.hash.slice(1) : window.location.pathname;
+  const isOnLoginPage = currentPath === '/' || currentPath === '';
   
   // Only log in development mode
   if (process.env.NODE_ENV === 'development') {
@@ -98,7 +142,10 @@ export async function checkAndRefreshToken() {
     if (process.env.NODE_ENV === 'development') {
       console.log("❌ No tokens available, logging out");
     }
-    logoutAndRedirect();
+    // Only call logoutAndRedirect if not on login page
+    if (!isOnLoginPage) {
+      logoutAndRedirect();
+    }
     return false;
   }
   
@@ -113,7 +160,10 @@ export async function checkAndRefreshToken() {
       if (process.env.NODE_ENV === 'development') {
         console.log("❌ Auto refresh failed, logging out");
       }
-      logoutAndRedirect();
+      // Only call logoutAndRedirect if not on login page
+      if (!isOnLoginPage) {
+        logoutAndRedirect();
+      }
       return false;
     }
     
@@ -194,7 +244,12 @@ export async function performTokenRefresh() {
           if (process.env.NODE_ENV === 'development') {
             console.log("🚪 Refresh token expired/invalid, logging out");
           }
-          logoutAndRedirect();
+          // Check if we're on login page to prevent unnecessary logout calls
+          const currentPath = window.location.hash ? window.location.hash.slice(1) : window.location.pathname;
+          const isOnLoginPage = currentPath === '/' || currentPath === '';
+          if (!isOnLoginPage) {
+            logoutAndRedirect();
+          }
           return false;
         }
         

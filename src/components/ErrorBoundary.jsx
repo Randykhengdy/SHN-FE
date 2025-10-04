@@ -50,7 +50,12 @@ class ErrorBoundary extends React.Component {
   };
 
   handleGoHome = () => {
-    window.location.href = '/';
+    // Support both hash routing and regular routing
+    if (window.location.hash) {
+      window.location.hash = '#/';
+    } else {
+      window.location.href = '/';
+    }
   };
 
   toggleDetails = () => {

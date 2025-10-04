@@ -13,12 +13,6 @@ export default function Header() {
   useEffect(() => {
     // Get user info dari JWT token
     const info = getUserInfo();
-    console.log('🎯 Header - User info from JWT:', info);
-    console.log('🎯 Header - Roles from userInfo:', info?.roles);
-    console.log('🎯 Header - Roles type:', typeof info?.roles);
-    console.log('🎯 Header - Is roles array:', Array.isArray(info?.roles));
-    console.log('🎯 Header - User name:', info?.name);
-    console.log('🎯 Header - Username:', info?.username);
     setUserInfo(info);
   }, []);
 
@@ -34,27 +28,19 @@ export default function Header() {
 
   // Format roles untuk display
   const formatRoles = (roles) => {
-    console.log('🎨 formatRoles called with:', roles);
-    console.log('🎨 roles type:', typeof roles);
-    console.log('🎨 is array:', Array.isArray(roles));
-    
     if (!roles || roles.length === 0) {
-      console.log('🎨 No roles found, returning "Loading roles..."');
       return "Loading roles...";
     }
     
     if (typeof roles === 'string') {
-      console.log('🎨 String role, formatting:', roles);
       return roles.charAt(0).toUpperCase() + roles.slice(1);
     }
     
-    console.log('🎨 Array roles, mapping:', roles);
     const formatted = roles.map(role => {
       if (typeof role === 'object' && role.name) return role.name;
       return String(role).charAt(0).toUpperCase() + String(role).slice(1);
     }).join(", ");
     
-    console.log('🎨 Final formatted roles:', formatted);
     return formatted;
   };
 
