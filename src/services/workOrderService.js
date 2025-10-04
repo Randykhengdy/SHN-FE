@@ -101,7 +101,7 @@ export const workOrderService = {
   },
 
   // Save saran plat dasar for work order item
-  saveSaranPlatDasar: async (woItemUniqueIds, itemBarangId, isSelected = false, canvasData = null) => {
+  saveSaranPlatDasar: async (woItemUniqueIds, itemBarangId, isSelected = false, canvasData = null, canvasImage = null) => {
     const requestData = {
       wo_planning_item_id: woItemUniqueIds, // Array of wo_item_unique_id
       item_barang_id: itemBarangId,
@@ -109,7 +109,13 @@ export const workOrderService = {
       canvas_data: canvasData
     };
     
+    // Add canvas_image if provided
+    if (canvasImage) {
+      requestData.canvas_image = canvasImage;
+    }
+    
     console.log('🚀 API Request to saveSaranPlatDasar:', requestData);
+    console.log('📷 Canvas image included:', !!canvasImage);
     
     try {
       const response = await request(`${BASE_URL}/saran-plat-dasar`, {

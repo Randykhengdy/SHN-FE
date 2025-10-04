@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import SearchSelect from '@/components/ui/search-select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Save, ArrowLeft, Users, Package } from 'lucide-react';
+import { Plus, Trash2, Save, ArrowLeft, Users, Package, Grid3X3, X, Eye } from 'lucide-react';
 import SelectPlatShaftDasar from './select-platshaftdasar';
 import { useAlert } from '@/hooks/useAlert';
 import PageLayout from '@/components/PageLayout';
@@ -14,6 +14,10 @@ import { request } from '@/lib/request';
 import { Table, TableHead, TableBody, TableRow, TableCell, TableHeader } from '@/components/Table';
 import PelaksanaModal from '@/components/modals/PelaksanaModal';
 import WorkOrderItemEditModal from '@/components/modals/WorkOrderItemEditModal';
+import PlatPreviewModal from '@/components/PlatPreviewModal';
+// Import test utilities for development
+import '@/lib/canvasPreviewTest';
+import '@/lib/canvasPreviewDemo';
 import { 
   getGudangOptions, 
   getJenisBarangOptions, 
@@ -82,6 +86,11 @@ export default function AddWorkOrderPage() {
   const [showPlatDasarModal, setShowPlatDasarModal] = useState(false);
   const [currentItemData, setCurrentItemData] = useState(null);
   const [selectedPlatDasar, setSelectedPlatDasar] = useState({});
+  
+  // Plat Preview Modal State
+  const [showPlatPreviewModal, setShowPlatPreviewModal] = useState(false);
+  const [previewItems, setPreviewItems] = useState([]);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   // Loading State
   const [loading, setLoading] = useState(false);
@@ -334,6 +343,11 @@ export default function AddWorkOrderPage() {
         console.log('Transformed Work Order items:', transformedItems);
         setWorkOrderItems(transformedItems);
         
+        // Store WO item IDs for canvas color logic
+        const woItemIds = transformedItems.map(item => item.id);
+        localStorage.setItem('WO_item_unique_ids', JSON.stringify(woItemIds));
+        console.log('Stored WO_item_unique_ids:', woItemIds);
+        
                  // Auto-fill other fields from Sales Order
          setWorkOrderData(prev => ({
            ...prev,
@@ -461,6 +475,42 @@ export default function AddWorkOrderPage() {
     setCurrentItemData(null);
   };
 
+  // Plat Preview Modal Functions
+  const openPlatPreviewModal = async (item) => {
+    setCurrentItemData(item);
+    setShowPlatPreviewModal(true);
+    setLoadingPreview(true);
+    
+    try {
+      // Hit same API as regular Pilih button
+      const response = await request('/work-order-planning/get-saran-plat-dasar', {
+        method: 'POST',
+        body: JSON.stringify({
+          jenis_barang_id: item.jenis_barang_id,
+          bentuk_barang_id: item.bentuk_barang_id,
+          grade_barang_id: item.grade_barang_id,
+          tebal: parseFloat(item.tebal) || 0,
+          sisa_luas: calculateRequiredArea(item)
+        })
+      });
+      
+      console.log('Preview API response:', response.data);
+      setPreviewItems(response.data || []);
+    } catch (error) {
+      console.error('Error loading preview items:', error);
+      showAlert('Error', 'Gagal memuat data preview', 'error');
+      setPreviewItems([]);
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  const closePlatPreviewModal = () => {
+    setShowPlatPreviewModal(false);
+    setCurrentItemData(null);
+    setPreviewItems([]);
+  };
+
   const handlePlatDasarSelection = (selectedItems) => {
     if (currentItemData) {
       setSelectedPlatDasar(prev => ({
@@ -534,7 +584,7 @@ export default function AddWorkOrderPage() {
         console.log(`Saran plat ${saranItemId} is used in WO items:`, woItemsUsingThisSaranPlat.map(item => item.WoItemID));
         
         if (woItemsUsingThisSaranPlat.length === 0) {
-          console.log(`❌ No WO items found using saran plat ${saranItemId}`);
+          console.log(`❌ No WO items found using saran plat ${saranItemId} - skipping to preserve existing data`);
           continue;
         }
         
@@ -562,29 +612,118 @@ export default function AddWorkOrderPage() {
         if (canvasLayoutData) {
           const canvasLayout = JSON.parse(canvasLayoutData);
           
-          // Change all box colors to red before saving (mark as saved to database)
-          if (canvasLayout.boxes && Array.isArray(canvasLayout.boxes)) {
-            canvasLayout.boxes = canvasLayout.boxes.map(box => ({
-              ...box,
-              color: "#ef4444", // Red color for saved boxes
-              isDisabled: true, // Mark as disabled/saved
-              isSave: true // Mark as saved to database
-            }));
-            console.log(`Changed ${canvasLayout.boxes.length} boxes to red color for saran item ${saranItemId}`);
-          }
+          // Check if there are any boxes from current work order items
+          const currentWoItemIds = JSON.parse(localStorage.getItem('WO_item_unique_ids') || '[]');
+          const currentWOBoxes = canvasLayout.boxes ? canvasLayout.boxes.filter(box => {
+            // Check if box.woItemId is in current WO item IDs array (handle both string and number)
+            const boxWoItemId = box.woItemId;
+            return currentWoItemIds.includes(boxWoItemId) || 
+                   currentWoItemIds.includes(String(boxWoItemId)) || 
+                   currentWoItemIds.includes(parseInt(boxWoItemId));
+          }) : [];
           
-          processedCanvasData = JSON.stringify(canvasLayout);
+          console.log(`🔍 DEBUG: Checking boxes for saran item ${saranItemId}:`, {
+            currentWoItemIds: currentWoItemIds,
+            totalBoxes: canvasLayout.boxes ? canvasLayout.boxes.length : 0,
+            currentWOBoxes: currentWOBoxes.length,
+            allBoxes: canvasLayout.boxes ? canvasLayout.boxes.map(box => ({ 
+              woItemId: box.woItemId, 
+              workOrderId: box.workOrderId
+            })) : [],
+            localStorage: {
+              WO_current_work_order_id: localStorage.getItem('WO_current_work_order_id'),
+              WO_item_unique_ids: localStorage.getItem('WO_item_unique_ids')
+            }
+          });
+          
+          // Only process canvas data if there are boxes from current work order
+          if (currentWOBoxes.length > 0) {
+            // Change box colors to red before saving, but preserve yellow boxes from other WO items
+            if (canvasLayout.boxes && Array.isArray(canvasLayout.boxes)) {
+              canvasLayout.boxes = canvasLayout.boxes.map(box => {
+                // Check if this box belongs to current work order items or different work order
+                const boxWoItemId = box.woItemId;
+                const isFromCurrentWO = currentWoItemIds.includes(boxWoItemId) || 
+                                        currentWoItemIds.includes(String(boxWoItemId)) || 
+                                        currentWoItemIds.includes(parseInt(boxWoItemId));
+                
+                // Only change color to red if it's from current work order
+                // Preserve yellow color for boxes from other work orders
+                if (isFromCurrentWO) {
+                  return {
+                    ...box,
+                    color: "#ef4444", // Red color for saved boxes from current WO
+                    isDisabled: true, // Mark as disabled/saved
+                    isSave: true // Mark as saved to database
+                  };
+                } else {
+                  // Keep original color for boxes from other work orders (preserve yellow)
+                  return {
+                    ...box,
+                    // Don't change color, isDisabled, or isSave for boxes from other WO
+                  };
+                }
+              });
+              
+              console.log(`Changed ${currentWOBoxes.length} boxes to red color for saran item ${saranItemId} (preserved ${canvasLayout.boxes.length - currentWOBoxes.length} boxes from other WO items)`);
+            }
+            
+            processedCanvasData = JSON.stringify(canvasLayout);
+          } else {
+            // No boxes from current work order - don't save canvas data to preserve existing data
+            console.log(`No boxes from current WO for saran item ${saranItemId} - skipping canvas save to preserve existing data`);
+            processedCanvasData = null;
+          }
         }
         
-        // Always add saran plat data for all WO items
-        saranPlatData.push({
-          wo_planning_item_id: woItemUniqueIds, // Send array of woItemUniqueIds
-          item_barang_id: parseInt(saranItemId),
-          is_selected: true,
-          canvas_data: processedCanvasData // Use processed canvas data with red boxes
-        });
-        
-        console.log(`✅ Added saran plat data for saran item ${saranItemId} with ${woItemUniqueIds.length} WO items`);
+        // Only add saran plat data if there's canvas data from current work order
+        if (processedCanvasData) {
+          // Try to get canvas image from file
+          let canvasImageBase64 = null;
+          try {
+            const imageFileName = `canvas-preview-ItemId-${saranItemId}.jpg`;
+            const imagePath = `/canvas-previews/${imageFileName}`;
+            
+            // Check if file exists by trying to fetch it
+            const response = await fetch(imagePath);
+            if (response.ok) {
+              const blob = await response.blob();
+              const base64 = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+              });
+              canvasImageBase64 = base64;
+              console.log(`✅ Canvas image loaded for item ${saranItemId}: ${imageFileName}`);
+            } else {
+              console.log(`📷 No canvas image file found for item ${saranItemId}: ${imageFileName}`);
+            }
+          } catch (error) {
+            console.warn(`⚠️ Failed to load canvas image for item ${saranItemId}:`, error);
+          }
+
+          const saranData = {
+            wo_planning_item_id: woItemUniqueIds, // Send array of woItemUniqueIds
+            item_barang_id: parseInt(saranItemId),
+            is_selected: true,
+            canvas_data: processedCanvasData // Use processed canvas data with red boxes
+          };
+          
+          // Add canvas_image if available
+          if (canvasImageBase64) {
+            saranData.canvas_image = canvasImageBase64;
+          }
+          
+          console.log(`📷 Canvas image included for item ${saranItemId}:`, !!canvasImageBase64);
+          
+          saranPlatData.push(saranData);
+          
+          console.log(`✅ Added saran plat data for saran item ${saranItemId} with ${woItemUniqueIds.length} WO items`);
+          console.log(`📷 Canvas image included:`, !!saranData.canvas_image);
+          
+        } else {
+          console.log(`⏭️ Skipped saran plat data for saran item ${saranItemId} - no canvas data from current WO (preserving existing data)`);
+        }
       }
       
       console.log('Saran plat data to save:', saranPlatData);
@@ -602,7 +741,8 @@ export default function AddWorkOrderPage() {
             saranData.wo_planning_item_id,
             saranData.item_barang_id,
             saranData.is_selected,
-            saranData.canvas_data
+            saranData.canvas_data,
+            saranData.canvas_image
           );
           console.log('✅ Saved saran plat dasar:', saranData.item_barang_id, response);
         } catch (error) {
@@ -860,10 +1000,13 @@ export default function AddWorkOrderPage() {
                   Nomor WO *
                 </label>
                 <Input
-                  placeholder="Nomor WO akan otomatis terisi"
+                  placeholder="Masukkan nomor WO atau akan otomatis terisi dari SO"
                   value={workOrderData.nomor_wo}
-                  disabled
-                  className="bg-gray-100"
+                  onChange={(e) => setWorkOrderData({
+                    ...workOrderData,
+                    nomor_wo: e.target.value
+                  })}
+                  className="focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               
@@ -1060,6 +1203,17 @@ export default function AddWorkOrderPage() {
                               <Package className="w-3 h-3 mr-1" />
                               Pilih
                             </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openPlatPreviewModal(item)}
+                              disabled={!item.jenis_barang_id || !item.bentuk_barang_id || !item.grade_barang_id || !item.tebal}
+                              className="text-xs"
+                            >
+                              <Grid3X3 className="w-3 h-3 mr-1" />
+                              Pilih Preview
+                            </Button>
                             {selectedPlatDasar[item.id] && selectedPlatDasar[item.id].length > 0 && (
                               <Badge variant="secondary" className="text-xs whitespace-nowrap">
                                 {(() => {
@@ -1173,6 +1327,16 @@ export default function AddWorkOrderPage() {
         value={workOrderItems.find(item => item.id === pelaksanaModalItemId)?.pelaksana || []}
         onSave={savePelaksanaForItem}
         loadingOptions={loadingPelaksana}
+      />
+
+      {/* Plat Preview Modal */}
+      <PlatPreviewModal
+        isOpen={showPlatPreviewModal}
+        onClose={closePlatPreviewModal}
+        currentItemData={currentItemData}
+        previewItems={previewItems}
+        loadingPreview={loadingPreview}
+        calculateRequiredArea={calculateRequiredArea}
       />
 
       {/* Work Order Item Edit Modal */}

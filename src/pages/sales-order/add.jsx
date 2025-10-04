@@ -393,57 +393,96 @@ export default function AddSalesOrderPage() {
     }
     setHandoverMethod("pickup");
 
+    // Get available bentuk barang from master data
+    const availableShapes = itemShapeOptions.filter(shape => shape.value && shape.label);
+    const firstShape = availableShapes[0] || { value: "1", label: "AS", dimensi: "1D", nama: "AS", id: 1 };
+    const secondShape = availableShapes[1] || { value: "2", label: "CNU", dimensi: "2D", nama: "CANAL U", id: 2 };
+
+    // Calculate dimensions based on shape type
+    const getDimensionsForShape = (shape, index) => {
+      if (shape.dimensi === "1D") {
+        return {
+          panjang: 250 + (index * 50),
+          lebar: 120 + (index * 20),
+          tebal: 0,
+          dimensiString: `${250 + (index * 50)} x ${120 + (index * 20)}`
+        };
+      } else {
+        return {
+          panjang: 300 + (index * 100),
+          lebar: 150 + (index * 30),
+          tebal: 12 + (index * 3),
+          dimensiString: `${300 + (index * 100)} x ${150 + (index * 30)} x ${12 + (index * 3)}`
+        };
+      }
+    };
+
+    const firstItemDims = getDimensionsForShape(firstShape, 0);
+    const secondItemDims = getDimensionsForShape(secondShape, 1);
+
+    // Calculate area for each item
+    const calculateArea = (panjang, lebar, dimensi) => {
+      if (dimensi === "1D") {
+        return (panjang * lebar / 10000).toFixed(2); // Convert to m²
+      } else {
+        return (panjang * lebar / 10000).toFixed(2); // Convert to m²
+      }
+    };
+
+    const firstItemArea = calculateArea(firstItemDims.panjang, firstItemDims.lebar, firstShape.dimensi);
+    const secondItemArea = calculateArea(secondItemDims.panjang, secondItemDims.lebar, secondShape.dimensi);
+
     const autoItems = [
       {
         id: Date.now(),
         jenisBarang: itemTypeOptions.length > 0 ? itemTypeOptions[0].label : "Plat Besi",
-        bentuk: "Persegi",
+        bentuk: firstShape.nama,
         grade: itemGradeOptions.length > 0 ? itemGradeOptions[0].label : "Grade A",
-        dimensi: "250 x 120",
+        dimensi: firstItemDims.dimensiString,
         qty: 3,
-        luasPerItem: "300 m²",
-        hargaDisplay: "Rp 75,000/m²",
-        satuanDisplay: unitOptions.length > 0 ? unitOptions[0].label : "Per Dimensi",
+        luasPerItem: `${firstItemArea} m²`,
+        harga: `Rp ${(75000).toLocaleString('id-ID')}/m²`,
+        satuan: unitOptions.length > 0 ? unitOptions[0].label : "Per Dimensi",
         diskon: "5%",
-        total: "Rp 213,750",
+        total: `Rp ${(parseFloat(firstItemArea) * 75000 * 3 * 0.95).toLocaleString('id-ID')}`,
         jenisBarangId: itemTypeOptions.length > 0 ? itemTypeOptions[0].value : "1",
-        bentukBarangId: 2,
+        bentukBarangId: firstShape.value,
         gradeBarangId: itemGradeOptions.length > 0 ? itemGradeOptions[0].value : "1",
-        panjang: 250,
-        lebar: 120,
-        tebal: 50,
+        panjang: firstItemDims.panjang,
+        lebar: firstItemDims.lebar,
+        tebal: firstItemDims.tebal,
         harga: 75000,
         satuan: unitOptions.length > 0 ? unitOptions[0].value : "PER_DIMENSI",
         diskonPercent: 5,
-        catatan: "Auto-filled item 1 😄"
+        catatan: `Auto-filled item 1 - ${firstShape.nama} (${firstShape.dimensi}) 😄`
       },
       {
         id: Date.now() + 1,
-        jenisBarang: itemTypeOptions.length > 1 ? itemTypeOptions[1].label : "Besi Beton",
-        bentuk: "Bulat",
-        grade: itemGradeOptions.length > 1 ? itemGradeOptions[1].label : "Grade B",
-        dimensi: "600 x 12",
+        jenisBarang: itemTypeOptions.length > 1 ? itemTypeOptions[1].label : itemTypeOptions[0]?.label || "Besi Beton",
+        bentuk: secondShape.nama,
+        grade: itemGradeOptions.length > 1 ? itemGradeOptions[1].label : itemGradeOptions[0]?.label || "Grade B",
+        dimensi: secondItemDims.dimensiString,
         qty: 2,
-        luasPerItem: "72 m²",
-        hargaDisplay: "Rp 45,000/m²",
-        satuanDisplay: unitOptions.length > 0 ? unitOptions[0].label : "Per Dimensi",
+        luasPerItem: `${secondItemArea} m²`,
+        harga: `Rp ${(45000).toLocaleString('id-ID')}/m²`,
+        satuan: unitOptions.length > 0 ? unitOptions[0].label : "Per Dimensi",
         diskon: "3%",
-        total: "Rp 62,856",
-        jenisBarangId: itemTypeOptions.length > 1 ? itemTypeOptions[1].value : "2",
-        bentukBarangId: 1,
-        gradeBarangId: itemGradeOptions.length > 1 ? itemGradeOptions[1].value : "2",
-        panjang: 60,
-        lebar: 12,
-        tebal: 12,
+        total: `Rp ${(parseFloat(secondItemArea) * 45000 * 2 * 0.97).toLocaleString('id-ID')}`,
+        jenisBarangId: itemTypeOptions.length > 1 ? itemTypeOptions[1].value : itemTypeOptions[0]?.value || "2",
+        bentukBarangId: secondShape.value,
+        gradeBarangId: itemGradeOptions.length > 1 ? itemGradeOptions[1].value : itemGradeOptions[0]?.value || "2",
+        panjang: secondItemDims.panjang,
+        lebar: secondItemDims.lebar,
+        tebal: secondItemDims.tebal,
         harga: 45000,
         satuan: unitOptions.length > 0 ? unitOptions[0].value : "PER_DIMENSI",
         diskonPercent: 3,
-        catatan: "Auto-filled item 2 🎯"
+        catatan: `Auto-filled item 2 - ${secondShape.nama} (${secondShape.dimensi}) 🎯`
       }
     ];
 
     setItems(autoItems);
-    showAlert("Info", "Data sudah di-auto fill! Items langsung masuk ke table. 🎲", "info");
+    showAlert("Info", `Data sudah di-auto fill! Items menggunakan bentuk barang: ${firstShape.nama} & ${secondShape.nama} 🎲`, "info");
   };
 
   const handleShapeSelect = (shape) => {
