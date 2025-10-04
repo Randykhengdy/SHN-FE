@@ -6,6 +6,7 @@ const DashboardWorkshopPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [fontSize, setFontSize] = useState(13); // Default font size
+  const [showCustomerName, setShowCustomerName] = useState(true); // Toggle untuk kolom nama pelanggan
 
   const fetchWorkOrders = async () => {
     setLoading(true);
@@ -113,6 +114,26 @@ const DashboardWorkshopPage = () => {
             >
               🔍-
             </button>
+            <label style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              color: "#ffffff",
+              fontSize: "14px",
+              cursor: "pointer",
+              marginLeft: "16px"
+            }}>
+              <input
+                type="checkbox"
+                checked={showCustomerName}
+                onChange={(e) => setShowCustomerName(e.target.checked)}
+                style={{
+                  cursor: "pointer",
+                  transform: "scale(1.2)"
+                }}
+              />
+              Tampilkan Nama Pelanggan
+            </label>
           </div>
            <table
              style={{
@@ -126,6 +147,16 @@ const DashboardWorkshopPage = () => {
           >
             <thead>
               <tr style={{ background: "#3a3a3a" }}>
+                {showCustomerName && (
+                  <th style={{ 
+                    border: "1px solid #4a4a4a", 
+                    padding: "6px 8px",
+                    color: "#000000",
+                    fontWeight: "600",
+                    textAlign: "left",
+                    fontSize: `${fontSize + 1}px`
+                  }}>Nama Pelanggan</th>
+                )}
                 <th style={{ 
                   border: "1px solid #4a4a4a", 
                   padding: "6px 8px",
@@ -187,7 +218,7 @@ const DashboardWorkshopPage = () => {
             <tbody>
               {workOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ 
+                  <td colSpan={showCustomerName ? 8 : 7} style={{ 
                     textAlign: "center", 
                     padding: "24px",
                     color: "#a0a0a0",
@@ -217,6 +248,15 @@ const DashboardWorkshopPage = () => {
                       backgroundColor: idx % 2 === 0 ? "#2d2d2d" : "#333333",
                       transition: "background-color 0.2s ease"
                     }}>
+                    {showCustomerName && (
+                      <td style={{ 
+                        border: "1px solid #4a4a4a", 
+                        padding: "4px 6px",
+                        color: textColor,
+                        fontSize: `${fontSize}px`,
+                        lineHeight: "1.2"
+                      }}>{wo.nama_customer || "-"}</td>
+                    )}
                     <td style={{ 
                       border: "1px solid #4a4a4a", 
                       padding: "4px 6px",
