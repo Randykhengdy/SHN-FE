@@ -27,5 +27,6 @@ export const API_ENDPOINTS = {
   salesOrder: "/sales-order",
   workOrderPlanning: "/work-order-planning",
   purchaseOrder: "/purchase-order",
+  dashboardWorkshop: "/dashboard/workshop",
   stockMutation: "/stock-mutation"
 };

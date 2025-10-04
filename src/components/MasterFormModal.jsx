@@ -188,7 +188,12 @@ export default function MasterFormModal({
                 loadOptions();
               }}
               onLogin={() => {
-                window.location.href = '/';
+                // Support both hash routing and regular routing
+                if (window.location.hash) {
+                  window.location.hash = '#/';
+                } else {
+                  window.location.href = '/';
+                }
               }}
             />
           )}

@@ -1,11 +1,21 @@
 import { useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { checkAndRefreshToken, isTokenExpired, willTokenExpireSoon } from '../lib/tokenUtils';
+import { getToken } from '../lib/tokenStorage';
 
 export default function TokenInterceptor() {
   const location = useLocation();
+  const navigate = useNavigate();
   const lastCheckRef = useRef(0);
   const intervalRef = useRef(null);
+  
+  // Make navigate function available globally for tokenUtils
+  useEffect(() => {
+    window.__reactNavigate = navigate;
+    return () => {
+      delete window.__reactNavigate;
+    };
+  }, [navigate]);
 
   useEffect(() => {
     // Auto refresh token setiap 5 menit (lebih agresif)
@@ -38,14 +48,17 @@ export default function TokenInterceptor() {
       }
     };
 
-    // Immediate check when component mounts
-    if (location.pathname !== '/') {
+    // Only run token checks if not on login page
+    const isOnLoginPage = location.pathname === '/' || location.pathname === '';
+    
+    // Immediate check when component mounts (only if not on login page)
+    if (!isOnLoginPage) {
       checkToken();
     }
 
-    // Set up interval untuk auto refresh setiap 5 menit
+    // Set up interval untuk auto refresh setiap 5 menit (only if not on login page)
     intervalRef.current = setInterval(() => {
-      if (location.pathname !== '/') {
+      if (!isOnLoginPage) {
         checkToken();
       }
     }, 300000); // 5 minutes
@@ -60,7 +73,7 @@ export default function TokenInterceptor() {
   // Additional effect for more frequent checks when token is about to expire
   useEffect(() => {
     const checkExpiry = () => {
-      const token = localStorage.getItem('token');
+      const token = getToken();
       if (!token) return;
 
       // Check every minute if token will expire soon
@@ -72,9 +85,12 @@ export default function TokenInterceptor() {
       }
     };
 
-    // Check every minute for token expiry
+    // Only run expiry checks if not on login page
+    const isOnLoginPage = location.pathname === '/' || location.pathname === '';
+    
+    // Check every minute for token expiry (only if not on login page)
     const expiryInterval = setInterval(() => {
-      if (location.pathname !== '/') {
+      if (!isOnLoginPage) {
         checkExpiry();
       }
     }, 60000); // 1 minute
@@ -87,13 +103,14 @@ export default function TokenInterceptor() {
   // Handle visibility change (when user switches tabs or returns to app)
   useEffect(() => {
     const handleVisibilityChange = async () => {
-      if (!document.hidden && location.pathname !== '/') {
+      const isOnLoginPage = location.pathname === '/' || location.pathname === '';
+      if (!document.hidden && !isOnLoginPage) {
         if (process.env.NODE_ENV === 'development') {
           console.log('👁️ Page became visible, checking token...');
         }
         
         // Check if token is expired when user returns
-        const token = localStorage.getItem('token');
+        const token = getToken();
         if (token && isTokenExpired(token)) {
           if (process.env.NODE_ENV === 'development') {
             console.log('🔄 Token expired while away, refreshing...');
@@ -105,13 +122,14 @@ export default function TokenInterceptor() {
 
     // Handle window focus (when user returns to browser tab)
     const handleFocus = async () => {
-      if (location.pathname !== '/') {
+      const isOnLoginPage = location.pathname === '/' || location.pathname === '';
+      if (!isOnLoginPage) {
         if (process.env.NODE_ENV === 'development') {
           console.log('🎯 Window focused, checking token...');
         }
         
         // Check if token will expire soon when user returns
-        const token = localStorage.getItem('token');
+        const token = getToken();
         if (token && willTokenExpireSoon(token, 5)) { // 5 minutes
           if (process.env.NODE_ENV === 'development') {
             console.log('🔄 Token expiring soon, proactive refresh...');

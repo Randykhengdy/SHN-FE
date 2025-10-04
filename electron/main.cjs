@@ -172,6 +172,11 @@ function createWindow() {
           accelerator: 'CmdOrCtrl+D',
           click: () => mainWindow.webContents.send('navigate-to', '/dashboard')
         },
+        {
+          label: 'Dashboard Workshop',
+          accelerator: 'CmdOrCtrl+Shift+D',
+          click: () => mainWindow.webContents.send('navigate-to', '/dashboard/workshop')
+        },
         { type: 'separator' },
         {
           label: 'Exit',
@@ -209,6 +214,7 @@ function createWindow() {
           { label: 'Purchase Order', accelerator: 'CmdOrCtrl+P', click: () => mainWindow.webContents.send('navigate-to', '/purchase-order') },
           { label: 'Sales Order', accelerator: 'CmdOrCtrl+S', click: () => mainWindow.webContents.send('navigate-to', '/sales-order') },
           { label: 'Work Order', accelerator: 'CmdOrCtrl+W', click: () => mainWindow.webContents.send('navigate-to', '/work-order') },
+          { label: 'Surat Jalan \& Invoicing', accelerator: 'CmdOrCtrl+F', click: () => mainWindow.webContents.send('navigate-to', '/finance-invoice-pod') },
           { type: 'separator' },
           { label: 'AR / AP', accelerator: 'CmdOrCtrl+A', click: () => mainWindow.webContents.send('navigate-to', '/ar-ap') },
           { label: 'Mutasi Stock', accelerator: 'CmdOrCtrl+M', click: () => mainWindow.webContents.send('navigate-to', '/mutasi-stock') },
@@ -372,4 +378,72 @@ ipcMain.handle('get-app-version', () => {
 
 ipcMain.handle('get-app-name', () => {
   return app.getName();
+});
+
+// Handle canvas file saving
+ipcMain.handle('save-canvas-file', async (event, { dataUrl, filename }) => {
+  try {
+    console.log('=== SAVE CANVAS FILE DEBUG ===');
+    console.log('Received filename:', filename);
+    console.log('DataURL length:', dataUrl ? dataUrl.length : 'null');
+    
+    // Create canvas-previews directory in public folder
+    const publicDir = path.join(__dirname, '..', 'public');
+    const canvasPreviewsDir = path.join(publicDir, 'canvas-previews');
+    
+    console.log('Public dir:', publicDir);
+    console.log('Canvas previews dir:', canvasPreviewsDir);
+    console.log('Canvas previews dir exists:', fs.existsSync(canvasPreviewsDir));
+    
+    // Ensure directory exists
+    if (!fs.existsSync(canvasPreviewsDir)) {
+      console.log('Creating canvas-previews directory...');
+      fs.mkdirSync(canvasPreviewsDir, { recursive: true });
+      console.log('Directory created successfully');
+    }
+    
+    // Convert dataURL to buffer
+    const base64Data = dataUrl.replace(/^data:image\/[a-z]+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    
+    console.log('Buffer size:', buffer.length);
+    
+    // Save file
+    const filePath = path.join(canvasPreviewsDir, filename);
+    console.log('Saving to file path:', filePath);
+    
+    fs.writeFileSync(filePath, buffer);
+    
+    console.log(`✅ CANVAS PREVIEW SAVED SUCCESSFULLY!`);
+    console.log(`📁 Full file path: ${filePath}`);
+    console.log(`📄 Filename: ${filename}`);
+    console.log(`📊 File size: ${buffer.length} bytes`);
+    console.log(`🔍 File exists after save: ${fs.existsSync(filePath)}`);
+    
+    // Get file stats for verification
+    try {
+      const stats = fs.statSync(filePath);
+      console.log(`📅 File created: ${stats.birthtime}`);
+      console.log(`📏 File size on disk: ${stats.size} bytes`);
+    } catch (statError) {
+      console.error('Error getting file stats:', statError);
+    }
+    
+    return {
+      success: true,
+      message: 'File saved successfully',
+      path: `/canvas-previews/${filename}`,
+      fullPath: filePath,
+      fileSize: buffer.length
+    };
+    
+  } catch (error) {
+    console.error('Error saving canvas preview:', error);
+    console.error('Error stack:', error.stack);
+    return {
+      success: false,
+      error: 'Failed to save file',
+      details: error.message
+    };
+  }
 });

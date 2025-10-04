@@ -22,6 +22,7 @@ import { useRole } from "@/hooks/useRole";
 import { request } from "@/lib/request";
 import { API_ENDPOINTS } from "@/config/api";
 import SalesOrderLayout from "@/components/SalesOrderLayout";
+import { documentSequenceService } from "@/services/master-data/documentSequenceService";
 
 export default function AddSalesOrderPage() {
   const { showAlert, AlertComponent } = useAlert();
@@ -34,6 +35,12 @@ export default function AddSalesOrderPage() {
   const [itemShapeOptions, setItemShapeOptions] = useState([]);
   const [itemGradeOptions, setItemGradeOptions] = useState([]);
   const [unitOptions, setUnitOptions] = useState([]);
+
+  // Handover method options
+  const handoverMethodOptions = [
+    { value: "pickup", label: "Pickup" },
+    { value: "delivery", label: "Delivery" }
+  ];
 
   // Loading states
   const [loadingTerm, setLoadingTerm] = useState(false);
@@ -67,14 +74,16 @@ export default function AddSalesOrderPage() {
           jenisBarang,
           bentukBarang,
           gradeBarang,
-          units
+          units,
+          soNumber
         ] = await Promise.all([
           getTermOptions(),
           getGudangOptions(),
           getJenisBarangOptions(),
           getBentukBarangOptions(),
           getGradeBarangOptions(),
-          getUnitOptions()
+          getUnitOptions(),
+          documentSequenceService.generateSONumber()
         ]);
 
         setTermOptions(terms);
@@ -83,8 +92,13 @@ export default function AddSalesOrderPage() {
         setItemShapeOptions(bentukBarang);
         setItemGradeOptions(gradeBarang);
         setUnitOptions(units);
+        
+        // Set generated SO number
+        setSoNumber(soNumber);
+        console.log('Generated SO number:', soNumber);
       } catch (error) {
         console.error('Error loading master data:', error);
+        showAlert('Error', 'Gagal memuat data master atau generate nomor SO', 'error');
       } finally {
         setLoadingTerm(false);
         setLoadingWarehouse(false);
@@ -104,6 +118,7 @@ export default function AddSalesOrderPage() {
   const [deliveryDate, setDeliveryDate] = useState(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
   const [termOfPayment, setTermOfPayment] = useState("cash");
   const [originWarehouse, setOriginWarehouse] = useState("");
+  const [handoverMethod, setHandoverMethod] = useState("pickup");
 
   // Item Input Form
   const [itemLength, setItemLength] = useState("");
@@ -310,6 +325,7 @@ export default function AddSalesOrderPage() {
         tanggal_pengiriman: deliveryDate,
         syarat_pembayaran: termOfPayment,
         gudang_id: parseInt(originWarehouse) || 1,
+        handover_method: handoverMethod,
         pelanggan_id: selectedCustomer?.id || 1,
         subtotal: subtotal || 0,
         total_diskon: totalDiscount || 0,
@@ -356,12 +372,7 @@ export default function AddSalesOrderPage() {
   };
 
   const handleAutoFill = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const timestamp = Date.now().toString().slice(-3);
-    setSoNumber(`SO-${year}${month}${day}-${timestamp}`);
+    // Note: SO number is now auto-generated from API, no need to set it manually
     
     setCustomerName("PT Jaya Makmur Sejahtera");
     setCustomerPhone("08123456789");
@@ -383,6 +394,7 @@ export default function AddSalesOrderPage() {
     if (termOptions.length > 0) {
       setTermOfPayment(termOptions[0].value);
     }
+    setHandoverMethod("pickup");
 
     // Get available bentuk barang from master data
     const availableShapes = itemShapeOptions.filter(shape => shape.value && shape.label);
@@ -579,9 +591,13 @@ export default function AddSalesOrderPage() {
                 <Input
                   id="soNumber"
                   value={soNumber}
-                  onChange={(e) => setSoNumber(e.target.value)}
-                  placeholder="Masukkan nomor SO atau klik Auto Fill"
+                  disabled
+                  className="bg-gray-100 text-gray-600 cursor-not-allowed"
+                  placeholder="Nomor SO akan otomatis terisi dari API generate sequence"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Nomor SO otomatis di-generate dari sistem saat halaman dibuka
+                </p>
               </div>
               <div>
                 <Label htmlFor="soDate">Tanggal SO</Label>
@@ -628,6 +644,17 @@ export default function AddSalesOrderPage() {
                   onValueChange={setOriginWarehouse}
                   options={warehouseOptions}
                   loading={loadingWarehouse}
+                  required
+                />
+              </div>
+              <div>
+                <SearchSelect
+                  label="Metode Penyerahan"
+                  placeholder="Pilih Metode Penyerahan"
+                  searchPlaceholder="Cari metode penyerahan..."
+                  value={handoverMethod}
+                  onValueChange={setHandoverMethod}
+                  options={handoverMethodOptions}
                   required
                 />
               </div>

@@ -33,6 +33,9 @@ import WorkOrderPlatShaftCanvasPage from "@/pages/work-order/PlatShaftCanvasPage
 import PurchaseOrderPage from "@/pages/purchase-order";
 import AddPurchaseOrderPage from "@/pages/purchase-order/add";
 import ViewPurchaseOrderPage from "@/pages/purchase-order/view";
+import FinanceInvoicePodPage from "@/pages/finance-invoice-pod";
+
+import DashboardWorkshopPage from "@/pages/dashboard/workshop";
 import MutasiStockPage from "@/pages/mutasi-stock";
 import AddMutasiStockPage from "@/pages/mutasi-stock/add";
 import ViewMutasiStockPage from "@/pages/mutasi-stock/view";
@@ -74,6 +77,9 @@ const AppRouter = () => {
         <Route path="/purchase-order" element={<PurchaseOrderPage />} />
         <Route path="/purchase-order/add" element={<AddPurchaseOrderPage />} />
         <Route path="/purchase-order/view/:id" element={<ViewPurchaseOrderPage />} />
+        <Route path="/dashboard/workshop" element={<DashboardWorkshopPage />} />
+
+        <Route path="/finance-invoice-pod" element={<FinanceInvoicePodPage />} />
         <Route path="/mutasi-stock" element={<MutasiStockPage/>} />
         <Route path="/mutasi-stock/add" element={<AddMutasiStockPage />} />
         <Route path="/mutasi-stock/view/:id" element={<ViewMutasiStockPage />} />
