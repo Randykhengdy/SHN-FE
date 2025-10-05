@@ -39,6 +39,7 @@ import DashboardWorkshopPage from "@/pages/dashboard/workshop";
 import MutasiStockPage from "@/pages/mutasi-stock";
 import AddMutasiStockPage from "@/pages/mutasi-stock/add";
 import ViewMutasiStockPage from "@/pages/mutasi-stock/view";
+import KonversiBarangPage from "@/pages/konversi-barang";
 
 const AppRouter = () => {
     return (
@@ -83,6 +84,7 @@ const AppRouter = () => {
         <Route path="/mutasi-stock" element={<MutasiStockPage/>} />
         <Route path="/mutasi-stock/add" element={<AddMutasiStockPage />} />
         <Route path="/mutasi-stock/view/:id" element={<ViewMutasiStockPage />} />
+        <Route path="/konversi-barang" element={<KonversiBarangPage/>}/>
       </Routes>
     );
 };

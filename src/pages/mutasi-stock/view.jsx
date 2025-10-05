@@ -77,8 +77,8 @@ export default function ViewMutasiStockPage() {
             const result = await stockMutationService.getById(id);
             setMutasiStockData(result.data);
         } catch (error) {
-            console.error('Error loading purchase order:', error);
-            showAlert("Error", "Gagal memuat data Purchase Order", "error");
+            console.error('Error loading stock mutation:', error);
+            showAlert("Error", "Gagal memuat data Mutasi Stock", "error");
         } finally {
             setLoading(false);
         }

@@ -44,10 +44,6 @@ export default function MutasiStockPage() {
     const [selectedStockMutation, setSelectedStockMutation] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    useEffect(() => {
-        loadStockMutation();
-    }, []);
-
 
     const loadStockMutation = useCallback(async () => {
         try {
@@ -79,6 +75,9 @@ export default function MutasiStockPage() {
         }
     }, [currentPage, itemsPerPage, statusFilter, startDate, endDate, requestor]);
 
+    useEffect(() => {
+        loadStockMutation();
+    }, [loadStockMutation]);
 
     // Pagination calculations
     const totalPages = Math.ceil(totalItems / itemsPerPage);
@@ -476,7 +475,7 @@ export default function MutasiStockPage() {
             open={showDeleteModal}
             onOpenChange={setShowDeleteModal}
             title="Konfirmasi Hapus"
-            message={`Yakin ingin menghapus Purchase Order "${selectedStockMutation?.id}"?`}
+            message={`Yakin ingin menghapus Mutasi Stock "${selectedStockMutation?.id}"?`}
             type="warning"
             showCancel={true}
             confirmText={isDeleting ? "Menghapus..." : "Ya, Hapus"}
