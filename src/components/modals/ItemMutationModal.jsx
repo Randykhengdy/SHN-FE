@@ -24,7 +24,6 @@ const MutationModal = ({
     const [unit, setUnit] = useState(null);
     const [quantity, setQuantity] = useState(0);
 
-    // setiap kali `item` berubah → regenerate id
     useEffect(() => {
         if (!open) return; // hanya jalan ketika modal dibuka
 

@@ -1,6 +1,6 @@
 import PageLayout from "@/components/PageLayout";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAlert } from "@/hooks/useAlert";
 import { useCallback, useEffect, useState } from "react";
@@ -9,6 +9,7 @@ import { konversiBarangService } from "@/services/konversiBarangService";
 import { Badge } from "@/components/ui/badge";
 import { isAdmin } from "@/lib/utils";
 import { TableColumnsSplit } from "lucide-react";
+import KonversiModal from "@/components/modals/KonversiBarangModal";
 
 const statusOptions = [
     { value: "all", label: "Semua Status" },
@@ -37,6 +38,9 @@ export default function KonversiBarangPage() {
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     const startItem = (currentPage - 1) * itemsPerPage + 1;
     const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+    const [konversiModalOpen, setKonversiModalOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState(null);
 
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
@@ -91,6 +95,15 @@ export default function KonversiBarangPage() {
         loadItemBarang();
     }, [loadItemBarang]);
 
+    const handleConvertBarang = (item) => {
+        setSelectedItem(item)
+        setKonversiModalOpen(true);
+    }
+
+    const saveKonversiBarang = () => {
+        
+    }
+
     return <PageLayout title="Konversi Barang" category="TRANSAKSI">
 
         {/* Konversi Barang Table */}
@@ -144,6 +157,7 @@ export default function KonversiBarangPage() {
                                                         variant="outline"
                                                         onClick={() => handleConvertBarang(ib)}
                                                         title="Konversi"
+                                                        disabled={ib.status.toLowerCase() !== 'utuh'}
                                                     >
                                                         <TableColumnsSplit className="w-4 h-4" />
                                                     </Button>
@@ -228,5 +242,14 @@ export default function KonversiBarangPage() {
                 )}
             </CardContent>
         </Card>
+            <KonversiModal
+                open={konversiModalOpen}
+                onOpenChange={setKonversiModalOpen}
+                item={selectedItem}
+                title="Konversi Barang"
+                onSave={saveKonversiBarang}
+            />
+        {/* Alert Modal Component */}
+        <AlertComponent />
     </PageLayout>
 }

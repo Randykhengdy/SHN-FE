@@ -272,7 +272,6 @@ export default function AddMutasiStockPage() {
                 item={editingItem}
                 title="Form Item Mutasi"
                 onSave={saveStockForMutation}
-                loadingOptions={loadingStockItem}
             />
             {/* Alert Modal Component */}
             <AlertComponent />
