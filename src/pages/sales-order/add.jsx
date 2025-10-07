@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, ArrowLeft, Calendar } from "lucide-react";
+import { Plus, ArrowLeft, Calendar, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -224,13 +224,13 @@ export default function AddSalesOrderPage() {
 
       // Validasi berdasarkan dimensi bentuk barang
       if (selectedShape.dimensi === "1D") {
-        if (!itemLength || !itemWidth) {
-          showAlert("Peringatan", "Mohon isi panjang dan lebar untuk bentuk 1D", "warning");
+        if (!itemLength || !itemDiameter) {
+          showAlert("Peringatan", "Mohon isi panjang dan tebal untuk bentuk 1D", "warning");
           return;
         }
       } else if (selectedShape.dimensi === "2D") {
-        if (!itemLength || !itemDiameter) {
-          showAlert("Peringatan", "Mohon isi panjang dan tebal untuk bentuk 2D", "warning");
+        if (!itemLength || !itemWidth || !itemDiameter) {
+          showAlert("Peringatan", "Mohon isi panjang, lebar, dan tebal untuk bentuk 2D", "warning");
           return;
         }
       }
@@ -248,9 +248,9 @@ export default function AddSalesOrderPage() {
 
       let dimensiString = "";
       if (selectedShape.dimensi === "1D") {
-        dimensiString = `${itemLength} x ${itemWidth}`;
+        dimensiString = `${itemLength} x ${itemDiameter}`; // 1D: panjang x tebal
       } else {
-        dimensiString = `${itemLength} x ${itemWidth} x ${itemDiameter}`;
+        dimensiString = `${itemLength} x ${itemWidth} x ${itemDiameter}`; // 2D: panjang x lebar x tebal
       }
 
       const newItem = {
@@ -269,7 +269,7 @@ export default function AddSalesOrderPage() {
         bentukBarangId: selectedShape.id,
         gradeBarangId: itemGrade,
         panjang: parseFloat(itemLength) || 0,
-        lebar: parseFloat(itemWidth) || 0,
+        lebar: selectedShape.dimensi === "1D" ? 0 : parseFloat(itemWidth) || 0, // 1D doesn't use lebar
         tebal: parseFloat(itemDiameter) || 0,
         harga: parseFloat(itemPrice) || 0,
         satuan: itemUnit,
@@ -393,17 +393,17 @@ export default function AddSalesOrderPage() {
     const getDimensionsForShape = (shape, index) => {
       if (shape.dimensi === "1D") {
         return {
-          panjang: 250 + (index * 50),
-          lebar: 120 + (index * 20),
-          tebal: 0,
-          dimensiString: `${250 + (index * 50)} x ${120 + (index * 20)}`
+          panjang: 100,
+          lebar: 0, // 1D doesn't use lebar
+          tebal: 100, // 1D uses tebal instead of lebar
+          dimensiString: `100 x 100`
         };
       } else {
         return {
-          panjang: 300 + (index * 100),
-          lebar: 150 + (index * 30),
-          tebal: 12 + (index * 3),
-          dimensiString: `${300 + (index * 100)} x ${150 + (index * 30)} x ${12 + (index * 3)}`
+          panjang: 50,
+          lebar: 100,
+          tebal: 100,
+          dimensiString: `50 x 100 x 100`
         };
       }
     };
@@ -412,16 +412,16 @@ export default function AddSalesOrderPage() {
     const secondItemDims = getDimensionsForShape(secondShape, 1);
 
     // Calculate area for each item
-    const calculateArea = (panjang, lebar, dimensi) => {
+    const calculateArea = (panjang, lebar, tebal, dimensi) => {
       if (dimensi === "1D") {
-        return (panjang * lebar / 10000).toFixed(2); // Convert to m²
+        return (panjang * tebal / 10000).toFixed(2); // Convert to m² (1D uses panjang x tebal)
       } else {
-        return (panjang * lebar / 10000).toFixed(2); // Convert to m²
+        return (panjang * lebar / 10000).toFixed(2); // Convert to m² (2D uses panjang x lebar)
       }
     };
 
-    const firstItemArea = calculateArea(firstItemDims.panjang, firstItemDims.lebar, firstShape.dimensi);
-    const secondItemArea = calculateArea(secondItemDims.panjang, secondItemDims.lebar, secondShape.dimensi);
+    const firstItemArea = calculateArea(firstItemDims.panjang, firstItemDims.lebar, firstItemDims.tebal, firstShape.dimensi);
+    const secondItemArea = calculateArea(secondItemDims.panjang, secondItemDims.lebar, secondItemDims.tebal, secondShape.dimensi);
 
     const autoItems = [
       {
@@ -877,7 +877,7 @@ export default function AddSalesOrderPage() {
                       onClick={() => handleRemoveItem(item.id)}
                       className="btn-danger"
                     >
-                      <Plus className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4" />
                     </Button>
                   </TableCell>
                 </TableRow>

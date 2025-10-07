@@ -440,3 +440,72 @@ ipcMain.handle('save-canvas-file', async (event, { dataUrl, filename }) => {
     };
   }
 });
+
+// Handle clearing canvas-previews folder
+ipcMain.handle('clear-canvas-previews', async () => {
+  try {
+    console.log('=== CLEAR CANVAS PREVIEWS DEBUG ===');
+    
+    // Get canvas-previews directory path
+    const publicDir = path.join(__dirname, '..', 'public');
+    const canvasPreviewsDir = path.join(publicDir, 'canvas-previews');
+    
+    console.log('Canvas previews dir:', canvasPreviewsDir);
+    console.log('Canvas previews dir exists:', fs.existsSync(canvasPreviewsDir));
+    
+    if (!fs.existsSync(canvasPreviewsDir)) {
+      console.log('Canvas previews directory does not exist, nothing to clear');
+      return {
+        success: true,
+        message: 'Directory does not exist, nothing to clear',
+        filesDeleted: 0
+      };
+    }
+    
+    // Read directory contents
+    const files = fs.readdirSync(canvasPreviewsDir);
+    console.log('Files in canvas-previews:', files);
+    
+    let deletedCount = 0;
+    const errors = [];
+    
+    // Delete each file
+    for (const file of files) {
+      try {
+        const filePath = path.join(canvasPreviewsDir, file);
+        const stats = fs.statSync(filePath);
+        
+        if (stats.isFile()) {
+          fs.unlinkSync(filePath);
+          deletedCount++;
+          console.log(`✅ Deleted file: ${file}`);
+        } else {
+          console.log(`⚠️ Skipping non-file: ${file}`);
+        }
+      } catch (fileError) {
+        console.error(`❌ Error deleting file ${file}:`, fileError);
+        errors.push(`${file}: ${fileError.message}`);
+      }
+    }
+    
+    console.log(`✅ CANVAS PREVIEWS CLEARED SUCCESSFULLY!`);
+    console.log(`📊 Files deleted: ${deletedCount}`);
+    console.log(`❌ Errors: ${errors.length}`);
+    
+    return {
+      success: true,
+      message: `Cleared ${deletedCount} files from canvas-previews`,
+      filesDeleted: deletedCount,
+      errors: errors.length > 0 ? errors : undefined
+    };
+    
+  } catch (error) {
+    console.error('Error clearing canvas previews:', error);
+    console.error('Error stack:', error.stack);
+    return {
+      success: false,
+      error: 'Failed to clear canvas previews',
+      details: error.message
+    };
+  }
+});
