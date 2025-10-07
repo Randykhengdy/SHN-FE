@@ -69,7 +69,7 @@ export default function KonversiBarangPage() {
             // Transform API data to match our UI structure
             const transformedData = result.data.map(kb => ({
                 id: kb.id,
-                requestDate: formatDate(kb.created_at),
+                convertDate: formatDate(kb.convert_date),
                 item_barang: kb.nama_item_barang,
                 quantity: kb.quantity,
                 status: kb.jenis_potongan || "N/A",
@@ -235,7 +235,7 @@ export default function KonversiBarangPage() {
                             ) : (
                                 itemBarang.map((ib) => (
                                     <TableRow key={ib.id} className="hover:bg-gray-50">
-                                        <TableCell className="font-medium">{ib.requestDate}</TableCell>
+                                        <TableCell className="font-medium">{ib.convertDate}</TableCell>
                                         <TableCell>{ib.item_barang}</TableCell>
                                         <TableCell>
                                             <Badge className={`${getStatusColor(ib.status)} capitalize`}>
