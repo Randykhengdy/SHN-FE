@@ -64,7 +64,7 @@ export default function KonversiBarangPage() {
     const loadItemBarang = useCallback(async () => {
         try {
             setLoading(true);
-            const result = await konversiBarangService.getAll({page: currentPage, per_page: itemsPerPage, search: search, status: statusFilter });
+            const result = await konversiBarangService.getAll({ page: currentPage, per_page: itemsPerPage, search: search, status: statusFilter });
 
             // Transform API data to match our UI structure
             const transformedData = result.data.map(kb => ({
@@ -94,7 +94,7 @@ export default function KonversiBarangPage() {
         setShowConfirmationModal(true);
     }
 
-    const handleConvertBarangConfirm = async() => {
+    const handleConvertBarangConfirm = async () => {
         if (isConverting) {
             console.log('⏭️ Already processing convert operation');
             return;
@@ -177,7 +177,7 @@ export default function KonversiBarangPage() {
                             </SelectContent>
                         </Select>
                     </div>
-                    
+
                     <div className="flex flex-col gap-2">
                         <Button
                             variant="outline"
@@ -337,12 +337,12 @@ export default function KonversiBarangPage() {
                 )}
             </CardContent>
         </Card>
-        {/* Delete Confirmation Modal */}
+        {/* Convert Confirmation Modal */}
         <CustomAlert
             open={showConfirmationModal}
             onOpenChange={setShowConfirmationModal}
             title="Konfirmasi Konversi Barang"
-            message={`Yakin ingin memotong barang "${selectedItem?.item_barang}"?`}
+            message={`Apakah yakin untuk ubah status "${selectedItem?.item_barang}" menjadi lempengan siap potong?`}
             type="warning"
             showCancel={true}
             confirmText={isConverting ? "Memotong..." : "Ya, Ubah"}
