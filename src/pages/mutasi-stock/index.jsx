@@ -48,9 +48,8 @@ export default function MutasiStockPage() {
     const loadStockMutation = useCallback(async () => {
         try {
             setLoading(true);
-            const result = await stockMutationService.getAll({ startDate: startDate, endDate: endDate, requestor: requestor, status: statusFilter });
+            const result = await stockMutationService.getAll({ page: currentPage, per_page: itemsPerPage, startDate: startDate, endDate: endDate, requestor: requestor, status: statusFilter });
 
-            console.log(result)
             // Transform API data to match our UI structure
             const transformedData = result.data.map(sm => ({
                 id: sm.id,
@@ -60,13 +59,8 @@ export default function MutasiStockPage() {
                 // items: sm.stock_mutation_items || []
             }));
 
-            // Apply pagination
-            const startIndex = (currentPage - 1) * itemsPerPage;
-            const endIndex = startIndex + itemsPerPage;
-            const paginatedData = transformedData.slice(startIndex, endIndex);
-
-            setStockMutations(paginatedData);
-            setTotalItems(transformedData.length);
+            setStockMutations(transformedData);
+            setTotalItems(result.pagination.total);
         } catch (error) {
             console.error('Error loading stock mutations:', error);
             showAlert("Error", "Gagal memuat data mutation Stock", "error");

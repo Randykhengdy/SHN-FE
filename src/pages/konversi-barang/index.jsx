@@ -1,15 +1,16 @@
 import PageLayout from "@/components/PageLayout";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAlert } from "@/hooks/useAlert";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { konversiBarangService } from "@/services/konversiBarangService";
 import { Badge } from "@/components/ui/badge";
 import { isAdmin } from "@/lib/utils";
-import { TableColumnsSplit } from "lucide-react";
-import KonversiModal from "@/components/modals/KonversiBarangModal";
+import { Download, RefreshCw, TableColumnsSplit } from "lucide-react";
+import CustomAlert from "@/components/modals/CustomAlert";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const statusOptions = [
     { value: "all", label: "Semua Status" },
@@ -19,15 +20,14 @@ const statusOptions = [
 
 export default function KonversiBarangPage() {
 
-    const navigate = useNavigate();
     const { showAlert, AlertComponent } = useAlert();
 
     const [loading, setLoading] = useState(false);
 
-    const [statusFilter, setStatusFilter] = useState("all");
-
-
     const [itemBarang, setItemBarang] = useState([]);
+
+    const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("all");
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
@@ -39,8 +39,9 @@ export default function KonversiBarangPage() {
     const startItem = (currentPage - 1) * itemsPerPage + 1;
     const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
-    const [konversiModalOpen, setKonversiModalOpen] = useState(false);
+    const [showConfirmationModal, setShowConfirmationModal] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
+    const [isConverting, setConverting] = useState(false);
 
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
@@ -63,9 +64,8 @@ export default function KonversiBarangPage() {
     const loadItemBarang = useCallback(async () => {
         try {
             setLoading(true);
-            const result = await konversiBarangService.getAll({ status: statusFilter });
+            const result = await konversiBarangService.getAll({page: currentPage, per_page: itemsPerPage, search: search, status: statusFilter });
 
-            console.log(result)
             // Transform API data to match our UI structure
             const transformedData = result.data.map(kb => ({
                 id: kb.id,
@@ -73,23 +73,17 @@ export default function KonversiBarangPage() {
                 item_barang: kb.nama_item_barang,
                 quantity: kb.quantity,
                 status: kb.jenis_potongan || "N/A",
-                // items: kb.stock_mutation_items || []
             }));
 
-            // Apply pagination
-            const startIndex = (currentPage - 1) * itemsPerPage;
-            const endIndex = startIndex + itemsPerPage;
-            const paginatedData = transformedData.slice(startIndex, endIndex);
-
-            setItemBarang(paginatedData);
-            setTotalItems(transformedData.length);
+            setItemBarang(transformedData);
+            setTotalItems(result.pagination.total);
         } catch (error) {
             console.error('Error loading item barang:', error);
             showAlert("Error", "Gagal memuat data item barang", "error");
         } finally {
             setLoading(false);
         }
-    }, [currentPage, itemsPerPage, statusFilter]);
+    }, [currentPage, itemsPerPage, statusFilter, search]);
 
     useEffect(() => {
         loadItemBarang();
@@ -97,15 +91,116 @@ export default function KonversiBarangPage() {
 
     const handleConvertBarang = (item) => {
         setSelectedItem(item)
-        setKonversiModalOpen(true);
+        setShowConfirmationModal(true);
     }
 
-    const saveKonversiBarang = () => {
-        
+    const handleConvertBarangConfirm = async() => {
+        if (isConverting) {
+            console.log('⏭️ Already processing convert operation');
+            return;
+        }
+
+        try {
+            setConverting(true);
+
+            const response = await konversiBarangService.changeStatusToPotongan(selectedItem.id);
+
+            console.log('✅ Stock barang converted:', response);
+
+            // Close modal first
+            setShowConfirmationModal(false);
+
+            // Show success message and reload data after alert closes
+            showAlert("Sukses", "Stock Barang berhasil dikonversi!", "success", () => {
+                loadItemBarang();
+            });
+
+        } catch (error) {
+            console.error('❌ Error memotong barang:', error);
+            showAlert("Error", "Gagal memotong barang", "error");
+        } finally {
+            setConverting(false);
+        }
     }
+
+
+    const handleClearFilter = () => {
+        setSearch("");
+        setStatusFilter("all");
+        setCurrentPage(1);
+    };
+
+
+    const handleExport = () => {
+        // TODO: Implement export functionality
+        console.log("Exporting stock mutations...");
+    };
 
     return <PageLayout title="Konversi Barang" category="TRANSAKSI">
-
+        {/* Filter and Search */}
+        <Card className="mb-6">
+            <CardHeader>
+                <CardTitle className="text-lg">Filter dan Pencarian</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Cari:
+                        </label>
+                        <Input
+                            placeholder="Cari"
+                            value={search}
+                            onChange={e => {
+                                setSearch(e.target.value);
+                                setCurrentPage(1);
+                            }} className="w-full box-border pr-8 relative"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Status:
+                        </label>
+                        <Select value={statusFilter} onValueChange={(value) => {
+                            setStatusFilter(value);
+                            setCurrentPage(1);
+                        }}>
+                            <SelectTrigger>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {statusOptions.map((option) => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                        {option.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    
+                    <div className="flex flex-col gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={loadItemBarang}
+                            disabled={loading}
+                            className="w-full"
+                        >
+                            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                            Refresh
+                        </Button>
+                    </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" onClick={handleClearFilter}>
+                        Clear Filter
+                    </Button>
+                    <Button variant="outline" onClick={handleExport}>
+                        <Download className="w-4 h-4 mr-2" />
+                        Export
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
         {/* Konversi Barang Table */}
         <Card className="mb-6">
             <CardContent className="p-0">
@@ -242,13 +337,18 @@ export default function KonversiBarangPage() {
                 )}
             </CardContent>
         </Card>
-            <KonversiModal
-                open={konversiModalOpen}
-                onOpenChange={setKonversiModalOpen}
-                item={selectedItem}
-                title="Konversi Barang"
-                onSave={saveKonversiBarang}
-            />
+        {/* Delete Confirmation Modal */}
+        <CustomAlert
+            open={showConfirmationModal}
+            onOpenChange={setShowConfirmationModal}
+            title="Konfirmasi Konversi Barang"
+            message={`Yakin ingin memotong barang "${selectedItem?.item_barang}"?`}
+            type="warning"
+            showCancel={true}
+            confirmText={isConverting ? "Memotong..." : "Ya, Ubah"}
+            cancelText="Tidak"
+            onConfirm={handleConvertBarangConfirm}
+        />
         {/* Alert Modal Component */}
         <AlertComponent />
     </PageLayout>
