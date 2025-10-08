@@ -141,6 +141,26 @@ export default function WorkOrderPage() {
   };
 
   useEffect(() => {
+    // Clear canvas-previews folder when Work Order page loads
+    const clearCanvasPreviews = async () => {
+      try {
+        if (window.electronAPI && window.electronAPI.clearCanvasPreviews) {
+          console.log('🧹 Clearing canvas-previews folder...');
+          const result = await window.electronAPI.clearCanvasPreviews();
+          if (result.success) {
+            console.log('✅ Canvas-previews folder cleared successfully');
+          } else {
+            console.warn('⚠️ Failed to clear canvas-previews folder:', result.error);
+          }
+        } else {
+          console.log('📁 Electron API not available for clearing canvas-previews');
+        }
+      } catch (error) {
+        console.error('❌ Error clearing canvas-previews folder:', error);
+      }
+    };
+
+    clearCanvasPreviews();
     loadWorkOrders();
   }, [loadWorkOrders]);
 

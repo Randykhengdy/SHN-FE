@@ -1382,7 +1382,20 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
             const rotatedWidth = newBox.isRotated ? box.height : box.width;
             const rotatedHeight = newBox.isRotated ? box.width : box.height;
             
+            console.log('Rotation bounds check:', {
+              boxId: box.id,
+              currentPos: { x: box.x, y: box.y },
+              currentSize: { width: box.width, height: box.height },
+              rotatedSize: { width: rotatedWidth, height: rotatedHeight },
+              containerSize: { width: baseContainer.width, height: baseContainer.height },
+              wouldExceedX: box.x + rotatedWidth > baseContainer.width,
+              wouldExceedY: box.y + rotatedHeight > baseContainer.height,
+              finalX: box.x + rotatedWidth,
+              finalY: box.y + rotatedHeight
+            });
+            
             if (box.x + rotatedWidth > baseContainer.width || box.y + rotatedHeight > baseContainer.height) {
+              console.log('❌ Rotation blocked: Would exceed container bounds');
               showAlert('Warning', `Rotated box (${rotatedWidth}×${rotatedHeight}) would exceed container bounds!`, 'warning');
               return box; // Don't rotate if it doesn't fit
             }
@@ -1394,18 +1407,28 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               const otherBoxWidth = otherBox.isRotated ? otherBox.height : otherBox.width;
               const otherBoxHeight = otherBox.isRotated ? otherBox.width : otherBox.height;
               
-              return !(box.x >= otherBox.x + otherBoxWidth || 
-                      box.x + rotatedWidth <= otherBox.x || 
-                      box.y >= otherBox.y + otherBoxHeight || 
-                      box.y + rotatedHeight <= otherBox.y);
+              const collision = !(box.x >= otherBox.x + otherBoxWidth || 
+                                box.x + rotatedWidth <= otherBox.x || 
+                                box.y >= otherBox.y + otherBoxHeight || 
+                                box.y + rotatedHeight <= otherBox.y);
+              
+              if (collision) {
+                console.log('Collision detected with box:', {
+                  currentBox: { id: box.id, x: box.x, y: box.y, rotatedSize: { width: rotatedWidth, height: rotatedHeight } },
+                  otherBox: { id: otherBox.id, x: otherBox.x, y: otherBox.y, size: { width: otherBoxWidth, height: otherBoxHeight } }
+                });
+              }
+              
+              return collision;
             });
             
             if (hasCollision) {
+              console.log('❌ Rotation blocked: Would collide with another box');
               showAlert('Warning', 'Rotated box would collide with another box!', 'warning');
               return box; // Don't rotate if there's a collision
             }
             
-            console.log(`Box ${clickedBox.id} rotated: ${box.width}×${box.height} → ${rotatedWidth}×${rotatedHeight}`);
+            console.log(`✅ Box ${clickedBox.id} rotated successfully: ${box.width}×${box.height} → ${rotatedWidth}×${rotatedHeight}`);
             return newBox;
           }
           return box;
@@ -1517,11 +1540,15 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         Array(baseContainer.width).fill(false)
       );
       
-      // Mark existing boxes as occupied
+      // Mark existing boxes as occupied (handle rotation)
       if (prevBoxes && prevBoxes.length > 0) {
         prevBoxes.forEach(box => {
-          for (let y = box.y; y < box.y + box.height; y++) {
-            for (let x = box.x; x < box.x + box.width; x++) {
+          // Get actual dimensions considering rotation
+          const boxWidth = box.isRotated ? box.height : box.width;
+          const boxHeight = box.isRotated ? box.width : box.height;
+          
+          for (let y = box.y; y < box.y + boxHeight; y++) {
+            for (let x = box.x; x < box.x + boxWidth; x++) {
               if (x >= 0 && x < baseContainer.width && y >= 0 && y < baseContainer.height) {
                 grid[y][x] = true;
               }
@@ -1551,6 +1578,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
             const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
             const workOrderId = workOrderData?.workOrderId || 'unknown';
             const saranId = workOrderData?.selectedItem?.id || 'unknown';
+            const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
             
             newBox = {
               id: newId,
@@ -1564,7 +1592,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               woItemId: woItemId,
               workOrderId: workOrderId,
               saranId: saranId,
-              isSave: false // Will be true when saving
+              isSave: false, // Will be true when saving
+              workItemUniqueId: workItemUniqueId
             };
             console.log('Created new box with isSave and workItemUniqueId:', {
               boxId: newId,
@@ -1616,6 +1645,105 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               placed = true;
             }
           }
+        }
+      }
+      
+      // If still not placed, try with rotation (horizontal orientation)
+      if (!placed) {
+        console.log('Trying to place box with rotation (horizontal orientation)...');
+        const rotatedWidth = newBoxSize.height; // 100
+        const rotatedHeight = newBoxSize.width; // 50
+        
+        // Check if rotated box can fit in container
+        if (rotatedWidth <= baseContainer.width && rotatedHeight <= baseContainer.height) {
+          // Try perfect grid alignment with rotation
+          for (let x = baseContainer.x; x <= baseContainer.x + baseContainer.width - rotatedWidth && !placed; x += rotatedWidth) {
+            for (let y = baseContainer.y; y <= baseContainer.y + baseContainer.height - rotatedHeight && !placed; y += rotatedHeight) {
+              // Check if this position is completely available
+              let canPlace = true;
+              for (let checkY = y; checkY < y + rotatedHeight && canPlace; checkY++) {
+                for (let checkX = x; checkX < x + rotatedWidth && canPlace; checkX++) {
+                  if (checkX >= baseContainer.width || checkY >= baseContainer.height || grid[checkY][checkX]) {
+                    canPlace = false;
+                  }
+                }
+              }
+              
+              if (canPlace) {
+                const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
+                const workOrderId = workOrderData?.workOrderId || 'unknown';
+                const saranId = workOrderData?.selectedItem?.id || 'unknown';
+                const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
+                
+                newBox = {
+                  id: newId,
+                  x: x,
+                  y: y,
+                  width: newBoxSize.width, // Keep original width/height for consistency
+                  height: newBoxSize.height,
+                  color: '#10b981',
+                  isDisabled: false,
+                  isRotated: true, // Mark as rotated
+                  woItemId: woItemId,
+                  workOrderId: workOrderId,
+                  saranId: saranId,
+                  isSave: false,
+                  workItemUniqueId: workItemUniqueId
+                };
+                console.log(`✅ Placed box ${newId} with rotation at (${x}, ${y}) - dimensions: ${rotatedWidth}×${rotatedHeight}`);
+                placed = true;
+              }
+            }
+          }
+          
+          // If perfect grid alignment with rotation failed, try flexible placement with rotation
+          if (!placed) {
+            for (let x = baseContainer.x; x <= baseContainer.x + baseContainer.width - rotatedWidth && !placed; x += 1) {
+              for (let y = baseContainer.y; y <= baseContainer.y + baseContainer.height - rotatedHeight && !placed; y += 1) {
+                // Check if this position is completely available
+                let canPlace = true;
+                for (let checkY = y; checkY < y + rotatedHeight && canPlace; checkY++) {
+                  for (let checkX = x; checkX < x + rotatedWidth && canPlace; checkX++) {
+                    if (checkX >= baseContainer.width || checkY >= baseContainer.height || grid[checkY][checkX]) {
+                      canPlace = false;
+                    }
+                  }
+                }
+                
+                if (canPlace) {
+                  const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
+                  const workOrderId = workOrderData?.workOrderId || 'unknown';
+                  const saranId = workOrderData?.selectedItem?.id || 'unknown';
+                  const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
+                  
+                  newBox = {
+                    id: newId,
+                    x: x,
+                    y: y,
+                    width: newBoxSize.width, // Keep original width/height for consistency
+                    height: newBoxSize.height,
+                    color: '#10b981',
+                    isDisabled: false,
+                    isRotated: true, // Mark as rotated
+                    woItemId: woItemId,
+                    workOrderId: workOrderId,
+                    saranId: saranId,
+                    isSave: false,
+                    workItemUniqueId: workItemUniqueId
+                  };
+                  console.log(`✅ Placed box ${newId} with rotation at (${x}, ${y}) - dimensions: ${rotatedWidth}×${rotatedHeight}`);
+                  placed = true;
+                }
+              }
+            }
+          }
+        } else {
+          console.log('❌ Rotated box cannot fit in container:', {
+            rotatedWidth,
+            rotatedHeight,
+            containerWidth: baseContainer.width,
+            containerHeight: baseContainer.height
+          });
         }
       }
       
@@ -2288,6 +2416,123 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                 placed = true;
               }
             }
+          }
+        }
+        
+        // If still not placed, try with rotation (horizontal orientation)
+        if (!placed) {
+          console.log(`Trying to place box ${boxId} with rotation (horizontal orientation)...`);
+          const rotatedWidth = newBoxSize.height; // 100
+          const rotatedHeight = newBoxSize.width; // 50
+          
+          // Check if rotated box can fit in container
+          if (rotatedWidth <= baseContainer.width && rotatedHeight <= baseContainer.height) {
+            // Try perfect grid alignment with rotation
+            for (let x = baseContainer.x; x <= baseContainer.x + baseContainer.width - rotatedWidth && !placed; x += rotatedWidth) {
+              for (let y = baseContainer.y; y <= baseContainer.y + baseContainer.height - rotatedHeight && !placed; y += rotatedHeight) {
+                // Check if this position is completely available
+                let canPlace = true;
+                for (let checkY = y; checkY < y + rotatedHeight && canPlace; checkY++) {
+                  for (let checkX = x; checkX < x + rotatedWidth && canPlace; checkX++) {
+                    if (checkX >= baseContainer.width || checkY >= baseContainer.height || grid[checkY][checkX]) {
+                      canPlace = false;
+                    }
+                  }
+                }
+                
+                if (canPlace) {
+                  // Mark this position as occupied
+                  for (let markY = y; markY < y + rotatedHeight; markY++) {
+                    for (let markX = x; markX < x + rotatedWidth; markX++) {
+                      if (markX >= 0 && markX < baseContainer.width && markY >= 0 && markY < baseContainer.height) {
+                        grid[markY][markX] = true;
+                      }
+                    }
+                  }
+                  
+                  const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
+                  const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
+                  const workOrderId = workOrderData?.workOrderId || 'unknown';
+                  const saranId = workOrderData?.selectedItem?.id || 'unknown';
+                  
+                  newBoxes.push({
+                    id: boxId,
+                    x: x,
+                    y: y,
+                    width: newBoxSize.width, // Keep original width/height for consistency
+                    height: newBoxSize.height,
+                    color: '#10b981',
+                    isDisabled: false,
+                    isRotated: true, // Mark as rotated
+                    woItemId: woItemId,
+                    workOrderId: workOrderId,
+                    saranId: saranId,
+                    isSave: false,
+                    workItemUniqueId: workItemUniqueId
+                  });
+                  console.log(`✅ Placed box ${boxId} with rotation at (${x}, ${y}) - dimensions: ${rotatedWidth}×${rotatedHeight}`);
+                  placed = true;
+                }
+              }
+            }
+            
+            // If perfect grid alignment with rotation failed, try flexible placement with rotation
+            if (!placed) {
+              for (let x = baseContainer.x; x <= baseContainer.x + baseContainer.width - rotatedWidth && !placed; x += 1) {
+                for (let y = baseContainer.y; y <= baseContainer.y + baseContainer.height - rotatedHeight && !placed; y += 1) {
+                  // Check if this position is completely available
+                  let canPlace = true;
+                  for (let checkY = y; checkY < y + rotatedHeight && canPlace; checkY++) {
+                    for (let checkX = x; checkX < x + rotatedWidth && canPlace; checkX++) {
+                      if (checkX >= baseContainer.width || checkY >= baseContainer.height || grid[checkY][checkX]) {
+                        canPlace = false;
+                      }
+                    }
+                  }
+                  
+                  if (canPlace) {
+                    // Mark this position as occupied
+                    for (let markY = y; markY < y + rotatedHeight; markY++) {
+                      for (let markX = x; markX < x + rotatedWidth; markX++) {
+                        if (markX >= 0 && markX < baseContainer.width && markY >= 0 && markY < baseContainer.height) {
+                          grid[markY][markX] = true;
+                        }
+                      }
+                    }
+                    
+                    const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
+                    const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
+                    const workOrderId = workOrderData?.workOrderId || 'unknown';
+                    const saranId = workOrderData?.selectedItem?.id || 'unknown';
+                    
+                    newBoxes.push({
+                      id: boxId,
+                      x: x,
+                      y: y,
+                      width: newBoxSize.width, // Keep original width/height for consistency
+                      height: newBoxSize.height,
+                      color: '#10b981',
+                      isDisabled: false,
+                      isRotated: true, // Mark as rotated
+                      woItemId: woItemId,
+                      workOrderId: workOrderId,
+                      saranId: saranId,
+                      isSave: false,
+                      workItemUniqueId: workItemUniqueId
+                    });
+                    console.log(`✅ Placed box ${boxId} with rotation at (${x}, ${y}) - dimensions: ${rotatedWidth}×${rotatedHeight}`);
+                    placed = true;
+                  }
+                }
+              }
+            }
+          } else {
+            console.log(`❌ Rotated box ${boxId} cannot fit in container:`, {
+              rotatedWidth,
+              rotatedHeight,
+              containerWidth: baseContainer.width,
+              containerHeight: baseContainer.height
+            });
           }
         }
         
@@ -3236,15 +3481,20 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       Array(baseContainer.width).fill(false)
     );
     
-    // Mark occupied cells
+    // Mark occupied cells (handle rotation)
     if (boxes && boxes.length > 0) {
       boxes.forEach(box => {
         // Safety check for box properties
         if (box && typeof box.x === 'number' && typeof box.y === 'number' && 
             typeof box.width === 'number' && typeof box.height === 'number' &&
             box.width > 0 && box.height > 0) {
-          for (let y = box.y; y < box.y + box.height; y++) {
-            for (let x = box.x; x < box.x + box.width; x++) {
+          
+          // Get actual dimensions considering rotation
+          const boxWidth = box.isRotated ? box.height : box.width;
+          const boxHeight = box.isRotated ? box.width : box.height;
+          
+          for (let y = box.y; y < box.y + boxHeight; y++) {
+            for (let x = box.x; x < box.x + boxWidth; x++) {
               if (x >= 0 && x < baseContainer.width && y >= 0 && y < baseContainer.height) {
                 if (grid[y] && grid[y][x] !== undefined) {
                   if (!grid[y][x]) {

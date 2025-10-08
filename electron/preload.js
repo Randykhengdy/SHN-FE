@@ -7,5 +7,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onNavigate: (callback) => ipcRenderer.on('navigate-to', callback),
   showMenu: () => ipcRenderer.send('show-menu'),
   hideMenu: () => ipcRenderer.send('hide-menu'),
-  saveCanvasFile: (dataUrl, filename) => ipcRenderer.invoke('save-canvas-file', { dataUrl, filename })
+  saveCanvasFile: (dataUrl, filename) => ipcRenderer.invoke('save-canvas-file', { dataUrl, filename }),
+  clearCanvasPreviews: () => ipcRenderer.invoke('clear-canvas-previews')
 });
