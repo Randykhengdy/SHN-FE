@@ -16,13 +16,15 @@ const MutationModal = ({
     open,
     item,
     onOpenChange,
-    onSave
+    onSave,
+    gudangId
 }) => {
     const { showAlert, AlertComponent } = useAlert();
 
     const [selectedItemStock, setSelectedItemStock] = useState(null);
     const [unit, setUnit] = useState(null);
     const [quantity, setQuantity] = useState(0);
+    const [availableQuantity, setAvailableQuantity] = useState(0);
 
     useEffect(() => {
         if (!open) return; // hanya jalan ketika modal dibuka
@@ -32,11 +34,13 @@ const MutationModal = ({
             setSelectedItemStock(item.item_barang_id);
             setUnit(item.unit);
             setQuantity(item.quantity);
+            setAvailableQuantity(item.available_quantity || 0);
         } else {
             // add mode
             setSelectedItemStock(null);
             setUnit(null);
             setQuantity(0);
+            setAvailableQuantity(0);
         }
     }, [open, item]); // depend ke open & item
 
@@ -55,7 +59,7 @@ const MutationModal = ({
                 const [
                     itemStocks,
                 ] = await Promise.all([
-                    getItemBarangOptions(),
+                    getItemBarangOptions(gudangId),
                 ]);
                 setItemStockOptions(itemStocks);
             } catch (error) {
@@ -65,8 +69,10 @@ const MutationModal = ({
             }
         };
 
-        loadMasterData();
-    }, []);
+        if (open) {
+            loadMasterData();
+        }
+    }, [open, gudangId]);
 
     const handleSave = () => {
         let isValid = true;
@@ -126,10 +132,25 @@ const MutationModal = ({
                                     value={selectedItemStock}
                                     onValueChange={(value) => {
                                         setSelectedItemStock(value);
+                                        // Find the selected item and set its quantity
+                                        const selectedItem = itemStockOptions.find(item => item.value === value);
+                                        setAvailableQuantity(selectedItem?.quantity || 0);
                                     }}
                                     options={itemStockOptions}
                                     loading={loadingItemStock}
                                     required
+                                />
+                            </div>
+                        </div>
+                        <div className="grid-form m-lg !mt-0">
+                            <div className="col-span-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Quantity Tersedia:
+                                </label>
+                                <Input
+                                    value={Math.round(availableQuantity)}
+                                    disabled
+                                    className="bg-gray-100"
                                 />
                             </div>
                         </div>

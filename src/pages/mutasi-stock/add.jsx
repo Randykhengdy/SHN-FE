@@ -164,6 +164,27 @@ export default function AddMutasiStockPage() {
 
 
                     <div className="border-t pt-6">
+                        {/* Pilih Gudang Asal */}
+                        <div className="grid-form m-lg">
+                            <div className="col-span-2">
+                                <SearchSelect
+                                    label="Gudang Asal"
+                                    placeholder="Pilih Gudang"
+                                    searchPlaceholder="Cari gudang..."
+                                    options={warehouseOptions}
+                                    value={mutasiStockData.gudang_asal_id ? mutasiStockData.gudang_asal_id.toString() : ''}
+                                    onValueChange={(value) => {
+                                        setMutasiStockData({ 
+                                            ...mutasiStockData, 
+                                            gudang_asal_id: parseInt(value),
+                                            stock_mutation: [] 
+                                        });
+                                    }}
+                                    loading={loadingWarehouse}
+                                    required
+                                />
+                            </div>
+                        </div>
                         {/* Pilih Gudang Tujuan */}
                         <div className="grid-form m-lg">
                             <div className="col-span-2">
@@ -175,23 +196,6 @@ export default function AddMutasiStockPage() {
                                     value={mutasiStockData.gudang_tujuan_id ? mutasiStockData.gudang_tujuan_id.toString() : ''}
                                     onValueChange={(value) => {
                                         setMutasiStockData({ ...mutasiStockData, gudang_tujuan_id: parseInt(value) });
-                                    }}
-                                    loading={loadingWarehouse}
-                                    required
-                                />
-                            </div>
-                        </div>
-                        {/* Pilih Gudang Asal */}
-                        <div className="grid-form m-lg">
-                            <div className="col-span-2">
-                                <SearchSelect
-                                    label="Gudang Asal"
-                                    placeholder="Pilih Gudang"
-                                    searchPlaceholder="Cari gudang..."
-                                    options={warehouseOptions}
-                                    value={mutasiStockData.gudang_asal_id ? mutasiStockData.gudang_asal_id.toString() : ''}
-                                    onValueChange={(value) => {
-                                        setMutasiStockData({ ...mutasiStockData, gudang_asal_id: parseInt(value) });
                                     }}
                                     loading={loadingWarehouse}
                                     required
@@ -272,6 +276,7 @@ export default function AddMutasiStockPage() {
                 item={editingItem}
                 title="Form Item Mutasi"
                 onSave={saveStockForMutation}
+                gudangId={mutasiStockData.gudang_asal_id}
             />
             {/* Alert Modal Component */}
             <AlertComponent />

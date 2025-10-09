@@ -325,15 +325,20 @@ export const getSalesOrderOptions = async () => {
 };
 
 // Fetch Item Barang options
-export const getItemBarangOptions = async () => {
+export const getItemBarangOptions = async (gudangId = null) => {
   checkMemoryUsage();
   return await safeApiCall(async () => {
-    const response = await itemBarangService.getAll();
+    let url = "/item-barang";
+    if (gudangId) {
+      url += `?gudang_id=${gudangId}`;
+    }
+    const response = await request(url, { method: "GET" });
     // console.log('Raw item barang data:', response.data); // Debug log
     return response.data.map(item => ({
       value: item.id?.toString(),
       label: item.kode_barang + ' - ' + item.nama_item_barang || 'Unknown',
-      searchKey: item.kode_barang || item.nama_item_barang || 'Unknown'
+      searchKey: item.kode_barang || item.nama_item_barang || 'Unknown',
+      quantity: item.quantity || 0
     }));
   }, 'ItemBarangService');
 };
