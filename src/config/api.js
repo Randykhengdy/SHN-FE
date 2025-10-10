@@ -29,5 +29,7 @@ export const API_ENDPOINTS = {
   purchaseOrder: "/purchase-order",
   dashboardWorkshop: "/dashboard/workshop",
   stockMutation: "/stock-mutation",
-  konversiBarang: "/konversi-barang"
+  konversiBarang: "/konversi-barang",
+  splitBarang: "/split-barang",
+  mergeBarang: "/merge-barang"
 };

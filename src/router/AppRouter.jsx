@@ -40,6 +40,8 @@ import MutasiStockPage from "@/pages/mutasi-stock";
 import AddMutasiStockPage from "@/pages/mutasi-stock/add";
 import ViewMutasiStockPage from "@/pages/mutasi-stock/view";
 import KonversiBarangPage from "@/pages/konversi-barang";
+import MergeBarangPage from "@/pages/merge-barang";
+import SplitBarangPage from "@/pages/split-barang";
 
 const AppRouter = () => {
     return (
@@ -85,6 +87,9 @@ const AppRouter = () => {
         <Route path="/mutasi-stock/add" element={<AddMutasiStockPage />} />
         <Route path="/mutasi-stock/view/:id" element={<ViewMutasiStockPage />} />
         <Route path="/konversi-barang" element={<KonversiBarangPage/>}/>
+        <Route path="/split-barang" element={<SplitBarangPage/>}/>
+        <Route path="/merge-barang" element={<MergeBarangPage/>}/>
+
       </Routes>
     );
 };
