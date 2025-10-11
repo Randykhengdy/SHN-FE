@@ -521,3 +521,17 @@ export const getItemBarangOptionsFiltered = async (id) => {//filter jenis barang
     }));
   }, 'ItemBarangService');
 };
+
+// Fetch Item Barang options
+export const getItemBarangUtuhOptions = async () => {
+  checkMemoryUsage();
+  return await safeApiCall(async () => {
+    const response = await itemBarangService.getItemUtuh();
+    // console.log('Raw item barang data:', response.data); // Debug log
+    return response.data.map(item => ({
+      value: item.id?.toString(),
+      label: item.kode_barang + ' - ' + item.nama_item_barang || 'Unknown',
+      searchKey: item.kode_barang || item.nama_item_barang || 'Unknown'
+    }));
+  }, 'ItemBarangService');
+};

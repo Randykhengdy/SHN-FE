@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import SearchSelect from "@/components/ui/search-select";
-import { getItemBarangOptions } from "@/services/masterDataService";
+import { getItemBarangUtuhOptions } from "@/services/masterDataService";
 import { useAlert } from "../ui/modal";
 import { itemBarangService } from "@/services/master-data";
 import { Label } from "../ui/label";
@@ -45,7 +45,7 @@ const SplitBarangModal = ({
                 const [
                     itemStocks,
                 ] = await Promise.all([
-                    getItemBarangOptions(),
+                    getItemBarangUtuhOptions(),
                 ]);
                 setItemStockOptions(itemStocks);
             } catch (error) {
