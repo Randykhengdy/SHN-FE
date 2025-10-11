@@ -7,32 +7,32 @@ import { getItemBarangOptions, getItemBarangOptionsFiltered } from "@/services/m
 import { useAlert } from "../ui/modal";
 import { itemBarangService } from "@/services/master-data";
 import { Label } from "../ui/label";
+import { Description } from "@radix-ui/react-dialog";
 
-const MergeBarangModal = ({
+const SplitBarangModal = ({
     open,
     onOpenChange,
     onSave
 }) => {
     const { showAlert, AlertComponent } = useAlert();
 
-    const [itemStock1, setItemStock1] = useState(null);
-    const [itemStock2, setItemStock2] = useState(null);
+    const [itemStock, setItemStock] = useState(null);
+    const [quantity, setQuantity] = useState(0);
+    const [newSplitQuantity, setNewSplitQuantity] = useState(0);
+    const [finalQuantity, setFinalQuantity] = useState(0);
 
     useEffect(() => {
-        setItemStock1(null);
-        setItemStock2(null);
+        setItemStock(null);
+        setNewSplitQuantity(0);
+        setQuantity(0);
+        setFinalQuantity(0);
     }, [open]);
 
     //Loading state
     const [loadingItemStock, setLoadingItemStock] = useState(false);
-    const [loadingItemStockPair, setLoadingItemStockPair] = useState(false);
 
     // Master Data
     const [itemStockOptions, setItemStockOptions] = useState([]);
-    const [itemStockPairOptions, setItemStockPairOptions] = useState([]);
-    const [itemStock1Quantity, setItemStock1Quantity] = useState(0);
-    const [itemStock2Quantity, setItemStock2Quantity] = useState(0);
-    const [total, setTotal] = useState(0);
 
     // Load master data on component mount
     useEffect(() => {
@@ -64,53 +64,25 @@ const MergeBarangModal = ({
         } catch (error) {
             console.log(error);
         }
-
     }
 
     useEffect(() => {
-        if (itemStock1) getItemQuantity(itemStock1, setItemStock1Quantity);
-        const loadMasterDataPair = async (id) => {
-            if (id) {
-                try {
-                    setLoadingItemStockPair(true);
-                    const [
-                        itemStocks,
-                    ] = await Promise.all([
-                        getItemBarangOptionsFiltered(id),
-                    ]);
-                    setItemStockPairOptions(itemStocks);
-                } catch (error) {
-                    console.error('Error loading master data:', error);
-                } finally {
-                    setLoadingItemStockPair(false);
-                }
-            }
-        };
-        loadMasterDataPair(itemStock1);
-    }, [itemStock1]);
+        if (itemStock) getItemQuantity(itemStock, setQuantity);
+    }, [itemStock]);
     useEffect(() => {
-        if (itemStock2) getItemQuantity(itemStock2, setItemStock2Quantity);
-    }, [itemStock2]);
-
-    useEffect(() => {
-        if (itemStock1 && itemStock2) {
-            setTotal(itemStock1Quantity + itemStock2Quantity);
-        }
-    }, [itemStock1Quantity, itemStock2Quantity]);
+        if (newSplitQuantity > quantity) setNewSplitQuantity(quantity);
+        setFinalQuantity(quantity - newSplitQuantity);
+    }, [newSplitQuantity, quantity]);
 
     const handleSave = () => {
         let isValid = true;
         let messages = '';
-        if (itemStock1 == null) {
+        if (itemStock == null) {
             messages += 'Mohon pilih item barang';
             isValid = false;
         }
-        if (itemStock2 == null) {
-            messages += 'Mohon pilih item barang';
-            isValid = false;
-        }
-        if (!itemStockPairOptions.some(item => item.value == itemStock2)) {
-            messages += 'Mohon pilih ulang item barang kedua';
+        if (newSplitQuantity == 0) {
+            messages += 'Mohon tentukan jumlah split';
             isValid = false;
         }
 
@@ -119,10 +91,10 @@ const MergeBarangModal = ({
             return;
         }
         const result = {
-            id_1: itemStock1,
-            id_2: itemStock2
+            id: itemStock,
+            quantity: newSplitQuantity
         }
-        
+
         onSave?.(result);
         onOpenChange(false);
     };
@@ -133,11 +105,12 @@ const MergeBarangModal = ({
                 <DialogContent className="w-[90vw] !max-w-3xl flex flex-col">
                     {/* Header */}
                     <DialogHeader>
-                        <DialogTitle className="text-xl font-bold">Merge barang</DialogTitle>
+                        <DialogTitle className="text-xl font-bold">Split barang</DialogTitle>
                         <div className="flex items-center justify-between mt-2">
                             <div className="flex items-center gap-2 text-sm text-gray-600">
                             </div>
                         </div>
+                        <Description />
                     </DialogHeader>
 
                     {/* Content */}
@@ -150,9 +123,9 @@ const MergeBarangModal = ({
                                         label="Item Barang"
                                         placeholder="Pilih Item Barang"
                                         searchPlaceholder="Cari barang..."
-                                        value={itemStock1}
+                                        value={itemStock}
                                         onValueChange={(value) => {
-                                            setItemStock1(value);
+                                            setItemStock(value);
                                         }}
                                         options={itemStockOptions}
                                         loading={loadingItemStock}
@@ -160,43 +133,29 @@ const MergeBarangModal = ({
                                     />
                                 </div>
                             </div>
-                            <div className="m-lg !ml-0 !mt-0  space-y-2">
-                                <Label className="block text-sm font-medium text-gray-700 mb-1">Quantity</Label>
+                            <div className="m-lg !ml-0 !mt-0 space-y-2">
+                                <Label className="block text-sm font-medium text-gray-700 mb-1">Quantity Awal</Label>
                                 <div className="relative">
-                                    <Input value={itemStock1Quantity} disabled />
+                                    <Input value={quantity} disabled />
                                 </div>
                             </div>
                         </div>
                         <div className="flex">
-                            <div className="flex-1 m-lg !mt-0">
-                                <div className="col-span-2">
-                                    <SearchSelect
-                                        label="Item Barang"
-                                        placeholder="Pilih Item Barang"
-                                        searchPlaceholder="Cari barang..."
-                                        value={itemStock2}
-                                        onValueChange={(value) => {
-                                            setItemStock2(value);
-                                        }}
-                                        options={itemStockPairOptions}
-                                        loading={loadingItemStockPair}
-                                        required
-                                    />
+                            <div className="flex-1 m-lg !mt-0 space-y-2">
+                                <Label className="block text-sm font-medium text-gray-700 mb-1">Quantity Split</Label>
+                                <div className="relative">
+                                    <Input
+                                        value={newSplitQuantity}
+                                        type="number"
+                                        onChange={e => setNewSplitQuantity(parseInt(e.target.value))}
+                                        min="0"
+                                        max={quantity.toString()} />
                                 </div>
                             </div>
                             <div className="m-lg !ml-0 !mt-0 space-y-2">
-                                <Label className="block text-sm font-medium text-gray-700 mb-1">Quantity</Label>
+                                <Label className="block text-sm font-medium text-gray-700 mb-1">Quantity Sisa</Label>
                                 <div className="relative">
-                                    <Input value={itemStock2Quantity} disabled />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="flex">
-                            <div className="flex-1" />
-                            <div className="m-lg !ml-0 !mt-0 space-y-2">
-                                <Label className="block text-sm font-medium text-gray-700 mb-1">Total</Label>
-                                <div className="relative">
-                                    <Input value={total} disabled />
+                                    <Input value={finalQuantity} disabled />
                                 </div>
                             </div>
                         </div>
@@ -227,4 +186,4 @@ const MergeBarangModal = ({
     );
 };
 
-export default MergeBarangModal;
+export default SplitBarangModal;

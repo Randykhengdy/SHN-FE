@@ -4,12 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAlert } from "@/hooks/useAlert";
 import { useCallback, useEffect, useState } from "react";
-import { mergeBarangService } from "@/services/mergeBarangService";
+import { splitBarangService } from "@/services/splitBarangService";
 import { Download, Plus, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import MergeBarangModal from "@/components/modals/MergeBarangModal";
+import SplitBarangModal from "@/components/modals/SplitBarangModal";
 
-export default function MergeBarangPage() {
+export default function SplitBarangPage() {
 
     const { showAlert, AlertComponent } = useAlert();
 
@@ -29,9 +29,8 @@ export default function MergeBarangPage() {
     const startItem = (currentPage - 1) * itemsPerPage + 1;
     const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
-    // const [showConfirmationModal, setShowConfirmationModal] = useState(false);
-    const [showMergeModal, setShowMergeModal] = useState(false);
-    const [isMerging, setMerging] = useState(false);
+    const [showSplitModal, setShowSplitModal] = useState(false);
+    const [isSplitting, setSplitting] = useState(false);
 
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
@@ -46,15 +45,15 @@ export default function MergeBarangPage() {
     const loadItemBarang = useCallback(async () => {
         try {
             setLoading(true);
-            const result = await mergeBarangService.getAll({ page: currentPage, per_page: itemsPerPage, search: search });
+            const result = await splitBarangService.getAll({ page: currentPage, per_page: itemsPerPage, search: search });
 
             // Transform API data to match our UI structure
-            const transformedData = result.data.map(mb => ({
-                id: mb.id,
-                kode_barang: mb.kode_barang,
-                merge_date: formatDate(mb.merge_date),
-                item_barang: mb.nama_item_barang,
-                quantity: mb.quantity,
+            const transformedData = result.data.map(sb => ({
+                id: sb.id,
+                kode_barang: sb.kode_barang,
+                split_date: formatDate(sb.split_date),
+                item_barang: sb.nama_item_barang,
+                quantity: sb.quantity,
             }));
 
             setItemBarang(transformedData);
@@ -71,36 +70,36 @@ export default function MergeBarangPage() {
         loadItemBarang();
     }, [loadItemBarang]);
 
-    const handleMergeBarang = () => {
-        setShowMergeModal(true);
+    const handleSplitBarang = (item) => {
+        setShowSplitModal(true);
     }
 
-    const handleMergeBarangConfirm = async (mergedItem) => {
-        if (isMerging) {
-            console.log('⏭️ Already processing merge operation');
+    const handleSplitBarangConfirm = async (data) => {
+        if (isSplitting) {
+            console.log('⏭️ Already processing Split operation');
             return;
         }
 
         try {
-            setMerging(true);
+            setSplitting(true);
 
-            const response = await mergeBarangService.mergeBarang(mergedItem);
+            const response = await splitBarangService.splitBarang(data);
 
-            console.log('✅ Stock barang merged:', response);
+            console.log('✅ Stock barang Splitted:', response);
 
             // Close modal first
-            setShowConfirmationModal(false);
+            setShowSplitModal(false);
 
             // Show success message and reload data after alert closes
-            showAlert("Sukses", "Stock Barang berhasil dimerge!", "success", () => {
+            showAlert("Sukses", "Stock Barang berhasil diSplit!", "success", () => {
                 loadItemBarang();
             });
 
         } catch (error) {
             console.error('❌ Error memotong barang:', error);
-            showAlert("Error", `Gagal memotong barang. ${error.message}`, "error");
+            showAlert("Error", "Gagal memotong barang", "error");
         } finally {
-            setMerging(false);
+            setSplitting(false);
         }
     }
 
@@ -116,14 +115,14 @@ export default function MergeBarangPage() {
         console.log("Exporting stock mutations...");
     };
 
-    return <PageLayout title="Merge Barang" category="TRANSAKSI">
+    return <PageLayout title="Split Barang" category="TRANSAKSI">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
             <div className="bg-white rounded-lg px-4 py-2 border border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-800">Daftar Merge Barang</h2>
+                <h2 className="text-lg font-semibold text-gray-800">Daftar Split Barang</h2>
             </div>
-            <Button onClick={handleMergeBarang} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
+            <Button onClick={handleSplitBarang} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
                 <Plus className="w-4 h-4 mr-2" />
-                Tambah Merge Barang
+                Tambah Split Barang
             </Button>
         </div>
         {/* Filter and Search */}
@@ -170,14 +169,14 @@ export default function MergeBarangPage() {
                 </div>
             </CardContent>
         </Card>
-        {/* Merge Barang Table */}
+        {/* Split Barang Table */}
         <Card className="mb-6">
             <CardContent className="p-0">
                 <div className="overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-gray-50">
-                                <TableHead className="font-semibold">Waktu Merge</TableHead>
+                                <TableHead className="font-semibold">Waktu Split</TableHead>
                                 <TableHead className="font-semibold">Kode Barang</TableHead>
                                 <TableHead className="font-semibold">Item</TableHead>
                                 <TableHead className="font-semibold">Quantity</TableHead>
@@ -202,7 +201,7 @@ export default function MergeBarangPage() {
                             ) : (
                                 itemBarang.map((ib) => (
                                     <TableRow key={ib.id} className="hover:bg-gray-50">
-                                        <TableCell className="font-medium">{ib.merge_date}</TableCell>
+                                        <TableCell className="font-medium">{ib.split_date}</TableCell>
                                         <TableCell className="font-medium">{ib.kode_barang}</TableCell>
                                         <TableCell>{ib.item_barang}</TableCell>
                                         <TableCell>{ib.quantity}</TableCell>
@@ -284,11 +283,11 @@ export default function MergeBarangPage() {
                 )}
             </CardContent>
         </Card>
-        {/* Merge Confirmation Modal */}
-        <MergeBarangModal
-            open={showMergeModal}
-            onOpenChange={setShowMergeModal}
-            onSave={handleMergeBarangConfirm}
+        {/* Split Confirmation Modal */}
+        <SplitBarangModal
+            open={showSplitModal}
+            onOpenChange={setShowSplitModal}
+            onSave={handleSplitBarangConfirm}
         />
         {/* Alert Modal Component */}
         <AlertComponent />
