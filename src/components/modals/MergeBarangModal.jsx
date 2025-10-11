@@ -7,6 +7,7 @@ import { getItemBarangOptions, getItemBarangOptionsFiltered } from "@/services/m
 import { useAlert } from "../ui/modal";
 import { itemBarangService } from "@/services/master-data";
 import { Label } from "../ui/label";
+import CustomAlert from "./CustomAlert";
 
 const MergeBarangModal = ({
     open,
@@ -33,6 +34,8 @@ const MergeBarangModal = ({
     const [itemStock1Quantity, setItemStock1Quantity] = useState(0);
     const [itemStock2Quantity, setItemStock2Quantity] = useState(0);
     const [total, setTotal] = useState(0);
+    const [showMergeModal, setShowMergeModal] = useState(false);
+    const [isMerging, setMerging] = useState(false);
 
     // Load master data on component mount
     useEffect(() => {
@@ -98,7 +101,7 @@ const MergeBarangModal = ({
         }
     }, [itemStock1Quantity, itemStock2Quantity]);
 
-    const handleSave = () => {
+    const validateMerge = () => {
         let isValid = true;
         let messages = '';
         if (itemStock1 == null) {
@@ -106,10 +109,12 @@ const MergeBarangModal = ({
             isValid = false;
         }
         if (itemStock2 == null) {
+            messages += (messages.length != 0) ? '\n' : '';
             messages += 'Mohon pilih item barang';
             isValid = false;
         }
         if (!itemStockPairOptions.some(item => item.value == itemStock2)) {
+            messages += (messages.length != 0) ? '\n' : '';
             messages += 'Mohon pilih ulang item barang kedua';
             isValid = false;
         }
@@ -118,14 +123,19 @@ const MergeBarangModal = ({
             showAlert('Error', messages, 'error');
             return;
         }
+        setShowMergeModal(true);
+    };
+
+    const handleSave = () => {
+        setMerging(true);
         const result = {
             id_1: itemStock1,
             id_2: itemStock2
         }
-        
         onSave?.(result);
+        setMerging(false);
         onOpenChange(false);
-    };
+    }
 
     return (
         <>
@@ -212,7 +222,7 @@ const MergeBarangModal = ({
                                 Tutup
                             </Button>
                             <Button
-                                onClick={handleSave}
+                                onClick={validateMerge}
                                 className="bg-blue-600 hover:bg-blue-700"
                             >
                                 Simpan Perubahan
@@ -221,6 +231,19 @@ const MergeBarangModal = ({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Merge Confirmation Modal */}
+            <CustomAlert
+                open={showMergeModal}
+                onOpenChange={setShowMergeModal}
+                title="Konfirmasi Merge"
+                message={`Yakin ingin Merge Barang "${itemStock1}" dan "${itemStock2}"?`}
+                type="warning"
+                showCancel={true}
+                confirmText={isMerging ? "Merging..." : "Ya, Gabungkan"}
+                cancelText="Tidak"
+                onConfirm={handleSave}
+            />
             {/* Alert Modal Component */}
             <AlertComponent />
         </>

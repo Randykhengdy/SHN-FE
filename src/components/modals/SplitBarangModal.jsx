@@ -3,11 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import SearchSelect from "@/components/ui/search-select";
-import { getItemBarangOptions, getItemBarangOptionsFiltered } from "@/services/masterDataService";
+import { getItemBarangOptions } from "@/services/masterDataService";
 import { useAlert } from "../ui/modal";
 import { itemBarangService } from "@/services/master-data";
 import { Label } from "../ui/label";
 import { Description } from "@radix-ui/react-dialog";
+import CustomAlert from "./CustomAlert";
 
 const SplitBarangModal = ({
     open,
@@ -34,6 +35,8 @@ const SplitBarangModal = ({
     // Master Data
     const [itemStockOptions, setItemStockOptions] = useState([]);
 
+    const [showSplitModal, setShowSplitModal] = useState(false);
+    const [isSplitting, setSplitting] = useState(false);
     // Load master data on component mount
     useEffect(() => {
         const loadMasterData = async () => {
@@ -74,7 +77,7 @@ const SplitBarangModal = ({
         setFinalQuantity(quantity - newSplitQuantity);
     }, [newSplitQuantity, quantity]);
 
-    const handleSave = () => {
+    const validateSplit = () => {
         let isValid = true;
         let messages = '';
         if (itemStock == null) {
@@ -82,6 +85,7 @@ const SplitBarangModal = ({
             isValid = false;
         }
         if (newSplitQuantity == 0) {
+            messages += (messages.length != 0) ? '\n' : '';
             messages += 'Mohon tentukan jumlah split';
             isValid = false;
         }
@@ -90,14 +94,19 @@ const SplitBarangModal = ({
             showAlert('Error', messages, 'error');
             return;
         }
+
+        setShowSplitModal(true);
+    };
+    const handleSave = () => {
+        setSplitting(true);
         const result = {
             id: itemStock,
             quantity: newSplitQuantity
         }
-
         onSave?.(result);
+        setSplitting(false);
         onOpenChange(false);
-    };
+    }
 
     return (
         <>
@@ -171,7 +180,7 @@ const SplitBarangModal = ({
                                 Tutup
                             </Button>
                             <Button
-                                onClick={handleSave}
+                                onClick={validateSplit}
                                 className="bg-blue-600 hover:bg-blue-700"
                             >
                                 Simpan Perubahan
@@ -180,6 +189,18 @@ const SplitBarangModal = ({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+            {/* Split Confirmation Modal */}
+            <CustomAlert
+                open={showSplitModal}
+                onOpenChange={setShowSplitModal}
+                title="Konfirmasi Split"
+                message={`Yakin ingin Split Barang "${itemStock}" sebanyak ${newSplitQuantity}?`}
+                type="warning"
+                showCancel={true}
+                confirmText={isSplitting ? "Splitting..." : "Ya, Pisahkan"}
+                cancelText="Tidak"
+                onConfirm={handleSave}
+            />
             {/* Alert Modal Component */}
             <AlertComponent />
         </>
