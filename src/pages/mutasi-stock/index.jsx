@@ -456,19 +456,6 @@ export default function MutasiStockPage() {
             open={showDeleteModal}
             onOpenChange={setShowDeleteModal}
             title="Konfirmasi Hapus"
-            message={`Yakin ingin menghapus Mutation Stock "${selectedStockMutation?.noStockMutation}"?`}
-            type="warning"
-            showCancel={true}
-            confirmText={isDeleting ? "Menghapus..." : "Ya, Hapus"}
-            cancelText="Tidak"
-            onConfirm={handleDeleteConfirm}
-        />
-
-        {/* Delete Confirmation Modal */}
-        <CustomAlert
-            open={showDeleteModal}
-            onOpenChange={setShowDeleteModal}
-            title="Konfirmasi Hapus"
             message={`Yakin ingin menghapus Mutasi Stock "${selectedStockMutation?.id}"?`}
             type="warning"
             showCancel={true}
