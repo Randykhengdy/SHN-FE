@@ -132,6 +132,55 @@ export default function AddSalesOrderPage() {
   // Item List
   const [items, setItems] = useState([]);
 
+  // Function to calculate price based on satuan
+  const calculatePriceBySatuan = (satuan, panjang, lebar, tebal, qty, pricePerUnit, berat = 0, selectedShape = null) => {
+    const panjangM = panjang / 1000; // Convert mm to m
+    const lebarM = lebar / 1000; // Convert mm to m
+    const tebalM = tebal / 1000; // Convert mm to m
+    
+    switch (satuan?.toLowerCase()) {
+      case 'utuh':
+      case 'per unit':
+      case 'per pcs':
+        // Harga X quantity
+        return pricePerUnit * qty;
+        
+      case 'kilogram':
+      case 'kg':
+        // Harga X kg (berat)
+        if (berat <= 0) {
+          // Jika berat tidak ada, estimasi berdasarkan volume dan densitas besi (7.85 g/cm³)
+          const volumeCm3 = (panjang * lebar * tebal) / 1000; // mm³ to cm³
+          const estimatedWeight = volumeCm3 * 7.85 / 1000; // Convert to kg
+          return pricePerUnit * estimatedWeight;
+        }
+        return pricePerUnit * berat;
+        
+      case 'dimensi':
+      case 'per dimensi':
+      case 'per m²':
+      case 'm²':
+        // Harga X panjang X lebar (atau panjang saja untuk 1D) - TEBAL TIDAK DIHITUNG
+        if (selectedShape?.dimensi === "1D") {
+          // Untuk 1D (shaft): harga X panjang saja
+          return pricePerUnit * panjangM;
+        } else {
+          // Untuk 2D (plat): harga X panjang X lebar saja (tanpa tebal)
+          return pricePerUnit * panjangM * lebarM;
+        }
+        
+      case 'per m³':
+      case 'm³':
+        // Harga X volume
+        const volumeM3 = panjangM * lebarM * tebalM;
+        return pricePerUnit * volumeM3;
+        
+      default:
+        // Default: harga X quantity
+        return pricePerUnit * qty;
+    }
+  };
+
   // Calculate item area and total
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -150,38 +199,76 @@ export default function AddSalesOrderPage() {
         }
         setItemThickness(thicknessDisplay);
 
-        // Hitung luas persegi berdasarkan dimensi
+        // Hitung luas persegi berdasarkan dimensi (TEBAL TIDAK DIHITUNG)
         let area = 0;
         let areaPerItem = "0.00";
 
         if (selectedShape?.dimensi === "1D") {
-          // Untuk bentuk 1D (persegi panjang), luas = panjang x lebar
-          area = length * width;
-          areaPerItem = area.toFixed(2);
+          // Untuk bentuk 1D (shaft), luas = panjang saja (tanpa tebal)
+          area = length;
+          areaPerItem = (area / 1000).toFixed(2); // Convert mm to m
         } else if (selectedShape?.dimensi === "2D") {
-          // Untuk bentuk 2D (persegi), luas = panjang x tebal
+          // Untuk bentuk 2D (plat), luas = panjang x lebar (tanpa tebal)
           area = length * width;
-          areaPerItem = area.toFixed(2);
+          areaPerItem = (area / 10000).toFixed(2); // Convert mm² to m²
         }
 
-        // Hitung harga per m²
-        let pricePerM2 = "Rp 0/m²";
+        // Get current satuan
+        const currentSatuan = unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit;
+        
+        // Hitung harga berdasarkan satuan
+        let priceDisplay = "Rp 0";
         if (pricePerUnit > 0) {
-          pricePerM2 = `Rp ${pricePerUnit.toLocaleString('id-ID')}/m²`;
+          switch (currentSatuan?.toLowerCase()) {
+            case 'utuh':
+            case 'per unit':
+            case 'per pcs':
+              priceDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/unit`;
+              break;
+            case 'kilogram':
+            case 'kg':
+              priceDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/kg`;
+              break;
+            case 'dimensi':
+            case 'per dimensi':
+            case 'per m²':
+            case 'm²':
+              priceDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/m²`;
+              break;
+            case 'per m³':
+            case 'm³':
+              priceDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/m³`;
+              break;
+            default:
+              priceDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/unit`;
+          }
         }
-        setItemPricePerUnit(pricePerM2);
+        setItemPricePerUnit(priceDisplay);
 
-        // Hitung total item (termasuk diskon)
+        // Hitung total item berdasarkan satuan (termasuk diskon)
         let totalBeforeDiscount = 0;
         let totalAfterDiscount = 0;
         
-        if (area > 0 && pricePerUnit > 0) {
-          totalBeforeDiscount = area * pricePerUnit * qty;
+        if (pricePerUnit > 0) {
+          const unitPrice = calculatePriceBySatuan(currentSatuan, length, width, thickness, qty, pricePerUnit, parseFloat(itemWeight) || 0, selectedShape);
+          
+          // Untuk satuan "utuh", tidak perlu dikalikan quantity lagi
+          if (currentSatuan?.toLowerCase() === 'utuh' || currentSatuan?.toLowerCase() === 'per unit' || currentSatuan?.toLowerCase() === 'per pcs') {
+            totalBeforeDiscount = unitPrice; // Sudah termasuk quantity di dalamnya
+          } else {
+            totalBeforeDiscount = unitPrice * qty; // Kalikan dengan quantity untuk satuan lain
+          }
+          
           const discountAmount = totalBeforeDiscount * (discount / 100);
           totalAfterDiscount = totalBeforeDiscount - discountAmount;
         }
 
-        setItemArea(`${areaPerItem} m²`);
+        // Set area display based on shape
+        if (selectedShape?.dimensi === "1D") {
+          setItemArea(`${areaPerItem} m`); // 1D shows in meters
+        } else {
+          setItemArea(`${areaPerItem} m²`); // 2D shows in square meters
+        }
         setItemTotal(`Rp ${totalAfterDiscount.toLocaleString('id-ID')}`);
 
       } catch (error) {
@@ -194,7 +281,7 @@ export default function AddSalesOrderPage() {
     }, 100);
 
     return () => clearTimeout(timeoutId);
-  }, [itemLength, itemWidth, itemDiameter, selectedShape, itemQty, itemDiscount, itemPrice]);
+  }, [itemLength, itemWidth, itemDiameter, selectedShape, itemQty, itemDiscount, itemPrice, itemWeight, itemUnit, unitOptions]);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('id-ID', {
@@ -253,6 +340,30 @@ export default function AddSalesOrderPage() {
         dimensiString = `${itemLength} x ${itemWidth} x ${itemDiameter}`; // 2D: panjang x lebar x tebal
       }
 
+      // Calculate total using satuan-based pricing
+      const currentSatuan = unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit;
+      const unitPrice = calculatePriceBySatuan(
+        currentSatuan, 
+        parseFloat(itemLength) || 0, 
+        parseFloat(itemWidth) || 0, 
+        parseFloat(itemDiameter) || 0, 
+        parseInt(itemQty), 
+        parseFloat(itemPrice) || 0, 
+        parseFloat(itemWeight) || 0,
+        selectedShape
+      );
+      
+      // Untuk satuan "utuh", tidak perlu dikalikan quantity lagi
+      let calculatedTotal;
+      if (currentSatuan?.toLowerCase() === 'utuh' || currentSatuan?.toLowerCase() === 'per unit' || currentSatuan?.toLowerCase() === 'per pcs') {
+        calculatedTotal = unitPrice; // Sudah termasuk quantity di dalamnya
+      } else {
+        calculatedTotal = unitPrice * parseInt(itemQty); // Kalikan dengan quantity untuk satuan lain
+      }
+      
+      const discountAmount = calculatedTotal * (parseFloat(itemDiscount) || 0) / 100;
+      const finalTotal = calculatedTotal - discountAmount;
+
       const newItem = {
         id: Date.now(),
         jenisBarang: itemTypeOptions.find(opt => opt.value === itemType)?.label || itemType,
@@ -264,15 +375,21 @@ export default function AddSalesOrderPage() {
         harga: itemPricePerUnit,
         satuan: unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit,
         diskon: `${itemDiscount}%`,
-        total: itemTotal,
+        total: `Rp ${finalTotal.toLocaleString('id-ID')}`,
         jenisBarangId: itemType,
         bentukBarangId: selectedShape.id,
         gradeBarangId: itemGrade,
         panjang: parseFloat(itemLength) || 0,
         lebar: selectedShape.dimensi === "1D" ? 0 : parseFloat(itemWidth) || 0, // 1D doesn't use lebar
         tebal: parseFloat(itemDiameter) || 0,
+        berat: parseFloat(itemWeight) || 0,
         harga: parseFloat(itemPrice) || 0,
         satuan: itemUnit,
+        // Derive jenis_potongan from selected satuan: 'utuh' => 'utuh', others => 'potongan'
+        jenis_potongan: (() => {
+          const label = (unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit || '').toString().toLowerCase();
+          return label.includes('utuh') ? 'utuh' : 'potongan';
+        })(),
         diskonPercent: parseFloat(itemDiscount) || 0,
         catatan: itemNotes
       };
@@ -290,6 +407,7 @@ export default function AddSalesOrderPage() {
       setItemGrade("");
       setItemDiscount("0");
       setItemNotes("");
+      setItemWeight("");
     } catch (error) {
       console.error('Error adding item:', error);
       showAlert("Error", "Terjadi kesalahan saat menambahkan item", "error");
@@ -326,6 +444,7 @@ export default function AddSalesOrderPage() {
           grade_barang_id: parseInt(item.gradeBarangId) || 0,
           harga: parseFloat(item.harga) || 0,
           satuan: item.satuan,
+          jenis_potongan: item.jenis_potongan || null,
           diskon: parseFloat(item.diskonPercent) || 0,
           catatan: item.catatan || ""
         }))
@@ -411,10 +530,10 @@ export default function AddSalesOrderPage() {
     const firstItemDims = getDimensionsForShape(firstShape, 0);
     const secondItemDims = getDimensionsForShape(secondShape, 1);
 
-    // Calculate area for each item
+    // Calculate area for each item (TEBAL TIDAK DIHITUNG)
     const calculateArea = (panjang, lebar, tebal, dimensi) => {
       if (dimensi === "1D") {
-        return (panjang * tebal / 10000).toFixed(2); // Convert to m² (1D uses panjang x tebal)
+        return (panjang / 1000).toFixed(2); // Convert to m (1D uses panjang saja)
       } else {
         return (panjang * lebar / 10000).toFixed(2); // Convert to m² (2D uses panjang x lebar)
       }
@@ -422,6 +541,28 @@ export default function AddSalesOrderPage() {
 
     const firstItemArea = calculateArea(firstItemDims.panjang, firstItemDims.lebar, firstItemDims.tebal, firstShape.dimensi);
     const secondItemArea = calculateArea(secondItemDims.panjang, secondItemDims.lebar, secondItemDims.tebal, secondShape.dimensi);
+
+    // Calculate totals using satuan-based pricing
+    const firstSatuan = unitOptions.length > 0 ? unitOptions[0].label : "Per Dimensi";
+    const firstUnitPrice = calculatePriceBySatuan(
+      firstSatuan, 
+      firstItemDims.panjang, 
+      firstItemDims.lebar, 
+      firstItemDims.tebal, 
+      3, 
+      75000, 
+      0,
+      firstShape
+    );
+    // Untuk satuan "utuh", tidak perlu dikalikan quantity lagi
+    let firstTotal;
+    if (firstSatuan?.toLowerCase() === 'utuh' || firstSatuan?.toLowerCase() === 'per unit' || firstSatuan?.toLowerCase() === 'per pcs') {
+      firstTotal = firstUnitPrice; // Sudah termasuk quantity di dalamnya
+    } else {
+      firstTotal = firstUnitPrice * 3; // Kalikan dengan quantity untuk satuan lain
+    }
+    const firstDiscountAmount = firstTotal * 0.05;
+    const firstFinalTotal = firstTotal - firstDiscountAmount;
 
     const autoItems = [
       {
@@ -431,17 +572,18 @@ export default function AddSalesOrderPage() {
         grade: itemGradeOptions.length > 0 ? itemGradeOptions[0].label : "Grade A",
         dimensi: firstItemDims.dimensiString,
         qty: 3,
-        luasPerItem: `${firstItemArea} m²`,
+        luasPerItem: firstShape.dimensi === "1D" ? `${firstItemArea} m` : `${firstItemArea} m²`,
         harga: `Rp ${(75000).toLocaleString('id-ID')}/m²`,
-        satuan: unitOptions.length > 0 ? unitOptions[0].label : "Per Dimensi",
+        satuan: firstSatuan,
         diskon: "5%",
-        total: `Rp ${(parseFloat(firstItemArea) * 75000 * 3 * 0.95).toLocaleString('id-ID')}`,
+        total: `Rp ${firstFinalTotal.toLocaleString('id-ID')}`,
         jenisBarangId: itemTypeOptions.length > 0 ? itemTypeOptions[0].value : "1",
         bentukBarangId: firstShape.value,
         gradeBarangId: itemGradeOptions.length > 0 ? itemGradeOptions[0].value : "1",
         panjang: firstItemDims.panjang,
         lebar: firstItemDims.lebar,
         tebal: firstItemDims.tebal,
+        berat: 0,
         harga: 75000,
         satuan: unitOptions.length > 0 ? unitOptions[0].value : "PER_DIMENSI",
         diskonPercent: 5,
@@ -454,17 +596,27 @@ export default function AddSalesOrderPage() {
         grade: itemGradeOptions.length > 1 ? itemGradeOptions[1].label : itemGradeOptions[0]?.label || "Grade B",
         dimensi: secondItemDims.dimensiString,
         qty: 2,
-        luasPerItem: `${secondItemArea} m²`,
+        luasPerItem: secondShape.dimensi === "1D" ? `${secondItemArea} m` : `${secondItemArea} m²`,
         harga: `Rp ${(45000).toLocaleString('id-ID')}/m²`,
-        satuan: unitOptions.length > 0 ? unitOptions[0].label : "Per Dimensi",
+        satuan: firstSatuan,
         diskon: "3%",
-        total: `Rp ${(parseFloat(secondItemArea) * 45000 * 2 * 0.97).toLocaleString('id-ID')}`,
+        total: `Rp ${(() => {
+          const secondUnitPrice = calculatePriceBySatuan(firstSatuan, secondItemDims.panjang, secondItemDims.lebar, secondItemDims.tebal, 2, 45000, 0, secondShape);
+          let secondTotal;
+          if (firstSatuan?.toLowerCase() === 'utuh' || firstSatuan?.toLowerCase() === 'per unit' || firstSatuan?.toLowerCase() === 'per pcs') {
+            secondTotal = secondUnitPrice; // Sudah termasuk quantity di dalamnya
+          } else {
+            secondTotal = secondUnitPrice * 2; // Kalikan dengan quantity untuk satuan lain
+          }
+          return (secondTotal * 0.97).toLocaleString('id-ID');
+        })()}`,
         jenisBarangId: itemTypeOptions.length > 1 ? itemTypeOptions[1].value : itemTypeOptions[0]?.value || "2",
         bentukBarangId: secondShape.value,
         gradeBarangId: itemGradeOptions.length > 1 ? itemGradeOptions[1].value : itemGradeOptions[0]?.value || "2",
         panjang: secondItemDims.panjang,
         lebar: secondItemDims.lebar,
         tebal: secondItemDims.tebal,
+        berat: 0,
         harga: 45000,
         satuan: unitOptions.length > 0 ? unitOptions[0].value : "PER_DIMENSI",
         diskonPercent: 3,
