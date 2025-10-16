@@ -15,24 +15,18 @@ export default function ItemBarangPage() {
       subtitle="Master Data"
       service={itemBarangService}
       fields={[
-        { name: "kode_barang", label: "Kode Barang", maxLength: 100, required: true },
-        { name: "nama_item_barang", label: "Nama Item Barang", maxLength: 255, required: true, colSpan: 2 },
-        { name: "sisa_luas", label: "Sisa Luas", type: "number", step: 0.01, required: true },
         { name: "panjang", label: "Panjang", type: "number", step: 0.01, required: true },
         { name: "lebar", label: "Lebar", type: "number", step: 0.01, required: true },
         { name: "tebal", label: "Tebal", type: "number", step: 0.01, required: true },
+        { name: "jenis_barang_id", label: "Jenis Barang", type: "select", optionsService: jenisBarangService, optionLabel: "nama_jenis", required: true },
+        { name: "bentuk_barang_id", label: "Bentuk Barang", type: "select", optionsService: bentukBarangService, optionLabel: "nama_bentuk", required: true },
+        { name: "grade_barang_id", label: "Grade Barang", type: "select", optionsService: gradeBarangService, optionLabel: "nama", required: true },
         { name: "quantity", label: "Quantity", type: "number", step: 0.01, required: true },
-        { name: "quantity_tebal_sama", label: "Quantity Tebal Sama", type: "number", step: 0.01 },
         { name: "jenis_potongan", label: "Jenis Potongan", type: "select", options: [
           { value: "utuh", label: "Utuh" },
           { value: "potongan", label: "Potongan" }
         ], required: true },
         { name: "gudang_id", label: "Gudang", type: "select", optionsService: gudangService, optionLabel: "nama_gudang", required: true },
-        { name: "is_edit", label: "Is Edit", type: "checkbox", defaultValue: false },
-        { name: "is_edit_by", label: "Is Edit By", maxLength: 100, hideOnEdit: true },
-        { name: "jenis_barang_id", label: "Jenis Barang", type: "select", optionsService: jenisBarangService, optionLabel: "nama_jenis", required: true },
-        { name: "bentuk_barang_id", label: "Bentuk Barang", type: "select", optionsService: bentukBarangService, optionLabel: "nama_bentuk", required: true },
-        { name: "grade_barang_id", label: "Grade Barang", type: "select", optionsService: gradeBarangService, optionLabel: "nama", required: true },
       ]}
       columns={[
         { key: "id", label: "ID", align: "center", width: "5rem", maxWidth: "5rem" },
