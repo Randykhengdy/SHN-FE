@@ -340,6 +340,7 @@ export default function AddWorkOrderPage() {
             jenis_barang_id: item.jenis_barang_id || item.jenis_barang?.id,
             bentuk_barang_id: item.bentuk_barang_id || item.bentuk_barang?.id,
             grade_barang_id: item.grade_barang_id || item.grade_barang?.id,
+            jenis_potongan: item.jenis_potongan || null,
             catatan: item.catatan || item.note || item.notes || '',
             pelaksana: []
           };
@@ -787,18 +788,33 @@ export default function AddWorkOrderPage() {
       return;
     }
 
-    // Validasi pelaksana - cek item mana yang belum ada pelaksana
-    const itemsWithoutPelaksana = [];
+    // Validasi pelaksana - cek kelengkapan data pelaksana
+    const pelaksanaValidationErrors = [];
     workOrderItems.forEach((item, index) => {
+      const itemNumber = index + 1;
+      const itemQty = parseInt(item.qty) || 0;
+      const pelaksanaCount = item.pelaksana ? item.pelaksana.length : 0;
+      
+      // Cek apakah ada pelaksana
       if (!item.pelaksana || item.pelaksana.length === 0) {
-        itemsWithoutPelaksana.push(`Item ${index + 1}`);
+        pelaksanaValidationErrors.push(`Item ${itemNumber}: Belum memiliki pelaksana`);
+        return;
       }
+      
+      // Cek apakah ada pelaksana yang tidak lengkap
+      item.pelaksana.forEach((pelaksana, pelaksanaIndex) => {
+        if (!pelaksana.pelaksana_id) {
+          pelaksanaValidationErrors.push(
+            `Item ${itemNumber}, Pelaksana ${pelaksanaIndex + 1}: Belum memilih pelaksana`
+          );
+        }
+      });
     });
 
-    if (itemsWithoutPelaksana.length > 0) {
+    if (pelaksanaValidationErrors.length > 0) {
       showAlert(
         'Validasi Pelaksana', 
-        `Item berikut belum memiliki pelaksana:\n${itemsWithoutPelaksana.join(', ')}\n\nSetiap item harus memiliki minimal 1 pelaksana.`, 
+        `Terdapat kesalahan dalam data pelaksana:\n\n${pelaksanaValidationErrors.join('\n')}\n\nSetiap item harus memiliki minimal 1 pelaksana yang lengkap.`, 
         'warning'
       );
       return;
@@ -809,19 +825,6 @@ export default function AddWorkOrderPage() {
       if (!item.jenis_barang_id || !item.bentuk_barang_id || !item.grade_barang_id) {
         showAlert('Error', 'Mohon lengkapi data item', 'error');
         return;
-      }
-      
-      // Validate pelaksana - setiap item harus memiliki minimal 1 pelaksana
-      if (!item.pelaksana || item.pelaksana.length === 0) {
-        showAlert('Error', `Item ${index + 1}: Setiap item harus memiliki minimal 1 pelaksana`, 'error');
-        return;
-      }
-      
-      for (let pelaksana of item.pelaksana) {
-        if (!pelaksana.pelaksana_id) {
-          showAlert('Error', `Item ${index + 1}: Mohon lengkapi data pelaksana`, 'error');
-          return;
-        }
       }
     }
 
@@ -1146,6 +1149,7 @@ export default function AddWorkOrderPage() {
                     <TableHeader className="text-left">Jenis</TableHeader>
                     <TableHeader className="text-left">Bentuk</TableHeader>
                     <TableHeader className="text-left">Grade</TableHeader>
+                    <TableHeader className="text-left">Jenis Potongan</TableHeader>
                     <TableHeader className="text-left">Catatan</TableHeader>
                     <TableHeader className="text-left">Plat Dasar</TableHeader>
                     <TableHeader className="text-left">Pelaksana</TableHeader>
@@ -1197,6 +1201,11 @@ export default function AddWorkOrderPage() {
                         <TableCell className="text-left">
                           <div className="px-3 py-2 bg-gray-50 rounded text-sm">
                             {getGradeBarangName(item.grade_barang_id)}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-left">
+                          <div className="px-3 py-2 bg-gray-50 rounded text-sm capitalize">
+                            {item.jenis_potongan || '-'}
                           </div>
                         </TableCell>
                         <TableCell className="text-left">
@@ -1378,3 +1387,4 @@ export default function AddWorkOrderPage() {
     </PageLayout>
   );
 }
+

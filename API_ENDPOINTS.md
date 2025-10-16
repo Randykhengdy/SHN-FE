@@ -120,12 +120,12 @@
 
 ## Master Data - Item Barang
 - `GET /api/item-barang` - List all item barang
-  - **Response:** `{ "data": [{ "id": "int", "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "quantity": "decimal", "quantity_tebal_sama": "decimal", "jenis_potongan": "string", "is_edit": "boolean", "is_edit_by": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }] }`
+  - **Response:** `{ "data": [{ "id": "int", "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "quantity": "decimal", "quantity_tebal_sama": "decimal", "jenis_potongan": "string", "is_available": "boolean", "is_edit": "boolean", "is_edit_by": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }] }`
 - `POST /api/item-barang` - Create new item barang
-  - **Request:** `{ "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "quantity": "decimal", "quantity_tebal_sama": "decimal", "jenis_potongan": "string", "is_edit": "boolean", "is_edit_by": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }`
+  - **Request:** `{ "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "quantity": "decimal", "quantity_tebal_sama": "decimal", "jenis_potongan": "string", "is_available": "boolean", "is_edit": "boolean", "is_edit_by": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }`
 - `GET /api/item-barang/{id}` - Get item barang by ID
 - `PUT /api/item-barang/{id}` - Update item barang
-  - **Request:** `{ "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "quantity": "decimal", "quantity_tebal_sama": "decimal", "jenis_potongan": "string", "is_edit": "boolean", "is_edit_by": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }`
+  - **Request:** `{ "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "quantity": "decimal", "quantity_tebal_sama": "decimal", "jenis_potongan": "string", "is_available": "boolean", "is_edit": "boolean", "is_edit_by": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }`
 - `PATCH /api/item-barang/{id}` - Update item barang
 - `DELETE /api/item-barang/{id}/soft` - Soft delete item barang
 - `PATCH /api/item-barang/{id}/restore` - Restore soft deleted item barang
@@ -279,14 +279,31 @@
 - `GET /api/penerimaan-barang/with-trashed/trashed` - Get only deleted penerimaan barang
 
 ## Transaction - Sales Order
+## Transaction - Konversi Barang
+
+- Base URL: `/api/konversi-barang`
+
+- `GET /api/konversi-barang` - List item barang yang dapat dikonversi
+  - **Query Params (optional):**
+    - `per_page` (default: 10)
+    - `search` (filter nama item)
+    - `status` (values: `utuh` | `potongan` | `all`; default filter hanya `utuh` dan `potongan`)
+  - **Behavior:**
+    - Hanya menampilkan item dengan `jenis_potongan` in [`potongan`, `utuh`] dan `quantity = 1`
+  - **Response:** Pagination standard dengan relasi `jenisBarang`, `bentukBarang`, `gradeBarang`
+
+- `PATCH /api/konversi-barang/{id}` - Konversi item menjadi potongan
+  - **Description:** Mengubah `jenis_potongan` menjadi `potongan` dan set `convert_date` ke tanggal hari ini (Asia/Jakarta)
+  - **Response:** `{ success, message, data: ItemBarang(with relations) }`
+
 - `GET /api/sales-order` - List all sales order
-  - **Response:** `{ "data": [{ "id": "int", "nomor_so": "string", "tanggal_so": "date", "tanggal_pengiriman": "date", "syarat_pembayaran": "string", "gudang_id": "int", "pelanggan_id": "int", "subtotal": "decimal", "total_diskon": "decimal", "ppn_percent": "decimal", "ppn_amount": "decimal", "total_harga_so": "decimal", "status": "string", "salesOrderItems": [{ "id": "int", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "qty": "int", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "harga": "decimal", "satuan": "string", "diskon": "decimal", "catatan": "string", "jenis_barang": { "id": "int", "nama_jenis_barang": "string" }, "bentuk_barang": { "id": "int", "nama_bentuk_barang": "string" }, "grade_barang": { "id": "int", "nama_grade_barang": "string" } }], "pelanggan": { "id": "int", "nama_pelanggan": "string", "alamat": "string", "telepon": "string" }, "gudang": { "id": "int", "kode": "string", "nama_gudang": "string", "tipe_gudang": "string" } }] }`
+  - **Response:** `{ "data": [{ "id": "int", "nomor_so": "string", "tanggal_so": "date", "tanggal_pengiriman": "date", "syarat_pembayaran": "string", "gudang_id": "int", "pelanggan_id": "int", "subtotal": "decimal", "total_diskon": "decimal", "ppn_percent": "decimal", "ppn_amount": "decimal", "total_harga_so": "decimal", "status": "string", "salesOrderItems": [{ "id": "int", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "qty": "int", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "harga": "decimal", "satuan": "string", "jenis_potongan": "string", "diskon": "decimal", "catatan": "string", "jenis_barang": { "id": "int", "nama_jenis_barang": "string" }, "bentuk_barang": { "id": "int", "nama_bentuk_barang": "string" }, "grade_barang": { "id": "int", "nama_grade_barang": "string" } }], "pelanggan": { "id": "int", "nama_pelanggan": "string", "alamat": "string", "telepon": "string" }, "gudang": { "id": "int", "kode": "string", "nama_gudang": "string", "tipe_gudang": "string" } }] }`
 - `POST /api/sales-order` - Create new sales order
-  - **Request:** `{ "nomor_so": "string", "tanggal_so": "date", "tanggal_pengiriman": "date", "syarat_pembayaran": "string", "gudang_id": "int", "pelanggan_id": "int", "subtotal": "decimal", "total_diskon": "decimal", "ppn_percent": "decimal", "ppn_amount": "decimal", "total_harga_so": "decimal", "items": [{ "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "qty": "int", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "harga": "decimal", "satuan": "string", "diskon": "decimal", "catatan": "string" }] }`
+  - **Request:** `{ "nomor_so": "string", "tanggal_so": "date", "tanggal_pengiriman": "date", "syarat_pembayaran": "string", "gudang_id": "int", "pelanggan_id": "int", "subtotal": "decimal", "total_diskon": "decimal", "ppn_percent": "decimal", "ppn_amount": "decimal", "total_harga_so": "decimal", "items": [{ "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "qty": "int", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "harga": "decimal", "satuan": "string", "jenis_potongan": "string", "diskon": "decimal", "catatan": "string" }] }`
 - `GET /api/sales-order/{id}` - Get sales order by ID
-  - **Response:** `{ "id": "int", "nomor_so": "string", "tanggal_so": "date", "tanggal_pengiriman": "date", "syarat_pembayaran": "string", "gudang_id": "int", "pelanggan_id": "int", "subtotal": "decimal", "total_diskon": "decimal", "ppn_percent": "decimal", "ppn_amount": "decimal", "total_harga_so": "decimal", "status": "string", "salesOrderItems": [{ "id": "int", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "qty": "int", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "harga": "decimal", "satuan": "string", "diskon": "decimal", "catatan": "string", "jenis_barang": { "id": "int", "nama_jenis_barang": "string" }, "bentuk_barang": { "id": "int", "nama_bentuk_barang": "string" }, "grade_barang": { "id": "int", "nama_grade_barang": "string" } }], "pelanggan": { "id": "int", "nama_pelanggan": "string", "alamat": "string", "telepon": "string" }, "gudang": { "id": "int", "kode": "string", "nama_gudang": "string", "tipe_gudang": "string" } }`
+  - **Response:** `{ "id": "int", "nomor_so": "string", "tanggal_so": "date", "tanggal_pengiriman": "date", "syarat_pembayaran": "string", "gudang_id": "int", "pelanggan_id": "int", "subtotal": "decimal", "total_diskon": "decimal", "ppn_percent": "decimal", "ppn_amount": "decimal", "total_harga_so": "decimal", "status": "string", "salesOrderItems": [{ "id": "int", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "qty": "int", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "harga": "decimal", "satuan": "string", "jenis_potongan": "string", "diskon": "decimal", "catatan": "string", "jenis_barang": { "id": "int", "nama_jenis_barang": "string" }, "bentuk_barang": { "id": "int", "nama_bentuk_barang": "string" }, "grade_barang": { "id": "int", "nama_grade_barang": "string" } }], "pelanggan": { "id": "int", "nama_pelanggan": "string", "alamat": "string", "telepon": "string" }, "gudang": { "id": "int", "kode": "string", "nama_gudang": "string", "tipe_gudang": "string" } }`
 - `PUT /api/sales-order/{id}` - Update sales order
-  - **Request:** `{ "nomor_so": "string", "tanggal_so": "date", "tanggal_pengiriman": "date", "syarat_pembayaran": "string", "gudang_id": "int", "pelanggan_id": "int", "subtotal": "decimal", "total_diskon": "decimal", "ppn_percent": "decimal", "ppn_amount": "decimal", "total_harga_so": "decimal", "items": [{ "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "qty": "int", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "harga": "decimal", "satuan": "string", "diskon": "decimal", "catatan": "string" }] }`
+  - **Request:** `{ "nomor_so": "string", "tanggal_so": "date", "tanggal_pengiriman": "date", "syarat_pembayaran": "string", "gudang_id": "int", "pelanggan_id": "int", "subtotal": "decimal", "total_diskon": "decimal", "ppn_percent": "decimal", "ppn_amount": "decimal", "total_harga_so": "decimal", "items": [{ "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "qty": "int", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "harga": "decimal", "satuan": "string", "jenis_potongan": "string", "diskon": "decimal", "catatan": "string" }] }`
 - `PATCH /api/sales-order/{id}` - Update sales order
 - `POST /api/sales-order/{id}/request-delete` - Request delete sales order (user)
   - **Request:** `{ "delete_reason": "string" }`
@@ -556,29 +573,62 @@
 
 #### 13. Get Saran Plat Dasar
 - **POST** `/api/work-order-planning/get-saran-plat-dasar`
-- **Description**: Mendapatkan saran plat dasar berdasarkan array kriteria (jenis, bentuk, grade barang, tebal, dan sisa_luas). Hanya menampilkan item yang tidak sedang diedit (is_edit = false atau null)
+- **Description**: Mendapatkan saran plat dasar berdasarkan kriteria (jenis, bentuk, grade barang, tebal, dan sisa_luas). Hanya menampilkan item yang jenis_potongan = 'potongan' dan tidak sedang diedit (is_edit = false atau null)
 - **Request Body**:
 ```json
 {
-  "criteria": [
+  "jenis_barang_id": 1,
+  "bentuk_barang_id": 1,
+  "grade_barang_id": 1,
+  "tebal": 10,
+  "sisa_luas": 100
+}
+```
+- **Response**: List item barang yang memenuhi kriteria, dengan jenis, bentuk, grade barang yang sama, tebal yang sama, sisa_luas lebih besar dari parameter, jenis_potongan = 'potongan', dan tidak sedang diedit (is_edit = false atau null), diurutkan berdasarkan sisa_luas (ascending).
+- **Response Format**:
+```json
+{
+  "success": true,
+  "data": [
     {
-      "jenis_barang_id": 1,
-      "bentuk_barang_id": 1,
-      "grade_barang_id": 1,
-      "tebal": 10,
-      "sisa_luas": 100
-    },
-    {
-      "jenis_barang_id": 2,
-      "bentuk_barang_id": 1,
-      "grade_barang_id": 1,
-      "tebal": 15,
-      "sisa_luas": 150
+      "id": 1,
+      "nama": "Aluminium Shaft Grade A",
+      "ukuran": "80.5 x 45.2 x 5.0",
+      "sisa_luas": 3640.60
     }
   ]
 }
 ```
-- **Response**: List item barang yang memenuhi salah satu kriteria dalam array, dengan jenis, bentuk, grade barang yang sama, tebal yang sama, sisa_luas lebih besar dari parameter, dan tidak sedang diedit (is_edit = false atau null), diurutkan berdasarkan sisa_luas (ascending). Duplikasi dihilangkan berdasarkan ID item barang.
+
+#### 13.1. Get Saran Plat Utuh
+- **POST** `/api/work-order-planning/get-saran-plat-utuh`
+- **Description**: Mendapatkan saran plat dasar untuk jenis potongan 'utuh' berdasarkan kriteria (jenis, bentuk, grade barang, tebal, panjang, dan lebar). Hanya menampilkan item yang jenis_potongan = 'utuh' dan tidak sedang diedit (is_edit = false atau null)
+- **Request Body**:
+```json
+{
+  "jenis_barang_id": 1,
+  "bentuk_barang_id": 1,
+  "grade_barang_id": 1,
+  "tebal": 10,
+  "panjang": 100,
+  "lebar": 50
+}
+```
+- **Response**: List item barang yang memenuhi kriteria, dengan jenis, bentuk, grade barang yang sama, tebal yang sama, panjang dan lebar lebih besar atau sama dengan parameter, jenis_potongan = 'utuh', dan tidak sedang diedit (is_edit = false atau null), diurutkan berdasarkan sisa_luas (ascending).
+- **Response Format**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "nama": "Aluminium Shaft Grade A",
+      "ukuran": "80.5 x 45.2 x 5.0",
+      "sisa_luas": 3640.60
+    }
+  ]
+}
+```
 
 
 #### 14. Print SPK Work Order
