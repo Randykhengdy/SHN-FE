@@ -14,6 +14,8 @@ import { request } from "@/lib/request";
 import { API_ENDPOINTS } from "@/config/api";
 import { workOrderService } from "@/services/workOrderService";
 import PageLayout from "@/components/PageLayout";
+import PelaksanaViewModal from "@/components/modals/PelaksanaViewModal";
+import SaranViewModal from "@/components/modals/SaranViewModal";
 
 export default function ViewWorkOrderPage() {
   const { id } = useParams();
@@ -47,13 +49,44 @@ export default function ViewWorkOrderPage() {
   const [status, setStatus] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
   
-  // Edit state for WO number
-  const [isEditingWoNumber, setIsEditingWoNumber] = useState(false);
-  const [originalWoNumber, setOriginalWoNumber] = useState("");
-  const [savingWoNumber, setSavingWoNumber] = useState(false);
-
   // Item List
   const [items, setItems] = useState([]);
+  const [pelaksanaData, setPelaksanaData] = useState([]);
+  const [saranData, setSaranData] = useState([]);
+  
+  // Modal states
+  const [pelaksanaModalOpen, setPelaksanaModalOpen] = useState(false);
+  const [saranModalOpen, setSaranModalOpen] = useState(false);
+  const [selectedItemPelaksana, setSelectedItemPelaksana] = useState(null);
+  const [selectedItemSaran, setSelectedItemSaran] = useState(null);
+  const [selectedItemInfo, setSelectedItemInfo] = useState(null);
+  const [loadingPelaksana, setLoadingPelaksana] = useState(false);
+  const [loadingSaran, setLoadingSaran] = useState(false);
+  
+  // Modal handlers
+  const handlePelaksanaClick = (item) => {
+    setSelectedItemInfo(item);
+    setSelectedItemPelaksana(item.pelaksana || []);
+    setPelaksanaModalOpen(true);
+  };
+
+  const handleSaranClick = (item) => {
+    setSelectedItemInfo(item);
+    setSelectedItemSaran(item.saran_plat_dasar || []);
+    setSaranModalOpen(true);
+  };
+
+  const closePelaksanaModal = () => {
+    setPelaksanaModalOpen(false);
+    setSelectedItemPelaksana(null);
+    setSelectedItemInfo(null);
+  };
+
+  const closeSaranModal = () => {
+    setSaranModalOpen(false);
+    setSelectedItemSaran(null);
+    setSelectedItemInfo(null);
+  };
   
 
 
@@ -71,13 +104,10 @@ export default function ViewWorkOrderPage() {
       try {
         setLoading(true);
 
-        // Load work order data (includes master data)
+        // Load work order data using workOrderService
         console.log('🔧 Fetching work order data for ID:', id);
-        console.log('🔧 API URL:', `${API_ENDPOINTS.workOrder}/${id}`);
         
-        const response = await request(`${API_ENDPOINTS.workOrder}/${id}`, {
-          method: 'GET'
-        });
+        const response = await workOrderService.getWorkOrderById(id);
 
         console.log('🔍 Work Order API Response:', response);
         
@@ -102,28 +132,63 @@ export default function ViewWorkOrderPage() {
         if (!woData) {
           throw new Error('Work order data not found in response');
         }
-        
-        setWorkOrder(woData);
 
         // Extract master data from work order response
         console.log('🔧 Extracting master data from work order response...');
         
         // Get customer data from work order
-        const customerData = woData.pelanggan || woData.customer || woData.client;
+        const customerData = woData.pelanggan || woData.customer || woData.client || woData.salesOrder?.pelanggan;
         if (customerData) {
           console.log('🔍 Customer data found:', customerData);
           setCustomerData(customerData);
         }
 
         // Get warehouse data from work order
-        const warehouseData = woData.gudang || woData.warehouse;
+        const warehouseData = woData.gudang || woData.warehouse || woData.salesOrder?.gudang;
         if (warehouseData) {
           console.log('🔍 Warehouse data found:', warehouseData);
           setWarehouseOptions([warehouseData]);
         }
 
+        // Get sales order data from work order
+        const salesOrderData = woData.sales_order || woData.salesOrder;
+        console.log('🔍 Sales Order data found:', salesOrderData);
+        
+        setWorkOrder({
+          ...woData,
+          sales_order: salesOrderData,
+          nomor_so: salesOrderData?.nomor_so || woData.nomor_so,
+          pelanggan: customerData,
+          gudang: warehouseData
+        });
+
+        // Pelaksana data is already available in workOrderPlanningItems, no separate API call needed
+
+        // Process saran data to show item ID and quantities
+        const processedSaranData = [];
+        
+        if (woData.workOrderPlanningItems && Array.isArray(woData.workOrderPlanningItems)) {
+          woData.workOrderPlanningItems.forEach(item => {
+            if (item.saran_plat_dasar && Array.isArray(item.saran_plat_dasar)) {
+              item.saran_plat_dasar.forEach(saran => {
+                processedSaranData.push({
+                  saranItemId: saran.item_barang?.id,
+                  itemName: saran.item_barang?.nama_item_barang || 'Unknown Item',
+                  quantity: parseFloat(saran.quantity) || 0,
+                  targetQuantity: parseFloat(saran.quantity) || 0,
+                  woItemId: item.wo_item_unique_id,
+                  isSelected: saran.is_selected
+                });
+              });
+            }
+          });
+        }
+        
+        setSaranData(processedSaranData);
+
+
         // Extract master data from items
-        const itemsData = woData.workOrderItems || woData.items || woData.work_order_items || woData.orderItems || [];
+        const itemsData = woData.workOrderPlanningItems || woData.workOrderItems || woData.items || woData.work_order_items || woData.orderItems || [];
         console.log('🔍 Items data:', itemsData);
         
         // Collect unique master data from items
@@ -136,18 +201,18 @@ export default function ViewWorkOrderPage() {
 
         itemsData.forEach(item => {
           // Add jenis barang if exists and not already added
-          if (item.jenis_barang && !masterData.jenisBarang.find(jb => jb.id === item.jenis_barang.id)) {
-            masterData.jenisBarang.push(item.jenis_barang);
+          if (item.jenisBarang && !masterData.jenisBarang.find(jb => jb.id === item.jenisBarang.id)) {
+            masterData.jenisBarang.push(item.jenisBarang);
           }
           
           // Add bentuk barang if exists and not already added
-          if (item.bentuk_barang && !masterData.bentukBarang.find(bb => bb.id === item.bentuk_barang.id)) {
-            masterData.bentukBarang.push(item.bentuk_barang);
+          if (item.bentukBarang && !masterData.bentukBarang.find(bb => bb.id === item.bentukBarang.id)) {
+            masterData.bentukBarang.push(item.bentukBarang);
           }
           
           // Add grade barang if exists and not already added
-          if (item.grade_barang && !masterData.gradeBarang.find(gb => gb.id === item.grade_barang.id)) {
-            masterData.gradeBarang.push(item.grade_barang);
+          if (item.gradeBarang && !masterData.gradeBarang.find(gb => gb.id === item.gradeBarang.id)) {
+            masterData.gradeBarang.push(item.gradeBarang);
           }
         });
 
@@ -167,24 +232,33 @@ export default function ViewWorkOrderPage() {
         console.log('🔍 Setting WO details:', {
           nomor_wo: woData.nomor_wo,
           tanggal_wo: woData.tanggal_wo,
-          tanggal_selesai: woData.tanggal_selesai,
+          tanggal_target: woData.tanggal_target,
           prioritas: woData.prioritas,
           status: woData.status,
-          assigned_to: woData.assigned_to,
+          handover_method: woData.handover_method,
           gudang: warehouseData,
-          gudang_nama: warehouseData?.nama_gudang,
-          gudang_nama_alt: warehouseData?.nama,
-          gudang_label: warehouseData?.label
+          gudang_nama: warehouseData?.nama_gudang || warehouseData?.nama,
+          salesOrder: woData.salesOrder
+        });
+
+        // Set work order state with complete data
+        setWorkOrder({
+          ...woData,
+          gudang: warehouseData,
+          gudang_nama: warehouseData?.nama_gudang || warehouseData?.nama,
+          pelanggan: customerData,
+          pelanggan_nama: customerData?.nama_pelanggan || customerData?.nama || customerData?.name,
+          sales_order: salesOrderData,
+          nomor_so: salesOrderData?.nomor_so
         });
         
         const currentWoNumber = woData.nomor_wo || woData.wo_number || woData.order_number || "";
         setWoNumber(currentWoNumber);
-        setOriginalWoNumber(currentWoNumber); // Store original for cancel functionality
         setWoDate(formatDateForInput(woData.tanggal_wo || woData.wo_date || woData.order_date));
-        setDueDate(formatDateForInput(woData.tanggal_selesai || woData.due_date));
+        setDueDate(formatDateForInput(woData.tanggal_target || woData.due_date));
         setPriority(woData.prioritas || woData.priority || "");
         setStatus(woData.status || "");
-        setAssignedTo(woData.assigned_to || woData.assignedTo || "");
+        setAssignedTo(woData.handover_method || woData.assignedTo || "");
 
         // Process items with included master data
         if (itemsData && itemsData.length > 0) {
@@ -211,9 +285,9 @@ export default function ViewWorkOrderPage() {
             
             return {
               id: item.id,
-              jenisBarang: item.jenis_barang?.nama_bentuk || 'N/A',
-              bentukBarang: item.bentuk_barang?.nama_bentuk_barang || 'N/A',
-              gradeBarang: item.grade_barang?.nama || 'N/A',
+              jenisBarang: item.jenis_barang || item.jenisBarang,
+              bentukBarang: item.bentuk_barang || item.bentukBarang,
+              gradeBarang: item.grade_barang || item.gradeBarang,
               panjang: item.panjang || item.length || 0,
               lebar: item.lebar || item.width || 0,
               diameter: item.diameter || 0,
@@ -224,7 +298,11 @@ export default function ViewWorkOrderPage() {
               diskon: diskon,
               satuan: item.satuan || 'N/A',
               catatan: item.catatan || item.note || item.notes || "",
-              total: item.total || item.subtotal || total || 0
+              total: item.total || item.subtotal || total || 0,
+              jenis_potongan: item.jenis_potongan || 'potongan',
+              // Include pelaksana and saran data from API
+              pelaksana: item.pelaksana || [],
+              saran_plat_dasar: item.saran_plat_dasar || []
             };
           });
           console.log('🔍 Mapped items:', mappedItems);
@@ -307,54 +385,6 @@ export default function ViewWorkOrderPage() {
     return { subtotal, totalDiscount, ppnAmount, grandTotal };
   }, [items]);
 
-  // Handle WO Number Edit Functions
-  const handleEditWoNumber = () => {
-    setIsEditingWoNumber(true);
-  };
-
-  const handleCancelEditWoNumber = () => {
-    setWoNumber(originalWoNumber);
-    setIsEditingWoNumber(false);
-  };
-
-  const handleSaveWoNumber = async () => {
-    if (!woNumber.trim()) {
-      showAlert('Error', 'Nomor WO tidak boleh kosong', 'error');
-      return;
-    }
-
-    if (woNumber === originalWoNumber) {
-      setIsEditingWoNumber(false);
-      return;
-    }
-
-    setSavingWoNumber(true);
-    try {
-      console.log('🚀 Updating WO number:', { id, oldNumber: originalWoNumber, newNumber: woNumber });
-      
-      const updateData = {
-        nomor_wo: woNumber
-      };
-
-      await workOrderService.updateWorkOrder(id, updateData);
-      
-      setOriginalWoNumber(woNumber);
-      setIsEditingWoNumber(false);
-      
-      console.log('✅ WO number updated successfully');
-      showAlert('Success', `Nomor WO berhasil diubah menjadi "${woNumber}"`, 'success');
-      
-    } catch (error) {
-      console.error('❌ Error updating WO number:', error);
-      showAlert('Error', 'Gagal mengubah nomor WO: ' + (error.message || 'Unknown error'), 'error');
-      
-      // Reset to original value on error
-      setWoNumber(originalWoNumber);
-    } finally {
-      setSavingWoNumber(false);
-    }
-  };
-
 
 
   if (loading) {
@@ -405,57 +435,14 @@ export default function ViewWorkOrderPage() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
-                <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <Label className="text-sm font-medium text-gray-700">
                   Nomor WO
-                  {!isEditingWoNumber && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleEditWoNumber}
-                      className="h-6 w-6 p-0 hover:bg-blue-100"
-                      title="Edit Nomor WO"
-                    >
-                      <Edit className="h-3 w-3 text-blue-600" />
-                    </Button>
-                  )}
                 </Label>
-                {isEditingWoNumber ? (
-                  <div className="flex gap-2">
-                    <Input 
-                      value={woNumber} 
-                      onChange={(e) => setWoNumber(e.target.value)}
-                      placeholder="Masukkan nomor WO"
-                      className="focus:ring-2 focus:ring-blue-500"
-                      disabled={savingWoNumber}
-                    />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleSaveWoNumber}
-                      disabled={savingWoNumber}
-                      className="px-3 hover:bg-green-100 text-green-600"
-                      title="Simpan"
-                    >
-                      <Save className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleCancelEditWoNumber}
-                      disabled={savingWoNumber}
-                      className="px-3 hover:bg-red-100 text-red-600"
-                      title="Batal"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <Input 
-                    value={woNumber} 
-                    disabled 
-                    className="bg-gray-50"
-                  />
-                )}
+                <Input 
+                  value={woNumber} 
+                  disabled 
+                  className="bg-gray-50"
+                />
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">Tanggal WO</Label>
@@ -466,7 +453,7 @@ export default function ViewWorkOrderPage() {
                 />
               </div>
               <div>
-                <Label className="text-sm font-medium text-gray-700">Tanggal Selesai</Label>
+                <Label className="text-sm font-medium text-gray-700">Tanggal Target</Label>
                 <Input 
                   value={dueDate} 
                   disabled 
@@ -490,7 +477,7 @@ export default function ViewWorkOrderPage() {
                 />
               </div>
               <div>
-                <Label className="text-sm font-medium text-gray-700">Ditugaskan ke</Label>
+                <Label className="text-sm font-medium text-gray-700">Metode Handover</Label>
                 <Input 
                   value={assignedTo || 'N/A'} 
                   disabled 
@@ -558,6 +545,88 @@ export default function ViewWorkOrderPage() {
            </CardContent>
          </Card>
 
+        {/* Warehouse Information */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Informasi Gudang</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {warehouseOptions.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Nama Gudang</Label>
+                  <Input 
+                    value={warehouseOptions[0]?.nama_gudang || warehouseOptions[0]?.nama || 'N/A'} 
+                    disabled 
+                    className="bg-gray-50"
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Alamat</Label>
+                  <Input 
+                    value={warehouseOptions[0]?.alamat || 'N/A'} 
+                    disabled 
+                    className="bg-gray-50"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                Data gudang tidak ditemukan
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Sales Order Information */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Informasi Sales Order</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {workOrder?.sales_order ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Nomor SO</Label>
+                  <Input 
+                    value={workOrder.sales_order.nomor_so || workOrder.nomor_so || 'N/A'} 
+                    disabled 
+                    className="bg-gray-50"
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Tanggal SO</Label>
+                  <Input 
+                    value={workOrder.sales_order.tanggal_so ? formatDate(workOrder.sales_order.tanggal_so) : 'N/A'} 
+                    disabled 
+                    className="bg-gray-50"
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Tanggal Pengiriman</Label>
+                  <Input 
+                    value={workOrder.sales_order.tanggal_pengiriman ? formatDate(workOrder.sales_order.tanggal_pengiriman) : 'N/A'} 
+                    disabled 
+                    className="bg-gray-50"
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Metode Handover</Label>
+                  <Input 
+                    value={workOrder.sales_order.handover_method || 'N/A'} 
+                    disabled 
+                    className="bg-gray-50"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                Data sales order tidak ditemukan
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Items Table */}
         <Card className="mb-6">
           <CardHeader>
@@ -566,55 +635,113 @@ export default function ViewWorkOrderPage() {
           <CardContent>
             <div className="overflow-x-auto">
               <Table>
-                                 <TableHeader className="table-header-standard">
-                   <TableRow className="bg-gray-50">
-                     <TableHead className="table-header-cell-standard">#</TableHead>
-                     <TableHead className="table-header-cell-standard">Jenis Barang</TableHead>
-                     <TableHead className="table-header-cell-standard">Bentuk</TableHead>
-                     <TableHead className="table-header-cell-standard">Grade</TableHead>
-                     <TableHead className="table-header-cell-standard">Dimensi</TableHead>
-                     <TableHead className="table-header-cell-standard">Qty</TableHead>
-                     <TableHead className="table-header-cell-standard">Luas/item</TableHead>
-                     <TableHead className="table-header-cell-standard">Harga</TableHead>
-                     <TableHead className="table-header-cell-standard">Satuan</TableHead>
-                     <TableHead className="table-header-cell-standard">Diskon</TableHead>
-                     <TableHead className="table-header-cell-standard">Total</TableHead>
-                   </TableRow>
-                 </TableHeader>
+                <TableHeader className="table-header-standard">
+                  <TableRow className="bg-gray-50">
+                    <TableHead className="table-header-cell-standard">#</TableHead>
+                    <TableHead className="table-header-cell-standard">Jenis Barang</TableHead>
+                    <TableHead className="table-header-cell-standard">Bentuk</TableHead>
+                    <TableHead className="table-header-cell-standard">Grade</TableHead>
+                    <TableHead className="table-header-cell-standard">Dimensi</TableHead>
+                    <TableHead className="table-header-cell-standard">Qty</TableHead>
+                    <TableHead className="table-header-cell-standard">Luas/item</TableHead>
+                    <TableHead className="table-header-cell-standard">Harga</TableHead>
+                    <TableHead className="table-header-cell-standard">Satuan</TableHead>
+                    <TableHead className="table-header-cell-standard">Tipe Potongan</TableHead>
+                    <TableHead className="table-header-cell-standard">Diskon</TableHead>
+                    <TableHead className="table-header-cell-standard">Total</TableHead>
+                    <TableHead className="table-header-cell-standard">Pelaksana</TableHead>
+                    <TableHead className="table-header-cell-standard">Item Barang</TableHead>
+                  </TableRow>
+                </TableHeader>
                 <TableBody>
-                                     {items.length === 0 ? (
-                     <TableRow>
-                       <TableCell colSpan={12} className="text-center py-8 text-gray-500">
-                         Tidak ada item
-                       </TableCell>
-                     </TableRow>
-                   ) : (
-                     items.map((item, index) => {
-                       // Calculate luas per item
-                       const panjang = parseFloat(item.panjang) || 0;
-                       const lebar = parseFloat(item.lebar) || 0;
-                       const luasPerItem = panjang * lebar;
-                       
-                       // Format dimensi
-                       const dimensi = `${panjang} x ${lebar} mm`;
-                       
-                       return (
-                         <TableRow key={item.id || index} className="hover:bg-gray-50">
-                           <TableCell className="font-medium">{index + 1}</TableCell>
-                           <TableCell>{item.jenisBarang}</TableCell>
-                           <TableCell>{item.bentukBarang}</TableCell>
-                           <TableCell>{item.gradeBarang}</TableCell>
-                           <TableCell>{dimensi}</TableCell>
-                           <TableCell>{item.qty}</TableCell>
-                           <TableCell>{luasPerItem.toFixed(2)} mm²</TableCell>
-                           <TableCell>{formatCurrency(item.harga)}</TableCell>
-                           <TableCell>{item.satuan}</TableCell>
-                           <TableCell>{item.diskon}%</TableCell>
-                           <TableCell className="font-semibold">{formatCurrency(item.total)}</TableCell>
-                         </TableRow>
-                       );
-                     })
-                   )}
+                  {items.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={14} className="text-center py-8 text-gray-500">
+                        Tidak ada item
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    items.map((item, index) => {
+                      // Calculate luas per item
+                      const panjang = parseFloat(item.panjang) || 0;
+                      const lebar = parseFloat(item.lebar) || 0;
+                      const luasPerItem = panjang * lebar;
+                      
+                      // Format dimensi
+                      const dimensi = `${panjang} x ${lebar} mm`;
+                      
+                      // Get pelaksana data for this item
+                      const itemPelaksana = pelaksanaData.find(p => p.id === item.pelaksana_id) || null;
+                      
+                      // Get saran relasi data from API response (saran_plat_dasar)
+                      const itemSaranRelasi = (item.saran_plat_dasar || []).map(saran => ({
+                        saranItemId: saran.item_barang?.id || saran.id,
+                        itemName: saran.item_barang?.nama_item_barang || 'Unknown Item',
+                        quantity: parseFloat(saran.quantity) || 0,
+                        targetQuantity: item.qty || 0,
+                        woItemId: item.id || index,
+                        isSelected: saran.is_selected
+                      }));
+                      
+                      // Prepare pelaksana data for modal
+                      const itemPelaksanaArray = itemPelaksana ? [itemPelaksana] : (item.pelaksana || []);
+                      
+                      return (
+                        <TableRow key={item.id || index} className="hover:bg-gray-50">
+                          <TableCell className="font-medium">{index + 1}</TableCell>
+                          <TableCell>{item.jenisBarang?.nama_jenis_barang || item.jenisBarang?.nama || 'N/A'}</TableCell>
+                          <TableCell>{item.bentukBarang?.nama_bentuk_barang || item.bentukBarang?.nama || 'N/A'}</TableCell>
+                          <TableCell>{item.gradeBarang?.nama_grade_barang || item.gradeBarang?.nama || 'N/A'}</TableCell>
+                          <TableCell>{dimensi}</TableCell>
+                          <TableCell>{item.qty}</TableCell>
+                          <TableCell>{luasPerItem.toFixed(2)} mm²</TableCell>
+                          <TableCell>{formatCurrency(item.harga)}</TableCell>
+                          <TableCell>{item.satuan}</TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              item.jenis_potongan === 'potongan' 
+                                ? 'bg-orange-100 text-orange-800' 
+                                : 'bg-green-100 text-green-800'
+                            }`}>
+                              {item.jenis_potongan === 'potongan' ? 'Potongan' : 'Utuh'}
+                            </span>
+                          </TableCell>
+                          <TableCell>{item.diskon}%</TableCell>
+                          <TableCell className="font-semibold">{formatCurrency(item.total)}</TableCell>
+                          <TableCell>
+                            {itemPelaksanaArray && itemPelaksanaArray.length > 0 ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handlePelaksanaClick({...item, pelaksana: itemPelaksanaArray})}
+                                className="text-blue-600 hover:text-blue-800"
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                Lihat ({itemPelaksanaArray.length})
+                              </Button>
+                            ) : (
+                              <span className="text-gray-400">Belum ditentukan</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {itemSaranRelasi && itemSaranRelasi.length > 0 ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleSaranClick({...item, saran_plat_dasar: itemSaranRelasi})}
+                                className="text-green-600 hover:text-green-800"
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                Lihat ({itemSaranRelasi.length})
+                              </Button>
+                            ) : (
+                              <span className="text-gray-400">Tidak ada relasi</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -686,8 +813,22 @@ export default function ViewWorkOrderPage() {
           </RoleGuard>
         </div>
         
-        {/* Alert Modal Component */}
         <AlertComponent />
+        
+        {/* Modals */}
+        <PelaksanaViewModal
+          isOpen={pelaksanaModalOpen}
+          onClose={closePelaksanaModal}
+          pelaksanaData={selectedItemPelaksana}
+          itemInfo={selectedItemInfo}
+        />
+        
+        <SaranViewModal
+          isOpen={saranModalOpen}
+          onClose={closeSaranModal}
+          saranData={selectedItemSaran}
+          itemInfo={selectedItemInfo}
+        />
       </PageLayout>
   );
 }

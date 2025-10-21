@@ -43,7 +43,8 @@ export default function AddWorkOrderPage() {
     sales_order_id: '',
     catatan: '',
     status: 'Pending',
-    prioritas: 'MEDIUM'
+    prioritas: 'MEDIUM',
+    handover_method: 'pickup'
   });
 
   // Work Order Items State
@@ -114,9 +115,104 @@ export default function AddWorkOrderPage() {
   const [itemEditModalOpen, setItemEditModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
 
+  // State untuk modal utuh
+  const [utuhModalOpen, setUtuhModalOpen] = useState(false);
+  const [selectedUtuhItem, setSelectedUtuhItem] = useState(null);
+  const [saranUtuhData, setSaranUtuhData] = useState([]);
+  const [loadingSaranUtuh, setLoadingSaranUtuh] = useState(false);
+  const [selectedSaranUtuhItems, setSelectedSaranUtuhItems] = useState([]);
+  const [saranUtuhQuantities, setSaranUtuhQuantities] = useState({});
+  
+  // State untuk WO_total_quantity
+  const [woTotalQuantity, setWoTotalQuantity] = useState(() => {
+    const savedData = localStorage.getItem('WO_total_quantity');
+    return savedData ? JSON.parse(savedData) : [];
+  });
+
   const openPelaksanaModal = (itemId) => {
     setPelaksanaModalItemId(itemId);
     setPelaksanaModalOpen(true);
+  };
+
+  const openUtuhModal = async (item) => {
+    setSelectedUtuhItem(item);
+    setUtuhModalOpen(true);
+    
+    // Reset selection terlebih dahulu
+    setSelectedSaranUtuhItems([]);
+    setSaranUtuhQuantities({});
+    
+    // Hit API saran plat utuh
+    await fetchSaranUtuh(item);
+  };
+
+  const closeUtuhModal = () => {
+    setUtuhModalOpen(false);
+    setSelectedUtuhItem(null);
+    setSaranUtuhData([]);
+    setSelectedSaranUtuhItems([]);
+    setSaranUtuhQuantities({});
+  };
+
+  // Fetch saran plat utuh
+  const fetchSaranUtuh = async (item) => {
+    if (!item.jenis_barang_id || !item.bentuk_barang_id || !item.grade_barang_id || !item.tebal) {
+      showAlert('Error', 'Data item belum lengkap untuk mencari saran plat utuh', 'error');
+      return;
+    }
+
+    setLoadingSaranUtuh(true);
+    try {
+      const response = await request('/work-order-planning/get-saran-plat-utuh', {
+        method: 'POST',
+        body: JSON.stringify({
+          jenis_barang_id: item.jenis_barang_id,
+          bentuk_barang_id: item.bentuk_barang_id,
+          grade_barang_id: item.grade_barang_id,
+          tebal: parseFloat(item.tebal) || 0,
+          panjang: parseFloat(item.panjang) || 0,
+          lebar: parseFloat(item.lebar) || 0,
+          qty: parseInt(item.qty) || 1 // Menambahkan quantity ke request
+        })
+      });
+
+      console.log('Saran plat utuh response:', response);
+      setSaranUtuhData(response.data || []);
+      
+      // Ambil data dari localStorage
+      const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
+      
+      // Cek apakah item sudah ada di localStorage, gunakan selectedUtuhItem.id untuk konsistensi
+      const existingEntry = totalQuantityData.find(entry => entry.WoItemID === item.id);
+      
+      if (existingEntry && response.data && response.data.length > 0) {
+        // Jika sudah ada data di localStorage, otomatis check item yang sesuai
+        const selectedIds = [];
+        const quantities = {};
+        
+        // Untuk setiap item di WOQuantity, cari di response data dan check jika ada
+        existingEntry.WOQuantity.forEach(woItem => {
+          const matchingItem = response.data.find(saranItem => saranItem.id === woItem.ItemId);
+          if (matchingItem) {
+            selectedIds.push(woItem.ItemId);
+            quantities[woItem.ItemId] = woItem.Quantity;
+          }
+        });
+        
+        // Update state dengan data yang sudah ada
+        setSelectedSaranUtuhItems(selectedIds);
+        setSaranUtuhQuantities(quantities);
+        
+        console.log('Auto-checked items:', selectedIds);
+        console.log('Auto-set quantities:', quantities);
+      }
+    } catch (error) {
+      console.error('Error fetching saran plat utuh:', error);
+      showAlert('Error', 'Gagal mengambil saran plat utuh', 'error');
+      setSaranUtuhData([]);
+    } finally {
+      setLoadingSaranUtuh(false);
+    }
   };
 
   const savePelaksanaForItem = (rows) => {
@@ -355,6 +451,7 @@ export default function AddWorkOrderPage() {
           return {
             id: timestamp,
             workOrderUniqueId: workOrderUniqueId, // Add workOrderUniqueId to each WO item
+            sales_order_item_id: item.id, // Map Sales Order Item ID
             panjang: item.panjang || item.length || 0,
             lebar: item.lebar || item.width || 0,
             tebal: item.tebal || item.ketebalan || item.thickness || 0,
@@ -422,6 +519,7 @@ export default function AddWorkOrderPage() {
       jenis_barang_id: '',
       bentuk_barang_id: '',
       grade_barang_id: '',
+      jenis_potongan: 'potongan',
       catatan: '',
       pelaksana: []
     };
@@ -785,6 +883,84 @@ export default function AddWorkOrderPage() {
     }
   };
 
+  // DUMMY FUNCTION - HAPUS SETELAH TESTING
+  const handleGenerateDummyJson = async () => {
+    try {
+      // Generate dummy payload
+      const dummyPayload = {
+        wo_unique_id: workOrderData.wo_unique_id,
+        tanggal_wo: workOrderData.tanggal_wo,
+        tanggal_target: workOrderData.tanggal_target,
+        id_sales_order: workOrderData.sales_order_id,
+        id_pelanggan: workOrderData.pelanggan_id,
+        id_gudang: workOrderData.gudang_id,
+        prioritas: workOrderData.prioritas,
+        status: workOrderData.status,
+        handover_method: workOrderData.handover_method,
+        catatan: workOrderData.catatan,
+        // Add id_pelaksana field at the top level as required by API (array of all pelaksana IDs)
+        id_pelaksana: (() => {
+          const allPelaksanaIds = [];
+          workOrderItems.forEach(item => {
+            item.pelaksana.forEach(pelaksana => {
+              if (pelaksana.pelaksana_id && !allPelaksanaIds.includes(pelaksana.pelaksana_id)) {
+                allPelaksanaIds.push(pelaksana.pelaksana_id);
+              }
+            });
+          });
+          return allPelaksanaIds.length > 0 ? allPelaksanaIds : null;
+        })(),
+        items: workOrderItems.map((item, index) => ({
+          wo_item_unique_id: item.wo_item_unique_id,
+          sales_order_item_id: item.sales_order_item_id, // Mapped from Sales Order
+          qty: item.qty,
+          panjang: parseFloat(item.panjang) || 0,
+          lebar: parseFloat(item.lebar) || 0,
+          tebal: parseFloat(item.tebal) || 0,
+          jenis_barang_id: item.jenis_barang_id,
+          bentuk_barang_id: item.bentuk_barang_id,
+          grade_barang_id: item.grade_barang_id,
+          jenis_potongan: item.jenis_potongan || 'potongan',
+          berat: 0,
+          satuan: "PCS",
+          diskon: 0,
+          catatan: item.catatan,
+          saran_plat_dasar: (() => {
+            const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
+            const woItemData = totalQuantityData.find(wo => wo.WoItemID === item.id);
+            if (!woItemData || !woItemData.WOQuantity) return [];
+            return woItemData.WOQuantity.map(woq => ({
+              item_barang_id: woq.ItemId,
+              quantity: woq.Quantity,
+              is_selected: true
+            }));
+          })(),
+          pelaksana: item.pelaksana.map(p => ({
+            pelaksana_id: p.pelaksana_id,
+            qty: p.qty,
+            weight: 0,
+            tanggal: p.tanggal,
+            jam_mulai: p.jam_mulai,
+            jam_selesai: p.jam_selesai,
+            catatan: p.catatan
+          }))
+        }))
+      };
+      
+      console.log('=== DUMMY JSON PAYLOAD ===');
+      console.log(JSON.stringify(dummyPayload, null, 2));
+      console.log('=== END DUMMY JSON ===');
+      
+      // Copy to clipboard
+      navigator.clipboard.writeText(JSON.stringify(dummyPayload, null, 2));
+      alert('Dummy JSON generated and copied to clipboard! Check console for full output.');
+      
+    } catch (error) {
+      console.error('Error generating dummy JSON:', error);
+      alert('Error generating dummy JSON. Check console for details.');
+    }
+  };
+
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -795,7 +971,7 @@ export default function AddWorkOrderPage() {
       return;
     }
 
-    // Validasi pelaksana - cek kelengkapan data pelaksana
+    // Validasi pelaksana - cek kelengkapan data pelaksana sesuai quantity
     const pelaksanaValidationErrors = [];
     workOrderItems.forEach((item, index) => {
       const itemNumber = index + 1;
@@ -808,11 +984,28 @@ export default function AddWorkOrderPage() {
         return;
       }
       
+      // Hitung total quantity dari semua pelaksana
+      const totalPelaksanaQty = item.pelaksana.reduce((total, pelaksana) => {
+        return total + (parseInt(pelaksana.qty) || 0);
+      }, 0);
+      
+      // Cek apakah total quantity pelaksana sesuai dengan quantity item
+      if (totalPelaksanaQty !== itemQty) {
+        pelaksanaValidationErrors.push(
+          `Item ${itemNumber}: Total quantity pelaksana (${totalPelaksanaQty}) harus sama dengan quantity item (${itemQty})`
+        );
+      }
+      
       // Cek apakah ada pelaksana yang tidak lengkap
       item.pelaksana.forEach((pelaksana, pelaksanaIndex) => {
         if (!pelaksana.pelaksana_id) {
           pelaksanaValidationErrors.push(
             `Item ${itemNumber}, Pelaksana ${pelaksanaIndex + 1}: Belum memilih pelaksana`
+          );
+        }
+        if (!pelaksana.qty || parseInt(pelaksana.qty) <= 0) {
+          pelaksanaValidationErrors.push(
+            `Item ${itemNumber}, Pelaksana ${pelaksanaIndex + 1}: Quantity pelaksana harus lebih dari 0`
           );
         }
       });
@@ -821,7 +1014,7 @@ export default function AddWorkOrderPage() {
     if (pelaksanaValidationErrors.length > 0) {
       showAlert(
         'Validasi Pelaksana', 
-        `Terdapat kesalahan dalam data pelaksana:\n\n${pelaksanaValidationErrors.join('\n')}\n\nSetiap item harus memiliki minimal 1 pelaksana yang lengkap.`, 
+        `Terdapat kesalahan dalam data pelaksana:\n\n${pelaksanaValidationErrors.join('\n')}\n\nTotal quantity pelaksana harus sama dengan quantity item.`, 
         'warning'
       );
       return;
@@ -862,12 +1055,15 @@ export default function AddWorkOrderPage() {
       // Transform data to match API expected format
       const transformedData = {
         wo_unique_id: woUniqueId,
-        nomor_wo: workOrderData.nomor_wo,
         tanggal_wo: workOrderData.tanggal_wo,
         tanggal_target: workOrderData.tanggal_target,
         id_sales_order: workOrderData.sales_order_id,
         id_pelanggan: workOrderData.pelanggan_id,
         id_gudang: workOrderData.gudang_id,
+        prioritas: workOrderData.prioritas,
+        status: workOrderData.status,
+        handover_method: workOrderData.handover_method,
+        catatan: workOrderData.catatan,
         // Add id_pelaksana field at the top level as required by API (array of all pelaksana IDs)
         id_pelaksana: (() => {
           const allPelaksanaIds = [];
@@ -880,11 +1076,9 @@ export default function AddWorkOrderPage() {
           });
           return allPelaksanaIds.length > 0 ? allPelaksanaIds : null;
         })(),
-        prioritas: workOrderData.prioritas,
-        catatan: workOrderData.catatan,
-        status: workOrderData.status,
         items: workOrderItems.map((item, index) => ({
           wo_item_unique_id: existingWoItemIds[index] || `WOI-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+          sales_order_item_id: item.sales_order_item_id, // Mapped from Sales Order
           qty: item.qty,
           panjang: parseFloat(item.panjang) || 0,
           lebar: parseFloat(item.lebar) || 0,
@@ -892,15 +1086,22 @@ export default function AddWorkOrderPage() {
           jenis_barang_id: item.jenis_barang_id,
           bentuk_barang_id: item.bentuk_barang_id,
           grade_barang_id: item.grade_barang_id,
+          jenis_potongan: item.jenis_potongan || 'potongan',
+          berat: 0, // Default weight, bisa diisi nanti
+          satuan: "PCS", // Default unit
+          diskon: 0, // Default discount
           catatan: item.catatan,
-          // Add plat dasar data if selected
-          plat_dasar: selectedPlatDasar[item.id] ? selectedPlatDasar[item.id].map(plat => ({
-            plat_dasar_id: plat.id,
-            sisa_luas: plat.sisa_luas,
-            panjang: plat.panjang,
-            lebar: plat.lebar,
-            tebal: plat.tebal
-          })) : [],
+          // Saran plat dasar mapping dari WO_total_quantity localStorage
+          saran_plat_dasar: (() => {
+            const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
+            const woItemData = totalQuantityData.find(wo => wo.WoItemID === item.id);
+            if (!woItemData || !woItemData.WOQuantity) return [];
+            return woItemData.WOQuantity.map(woq => ({
+              item_barang_id: woq.ItemId,
+              quantity: woq.Quantity,
+              is_selected: true
+            }));
+          })(),
           // Add required fields for pelaksana
           pelaksana: item.pelaksana.map(p => ({
             pelaksana_id: p.pelaksana_id,
@@ -1102,6 +1303,20 @@ export default function AddWorkOrderPage() {
                 </select>
               </div>
               
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Metode Penyerahan
+                </label>
+                <select
+                  value={workOrderData.handover_method}
+                  onChange={(e) => setWorkOrderData({...workOrderData, handover_method: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="pickup">Pickup</option>
+                  <option value="delivery">Delivery</option>
+                </select>
+              </div>
+              
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Catatan
@@ -1219,17 +1434,31 @@ export default function AddWorkOrderPage() {
                               <Package className="w-3 h-3 mr-1" />
                               Pilih
                             </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openPlatPreviewModal(item)}
-                              disabled={!item.jenis_barang_id || !item.bentuk_barang_id || !item.grade_barang_id || !item.tebal}
-                              className="text-xs"
-                            >
-                              <Grid3X3 className="w-3 h-3 mr-1" />
-                              Pilih Preview
-                            </Button>
+                            {item.jenis_potongan !== 'utuh' ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openPlatPreviewModal(item)}
+                                disabled={!item.jenis_barang_id || !item.bentuk_barang_id || !item.grade_barang_id || !item.tebal}
+                                className="text-xs"
+                              >
+                                <Grid3X3 className="w-3 h-3 mr-1" />
+                                Pilih Preview
+                              </Button>
+                            ) : (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openUtuhModal(item)}
+                                disabled={!item.jenis_barang_id || !item.bentuk_barang_id || !item.grade_barang_id || !item.tebal}
+                                className="text-xs bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                              >
+                                <Package className="w-3 h-3 mr-1" />
+                                Utuh
+                              </Button>
+                            )}
                             {selectedPlatDasar[item.id] && selectedPlatDasar[item.id].length > 0 && (
                               <Badge variant="secondary" className="text-xs whitespace-nowrap">
                                 {(() => {
@@ -1284,15 +1513,18 @@ export default function AddWorkOrderPage() {
             </div>
 
             <div className="flex justify-center mt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={addWorkOrderItem}
-                className="flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Tambah Item
-              </Button>
+              {/* Tombol Tambah Item disembunyikan */}
+              {false && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addWorkOrderItem}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Tambah Item
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -1307,6 +1539,14 @@ export default function AddWorkOrderPage() {
             disabled={loading}
           >
             Batal
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={handleGenerateDummyJson}
+            disabled={loading}
+          >
+            Generate Dummy JSON
           </Button>
           <Button
             type="submit"
@@ -1354,6 +1594,229 @@ export default function AddWorkOrderPage() {
         loadingPreview={loadingPreview}
         calculateRequiredArea={calculateRequiredArea}
       />
+
+      {/* Utuh Modal */}
+      {utuhModalOpen && selectedUtuhItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Item Utuh - {getJenisBarangName(selectedUtuhItem.jenis_barang_id)} - {getBentukBarangName(selectedUtuhItem.bentuk_barang_id)}
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={closeUtuhModal}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Dimensi</label>
+                    <p className="text-sm text-gray-900">
+                      {selectedUtuhItem.panjang} x {selectedUtuhItem.lebar} x {selectedUtuhItem.tebal} mm
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                    <p className="text-sm text-gray-900">{selectedUtuhItem.qty} pcs</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Grade</label>
+                    <p className="text-sm text-gray-900">{getGradeBarangName(selectedUtuhItem.grade_barang_id)}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Item Utuh
+                    </span>
+                  </div>
+                </div>
+
+                {/* Saran Plat Utuh */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Saran Plat Utuh</label>
+                  {loadingSaranUtuh ? (
+                    <div className="flex items-center justify-center p-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+                      <span className="ml-2 text-sm text-gray-600">Mencari saran plat utuh...</span>
+                    </div>
+                  ) : saranUtuhData.length > 0 ? (
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {saranUtuhData.map((saran, index) => {
+                        const isSelected = selectedSaranUtuhItems.includes(saran.id);
+                        return (
+                        <div
+                          key={saran.id}
+                          className={`p-3 border rounded-lg transition-colors ${
+                            isSelected
+                              ? 'border-green-500 bg-green-50'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex items-start gap-2">
+                              <input 
+                                type="checkbox" 
+                                checked={isSelected}
+                                onChange={() => {
+                                  if (isSelected) {
+                                    setSelectedSaranUtuhItems(prev => prev.filter(id => id !== saran.id));
+                                    setSaranUtuhQuantities(prev => {
+                                      const newQuantities = {...prev};
+                                      delete newQuantities[saran.id];
+                                      return newQuantities;
+                                    });
+                                  } else {
+                                    setSelectedSaranUtuhItems(prev => [...prev, saran.id]);
+                                    setSaranUtuhQuantities(prev => ({
+                                      ...prev,
+                                      [saran.id]: 1
+                                    }));
+                                  }
+                                }}
+                                className="mt-1"
+                              />
+                              <div>
+                                <p className="font-medium text-sm">{saran.nama}</p>
+                                <p className="text-xs text-gray-600">{saran.ukuran}</p>
+                              </div>
+                            </div>
+                            <div className="text-right flex items-center gap-2">
+                              <p className="text-sm font-medium text-green-600">{saran.sisa_luas} m²</p>
+                              {isSelected && (
+                                <div className="flex items-center">
+                                  <label className="text-xs text-gray-600 mr-1">Qty:</label>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={saranUtuhQuantities[saran.id] || 1}
+                                    onChange={(e) => {
+                                      const value = parseInt(e.target.value) || 1;
+                                      setSaranUtuhQuantities(prev => ({
+                                        ...prev,
+                                        [saran.id]: value
+                                      }));
+                                    }}
+                                    className="w-16 text-sm border rounded px-1 py-0.5"
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )})}
+                    </div>
+                  ) : (
+                    <div className="p-4 text-center text-gray-500 bg-gray-50 rounded-lg">
+                      <p className="text-sm">Tidak ada saran plat utuh yang tersedia</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <h3 className="text-sm font-medium text-blue-900 mb-2">Informasi Item Utuh</h3>
+                  <p className="text-sm text-blue-800">
+                    Item ini adalah item utuh yang tidak memerlukan proses pemotongan. 
+                    Item akan digunakan langsung sesuai dengan dimensi yang telah ditentukan.
+                  </p>
+                </div>
+
+                {selectedUtuhItem.catatan && (
+                  <div className="p-4 bg-yellow-50 rounded-lg">
+                    <h3 className="text-sm font-medium text-yellow-900 mb-2">Catatan</h3>
+                    <p className="text-sm text-yellow-800">{selectedUtuhItem.catatan}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={closeUtuhModal}
+                  className="px-6"
+                >
+                  Tutup
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (selectedSaranUtuhItems.length > 0) {
+                      // Validasi total quantity
+                      let totalSelectedQuantity = 0;
+                      selectedSaranUtuhItems.forEach(saranId => {
+                        totalSelectedQuantity += saranUtuhQuantities[saranId] || 1;
+                      });
+                      
+                      // Cek apakah total quantity melebihi target quantity
+                      if (totalSelectedQuantity > selectedUtuhItem.qty) {
+                        showAlert('Warning', `Total quantity (${totalSelectedQuantity}) melebihi target quantity (${selectedUtuhItem.qty})`, 'warning');
+                        return;
+                      }
+                      
+                      // Save selected saran utuh items to localStorage WO_total_quantity
+                      const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
+                      
+                      // Cek apakah item sudah ada di woTotalQuantity
+                      const existingEntryIndex = totalQuantityData.findIndex(entry => entry.WoItemID === selectedUtuhItem.id);
+                      
+                      // Gunakan selectedUtuhItem.id sebagai WoItemID untuk konsistensi
+                      const woItemID = selectedUtuhItem.id;
+                      
+                      // Create a new entry for plat dasar utuh
+                      const newUtuhEntry = {
+                        WoItemID: woItemID,
+                        TargetQuantity: selectedUtuhItem.qty,
+                        WOQuantity: [],
+                        PreviousQuantity: 0
+                      };
+                      
+                      // Process each selected item
+                      selectedSaranUtuhItems.forEach(saranId => {
+                        const quantity = saranUtuhQuantities[saranId] || 1;
+                        
+                        // Add to the new entry's WOQuantity
+                        newUtuhEntry.WOQuantity.push({
+                          ItemId: saranId,
+                          Quantity: quantity
+                        });
+                      });
+                      
+                      // Update atau tambahkan entry
+                      if (existingEntryIndex >= 0) {
+                        totalQuantityData[existingEntryIndex] = newUtuhEntry;
+                      } else {
+                        totalQuantityData.push(newUtuhEntry);
+                      }
+                      
+                      // Update localStorage
+                      localStorage.setItem('WO_total_quantity', JSON.stringify(totalQuantityData));
+                      
+                      // Update state
+                      setWoTotalQuantity(totalQuantityData);
+                      
+                      showAlert('Success', `${selectedSaranUtuhItems.length} saran plat utuh telah disimpan`, 'success');
+                    } else {
+                      showAlert('Warning', 'Pilih minimal satu saran plat utuh terlebih dahulu', 'warning');
+                      return;
+                    }
+                    closeUtuhModal();
+                  }}
+                  className="px-6 bg-green-600 hover:bg-green-700"
+                  disabled={selectedSaranUtuhItems.length === 0}
+                >
+                  Konfirmasi
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Work Order Item Edit Modal */}
       <WorkOrderItemEditModal

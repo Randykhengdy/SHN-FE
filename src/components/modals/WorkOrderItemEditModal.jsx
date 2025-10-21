@@ -25,6 +25,7 @@ export default function WorkOrderItemEditModal({
     jenis_barang_id: '',
     bentuk_barang_id: '',
     grade_barang_id: '',
+    jenis_potongan: 'potongan',
     catatan: ''
   });
 
@@ -49,6 +50,7 @@ export default function WorkOrderItemEditModal({
         jenis_barang_id: item.jenis_barang_id || '',
         bentuk_barang_id: item.bentuk_barang_id || '',
         grade_barang_id: item.grade_barang_id || '',
+        jenis_potongan: item.jenis_potongan || 'potongan',
         catatan: item.catatan || ''
       });
     }
@@ -164,7 +166,7 @@ export default function WorkOrderItemEditModal({
             </div>
 
             {/* Qty and Master Data Section */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Qty *
@@ -214,6 +216,21 @@ export default function WorkOrderItemEditModal({
                   onValueChange={(value) => handleInputChange('grade_barang_id', parseInt(value))}
                   placeholder="Pilih grade"
                   loading={loadingGradeBarang}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Jenis Potongan *
+                </label>
+                <SearchSelect
+                  label=""
+                  options={[
+                    { value: 'utuh', label: 'Utuh' },
+                    { value: 'potongan', label: 'Potongan' }
+                  ]}
+                  value={formData.jenis_potongan || 'potongan'}
+                  onValueChange={(value) => handleInputChange('jenis_potongan', value)}
+                  placeholder="Pilih jenis"
                 />
               </div>
             </div>

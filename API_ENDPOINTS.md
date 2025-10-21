@@ -397,21 +397,148 @@
 - **Query Parameters**:
   - `per_page`: Jumlah data per halaman (default: 10)
   - `search`: Pencarian berdasarkan nomor_wo, tanggal_wo, prioritas, status
-- **Response**: List work order planning dengan items dan sales order
+- **Response**: List work order planning dengan kolom referensi ringkas dan jumlah item
+- **Returned Fields**: mencakup `nomor_wo`, `tanggal_wo`, `prioritas`, `status`, `nomor_so`, `nama_pelanggan`, `nama_gudang`, `count` (jumlah item terkait).
+- **Filter Fields**: pencarian/penyaringan mendukung `nomor_wo`, `tanggal_wo`, `prioritas`, `status`, dan `nomor_so`.
 
 #### 2. Get Work Order Planning by ID
 - **GET** `/api/work-order-planning/{id}`
-- **Description**: Mendapatkan detail work order planning berdasarkan ID
-- **Response**: Detail work order planning dengan items dan sales order
+- **Description**: Mendapatkan detail work order planning lengkap berdasarkan ID
+- **Query Parameters (optional)**:
+  - `create_actual` (boolean): Jika `true`, akan membuat Work Order Actual untuk WO ini bila belum ada, serta mengembalikan info actual.
+- **Request Example**:
+```
+GET /api/work-order-planning/1?create_actual=true
+Authorization: Bearer your_jwt_token
+```
+- **Response**: Detail WO lengkap dengan struktur yang menyediakan data lengkap namun terorganisir:
+  - Header: informasi WO dengan objek terstruktur untuk `sales_order`, `pelanggan`, `gudang`, `pelaksana`
+  - Items: setiap item memuat objek terstruktur untuk `jenis_barang`, `bentuk_barang`, `grade_barang`, `plat_dasar`, `pelaksana` (dengan info pelaksana), dan `saran_plat_dasar` (dengan info item barang).
+- **Response Format**:
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "wo_unique_id": "WO-20240101-ABC123",
+    "nomor_wo": "WO/2024/001",
+    "tanggal_wo": "2024-01-01",
+    "prioritas": "HIGH",
+    "status": "DRAFT",
+    "catatan": null,
+    "created_at": "2024-01-01T08:00:00.000000Z",
+    "updated_at": "2024-01-01T08:00:00.000000Z",
+    "close_wo_at": null,
+    "has_generated_invoice": false,
+    "has_generated_pod": false,
+    "sales_order": {
+      "id": 1,
+      "nomor_so": "SO/2024/001",
+      "tanggal_so": "2024-01-01",
+      "tanggal_pengiriman": "2024-01-05",
+      "syarat_pembayaran": "Net 30",
+      "handover_method": "pickup"
+    },
+    "pelanggan": {
+      "id": 1,
+      "nama_pelanggan": "PT. Contoh Pelanggan"
+    },
+    "gudang": {
+      "id": 1,
+      "nama_gudang": "Gudang Utama"
+    },
+    "pelaksana": {
+      "id": 1,
+      "nama_pelaksana": "John Doe"
+    },
+    "workOrderPlanningItems": [
+      {
+        "id": 1,
+        "wo_item_unique_id": "WOI-20240101-DEF456",
+        "qty": 10,
+        "panjang": 100.00,
+        "lebar": 50.00,
+        "tebal": 2.00,
+        "berat": 25.50,
+        "satuan": "pcs",
+        "diskon": 0,
+        "catatan": "Catatan item",
+        "jenis_potongan": "utuh",
+        "created_at": "2024-01-01T08:00:00.000000Z",
+        "updated_at": "2024-01-01T08:00:00.000000Z",
+        "jenis_barang": {
+          "id": 1,
+          "nama_jenis_barang": "Aluminium"
+        },
+        "bentuk_barang": {
+          "id": 1,
+          "nama_bentuk_barang": "Plat"
+        },
+        "grade_barang": {
+          "id": 1,
+          "nama_grade_barang": "Grade A"
+        },
+        "plat_dasar": {
+          "id": 5,
+          "nama_item_barang": "Plat Dasar AL-001"
+        },
+        "pelaksana": [
+          {
+            "id": 1,
+            "qty": 5,
+            "weight": 12.5,
+            "tanggal": "2024-01-02",
+            "jam_mulai": "08:00:00",
+            "jam_selesai": "12:00:00",
+            "catatan": "Shift pagi",
+            "created_at": "2024-01-01T08:00:00.000000Z",
+            "updated_at": "2024-01-01T08:00:00.000000Z",
+            "pelaksana_info": {
+              "id": 1,
+              "nama_pelaksana": "John Doe"
+            }
+          }
+        ],
+        "saran_plat_dasar": [
+          {
+            "id": 1,
+            "is_selected": true,
+            "quantity": 2,
+            "created_at": "2024-01-01T08:00:00.000000Z",
+            "updated_at": "2024-01-01T08:00:00.000000Z",
+            "item_barang": {
+              "id": 5,
+              "nama_item_barang": "Plat Dasar AL-001"
+            }
+          },
+          {
+            "id": 2,
+            "is_selected": false,
+            "quantity": 1,
+            "created_at": "2024-01-01T08:00:00.000000Z",
+            "updated_at": "2024-01-01T08:00:00.000000Z",
+            "item_barang": {
+              "id": 6,
+              "nama_item_barang": "Plat Dasar AL-002"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+- **Notes**:
+  - Saran plat/shaft dasar memuat semua kandidat. Yang digunakan/terpilih ditandai `is_selected = true`. Field `plat_dasar_id` pada item juga mereferensikan pilihan yang aktif.
+  - Endpoint ini menyiapkan data siap pakai untuk 1 tampilan besar detail WO (header + item + pelaksana + saran plat/shaft dasar).
 
 #### 3. Create Work Order Planning
 - **POST** `/api/work-order-planning`
-- **Description**: Membuat work order planning baru dengan support multiple pelaksana per item
+- **Description**: Membuat work order planning baru dengan support multiple pelaksana per item dan mapping saran plat/shaft dasar per item.
 - **Request Body**:
 ```json
 {
   "wo_unique_id": "WO-20240101-ABC123",
-  "nomor_wo": "WO-001",
   "tanggal_wo": "2024-01-01",
   "id_sales_order": 1,
   "id_pelanggan": 1,
@@ -425,12 +552,26 @@
       "panjang": 100.00,
       "lebar": 50.00,
       "tebal": 2.00,
-      "plat_dasar_id": 1,
       "jenis_barang_id": 1,
       "bentuk_barang_id": 1,
       "grade_barang_id": 1,
       "catatan": "Catatan item",
-      "id_pelaksana": [1, 2, 3]
+      "jenis_potongan": "utuh",
+      "pelaksana": [
+        {
+          "pelaksana_id": 1,
+          "qty": 5,
+          "weight": 12.5,
+          "tanggal": "2024-01-02",
+          "jam_mulai": "08:00",
+          "jam_selesai": "12:00",
+          "catatan": "Shift pagi"
+        }
+      ],
+      "saran_plat_dasar": [
+        { "item_barang_id": 11, "quantity": 2.5 },
+        { "item_barang_id": 12, "quantity": 1.0 }
+      ]
     },
     {
       "wo_item_unique_id": "WOI-20240101-GHI789",
@@ -438,19 +579,20 @@
       "panjang": 80.00,
       "lebar": 40.00,
       "tebal": 1.50,
-      "plat_dasar_id": 2,
       "jenis_barang_id": 2,
       "bentuk_barang_id": 1,
       "grade_barang_id": 2,
       "catatan": "Item kedua",
-      "id_pelaksana": [2, 4]
+      "jenis_potongan": "potongan",
+      "saran_plat_dasar": [
+        { "item_barang_id": 21, "quantity": 0.5 }
+      ]
     }
   ]
 }
 ```
 - **Parameters**:
   - `wo_unique_id` (required): Unique identifier untuk work order planning
-  - `nomor_wo` (required): Nomor work order
   - `tanggal_wo` (required): Tanggal work order
   - `id_sales_order` (required): ID sales order
   - `id_pelanggan` (required): ID pelanggan
@@ -463,18 +605,21 @@
   - `items.*.panjang` (optional): Panjang item
   - `items.*.lebar` (optional): Lebar item
   - `items.*.tebal` (optional): Tebal item
-  - `items.*.plat_dasar_id` (optional): ID plat dasar
+  - `items.*.pelaksana` (optional, array of object): Detail pelaksana per item
+  - `items.*.saran_plat_dasar` (optional, array of object): Mapping saran plat/shaft dasar per item saat create WO
+    - `item_barang_id` (required): ID item barang yang dijadikan saran
+    - `quantity` (optional, number): Jumlah yang digunakan
   - `items.*.jenis_barang_id` (optional): ID jenis barang
   - `items.*.bentuk_barang_id` (optional): ID bentuk barang
   - `items.*.grade_barang_id` (optional): ID grade barang
   - `items.*.catatan` (optional): Catatan item
+  - `items.*.jenis_potongan` (optional): Jenis potongan item (enum: 'utuh', 'potongan')
   - `items.*.id_pelaksana` (optional, array): Array ID pelaksana untuk item
 - **Notes**:
   - `wo_unique_id` dan `wo_item_unique_id` harus unik dan disediakan dari request
-  - `id_pelaksana` sekarang berada di dalam setiap item dan menerima array of integers (multiple pelaksana per item)
-  - Setiap item bisa memiliki pelaksana yang berbeda
-  - Pelaksana akan ditambahkan ke tabel `trx_work_order_planning_pelaksana` untuk setiap item
-  - Response akan include relasi `workOrderPlanningItems.hasManyPelaksana.pelaksana`
+  - `nomor_wo` akan digenerate otomatis di server
+  - Mapping saran plat/shaft dasar dibuat saat create WO bila `saran_plat_dasar` dikirim
+  - Response akan include relasi `workOrderPlanningItems.hasManyPelaksana.pelaksana` dan `workOrderPlanningItems.hasManySaranPlatShaftDasar.itemBarang`
 
 #### 4. Update Work Order Planning
 - **PUT/PATCH** `/api/work-order-planning/{id}`
@@ -614,7 +759,7 @@
   "lebar": 50
 }
 ```
-- **Response**: List item barang yang memenuhi kriteria, dengan jenis, bentuk, grade barang yang sama, tebal yang sama, panjang dan lebar lebih besar atau sama dengan parameter, jenis_potongan = 'utuh', dan tidak sedang diedit (is_edit = false atau null), diurutkan berdasarkan sisa_luas (ascending).
+- **Response**: List item barang yang memenuhi kriteria, dengan jenis, bentuk, grade barang yang sama, tebal sama persis, panjang dan lebar sama persis dengan parameter, jenis_potongan = 'utuh', dan tidak sedang diedit (is_edit = false atau null), diurutkan berdasarkan sisa_luas (ascending).
 - **Response Format**:
 ```json
 {
@@ -641,41 +786,38 @@
 #### 15. Get Saran Plat Dasar by Item
 - **GET** `/api/work-order-planning/item/{itemId}/saran-plat-dasar`
 - **Description**: Mendapatkan semua saran plat/shaft dasar untuk item tertentu
-- **Response**: List saran plat dasar dengan relasi item barang, diurutkan berdasarkan is_selected (true di atas) dan created_at
+- **Response**: List saran plat dasar dengan relasi item barang, diurutkan berdasarkan created_at
 
-#### 16. Add Saran Plat Dasar
+#### 16. Save Canvas (Saran Plat)
 - **POST** `/api/work-order-planning/saran-plat-dasar`
-- **Description**: Menambahkan saran plat/shaft dasar baru ke item dengan canvas file dan canvas image. Mendukung multiple items dalam satu request.
+- **Description**: Menyimpan canvas JSON dan/atau canvas image untuk `item_barang_id`. Tidak membuat record saran; mapping saran dilakukan saat create Work Order.
 - **Request Body**:
 ```json
 {
-  "wo_planning_item_id": ["WOI-20240101-DEF456", "WOI-20240101-GHI789", "WOI-20240101-JKL012"],
   "item_barang_id": 1,
-  "is_selected": true,
   "canvas_data": "{\"shapes\":[{\"type\":\"rectangle\",\"x\":10,\"y\":20,\"width\":100,\"height\":50}]}",
-  "canvas_image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
+  "canvas_image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
 }
 ```
 - **Parameters**:
-  - `wo_planning_item_id` (required, array of strings): Array wo_item_unique_id work order planning items
-  - `item_barang_id` (required): ID item barang yang akan dijadikan saran
-  - `is_selected` (optional, boolean): Apakah saran ini dipilih (default: false)
-  - `canvas_data` (optional, json): Data canvas dalam format JSON string (bebas, bisa berisi shapes, coordinates, annotations, dll)
-  - `canvas_image` (optional, string): Base64 encoded JPG image data. Akan disimpan sebagai file JPG di folder yang sama dengan canvas_data
+  - `item_barang_id` (required): ID item barang target penyimpanan canvas
+  - `canvas_data` (optional, json): Data canvas (JSON string)
+  - `canvas_image` (optional, string): Base64 JPG image data
+- **Response**:
+```json
+{
+  "success": true,
+  "message": "Canvas berhasil disimpan",
+  "data": {
+    "canvas_file": "canvas/1/canvas.json",
+    "canvas_image": "canvas/1/canvas_image.jpg"
+  }
+}
+```
 
 
 #### 17. Set Selected Plat Dasar
-- **PATCH** `/api/work-order-planning/saran-plat-dasar/{saranId}/select`
-- **Description**: Set saran plat dasar sebagai yang dipilih (is_selected = true) menggunakan wo_item_unique_id
-- **Request Body**:
-```json
-{
-  "wo_item_unique_id": "WOI-20240101-DEF456"
-}
-```
-- **Parameters**:
-  - `wo_item_unique_id` (required, string): Unique identifier work order planning item
-- **Note**: Otomatis akan set semua saran lain menjadi false dan update plat_dasar_id di work order planning item
+- Dihandle di create Work Order (mapping saran). Endpoint ini tidak digunakan lagi.
 
 
 ## Notes
@@ -685,8 +827,6 @@
 - Field `pelaksana` dalam update item akan mengganti semua pelaksana yang ada dengan yang baru
 - Field `saran_plat_dasar` dalam update item akan mengganti semua saran plat dasar yang ada dengan yang baru
 - Jika tidak ada field `pelaksana` atau `saran_plat_dasar` dalam request, data yang ada tidak akan berubah
-- Hanya satu saran plat dasar yang dapat memiliki `is_selected = true` per item
-- Ketika `is_selected = true` diset, otomatis akan update `plat_dasar_id` di work order planning item
 - Semua operasi pelaksana dan saran plat dasar menggunakan soft delete
 - Relasi yang di-load secara otomatis: jenis barang, bentuk barang, grade barang, plat dasar, pelaksana, dan saran plat dasar
 - **Pelaksana Assignment**: Setiap item dapat memiliki pelaksana yang berbeda melalui field `id_pelaksana` di dalam item

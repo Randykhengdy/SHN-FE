@@ -222,7 +222,7 @@ const PlatPreviewModal = ({
                           {item.nama || `Plat ${item.id}`}
                         </h3>
                         <p className="text-xs text-gray-500 mt-1">
-                          {item.panjang}×{item.lebar}×{item.tebal}mm
+                          {item.ukuran} mm
                         </p>
                       </div>
 

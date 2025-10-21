@@ -70,10 +70,10 @@ export default function WorkOrderPage() {
       const transformedData = result.data.map(wo => ({
         id: wo.id,
         woNumber: wo.nomor_wo || 'N/A',
-        soNumber: wo.sales_order?.nomor_so || 'N/A',
-        customer: wo.sales_order?.pelanggan?.nama_pelanggan || 'N/A',
-        warehouse: wo.sales_order?.gudang?.nama_gudang || 'N/A',
-        itemCount: wo.workOrderItems?.length || 0,
+        soNumber: wo.nomor_so || wo.sales_order?.nomor_so || 'N/A',
+        customer: wo.nama_pelanggan || wo.sales_order?.pelanggan?.nama_pelanggan || 'N/A',
+        warehouse: wo.nama_gudang || wo.sales_order?.gudang?.nama_gudang || 'N/A',
+        itemCount: wo.count || wo.workOrderItems?.length || 0,
         status: wo.status || "Pending",
         createdAt: formatDate(wo.created_at),
         deleteRequestStatus: wo.delete_requested_by ? 'delete_requested' : null,
@@ -471,35 +471,8 @@ export default function WorkOrderPage() {
                             className="flex items-center gap-1"
                           >
                             <Eye className="w-4 h-4" />
+                            View
                           </Button>
-                          {isAdmin() ? (
-                            <Button 
-                              size="sm" 
-                              variant="destructive" 
-                              onClick={() => handleDeleteWO(wo)}
-                              title="Hapus Work Order (Admin)"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          ) : wo.deleteRequestStatus === 'delete_requested' ? (
-                            <Button 
-                              size="sm" 
-                              className="bg-yellow-600 hover:bg-yellow-700" 
-                              onClick={() => handleCancelDeleteRequest(wo)}
-                              title="Batalkan Permintaan Hapus"
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          ) : (
-                            <Button 
-                              size="sm" 
-                              className="bg-orange-600 hover:bg-orange-700" 
-                              onClick={() => handleRequestDeleteWO(wo)}
-                              title="Ajukan Permintaan Hapus"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          )}
                         </div>
                       </TableCell>
                     </TableRow>
