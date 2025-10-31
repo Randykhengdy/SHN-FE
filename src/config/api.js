@@ -28,4 +28,9 @@ export const API_ENDPOINTS = {
   workOrderPlanning: "/work-order-planning",
   workOrderActual: "/work-order-actual",
   purchaseOrder: "/purchase-order",
+  dashboardWorkshop: "/dashboard/workshop",
+  stockMutation: "/stock-mutation",
+  konversiBarang: "/konversi-barang",
+  splitBarang: "/split-barang",
+  mergeBarang: "/merge-barang"
 };

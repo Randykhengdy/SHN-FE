@@ -172,6 +172,11 @@ function createWindow() {
           accelerator: 'CmdOrCtrl+D',
           click: () => mainWindow.webContents.send('navigate-to', '/dashboard')
         },
+        {
+          label: 'Dashboard Workshop',
+          accelerator: 'CmdOrCtrl+Shift+D',
+          click: () => mainWindow.webContents.send('navigate-to', '/dashboard/workshop')
+        },
         { type: 'separator' },
         {
           label: 'Exit',
@@ -210,10 +215,15 @@ function createWindow() {
           { label: 'Sales Order', accelerator: 'CmdOrCtrl+S', click: () => mainWindow.webContents.send('navigate-to', '/sales-order') },
           { label: 'Work Order', accelerator: 'CmdOrCtrl+W', click: () => mainWindow.webContents.send('navigate-to', '/work-order') },
           { label: 'WO Actual', accelerator: 'CmdOrCtrl+Shift+W', click: () => mainWindow.webContents.send('navigate-to', '/wo-actual') },
+          { label: 'Surat Jalan \& Invoicing', accelerator: 'CmdOrCtrl+F', click: () => mainWindow.webContents.send('navigate-to', '/finance-invoice-pod') },
           { type: 'separator' },
           { label: 'AR / AP', accelerator: 'CmdOrCtrl+A', click: () => mainWindow.webContents.send('navigate-to', '/ar-ap') },
           { label: 'Mutasi Stock', accelerator: 'CmdOrCtrl+M', click: () => mainWindow.webContents.send('navigate-to', '/mutasi-stock') },
-          { label: 'Approval', accelerator: 'CmdOrCtrl+Shift+A', click: () => mainWindow.webContents.send('navigate-to', '/approval') }
+          { label: 'Approval', accelerator: 'CmdOrCtrl+Shift+A', click: () => mainWindow.webContents.send('navigate-to', '/approval') },
+          { type: 'separator' },
+          { label: 'Konversi Barang', accelerator: 'CmdOrCtrl+K', click: () => mainWindow.webContents.send('navigate-to', '/konversi-barang')},
+          { label: 'Split Barang', accelerator: 'CmdOrCtrl+Shift+S', click: () => mainWindow.webContents.send('navigate-to', '/split-barang')},
+          { label: 'Merge Barang', accelerator: 'CmdOrCtrl+Shift+M', click: () => mainWindow.webContents.send('navigate-to', '/merge-barang')}
         ]
       },
           {

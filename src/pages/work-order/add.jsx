@@ -28,6 +28,7 @@ import {
   getPelangganOptions,
   getSalesOrderOptions
 } from '@/services/masterDataService';
+import { documentSequenceService } from '@/services/master-data/documentSequenceService';
 
 export default function AddWorkOrderPage() {
   const navigate = useNavigate();
@@ -53,14 +54,11 @@ export default function AddWorkOrderPage() {
   // Work Order ID State - generate new ID every time page is opened
   const [workOrderId, setWorkOrderId] = useState(() => {
     // Clear all WO_ storage first
-    console.log('Clearing all WO_ storage before generating new ID');
     const keys = Object.keys(localStorage);
     const woKeys = keys.filter(key => key.startsWith('WO_'));
     woKeys.forEach(key => {
       localStorage.removeItem(key);
-      console.log('Removed storage key:', key);
     });
-    console.log(`Cleared ${woKeys.length} WO_ storage keys`);
     
     // Always generate a new work order ID when opening add WO page
     const timestamp = Date.now();
@@ -69,8 +67,6 @@ export default function AddWorkOrderPage() {
     
     // Store the new ID in localStorage for this session
     localStorage.setItem('WO_current_work_order_id', newWorkOrderId);
-    
-    console.log('Generated new work order ID:', newWorkOrderId);
     return newWorkOrderId;
   });
 
@@ -300,7 +296,6 @@ export default function AddWorkOrderPage() {
   useEffect(() => {
     const storedWorkOrderId = localStorage.getItem('WO_current_work_order_id');
     if (storedWorkOrderId && storedWorkOrderId !== workOrderId) {
-      console.log('Syncing workOrderId with localStorage:', storedWorkOrderId);
       setWorkOrderId(storedWorkOrderId);
     }
   }, []);
@@ -309,8 +304,6 @@ export default function AddWorkOrderPage() {
   useEffect(() => {
     const loadMasterData = async () => {
       try {
-        console.log('Loading master data...');
-        
         const [
           gudang,
           jenisBarang,
@@ -325,19 +318,7 @@ export default function AddWorkOrderPage() {
           getPelaksanaOptions()
         ]);
 
-        console.log('Gudang data:', gudang);
-        console.log('Jenis Barang data:', jenisBarang);
-        console.log('Bentuk Barang data:', bentukBarang);
-        console.log('Grade Barang data:', gradeBarang);
-        console.log('Pelaksana data:', pelaksana);
-
         // Set data directly like sales order does
-        console.log('Setting gudang list:', gudang);
-        console.log('Setting jenis barang list:', jenisBarang);
-        console.log('Setting bentuk barang list:', bentukBarang);
-        console.log('Setting grade barang list:', gradeBarang);
-        console.log('Setting pelaksana list:', pelaksana);
-        
         setGudangList(gudang);
         setJenisBarangList(jenisBarang);
         setBentukBarangList(bentukBarang);
@@ -353,14 +334,9 @@ export default function AddWorkOrderPage() {
             getSalesOrderOptions(),
             getPelangganOptions()
           ]);
-          
-          console.log('Sales Order response:', salesOrderResponse);
-          console.log('Pelanggan response:', pelangganResponse);
-          
           // getPelangganOptions sudah mengembalikan data yang sudah di-map
           if (pelangganResponse && Array.isArray(pelangganResponse)) {
             setPelangganList(pelangganResponse);
-            console.log('Pelanggan options:', pelangganResponse);
           } else if (pelangganResponse?.data && Array.isArray(pelangganResponse.data)) {
             // Fallback jika response masih dalam format lama
             const pelangganOptions = pelangganResponse.data.map(item => ({
@@ -369,7 +345,6 @@ export default function AddWorkOrderPage() {
               searchKey: `${item.nama_pelanggan || item.nama || ''} ${item.alamat || ''}`.trim()
             }));
             setPelangganList(pelangganOptions);
-            console.log('Pelanggan options (fallback):', pelangganOptions);
           }
           
           // Set sales order data
@@ -381,9 +356,6 @@ export default function AddWorkOrderPage() {
           setLoadingPelanggan(false);
           setLoadingSalesOrder(false);
         }
-        
-        console.log('State set - gudangList:', gudang);
-        console.log('State set - pelangganList:', pelangganList);
         
         // Debug: Log semua state setelah di-set
         setTimeout(() => {
@@ -416,14 +388,18 @@ export default function AddWorkOrderPage() {
     try {
       console.log('Loading Sales Order detail for ID:', salesOrderId);
       
-      // Get Sales Order detail with items
-      const response = await request(`/sales-order/${salesOrderId}`, {
-        method: 'GET'
-      });
+      // Get Sales Order detail with items and generate WO number in parallel
+      const [salesOrderResponse, woNumberResponse] = await Promise.all([
+        request(`/sales-order/${salesOrderId}`, {
+          method: 'GET'
+        }),
+        documentSequenceService.generateWONumber()
+      ]);
       
-      console.log('Sales Order detail response:', response);
+      console.log('Sales Order detail response:', salesOrderResponse);
+      console.log('Generated WO number:', woNumberResponse);
       
-      let soData = response.data || response;
+      let soData = salesOrderResponse.data || salesOrderResponse;
       
       // If response is an array, take the first item
       if (Array.isArray(soData)) {
@@ -451,7 +427,7 @@ export default function AddWorkOrderPage() {
           return {
             id: timestamp,
             workOrderUniqueId: workOrderUniqueId, // Add workOrderUniqueId to each WO item
-            sales_order_item_id: item.id, // Map Sales Order Item ID
+            sales_order_item_id: item.id, // Add hidden sales order item ID
             panjang: item.panjang || item.length || 0,
             lebar: item.lebar || item.width || 0,
             tebal: item.tebal || item.ketebalan || item.thickness || 0,
@@ -473,21 +449,24 @@ export default function AddWorkOrderPage() {
         localStorage.setItem('WO_item_unique_ids', JSON.stringify(woItemIds));
         console.log('Stored WO_item_unique_ids:', woItemIds);
         
-                 // Auto-fill other fields from Sales Order
-         setWorkOrderData(prev => ({
-           ...prev,
-           gudang_id: soData.gudang_id || soData.gudang?.id,
-           pelanggan_id: soData.pelanggan_id || soData.pelanggan?.id,
-           catatan: soData.catatan || '',
-           tanggal_target: workOrderData.tanggal_wo // Set tanggal target sama dengan tanggal WO
-         }));
+        // Auto-fill other fields from Sales Order and set generated WO number
+        setWorkOrderData(prev => ({
+          ...prev,
+          nomor_wo: woNumberResponse, // Use generated WO number from API
+          gudang_id: soData.gudang_id || soData.gudang?.id,
+          pelanggan_id: soData.pelanggan_id || soData.pelanggan?.id,
+          catatan: soData.catatan || '',
+          handover_method: soData.handover_method || 'pickup', // Set handover method from SO
+          tanggal_target: workOrderData.tanggal_wo // Set tanggal target sama dengan tanggal WO
+        }));
         
-        showAlert('Sukses', `${itemsData.length} item berhasil diambil dari Sales Order`, 'success');
+        showAlert('Sukses', `${itemsData.length} item berhasil diambil dari Sales Order\nNomor WO: ${woNumberResponse}`, 'success');
       } else {
         showAlert('Info', 'Sales Order tidak memiliki item', 'info');
         // Reset to default item if no items found
         setWorkOrderItems([{
           id: Date.now(),
+          sales_order_item_id: null, // No sales order item ID for manual items
           panjang: '',
           lebar: '',
           tebal: '',
@@ -498,6 +477,17 @@ export default function AddWorkOrderPage() {
           catatan: '',
           pelaksana: []
         }]);
+        
+        // Still set the generated WO number even if no items
+        setWorkOrderData(prev => ({
+          ...prev,
+          nomor_wo: woNumberResponse, // Use generated WO number from API
+          gudang_id: soData.gudang_id || soData.gudang?.id,
+          pelanggan_id: soData.pelanggan_id || soData.pelanggan?.id,
+          catatan: soData.catatan || '',
+          handover_method: soData.handover_method || 'pickup',
+          tanggal_target: workOrderData.tanggal_wo
+        }));
       }
       
     } catch (error) {
@@ -512,6 +502,7 @@ export default function AddWorkOrderPage() {
   const addWorkOrderItem = () => {
     const newItem = {
       id: Date.now(),
+      sales_order_item_id: null, // No sales order item ID for manual items
       panjang: '0',
       lebar: '0',
       tebal: '0',
@@ -1033,6 +1024,8 @@ export default function AddWorkOrderPage() {
       `Konfirmasi Simpan Work Order\n\n` +
       `Nomor WO: ${workOrderData.nomor_wo}\n` +
       `Tanggal WO: ${workOrderData.tanggal_wo}\n` +
+      `Prioritas: ${workOrderData.prioritas}\n` +
+      `Metode Penyerahan: ${workOrderData.handover_method === 'pickup' ? 'Pickup' : 'Delivery'}\n` +
       `Jumlah Item: ${workOrderItems.length}\n` +
       `Total Pelaksana: ${workOrderItems.reduce((total, item) => total + item.pelaksana.length, 0)}\n\n` +
       `Apakah Anda yakin ingin menyimpan Work Order ini?`
@@ -1076,9 +1069,13 @@ export default function AddWorkOrderPage() {
           });
           return allPelaksanaIds.length > 0 ? allPelaksanaIds : null;
         })(),
+        prioritas: workOrderData.prioritas,
+        handover_method: workOrderData.handover_method,
+        catatan: workOrderData.catatan,
+        status: workOrderData.status,
         items: workOrderItems.map((item, index) => ({
           wo_item_unique_id: existingWoItemIds[index] || `WOI-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-          sales_order_item_id: item.sales_order_item_id, // Mapped from Sales Order
+          sales_order_item_id: item.sales_order_item_id, // Include sales order item ID
           qty: item.qty,
           panjang: parseFloat(item.panjang) || 0,
           lebar: parseFloat(item.lebar) || 0,
@@ -1199,16 +1196,13 @@ export default function AddWorkOrderPage() {
                   onValueChange={(value) => {
                     const selectedSO = salesOrderList.find(so => so.value === value);
                     if (selectedSO) {
-                      // Generate WO number from SO number
-                      const soNumber = selectedSO.label || selectedSO.value;
-                      const woNumber = soNumber.replace(/^SO-/, 'WO-');
                       setWorkOrderData({
                         ...workOrderData, 
-                        sales_order_id: parseInt(value),
-                        nomor_wo: woNumber
+                        sales_order_id: parseInt(value)
                       });
                       
                       // Load Sales Order detail and populate items automatically
+                      // WO number will be generated automatically in loadSalesOrderDetail
                       loadSalesOrderDetail(parseInt(value));
                     } else {
                       setWorkOrderData({...workOrderData, sales_order_id: parseInt(value)});
@@ -1224,14 +1218,14 @@ export default function AddWorkOrderPage() {
                   Nomor WO *
                 </label>
                 <Input
-                  placeholder="Masukkan nomor WO atau akan otomatis terisi dari SO"
+                  placeholder="Nomor WO akan otomatis terisi dari API generate sequence"
                   value={workOrderData.nomor_wo}
-                  onChange={(e) => setWorkOrderData({
-                    ...workOrderData,
-                    nomor_wo: e.target.value
-                  })}
-                  className="focus:ring-2 focus:ring-blue-500"
+                  disabled
+                  className="bg-gray-100 text-gray-600 cursor-not-allowed"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Nomor WO otomatis di-generate dari sistem saat memilih Sales Order
+                </p>
               </div>
               
               <div>
@@ -1263,8 +1257,6 @@ export default function AddWorkOrderPage() {
                   options={gudangList}
                   value={workOrderData.gudang_id ? workOrderData.gudang_id.toString() : ''} 
                   onValueChange={(value) => {
-                    console.log('Gudang selected:', value, 'Type:', typeof value);
-                    console.log('Available gudang options:', gudangList);
                     setWorkOrderData({...workOrderData, gudang_id: parseInt(value)});
                   }}
                   placeholder="Pilih gudang"
@@ -1278,8 +1270,6 @@ export default function AddWorkOrderPage() {
                   options={pelangganList}
                   value={workOrderData.pelanggan_id ? workOrderData.pelanggan_id.toString() : ''} 
                   onValueChange={(value) => {
-                    console.log('Pelanggan selected:', value, 'Type:', typeof value);
-                    console.log('Available pelanggan options:', pelangganList);
                     setWorkOrderData({...workOrderData, pelanggan_id: parseInt(value)});
                   }}
                   placeholder="Pilih pelanggan"
@@ -1309,12 +1299,15 @@ export default function AddWorkOrderPage() {
                 </label>
                 <select
                   value={workOrderData.handover_method}
-                  onChange={(e) => setWorkOrderData({...workOrderData, handover_method: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-600 cursor-not-allowed"
                 >
                   <option value="pickup">Pickup</option>
                   <option value="delivery">Delivery</option>
                 </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Metode penyerahan otomatis diambil dari Sales Order yang dipilih
+                </p>
               </div>
               
               <div className="md:col-span-2">

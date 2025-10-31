@@ -79,5 +79,12 @@ export const itemBarangService = {
     }
     
     return request(`/item-barang/with-trashed/trashed?${params}`, { method: "GET" });
+  },
+
+  async getSimilarType(id) {
+    return request(`/item-barang/similar-type/${id}`, { method: "GET" });
+  },
+  async getItemUtuh() {
+    return request(`/item-barang/bulk`, { method: "GET" });
   }
 };
