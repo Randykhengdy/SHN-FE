@@ -14,6 +14,13 @@ export const workOrderService = {
     if (params.status) queryParams.append('status', params.status);
     if (params.gudang_id) queryParams.append('gudang_id', params.gudang_id);
     if (params.pelanggan_id) queryParams.append('pelanggan_id', params.pelanggan_id);
+    if (params.wo_number) queryParams.append('wo_number', params.wo_number);
+    if (params.so_number) queryParams.append('so_number', params.so_number);
+    if (params.customer) queryParams.append('customer', params.customer);
+    if (params.warehouse) queryParams.append('warehouse', params.warehouse);
+    if (params.period) queryParams.append('period', params.period);
+    if (params.sort_by) queryParams.append('sort_by', params.sort_by);
+    if (params.sort_order) queryParams.append('sort_order', params.sort_order);
     
     const url = `${BASE_URL}?${queryParams.toString()}`;
     return request(url, { method: 'GET' });

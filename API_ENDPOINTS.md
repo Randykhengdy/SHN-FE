@@ -120,13 +120,39 @@
 
 ## Master Data - Item Barang
 - `GET /api/item-barang` - List all item barang
-  - **Response:** `{ "data": [{ "id": "int", "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "quantity": "decimal", "quantity_tebal_sama": "decimal", "jenis_potongan": "string", "is_available": "boolean", "is_edit": "boolean", "is_edit_by": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }] }`
+  - **Query Parameters**:
+    - `gudang_id` (optional): Filter berdasarkan gudang ID
+    - `per_page` (optional): Jumlah item per halaman (default: 10)
+    - `search` (optional): Pencarian berdasarkan kode_barang atau nama_item_barang
+    - `sort` (optional): Field untuk sorting
+    - `order` (optional): Arah sorting (asc/desc, default: asc)
+  - **Response:** `{ "data": [{ "id": "int", "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "quantity": "decimal", "quantity_tebal_sama": "decimal", "jenis_potongan": "string", "is_available": "boolean", "is_edit": "boolean", "is_edit_by": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "gudang_id": "int" }] }`
+  - **Example**: `GET /api/item-barang?gudang_id=1&search=aluminium&per_page=20`
+- `GET /api/item-barang/by-gudang/{gudangId}` - Get item barang by gudang ID with search functionality
+  - **Description**: Mendapatkan daftar item barang berdasarkan gudang ID dengan fitur pencarian
+  - **Query Parameters**:
+    - `per_page` (optional): Jumlah item per halaman (default: 10)
+    - `search` (optional): Pencarian berdasarkan nama item barang
+    - `sort` (optional): Field untuk sorting (kode_barang, nama_item_barang)
+    - `order` (optional): Arah sorting (asc/desc, default: asc)
+  - **Response**: Pagination standard dengan relasi `jenisBarang`, `bentukBarang`, `gradeBarang`, `gudang`
+  - **Example**: `GET /api/item-barang/by-gudang/1?search=aluminium&per_page=20&sort=nama_item_barang&order=desc`
 - `POST /api/item-barang` - Create new item barang
-  - **Request:** `{ "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "quantity": "decimal", "quantity_tebal_sama": "decimal", "jenis_potongan": "string", "is_available": "boolean", "is_edit": "boolean", "is_edit_by": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }`
+  - **Request:** `{ "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "quantity": "decimal", "quantity_tebal_sama": "decimal", "jenis_potongan": "string", "is_available": "boolean", "is_edit": "boolean", "is_edit_by": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "gudang_id": "int" }`
 - `GET /api/item-barang/{id}` - Get item barang by ID
+  - **Query Parameters**:
+    - `gudang_id` (optional): Filter berdasarkan gudang ID untuk memastikan item berada di gudang yang benar
+  - **Response**: Item barang dengan relasi `jenisBarang`, `bentukBarang`, `gradeBarang`, `gudang`
+  - **Example**: `GET /api/item-barang/1?gudang_id=2`
 - `PUT /api/item-barang/{id}` - Update item barang
-  - **Request:** `{ "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "quantity": "decimal", "quantity_tebal_sama": "decimal", "jenis_potongan": "string", "is_available": "boolean", "is_edit": "boolean", "is_edit_by": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int" }`
+  - **Query Parameters**:
+    - `gudang_id` (optional): Filter berdasarkan gudang ID untuk memastikan item berada di gudang yang benar sebelum update
+  - **Request:** `{ "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "quantity": "decimal", "quantity_tebal_sama": "decimal", "jenis_potongan": "string", "is_available": "boolean", "is_edit": "boolean", "is_edit_by": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "gudang_id": "int" }`
+  - **Example**: `PUT /api/item-barang/1?gudang_id=2`
 - `PATCH /api/item-barang/{id}` - Update item barang
+  - **Query Parameters**:
+    - `gudang_id` (optional): Filter berdasarkan gudang ID untuk memastikan item berada di gudang yang benar sebelum update
+  - **Example**: `PATCH /api/item-barang/1?gudang_id=2`
 - `DELETE /api/item-barang/{id}/soft` - Soft delete item barang
 - `PATCH /api/item-barang/{id}/restore` - Restore soft deleted item barang
 - `DELETE /api/item-barang/{id}/force` - Force delete item barang
@@ -393,13 +419,40 @@
 
 #### 1. Get All Work Order Planning
 - **GET** `/api/work-order-planning`
-- **Description**: Mendapatkan semua data work order planning dengan pagination
+- **Description**: Mendapatkan semua data work order planning dengan pagination, pencarian, filter, dan sorting
 - **Query Parameters**:
   - `per_page`: Jumlah data per halaman (default: 10)
-  - `search`: Pencarian berdasarkan nomor_wo, tanggal_wo, prioritas, status
+  - `search`: Pencarian global berdasarkan field yang dapat dicari
+  - `sort`: Field untuk sorting (dapat multiple, dipisah koma)
+  - `order`: Arah sorting (asc/desc, dapat multiple, dipisah koma)
+  - `filter[field_name]`: Filter spesifik berdasarkan field tertentu
+- **Searchable Fields**: 
+  - `sales_order.nomor_so`: Nomor Sales Order
+  - `nomor_wo`: Nomor Work Order
+  - `tanggal_wo`: Tanggal Work Order
+  - `prioritas`: Prioritas (HIGH, MEDIUM, LOW)
+  - `status`: Status (DRAFT, APPROVED, IN_PROGRESS, COMPLETED)
+- **Sortable Fields**: Semua field yang dapat dicari juga dapat disortir
+- **Filter Options**:
+  - `filter[status]`: Filter berdasarkan status
+  - `filter[prioritas]`: Filter berdasarkan prioritas
+  - `filter[tanggal_wo]`: Filter berdasarkan tanggal (format: YYYY-MM-DD)
+- **Request Examples**:
+  ```
+  GET /api/work-order-planning?search=WO001
+  GET /api/work-order-planning?sort=tanggal_wo&order=desc
+  GET /api/work-order-planning?filter[status]=DRAFT&filter[prioritas]=HIGH
+  GET /api/work-order-planning?sort=nomor_wo,tanggal_wo&order=asc,desc
+  ```
 - **Response**: List work order planning dengan kolom referensi ringkas dan jumlah item
-- **Returned Fields**: mencakup `nomor_wo`, `tanggal_wo`, `prioritas`, `status`, `nomor_so`, `nama_pelanggan`, `nama_gudang`, `count` (jumlah item terkait).
-- **Filter Fields**: pencarian/penyaringan mendukung `nomor_wo`, `tanggal_wo`, `prioritas`, `status`, dan `nomor_so`.
+- **Returned Fields**: mencakup `nomor_wo`, `tanggal_wo`, `prioritas`, `status`, `nomor_so`, `nama_pelanggan`, `nama_gudang`, `count` (jumlah item terkait)
+- **Features**:
+  - **Pagination**: Standard Laravel pagination dengan meta data
+  - **Search**: Pencarian global di multiple field sekaligus
+  - **Multiple Sorting**: Dapat sort berdasarkan multiple field dengan arah berbeda
+  - **Advanced Filtering**: Filter spesifik per field dengan operator yang fleksibel
+  - **Join Optimization**: Menggunakan leftJoin untuk performa optimal
+  - **Count Relationship**: Menampilkan jumlah item terkait tanpa memuat semua data
 
 #### 2. Get Work Order Planning by ID
 - **GET** `/api/work-order-planning/{id}`
@@ -818,6 +871,265 @@ Authorization: Bearer your_jwt_token
 
 #### 17. Set Selected Plat Dasar
 - Dihandle di create Work Order (mapping saran). Endpoint ini tidak digunakan lagi.
+
+
+## Work Order Actual
+
+### Overview
+Work Order Actual API menyediakan endpoint untuk mengelola data aktual dari work order yang telah dieksekusi. API ini mendukung operasi untuk melihat daftar work order actual, detail work order actual, dan menyimpan data work order actual.
+
+#### 1. Get All Work Order Actual
+- **GET** `/api/work-order-actual`
+- **Description**: Mendapatkan daftar semua work order actual dengan pagination, search, filter, dan sorting
+- **Query Parameters (optional)**:
+  - `page` (integer): Halaman data (default: 1)
+  - `per_page` (integer): Jumlah data per halaman (default: 10)
+  - `search` (string): Pencarian berdasarkan ID, foto_bukti, atau nomor WO
+  - `sort_by` (string): Field untuk sorting (default: id)
+  - `sort_order` (string): Urutan sorting - asc/desc (default: desc)
+  - Filter fields: `id`, `work_order_planning_id`, `foto_bukti`, `created_at`, `updated_at`
+- **Request Example**:
+```
+GET /api/work-order-actual?page=1&per_page=10&search=WO&sort_by=created_at&sort_order=desc
+Authorization: Bearer your_jwt_token
+```
+- **Response**: Paginated list work order actual dengan relasi work order planning, items, dan pelaksana
+- **Response Format**:
+```json
+{
+  "success": true,
+  "message": "Data work order actual berhasil diambil",
+  "data": {
+    "current_page": 1,
+    "data": [
+      {
+        "id": 1,
+        "work_order_planning_id": 1,
+        "foto_bukti": "bukti/wo_actual_1.jpg",
+        "created_at": "2024-01-01T10:00:00.000000Z",
+        "updated_at": "2024-01-01T10:00:00.000000Z",
+        "work_order_planning": {
+          "id": 1,
+          "nomor_wo": "WO/2024/001",
+          "tanggal_wo": "2024-01-01"
+        },
+        "work_order_actual_items": [
+          {
+            "id": 1,
+            "qty_actual": 10,
+            "berat_actual": 25.5,
+            "work_order_planning_item": {
+              "id": 1,
+              "qty": 10,
+              "item_barang": {
+                "id": 1,
+                "nama_item_barang": "Aluminium Sheet"
+              }
+            },
+            "work_order_actual_pelaksanas": [
+              {
+                "id": 1,
+                "qty": 5,
+                "berat": 12.5,
+                "tanggal": "2024-01-01",
+                "jam_mulai": "08:00:00",
+                "jam_selesai": "12:00:00",
+                "catatan": "Shift pagi",
+                "pelaksana": {
+                  "id": 1,
+                  "nama_pelaksana": "John Doe"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "first_page_url": "http://localhost/api/work-order-actual?page=1",
+    "from": 1,
+    "last_page": 1,
+    "last_page_url": "http://localhost/api/work-order-actual?page=1",
+    "links": [...],
+    "next_page_url": null,
+    "path": "http://localhost/api/work-order-actual",
+    "per_page": 10,
+    "prev_page_url": null,
+    "to": 1,
+    "total": 1
+  }
+}
+```
+
+#### 2. Get Work Order Actual by ID
+- **GET** `/api/work-order-actual/{id}`
+- **Description**: Mendapatkan detail work order actual berdasarkan ID dengan relasi lengkap
+- **Request Example**:
+```
+GET /api/work-order-actual/1
+Authorization: Bearer your_jwt_token
+```
+- **Response**: Detail work order actual lengkap dengan semua relasi
+- **Response Format**:
+```json
+{
+  "success": true,
+  "message": "Data work order actual berhasil diambil",
+  "data": {
+    "id": 1,
+    "work_order_planning_id": 1,
+    "foto_bukti": "bukti/wo_actual_1.jpg",
+    "created_at": "2024-01-01T10:00:00.000000Z",
+    "updated_at": "2024-01-01T10:00:00.000000Z",
+    "work_order_planning": {
+      "id": 1,
+      "nomor_wo": "WO/2024/001",
+      "tanggal_wo": "2024-01-01",
+      "prioritas": "HIGH",
+      "status": "COMPLETED"
+    },
+    "work_order_actual_items": [
+      {
+        "id": 1,
+        "work_order_planning_item_id": 1,
+        "qty_actual": 10,
+        "berat_actual": 25.5,
+        "created_at": "2024-01-01T10:00:00.000000Z",
+        "updated_at": "2024-01-01T10:00:00.000000Z",
+        "work_order_planning_item": {
+          "id": 1,
+          "qty": 10,
+          "panjang": 100.00,
+          "lebar": 50.00,
+          "tebal": 2.00,
+          "jenis_potongan": "utuh",
+          "item_barang": {
+            "id": 1,
+            "nama_item_barang": "Aluminium Sheet",
+            "jenis_barang": {
+              "id": 1,
+              "nama_jenis_barang": "Aluminium"
+            },
+            "bentuk_barang": {
+              "id": 1,
+              "nama_bentuk_barang": "Sheet"
+            },
+            "grade_barang": {
+              "id": 1,
+              "nama_grade_barang": "Grade A"
+            }
+          }
+        },
+        "work_order_actual_pelaksanas": [
+          {
+            "id": 1,
+            "qty": 5,
+            "berat": 12.5,
+            "tanggal": "2024-01-01",
+            "jam_mulai": "08:00:00",
+            "jam_selesai": "12:00:00",
+            "catatan": "Shift pagi",
+            "created_at": "2024-01-01T10:00:00.000000Z",
+            "updated_at": "2024-01-01T10:00:00.000000Z",
+            "pelaksana": {
+              "id": 1,
+              "nama_pelaksana": "John Doe",
+              "email": "john@example.com"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+#### 3. Save Work Order Actual (Add New)
+- **POST** `/api/work-order-actual`
+- **Description**: Menyimpan data work order actual baru dengan foto bukti dan detail pelaksanaan. Endpoint ini digunakan untuk menambahkan work order actual baru berdasarkan work order planning yang sudah ada. Form structure mengikuti pola yang sama dengan work order planning namun fokus pada data realisasi/actual.
+- **Form Requirements**: 
+  - **Header**: Foto bukti (required), ID work order actual, ID work order planning
+  - **Items**: Setiap item memiliki qty actual, berat actual, dan assignments pelaksana
+  - **Assignments**: Detail pelaksana dengan qty, berat, tanggal, jam kerja, dan catatan
+- **Request Body**:
+```json
+{
+  "foto_bukti": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...",
+  "actualWorkOrderId": 1,
+  "planningWorkOrderId": 1,
+  "items": [
+    {
+      "qtyActual": 10,
+      "beratActual": 25.5,
+      "assignments": [
+        {
+          "id": 1,
+          "qty": 5,
+          "berat": 12.5,
+          "pelaksana": "John Doe",
+          "pelaksana_id": 1,
+          "tanggal": "2024-01-01",
+          "jamMulai": "08:00:00",
+          "jamSelesai": "12:00:00",
+          "catatan": "Shift pagi"
+        },
+        {
+          "id": 2,
+          "qty": 5,
+          "berat": 13.0,
+          "pelaksana": "Jane Smith",
+          "pelaksana_id": 2,
+          "tanggal": "2024-01-01",
+          "jamMulai": "13:00:00",
+          "jamSelesai": "17:00:00",
+          "catatan": "Shift siang"
+        }
+      ]
+    }
+  ]
+}
+```
+- **Parameters**:
+  - `foto_bukti` (required): Base64 encoded image sebagai bukti pelaksanaan work order actual
+  - `actualWorkOrderId` (required): ID work order actual yang akan menyimpan data ini
+  - `planningWorkOrderId` (required): ID work order planning sebagai referensi
+  - `items` (required): Array items dengan data actual yang direalisasikan
+    - Key: ID work order planning item (sebagai key object)
+    - `qtyActual` (required): Quantity actual yang berhasil dikerjakan
+    - `beratActual` (required): Berat actual yang berhasil dikerjakan
+    - `assignments` (required): Array assignment pelaksana yang mengerjakan item ini
+      - `id` (required): ID work order planning item
+      - `qty` (required): Quantity yang dikerjakan oleh pelaksana ini
+      - `berat` (required): Berat yang dikerjakan oleh pelaksana ini
+      - `pelaksana` (required): Nama pelaksana
+      - `pelaksana_id` (required): ID pelaksana
+      - `tanggal` (required): Tanggal pelaksanaan (format: YYYY-MM-DD)
+      - `jamMulai` (required): Jam mulai kerja (format: HH:MM:SS)
+      - `jamSelesai` (required): Jam selesai kerja (format: HH:MM:SS)
+      - `catatan` (optional): Catatan pelaksanaan
+- **Response**:
+```json
+{
+  "success": true,
+  "message": "Work Order Actual berhasil disimpan",
+  "data": {
+    "work_order_actual_id": 1,
+    "items_saved": 1,
+    "assignments_saved": 2
+  }
+}
+```
+
+### Features
+- **Pagination**: Mendukung pagination dengan parameter `page` dan `per_page`
+- **Search**: Pencarian berdasarkan ID, foto_bukti, atau nomor WO planning
+- **Filter**: Filter berdasarkan berbagai field seperti work_order_planning_id, created_at, dll
+- **Sorting**: Sorting berdasarkan field apapun dengan urutan ascending/descending
+- **Eager Loading**: Otomatis memuat relasi work order planning, items, dan pelaksana
+- **File Upload**: Support upload foto bukti dalam format base64
+- **Multiple Assignments**: Mendukung multiple pelaksana per item dengan detail waktu kerja
+- **Form Structure**: Form add mengikuti struktur yang mirip dengan work order planning namun fokus pada data realisasi
+- **Validation**: Validasi lengkap untuk semua field required dan format data
+- **Transaction Safety**: Menggunakan database transaction untuk memastikan konsistensi data
 
 
 ## Notes

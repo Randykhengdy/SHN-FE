@@ -26,5 +26,6 @@ export const API_ENDPOINTS = {
   jenisBarang: "/jenis-barang",
   salesOrder: "/sales-order",
   workOrderPlanning: "/work-order-planning",
+  workOrderActual: "/work-order-actual",
   purchaseOrder: "/purchase-order",
 };

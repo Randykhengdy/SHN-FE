@@ -33,6 +33,9 @@ import WorkOrderPlatShaftCanvasPage from "@/pages/work-order/PlatShaftCanvasPage
 import PurchaseOrderPage from "@/pages/purchase-order";
 import AddPurchaseOrderPage from "@/pages/purchase-order/add";
 import ViewPurchaseOrderPage from "@/pages/purchase-order/view";
+import WOActualPage from "@/pages/wo-actual";
+import WOActualDetailPage from "@/pages/wo-actual/detail";
+import AddWOActualPage from "@/pages/wo-actual/add";
 
 const AppRouter = () => {
     return (
@@ -71,6 +74,9 @@ const AppRouter = () => {
         <Route path="/purchase-order" element={<PurchaseOrderPage />} />
         <Route path="/purchase-order/add" element={<AddPurchaseOrderPage />} />
         <Route path="/purchase-order/view/:id" element={<ViewPurchaseOrderPage />} />
+        <Route path="/wo-actual" element={<WOActualPage />} />
+        <Route path="/wo-actual/add" element={<AddWOActualPage />} />
+        <Route path="/wo-actual/detail/:id" element={<WOActualDetailPage />} />
       </Routes>
     );
 };

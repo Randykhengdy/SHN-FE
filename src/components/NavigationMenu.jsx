@@ -11,7 +11,8 @@ import {
   Warehouse,
   Wrench,
   ClipboardList,
-  Edit3
+  Edit3,
+  Activity
 } from "lucide-react";
 
 export default function NavigationMenu() {
@@ -40,7 +41,13 @@ export default function NavigationMenu() {
     {
       label: "Work Order",
       path: "/work-order",
-      icon: ClipboardList,
+      icon: Wrench,
+      category: "transaksi"
+    },
+    {
+      label: "WO Actual",
+      path: "/wo-actual",
+      icon: Activity,
       category: "transaksi"
     },
     {
@@ -76,16 +83,15 @@ export default function NavigationMenu() {
   ];
 
   const isActive = (path) => {
-    if (path === "/dashboard") {
-      return location.pathname === "/dashboard";
+    if (path === "/work-order") {
+      return location.pathname === "/work-order" || 
+             location.pathname.startsWith("/work-order/");
     }
-    if (path === "/masterdata/jenis-barang") {
-      return location.pathname.startsWith("/masterdata");
+    if (path === "/wo-actual") {
+      return location.pathname === "/wo-actual" || 
+             location.pathname.startsWith("/wo-actual/");
     }
-    if (path === "/sales-order") {
-      return location.pathname.startsWith("/sales-order");
-    }
-    return location.pathname === path;
+    return location.pathname === path || location.pathname.startsWith(path + "/");
   };
 
   const getCategoryItems = (category) => {

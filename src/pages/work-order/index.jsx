@@ -51,6 +51,10 @@ export default function WorkOrderPage() {
   const [filterCustomer, setFilterCustomer] = useState('');
   const [filterWarehouse, setFilterWarehouse] = useState('');
   
+  // Sort states
+  const [sortBy, setSortBy] = useState('none');
+  const [sortOrder, setSortOrder] = useState('asc');
+  
   // Delete modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteModalType, setDeleteModalType] = useState('admin'); // 'admin' or 'request'
@@ -64,10 +68,29 @@ export default function WorkOrderPage() {
   const loadWorkOrders = useCallback(async () => {
     try {
       setLoading(true);
-      const result = await workOrderService.getWorkOrders();
+      
+      // Prepare API parameters
+      const params = {
+        page: currentPage,
+        per_page: itemsPerPage,
+        search: searchTerm || undefined,
+        status: statusFilter !== 'all' ? statusFilter : undefined,
+        period: periodFilter !== 'all' ? periodFilter : undefined,
+        wo_number: filterWoNumber || undefined,
+        so_number: filterSoNumber || undefined,
+        customer: filterCustomer || undefined,
+        warehouse: filterWarehouse || undefined,
+        sort_by: sortBy && sortBy !== 'none' ? sortBy : undefined,
+        sort_order: sortOrder || undefined
+      };
+
+      // Remove undefined values
+      Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
+
+      const result = await workOrderService.getWorkOrders(params);
       
       // Transform API data to match our UI structure
-      const transformedData = result.data.map(wo => ({
+      const transformedData = (result.data || []).map(wo => ({
         id: wo.id,
         woNumber: wo.nomor_wo || 'N/A',
         soNumber: wo.nomor_so || wo.sales_order?.nomor_so || 'N/A',
@@ -83,52 +106,15 @@ export default function WorkOrderPage() {
         items: wo.workOrderItems || []
       }));
       
-      // Apply filters
-      let filteredData = transformedData;
-      
-      if (filterWoNumber) {
-        filteredData = filteredData.filter(wo => 
-          wo.woNumber.toLowerCase().includes(filterWoNumber.toLowerCase())
-        );
-      }
-      
-      if (filterSoNumber) {
-        filteredData = filteredData.filter(wo => 
-          wo.soNumber.toLowerCase().includes(filterSoNumber.toLowerCase())
-        );
-      }
-      
-      if (filterCustomer) {
-        filteredData = filteredData.filter(wo => 
-          wo.customer.toLowerCase().includes(filterCustomer.toLowerCase())
-        );
-      }
-      
-      if (filterWarehouse) {
-        filteredData = filteredData.filter(wo => 
-          wo.warehouse.toLowerCase().includes(filterWarehouse.toLowerCase())
-        );
-      }
-      
-      if (statusFilter !== "all") {
-        filteredData = filteredData.filter(wo => wo.status.toLowerCase() === statusFilter.toLowerCase());
-      }
-      
-      // Apply pagination
-      const startIndex = (currentPage - 1) * itemsPerPage;
-      const endIndex = startIndex + itemsPerPage;
-      const paginatedData = filteredData.slice(startIndex, endIndex);
-      
-      setWorkOrders(paginatedData);
-      setTotalItems(filteredData.length);
+      setWorkOrders(transformedData);
+      setTotalItems(result.total || result.pagination?.total || transformedData.length);
     } catch (error) {
       console.error('Error loading work orders:', error);
       showAlert("Error", "Gagal memuat data Work Order", "error");
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, itemsPerPage, filterWoNumber, filterSoNumber, filterCustomer, filterWarehouse, statusFilter, periodFilter]);
+  }, [currentPage, itemsPerPage, searchTerm, statusFilter, periodFilter, filterWoNumber, filterSoNumber, filterCustomer, filterWarehouse, sortBy, sortOrder, showAlert]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -397,7 +383,92 @@ export default function WorkOrderPage() {
              </div>
            </div>
            
-           <div className="flex justify-end">
+           {/* Search and Sort Row */}
+           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+             <div>
+               <label className="block text-sm font-medium text-gray-700 mb-1">
+                 Search Global
+               </label>
+               <Input
+                 placeholder="Cari semua data..."
+                 value={searchTerm}
+                 onChange={(e) => setSearchTerm(e.target.value)}
+               />
+             </div>
+             
+             <div>
+               <label className="block text-sm font-medium text-gray-700 mb-1">
+                 Periode
+               </label>
+               <Select value={periodFilter} onValueChange={setPeriodFilter}>
+                 <SelectTrigger>
+                   <SelectValue placeholder="Semua Periode" />
+                 </SelectTrigger>
+                 <SelectContent>
+                   {periodOptions.map((option) => (
+                     <SelectItem key={option.value} value={option.value}>
+                       {option.label}
+                     </SelectItem>
+                   ))}
+                 </SelectContent>
+               </Select>
+             </div>
+             
+             <div>
+               <label className="block text-sm font-medium text-gray-700 mb-1">
+                 Sort By
+               </label>
+               <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih Sort" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Tidak Ada</SelectItem>
+                    <SelectItem value="nomor_wo">No. WO</SelectItem>
+                    <SelectItem value="nomor_so">No. SO</SelectItem>
+                    <SelectItem value="nama_pelanggan">Pelanggan</SelectItem>
+                    <SelectItem value="nama_gudang">Gudang</SelectItem>
+                    <SelectItem value="status">Status</SelectItem>
+                    <SelectItem value="created_at">Tanggal Dibuat</SelectItem>
+                  </SelectContent>
+                </Select>
+             </div>
+             
+             <div>
+               <label className="block text-sm font-medium text-gray-700 mb-1">
+                 Sort Order
+               </label>
+               <Select value={sortOrder} onValueChange={setSortOrder}>
+                 <SelectTrigger>
+                   <SelectValue placeholder="Urutan" />
+                 </SelectTrigger>
+                 <SelectContent>
+                   <SelectItem value="asc">A-Z / 1-9</SelectItem>
+                   <SelectItem value="desc">Z-A / 9-1</SelectItem>
+                 </SelectContent>
+               </Select>
+             </div>
+           </div>
+           
+           <div className="flex justify-end gap-2">
+             <Button 
+               variant="outline" 
+               onClick={() => {
+                 setSearchTerm('');
+                 setFilterWoNumber('');
+                 setFilterSoNumber('');
+                 setFilterCustomer('');
+                 setFilterWarehouse('');
+                 setStatusFilter('all');
+                 setPeriodFilter('all');
+                 setSortBy('none');
+                 setSortOrder('asc');
+               }}
+               className="flex items-center gap-2"
+             >
+               <X className="h-4 w-4" />
+               Clear Filter
+             </Button>
              <Button 
                variant="outline" 
                onClick={loadWorkOrders} 
