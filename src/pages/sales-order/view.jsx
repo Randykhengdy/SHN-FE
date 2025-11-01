@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { ArrowLeft, Calendar, Eye } from "lucide-react";
+import { ArrowLeft, Calendar, Eye, Printer } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import RoleGuard from "@/components/RoleGuard";
 import { request } from "@/lib/request";
 import { API_ENDPOINTS } from "@/config/api";
 import SalesOrderLayout from "@/components/SalesOrderLayout";
+import { generateSalesOrderPDF } from "@/lib/pdfUtils";
 
 export default function ViewSalesOrderPage() {
   const { id } = useParams();
@@ -22,6 +23,7 @@ export default function ViewSalesOrderPage() {
   
   // Loading states
   const [loading, setLoading] = useState(false);
+  const [printLoading, setPrintLoading] = useState(false);
   
   // Prevent multiple API calls
   const isLoadingRef = useRef(false);
@@ -203,8 +205,8 @@ export default function ViewSalesOrderPage() {
             
             return {
               id: item.id,
-              jenisBarang: item.jenis_barang?.nama_bentuk || 'N/A',
-              bentukBarang: item.bentuk_barang?.nama_bentuk_barang || 'N/A',
+              jenisBarang: item.jenis_barang?.nama_jenis || 'N/A',
+              bentukBarang: item.bentuk_barang?.nama_bentuk || 'N/A',
               gradeBarang: item.grade_barang?.nama || 'N/A',
               panjang: item.panjang || item.length || 0,
               lebar: item.lebar || item.width || 0,
@@ -261,6 +263,55 @@ export default function ViewSalesOrderPage() {
       currency: 'IDR',
       minimumFractionDigits: 0
     }).format(amount || 0);
+  };
+
+  // Handle print sales order
+  const handlePrintSalesOrder = async () => {
+    try {
+      setPrintLoading(true);
+      
+      if (!salesOrder) {
+        showAlert("Error", "Data sales order tidak ditemukan", "error");
+        return;
+      }
+
+      // Prepare print data
+      const printData = {
+        nomor_so: soNumber,
+        tanggal_so: soDate,
+        tanggal_pengiriman: deliveryDate,
+        term_of_payment: termOfPayment,
+        gudang_asal: originWarehouse,
+        customer: customerData,
+        items: items.map(item => ({
+          nama_item: item.jenisBarang || item.nama_item,
+          bentuk_barang: item.bentukBarang || item.bentuk_barang,
+          grade_barang: item.gradeBarang || item.grade_barang,
+          dimensi_potong: item.dimensiPotong || item.dimensi_potong,
+          unit: item.unit,
+          qty: item.qty || item.quantity,
+          total_kg: item.totalKg || item.total_kg || (parseFloat(item.qty || 0) * parseFloat(item.beratPerUnit || 0)),
+          harga_per_unit: item.harga || item.harga_per_unit,
+          total_harga: item.total || item.total_harga
+        })),
+        total_harga: subtotal,
+        discount: totalDiscount,
+        ppn: ppnAmount,
+        grand_total: grandTotal
+      };
+
+      console.log('🖨️ Print data:', printData);
+
+      // Generate and download PDF
+      await generateSalesOrderPDF(printData);
+      
+      showAlert("Sukses", "Sales Order PDF berhasil diunduh!", "success");
+    } catch (error) {
+      console.error('Error printing sales order:', error);
+      showAlert("Error", "Gagal generate PDF Sales Order", "error");
+    } finally {
+      setPrintLoading(false);
+    }
   };
 
 
@@ -467,7 +518,6 @@ export default function ViewSalesOrderPage() {
                      <TableHead className="table-header-cell-standard">Qty</TableHead>
                      <TableHead className="table-header-cell-standard">Luas/item</TableHead>
                      <TableHead className="table-header-cell-standard">Harga</TableHead>
-                     <TableHead className="table-header-cell-standard">Satuan</TableHead>
                      <TableHead className="table-header-cell-standard">Diskon</TableHead>
                      <TableHead className="table-header-cell-standard">Total</TableHead>
                    </TableRow>
@@ -475,7 +525,7 @@ export default function ViewSalesOrderPage() {
                 <TableBody>
                                      {items.length === 0 ? (
                      <TableRow>
-                       <TableCell colSpan={12} className="text-center py-8 text-gray-500">
+                       <TableCell colSpan={10} className="text-center py-8 text-gray-500">
                          Tidak ada item
                        </TableCell>
                      </TableRow>
@@ -499,7 +549,6 @@ export default function ViewSalesOrderPage() {
                            <TableCell>{item.qty}</TableCell>
                            <TableCell>{luasPerItem.toFixed(2)} mm²</TableCell>
                            <TableCell>{formatCurrency(item.harga)}</TableCell>
-                           <TableCell>{item.satuan}</TableCell>
                            <TableCell>{item.diskon}%</TableCell>
                            <TableCell className="font-semibold">{formatCurrency(item.total)}</TableCell>
                          </TableRow>
@@ -571,8 +620,18 @@ export default function ViewSalesOrderPage() {
           </Button>
           
           <RoleGuard roles={['admin', 'manager', 'supervisor']}>
-            <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
-              Print SO
+            <Button 
+              size="lg" 
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={handlePrintSalesOrder}
+              disabled={printLoading}
+            >
+              {printLoading ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              ) : (
+                <Printer className="w-4 h-4 mr-2" />
+              )}
+              Download PDF
             </Button>
           </RoleGuard>
         </div>

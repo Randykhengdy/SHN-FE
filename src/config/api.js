@@ -32,5 +32,6 @@ export const API_ENDPOINTS = {
   stockMutation: "/stock-mutation",
   konversiBarang: "/konversi-barang",
   splitBarang: "/split-barang",
-  mergeBarang: "/merge-barang"
+  mergeBarang: "/merge-barang",
+  warehouseTransferRequest: "/warehouse-transfer-request"
 };

@@ -16,6 +16,7 @@ import { workOrderService } from "@/services/workOrderService";
 import PageLayout from "@/components/PageLayout";
 import PelaksanaViewModal from "@/components/modals/PelaksanaViewModal";
 import SaranViewModal from "@/components/modals/SaranViewModal";
+import { generateWorkOrderPDF } from "@/lib/pdfUtils";
 
 export default function ViewWorkOrderPage() {
   const { id } = useParams();
@@ -86,6 +87,43 @@ export default function ViewWorkOrderPage() {
     setSaranModalOpen(false);
     setSelectedItemSaran(null);
     setSelectedItemInfo(null);
+  };
+
+  // Handle Print WO
+  const handlePrint = async () => {
+    try {
+      setLoading(true);
+      
+      // Prepare print data
+      const printData = {
+        nomor_wo: woNumber,
+        tanggal_wo: woDate,
+        due_date: dueDate,
+        priority: priority,
+        status: status,
+        assigned_to: assignedTo,
+        items: items.map(item => ({
+          nama_item: item.nama_item,
+          bentuk_barang: item.bentuk_barang,
+          grade_barang: item.grade_barang,
+          qty: item.qty,
+          status: item.status,
+          keterangan: item.keterangan
+        }))
+      };
+
+      console.log('🖨️ Generating Work Order PDF with data:', printData);
+      
+      // Generate and download PDF
+      await generateWorkOrderPDF(printData);
+      
+      showAlert('Work Order PDF berhasil diunduh!', 'success');
+    } catch (error) {
+      console.error('❌ Error generating Work Order PDF:', error);
+      showAlert('Gagal mengunduh Work Order PDF. Silakan coba lagi.', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
   
 
@@ -807,8 +845,13 @@ export default function ViewWorkOrderPage() {
           </Button>
           
           <RoleGuard roles={['admin', 'manager', 'supervisor']}>
-            <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
-              Print WO
+            <Button 
+              size="lg" 
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={handlePrint}
+              disabled={loading}
+            >
+              {loading ? 'Generating PDF...' : 'Print WO'}
             </Button>
           </RoleGuard>
         </div>

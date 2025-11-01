@@ -1157,3 +1157,219 @@ Authorization: Bearer your_jwt_token
 - Canvas data dan image dapat diakses via API atau langsung dari storage URL
 - **Canvas data format bebas**: Bisa berisi shapes, coordinates, annotations, metadata, atau struktur JSON apapun yang dibutuhkan untuk mapping/visualization
 - **Canvas image**: Base64 JPG data yang dikonversi dan disimpan sebagai file JPG
+
+## Item Barang Request Management
+
+### List Item Barang Requests
+- `GET /api/item-barang-request` - List all item barang requests
+  - **Query Parameters:**
+    - `page` (optional): Page number for pagination
+    - `per_page` (optional): Items per page (default: 15)
+    - `status` (optional): Filter by status (pending, approved, rejected)
+    - `search` (optional): Search by nomor_request or nama_item_barang
+  - **Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "current_page": 1,
+    "data": [
+      {
+        "id": 1,
+        "nomor_request": "REQ-20251031-001",
+        "nama_item_barang": "Plat Besi Tebal 10mm",
+        "jenis_barang_id": 1,
+        "bentuk_barang_id": 1,
+        "grade_barang_id": 1,
+        "panjang": 2000.00,
+        "lebar": 1000.00,
+        "tebal": 10.00,
+        "quantity": 5,
+        "keterangan": "Untuk proyek konstruksi gedung A",
+        "status": "pending",
+        "requested_by": 1,
+        "approved_by": null,
+        "approved_at": null,
+        "approval_notes": null,
+        "created_at": "2025-10-31T12:00:00.000000Z",
+        "updated_at": "2025-10-31T12:00:00.000000Z",
+        "jenis_barang": {
+          "id": 1,
+          "nama_jenis_barang": "Plat"
+        },
+        "bentuk_barang": {
+          "id": 1,
+          "nama_bentuk_barang": "Persegi"
+        },
+        "grade_barang": {
+          "id": 1,
+          "nama_grade_barang": "A"
+        },
+        "requested_by_user": {
+          "id": 1,
+          "name": "Admin User",
+          "username": "admin"
+        },
+        "approved_by_user": null
+      }
+    ],
+    "first_page_url": "http://localhost:8000/api/item-barang-request?page=1",
+    "from": 1,
+    "last_page": 1,
+    "last_page_url": "http://localhost:8000/api/item-barang-request?page=1",
+    "links": [...],
+    "next_page_url": null,
+    "path": "http://localhost:8000/api/item-barang-request",
+    "per_page": 15,
+    "prev_page_url": null,
+    "to": 4,
+    "total": 4
+  }
+}
+```
+
+### Get Pending Requests
+- `GET /api/item-barang-request/pending` - Get only pending requests
+  - **Query Parameters:** Same as list endpoint
+  - **Response:** Same format as list endpoint but filtered to pending status only
+
+### Get Item Barang Request by ID
+- `GET /api/item-barang-request/{id}` - Get specific item barang request
+  - **Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "nomor_request": "REQ-20251031-001",
+    "nama_item_barang": "Plat Besi Tebal 10mm",
+    "jenis_barang_id": 1,
+    "bentuk_barang_id": 1,
+    "grade_barang_id": 1,
+    "panjang": 2000.00,
+    "lebar": 1000.00,
+    "tebal": 10.00,
+    "quantity": 5,
+    "keterangan": "Untuk proyek konstruksi gedung A",
+    "status": "pending",
+    "requested_by": 1,
+    "approved_by": null,
+    "approved_at": null,
+    "approval_notes": null,
+    "created_at": "2025-10-31T12:00:00.000000Z",
+    "updated_at": "2025-10-31T12:00:00.000000Z",
+    "jenis_barang": {...},
+    "bentuk_barang": {...},
+    "grade_barang": {...},
+    "requested_by_user": {...},
+    "approved_by_user": null
+  }
+}
+```
+
+### Create Item Barang Request
+- `POST /api/item-barang-request` - Create new item barang request
+  - **Request:**
+```json
+{
+  "nama_item_barang": "Plat Besi Tebal 10mm",
+  "jenis_barang_id": 1,
+  "bentuk_barang_id": 1,
+  "grade_barang_id": 1,
+  "panjang": 2000.00,
+  "lebar": 1000.00,
+  "tebal": 10.00,
+  "quantity": 5,
+  "keterangan": "Untuk proyek konstruksi gedung A"
+}
+```
+  - **Response:**
+```json
+{
+  "success": true,
+  "message": "Item barang request berhasil dibuat",
+  "data": {
+    "id": 1,
+    "nomor_request": "REQ-20251031-001",
+    "nama_item_barang": "Plat Besi Tebal 10mm",
+    "status": "pending",
+    "requested_by": 1,
+    "created_at": "2025-10-31T12:00:00.000000Z",
+    ...
+  }
+}
+```
+
+### Update Item Barang Request
+- `PUT /api/item-barang-request/{id}` - Update item barang request (only if pending and owned by user)
+- `PATCH /api/item-barang-request/{id}` - Update item barang request (only if pending and owned by user)
+  - **Request:** Same fields as create request
+  - **Response:** Updated item barang request data
+
+### Delete Item Barang Request
+- `DELETE /api/item-barang-request/{id}` - Delete item barang request (only if pending and owned by user)
+  - **Response:**
+```json
+{
+  "success": true,
+  "message": "Item barang request berhasil dihapus"
+}
+```
+
+### Approve Item Barang Request
+- `PATCH /api/item-barang-request/{id}/approve` - Approve pending request
+  - **Request:**
+```json
+{
+  "approval_notes": "Disetujui untuk pengadaan segera"
+}
+```
+  - **Response:**
+```json
+{
+  "success": true,
+  "message": "Request berhasil disetujui",
+  "data": {
+    "id": 1,
+    "status": "approved",
+    "approved_by": 1,
+    "approved_at": "2025-10-31T12:30:00.000000Z",
+    "approval_notes": "Disetujui untuk pengadaan segera",
+    ...
+  }
+}
+```
+
+### Reject Item Barang Request
+- `PATCH /api/item-barang-request/{id}/reject` - Reject pending request
+  - **Request:**
+```json
+{
+  "approval_notes": "Stok masih tersedia, tidak perlu pengadaan baru"
+}
+```
+  - **Response:**
+```json
+{
+  "success": true,
+  "message": "Request berhasil ditolak",
+  "data": {
+    "id": 1,
+    "status": "rejected",
+    "approved_by": 1,
+    "approved_at": "2025-10-31T12:30:00.000000Z",
+    "approval_notes": "Stok masih tersedia, tidak perlu pengadaan baru",
+    ...
+  }
+}
+```
+
+### Item Barang Request Features
+- **Auto Document Number**: Nomor request otomatis generate dengan format REQ-YYYYMMDD-XXX
+- **Status Management**: Status pending, approved, rejected dengan workflow approval
+- **Authorization**: User hanya bisa edit/delete request milik sendiri yang masih pending
+- **Approval System**: Approval dengan notes dan timestamp
+- **Relationships**: Terintegrasi dengan jenis barang, bentuk barang, grade barang, dan user
+- **Validation**: Validasi lengkap untuk semua field required
+- **Pagination & Search**: Support pagination dan pencarian
+- **Soft Delete**: Menggunakan soft delete untuk data integrity
