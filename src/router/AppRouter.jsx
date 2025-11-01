@@ -45,11 +45,9 @@ import SplitBarangPage from "@/pages/split-barang";
 import WOActualPage from "@/pages/wo-actual";
 import WOActualDetailPage from "@/pages/wo-actual/detail";
 import AddWOActualPage from "@/pages/wo-actual/add";
-
-// Warehouse Transfer Request Pages
-import WarehouseTransferRequestIndex from "@/pages/warehouse-transfer-request";
-import WarehouseTransferRequestAdd from "@/pages/warehouse-transfer-request/add";
-import WarehouseTransferRequestView from "@/pages/warehouse-transfer-request/view";
+import ItemBarangRequestPage from "@/pages/item-barang-request";
+import AddItemBarangRequestPage from "@/pages/item-barang-request/add";
+import ViewItemBarangRequestPage from "@/pages/item-barang-request/view";
 
 const AppRouter = () => {
     return (
@@ -94,6 +92,9 @@ const AppRouter = () => {
         <Route path="/mutasi-stock" element={<MutasiStockPage/>} />
         <Route path="/mutasi-stock/add" element={<AddMutasiStockPage />} />
         <Route path="/mutasi-stock/view/:id" element={<ViewMutasiStockPage />} />
+        <Route path="/item-barang-request" element={<ItemBarangRequestPage />} />
+        <Route path="/item-barang-request/add" element={<AddItemBarangRequestPage />} />
+        <Route path="/item-barang-request/view/:id" element={<ViewItemBarangRequestPage />} />
         <Route path="/konversi-barang" element={<KonversiBarangPage/>}/>
         <Route path="/split-barang" element={<SplitBarangPage/>}/>
         <Route path="/merge-barang" element={<MergeBarangPage/>}/>
@@ -101,11 +102,6 @@ const AppRouter = () => {
         <Route path="/wo-actual" element={<WOActualPage />} />
         <Route path="/wo-actual/add" element={<AddWOActualPage />} />
         <Route path="/wo-actual/detail/:id" element={<WOActualDetailPage />} />
-
-        {/* Warehouse Transfer Request Routes */}
-        <Route path="/warehouse-transfer-request" element={<WarehouseTransferRequestIndex />} />
-        <Route path="/warehouse-transfer-request/add" element={<WarehouseTransferRequestAdd />} />
-        <Route path="/warehouse-transfer-request/view/:id" element={<WarehouseTransferRequestView />} />
       </Routes>
     );
 };

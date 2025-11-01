@@ -622,8 +622,16 @@ Authorization: Bearer your_jwt_token
         }
       ],
       "saran_plat_dasar": [
-        { "item_barang_id": 11, "quantity": 2.5 },
-        { "item_barang_id": 12, "quantity": 1.0 }
+        { 
+          "item_barang_id": 11, 
+          "quantity": 2.5,
+          "canvas_image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+        },
+        { 
+          "item_barang_id": 12, 
+          "quantity": 1.0,
+          "canvas_image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
+        }
       ]
     },
     {
@@ -662,6 +670,7 @@ Authorization: Bearer your_jwt_token
   - `items.*.saran_plat_dasar` (optional, array of object): Mapping saran plat/shaft dasar per item saat create WO
     - `item_barang_id` (required): ID item barang yang dijadikan saran
     - `quantity` (optional, number): Jumlah yang digunakan
+    - `canvas_image` (optional, string): Base64 encoded image data untuk canvas gambar (format: data:image/[type];base64,[data])
   - `items.*.jenis_barang_id` (optional): ID jenis barang
   - `items.*.bentuk_barang_id` (optional): ID bentuk barang
   - `items.*.grade_barang_id` (optional): ID grade barang
@@ -726,15 +735,18 @@ Authorization: Bearer your_jwt_token
   "saran_plat_dasar": [
     {
       "item_barang_id": 1,
-      "is_selected": true
+      "quantity": 2.5,
+      "canvas_image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
     },
     {
       "item_barang_id": 2,
-      "is_selected": false
+      "quantity": 1.0,
+      "canvas_image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
     },
     {
       "item_barang_id": 3,
-      "is_selected": false
+      "quantity": null,
+      "canvas_image": null
     }
   ]
 }
