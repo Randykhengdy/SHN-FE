@@ -305,7 +305,7 @@ export default function ViewSalesOrderPage() {
       // Generate and download PDF
       await generateSalesOrderPDF(printData);
       
-      showAlert("Sukses", "Sales Order PDF berhasil diunduh!", "success");
+      showAlert("Sukses", "Sales Order PDF siap diunduh!", "success");
     } catch (error) {
       console.error('Error printing sales order:', error);
       showAlert("Error", "Gagal generate PDF Sales Order", "error");

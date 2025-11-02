@@ -260,13 +260,29 @@ export const generateSalesOrderPDF = async (salesOrderData) => {
     // Create a promise to handle the save completion
     return new Promise((resolve, reject) => {
       try {
-        pdf.save(fileName);
+        // Create a blob URL and trigger download manually for better control
+        const pdfBlob = pdf.output('blob');
+        const url = URL.createObjectURL(pdfBlob);
         
-        // Wait a bit to ensure the download has started
+        // Create a temporary link element
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        link.style.display = 'none';
+        
+        // Append to body and trigger click
+        document.body.appendChild(link);
+        link.click();
+
+        // Clean up the blob URL and link after a short delay
         setTimeout(() => {
-          console.log('✅ PDF generated successfully:', fileName);
-          resolve(true);
-        }, 1000);
+          URL.revokeObjectURL(url);
+          document.body.removeChild(link);
+        }, 100);
+
+        console.log('✅ PDF download initiated:', fileName);
+        resolve(true); // Resolve immediately
+        
       } catch (error) {
         console.error('❌ Error saving PDF:', error);
         reject(error);
@@ -385,10 +401,8 @@ export const generateWorkOrderPDF = async (workOrderData) => {
             <h3>Detail Items</h3>
             <table>
               <thead>
-                <tr>
+                <tr style="background-color: #f8f9fa;">
                   <th>Item</th>
-                  <th class="text-center">Bentuk</th>
-                  <th class="text-center">Grade</th>
                   <th class="text-center">Dimensi</th>
                   <th class="text-center">Qty</th>
                   <th class="text-center">Status</th>
@@ -399,17 +413,80 @@ export const generateWorkOrderPDF = async (workOrderData) => {
                 ${workOrderData.items?.map(item => `
                   <tr>
                     <td>${item.nama_item || '-'}</td>
-                    <td class="text-center">${item.bentuk_barang?.nama_bentuk || '-'}</td>
-                    <td class="text-center">${item.grade_barang || '-'}</td>
                     <td class="text-center">${item.bentuk_barang?.dimensi || '-'}</td>
                     <td class="text-center">${item.qty || 0}</td>
                     <td class="text-center">${item.status || '-'}</td>
                     <td>${item.keterangan || '-'}</td>
                   </tr>
-                `).join('') || '<tr><td colspan="7" class="text-center">Tidak ada item</td></tr>'}
+                `).join('') || '<tr><td colspan="5" class="text-center">Tidak ada item</td></tr>'}
               </tbody>
             </table>
           </div>
+
+          <!-- Canvas Images Section -->
+          ${workOrderData.canvasImages && workOrderData.canvasImages.length > 0 ? `
+          <div class="images-section" style="margin-top: 30px;">
+            <h3 style="margin-bottom: 20px; font-size: 16px; color: #333333;">Canvas Preview Images</h3>
+            ${(() => {
+              // Group images by work order item or item barang
+              const groupedImages = {};
+              let itemCounter = 1;
+              
+              workOrderData.canvasImages.forEach((image, index) => {
+                // Use wo_item_id, item_barang_id, or item_barang_name as grouping key
+                const groupKey = image.wo_item_id || image.item_barang_id || image.item_barang_name || `Item_${itemCounter}`;
+                
+                if (!groupedImages[groupKey]) {
+                  groupedImages[groupKey] = {
+                    itemNumber: itemCounter++,
+                    itemName: image.item_barang_name || `Item ${itemCounter - 1}`,
+                    images: []
+                  };
+                }
+                
+                groupedImages[groupKey].images.push({
+                  ...image,
+                  originalIndex: index
+                });
+              });
+              
+              // Generate HTML for grouped images
+              return Object.entries(groupedImages).map(([groupKey, group]) => {
+                return group.images.map((image, imageIndex) => `
+                  <div class="image-item" style="margin-bottom: 25px; page-break-inside: avoid;">
+                    <h4 style="margin-bottom: 10px; font-size: 14px; color: #555555; font-weight: bold;">
+                      WO Item ${group.itemNumber} - Image ${imageIndex + 1}
+                    </h4>
+                    <p style="margin-bottom: 10px; font-size: 12px; color: #666; font-style: italic;">
+                      Item: ${group.itemName}
+                    </p>
+                    <div style="text-align: center; border: 1px solid #ddd; padding: 10px; background-color: #f9f9f9;">
+                      ${image.canvas_image_base64 ? `
+                        <img src="${image.canvas_image_base64}" alt="WO Item ${group.itemNumber} - Image ${imageIndex + 1}" 
+                             style="max-width: 100%; max-height: 400px; object-fit: contain;" 
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                        <div style="display: none; padding: 20px; color: #666; font-style: italic;">
+                          Image tidak dapat dimuat
+                        </div>
+                      ` : `
+                        <div style="padding: 20px; color: #666; font-style: italic;">
+                          Canvas image tidak tersedia
+                        </div>
+                      `}
+                    </div>
+                    ${image.quantity ? `
+                      <p style="margin-top: 10px; font-size: 12px; color: #666;">
+                        Quantity: ${image.quantity}
+                        ${image.dimensi ? ` | Dimensi: ${image.dimensi}` : ''}
+                        ${image.wo_item_id ? ` | WO Item ID: ${image.wo_item_id}` : ''}
+                      </p>
+                    ` : ''}
+                  </div>
+                `).join('');
+              }).join('');
+            })()}
+          </div>
+          ` : ''}
 
           <!-- Footer -->
           <div class="footer">
@@ -472,13 +549,29 @@ export const generateWorkOrderPDF = async (workOrderData) => {
     // Create a promise to handle the save completion
     return new Promise((resolve, reject) => {
       try {
-        pdf.save(fileName);
+        // Create a blob URL and trigger download manually for better control
+        const pdfBlob = pdf.output('blob');
+        const url = URL.createObjectURL(pdfBlob);
         
-        // Wait a bit to ensure the download has started
+        // Create a temporary link element
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        link.style.display = 'none';
+        
+        // Append to body and trigger click
+        document.body.appendChild(link);
+        link.click();
+
+        // Clean up the blob URL and link after a short delay
         setTimeout(() => {
-          console.log('✅ Work Order PDF generated successfully:', fileName);
-          resolve(true);
-        }, 1000);
+          URL.revokeObjectURL(url);
+          document.body.removeChild(link);
+        }, 100);
+
+        console.log('✅ Work Order PDF download initiated:', fileName);
+        resolve(true); // Resolve immediately
+        
       } catch (error) {
         console.error('❌ Error saving Work Order PDF:', error);
         reject(error);

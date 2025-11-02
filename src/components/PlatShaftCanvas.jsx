@@ -41,7 +41,10 @@ export default function PlatShaftCanvas({
   // Store data in sessionStorage for the canvas
   const canvasData = {
     selectedItem,
-    workOrderItem,
+    workOrderItem: {
+      ...workOrderItem,
+      wo_item_unique_id: workOrderItem?.wo_item_unique_id || workOrderItem?.id || 'unknown'
+    },
     platPanjang,
     platLebar,
     itemPanjang,

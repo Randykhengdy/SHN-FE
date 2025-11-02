@@ -94,22 +94,38 @@ export default function ViewWorkOrderPage() {
     try {
       setLoading(true);
       
-      // Prepare print data
+      // Get canvas images for this work order
+      let canvasImages = [];
+      try {
+        console.log('🖼️ Fetching canvas images for WO ID:', id);
+        const imagesResponse = await workOrderService.getWorkOrderImages(id);
+        canvasImages = imagesResponse.data?.images || [];
+        console.log('✅ Canvas images fetched:', canvasImages);
+      } catch (error) {
+        console.warn('⚠️ Failed to fetch canvas images:', error);
+        // Continue without images if API fails
+      }
+      
+      // Prepare print data using workOrder object directly for more complete data
       const printData = {
-        nomor_wo: woNumber,
-        tanggal_wo: woDate,
-        due_date: dueDate,
-        priority: priority,
-        status: status,
-        assigned_to: assignedTo,
+        nomor_wo: workOrder?.nomor_wo || woNumber || 'N/A',
+        tanggal_wo: workOrder?.tanggal_wo || woDate || 'N/A',
+        due_date: workOrder?.tanggal_target || dueDate || 'N/A',
+        priority: workOrder?.prioritas || priority || 'N/A',
+        status: workOrder?.status || status || 'N/A',
+        assigned_to: workOrder?.handover_method || assignedTo || 'N/A',
         items: items.map(item => ({
-          nama_item: item.nama_item,
-          bentuk_barang: item.bentuk_barang,
-          grade_barang: item.grade_barang,
-          qty: item.qty,
-          status: item.status,
-          keterangan: item.keterangan
-        }))
+          nama_item: item.jenisBarang?.nama_jenis_barang || item.jenisBarang?.nama || item.nama_item || 'N/A',
+          bentuk_barang: {
+            nama_bentuk: item.bentukBarang?.nama_bentuk || item.bentukBarang?.nama || 'N/A',
+            dimensi: item.bentukBarang?.dimensi || `${item.panjang || 0}x${item.lebar || 0}x${item.ketebalan || 0}mm`
+          },
+          grade_barang: item.gradeBarang?.nama_grade || item.gradeBarang?.nama || item.grade_barang || 'N/A',
+          qty: item.qty || 0,
+          status: item.status || 'N/A',
+          keterangan: item.catatan || item.keterangan || 'N/A'
+        })),
+        canvasImages: canvasImages // Add canvas images to print data
       };
 
       console.log('🖨️ Generating Work Order PDF with data:', printData);
@@ -117,7 +133,7 @@ export default function ViewWorkOrderPage() {
       // Generate and download PDF
       await generateWorkOrderPDF(printData);
       
-      showAlert('Work Order PDF berhasil diunduh!', 'success');
+      showAlert('Work Order PDF siap diunduh!', 'success');
     } catch (error) {
       console.error('❌ Error generating Work Order PDF:', error);
       showAlert('Gagal mengunduh Work Order PDF. Silakan coba lagi.', 'error');
@@ -728,8 +744,8 @@ export default function ViewWorkOrderPage() {
                         <TableRow key={item.id || index} className="hover:bg-gray-50">
                           <TableCell className="font-medium">{index + 1}</TableCell>
                           <TableCell>{item.jenisBarang?.nama_jenis_barang || item.jenisBarang?.nama || 'N/A'}</TableCell>
-                          <TableCell>{item.bentukBarang?.nama_bentuk_barang || item.bentukBarang?.nama || 'N/A'}</TableCell>
-                          <TableCell>{item.gradeBarang?.nama_grade_barang || item.gradeBarang?.nama || 'N/A'}</TableCell>
+                          <TableCell>{item.bentukBarang?.nama_bentuk || item.bentukBarang?.nama || 'N/A'}</TableCell>
+                          <TableCell>{item.gradeBarang?.nama_grade || item.gradeBarang?.nama || 'N/A'}</TableCell>
                           <TableCell>{dimensi}</TableCell>
                           <TableCell>{item.qty}</TableCell>
                           <TableCell>{luasPerItem.toFixed(2)} mm²</TableCell>

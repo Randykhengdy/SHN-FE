@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +34,10 @@ const periodOptions = [
 export default function WorkOrderPage() {
   const navigate = useNavigate();
   const { showAlert, AlertComponent } = useAlert();
+  
+  // Create a stable reference for showAlert
+  const showAlertRef = useRef(showAlert);
+  showAlertRef.current = showAlert;
   
   // State
   const [workOrders, setWorkOrders] = useState([]);
@@ -110,11 +114,11 @@ export default function WorkOrderPage() {
       setTotalItems(result.total || result.pagination?.total || transformedData.length);
     } catch (error) {
       console.error('Error loading work orders:', error);
-      showAlert("Error", "Gagal memuat data Work Order", "error");
+      showAlertRef.current("Error", "Gagal memuat data Work Order", "error");
     } finally {
       setLoading(false);
     }
-  }, [currentPage, itemsPerPage, searchTerm, statusFilter, periodFilter, filterWoNumber, filterSoNumber, filterCustomer, filterWarehouse, sortBy, sortOrder, showAlert]);
+  }, [currentPage, itemsPerPage, searchTerm, statusFilter, periodFilter, filterWoNumber, filterSoNumber, filterCustomer, filterWarehouse, sortBy, sortOrder]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -127,7 +131,7 @@ export default function WorkOrderPage() {
   };
 
   useEffect(() => {
-    // Clear canvas-previews folder when Work Order page loads
+    // Clear canvas-previews folder when Work Order page loads (only once)
     const clearCanvasPreviews = async () => {
       try {
         if (window.electronAPI && window.electronAPI.clearCanvasPreviews) {
@@ -147,6 +151,9 @@ export default function WorkOrderPage() {
     };
 
     clearCanvasPreviews();
+  }, []); // Empty dependency array - only run once on mount
+
+  useEffect(() => {
     loadWorkOrders();
   }, [loadWorkOrders]);
 
@@ -191,13 +198,13 @@ export default function WorkOrderPage() {
       setShowDeleteModal(false);
       
       // Show success message and reload data after alert closes
-      showAlert("Sukses", "Work Order berhasil dihapus!", "success", () => {
+      showAlertRef.current("Sukses", "Work Order berhasil dihapus!", "success", () => {
         loadWorkOrders();
       });
       
     } catch (error) {
       console.error('❌ Error deleting Work Order:', error);
-      showAlert("Error", "Gagal menghapus Work Order", "error");
+      showAlertRef.current("Error", "Gagal menghapus Work Order", "error");
     } finally {
       setIsDeleting(false);
     }
@@ -215,7 +222,7 @@ export default function WorkOrderPage() {
       setShowDeleteRequestModal(false);
       
       // Show success message and reload data after alert closes
-      showAlert(
+      showAlertRef.current(
         "Sukses", 
         "Permintaan hapus berhasil diajukan!\n\n" +
         "📧 Admin akan meninjau permintaan Anda.\n" +
@@ -228,7 +235,7 @@ export default function WorkOrderPage() {
       
     } catch (error) {
       console.error('❌ Error requesting delete:', error);
-      showAlert("Error", "Gagal mengajukan permintaan hapus", "error");
+      showAlertRef.current("Error", "Gagal mengajukan permintaan hapus", "error");
     }
   };
 
@@ -241,13 +248,13 @@ export default function WorkOrderPage() {
       console.log('✅ Delete request cancelled:', response);
       
       // Show success message and reload data after alert closes
-      showAlert("Sukses", "Permintaan hapus berhasil dibatalkan!", "success", () => {
+      showAlertRef.current("Sukses", "Permintaan hapus berhasil dibatalkan!", "success", () => {
         loadWorkOrders();
       });
       
     } catch (error) {
       console.error('❌ Error cancelling delete request:', error);
-      showAlert("Error", "Gagal membatalkan permintaan hapus", "error");
+      showAlertRef.current("Error", "Gagal membatalkan permintaan hapus", "error");
     }
   };
 
@@ -263,7 +270,7 @@ export default function WorkOrderPage() {
 
   const handleExport = () => {
     // TODO: Implement export functionality
-    showAlert('Info', 'Fitur export akan segera tersedia', 'info');
+    showAlertRef.current('Info', 'Fitur export akan segera tersedia', 'info');
   };
 
   // Pagination calculations
@@ -293,6 +300,7 @@ export default function WorkOrderPage() {
           <h2 className="text-lg font-semibold text-gray-800">Daftar Work Order</h2>
         </div>
         <div className="flex gap-2">
+          {/* Hidden buttons as requested
           <Button 
             onClick={() => navigate('/canvas-testing')} 
             variant="outline" 
@@ -309,6 +317,7 @@ export default function WorkOrderPage() {
             <Palette className="w-4 h-4 mr-2" />
             Canvas Grid
           </Button>
+          */}
           <Button onClick={handleAddWorkOrder} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             Tambah Work Order

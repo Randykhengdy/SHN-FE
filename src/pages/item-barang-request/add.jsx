@@ -10,7 +10,7 @@ import { ArrowLeft, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { itemBarangRequestService } from "@/services/itemBarangRequestService";
-import { masterDataService } from "@/services/masterDataService";
+import { getItemBarangOptions } from "@/services/masterDataService";
 
 const urgencyOptions = [
     { value: "low", label: "Low" },
@@ -39,7 +39,7 @@ export default function AddItemBarangRequestPage() {
         const loadItemBarangOptions = async () => {
             try {
                 setLoading(true);
-                const response = await masterDataService.getItemBarangOptions();
+                const response = await getItemBarangOptions();
                 if (response.success) {
                     setItemBarangOptions(response.data || []);
                 }

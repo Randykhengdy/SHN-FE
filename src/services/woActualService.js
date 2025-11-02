@@ -95,8 +95,8 @@ export const woActualService = {
     if (params.search) queryParams.append('search', params.search);
     if (params.status) queryParams.append('status', params.status);
     
-    // This endpoint should return WO Planning that can be converted to WO Actual
-    const url = `${API_ENDPOINTS.workOrderPlanning}/for-actual?${queryParams.toString()}`;
+    // Use the correct work order planning endpoint
+    const url = `${API_ENDPOINTS.workOrderPlanning}?${queryParams.toString()}`;
     return request(url, { method: 'GET' });
   }
 };

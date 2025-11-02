@@ -1,5 +1,6 @@
 import { request } from '@/lib/request';
 import { API_ENDPOINTS } from '@/config/api';
+import { processWorkOrderItemsWithCanvasPreviews } from '@/lib/canvasPreviewUtils';
 
 const BASE_URL = API_ENDPOINTS.workOrderPlanning;
 
@@ -33,18 +34,46 @@ export const workOrderService = {
 
   // Create new work order
   createWorkOrder: async (workOrderData) => {
-    return request(BASE_URL, {
-      method: 'POST',
-      body: JSON.stringify(workOrderData)
-    });
+    try {
+      // Process items to add canvas previews if they exist
+      if (workOrderData.items && Array.isArray(workOrderData.items)) {
+        workOrderData.items = await processWorkOrderItemsWithCanvasPreviews(workOrderData.items);
+      }
+      
+      return request(BASE_URL, {
+        method: 'POST',
+        body: JSON.stringify(workOrderData)
+      });
+    } catch (error) {
+      console.error('Error in createWorkOrder:', error);
+      // If canvas processing fails, still proceed with the original data
+      return request(BASE_URL, {
+        method: 'POST',
+        body: JSON.stringify(workOrderData)
+      });
+    }
   },
 
   // Update work order
   updateWorkOrder: async (id, workOrderData) => {
-    return request(`${BASE_URL}/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(workOrderData)
-    });
+    try {
+      // Process items to add canvas previews if they exist
+      if (workOrderData.items && Array.isArray(workOrderData.items)) {
+        workOrderData.items = await processWorkOrderItemsWithCanvasPreviews(workOrderData.items);
+      }
+      
+      return request(`${BASE_URL}/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(workOrderData)
+      });
+    } catch (error) {
+      console.error('Error in updateWorkOrder:', error);
+      // If canvas processing fails, still proceed with the original data
+      return request(`${BASE_URL}/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(workOrderData)
+      });
+    }
   },
 
   // Delete work order
@@ -141,6 +170,11 @@ export const workOrderService = {
 
   // Get canvas data by item barang ID
   getCanvasDataByItemBarangId: async (itemBarangId) => {
-    return request(`${BASE_URL}/item-barang/${itemBarangId}/canvas`, { method: 'GET' });
+    return request(`${API_ENDPOINTS.itemBarang}/${itemBarangId}/canvas`, { method: 'GET' });
+  },
+
+  // Get all canvas images by Work Order ID
+  getWorkOrderImages: async (workOrderId) => {
+    return request(`${BASE_URL}/${workOrderId}/images`, { method: 'GET' });
   }
 };

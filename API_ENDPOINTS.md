@@ -402,6 +402,32 @@
 }
 ```
 
+- **Error Responses**:
+```json
+// Validation Error (422)
+{
+  "success": false,
+  "message": "Validasi gagal",
+  "errors": {
+    "foto_bukti": ["The foto bukti field is required."],
+    "actualWorkOrderId": ["The actual work order id field is required."]
+  }
+}
+
+// Not Found Error (500)
+{
+  "success": false,
+  "message": "Terjadi kesalahan saat menyimpan data",
+  "error": "ActualWorkOrder dengan ID 999 tidak ditemukan"
+}
+
+// Empty Request Error (400)
+{
+  "success": false,
+  "message": "Data tidak boleh kosong"
+}
+```
+
 ## Notes:
 - All endpoints require authentication via JWT token (except Static Data APIs)
 - Role-based access control is implemented via middleware
@@ -846,14 +872,70 @@ Authorization: Bearer your_jwt_token
 - **Description**: Mendapatkan data untuk print SPK work order
 - **Response**: Data terformat untuk print dengan informasi jenis barang, bentuk barang, grade barang, ukuran, qty, berat, luas, plat dasar, dan pelaksana
 
+#### 15. Get All Canvas Images by Work Order ID
+- **GET** `/api/work-order-planning/{id}/images`
+- **Description**: Mendapatkan semua canvas images dari Work Order berdasarkan WO ID. Loop ke dalam child WO items dan ambil canvas images dalam format base64 dari saran plat dasar.
+- **Parameters**:
+  - `id` (required): Work Order Planning ID
+- **Response**:
+```json
+{
+  "success": true,
+  "message": "Canvas images berhasil diambil",
+  "data": {
+    "work_order": {
+      "id": 1,
+      "wo_unique_id": "WO-2024-001",
+      "nomor_wo": "WO/001/2024",
+      "tanggal_wo": "2024-01-15",
+      "status": "active",
+      "prioritas": "high"
+    },
+    "total_images": 2,
+    "images": [
+      {
+        "wo_id": 1,
+        "wo_unique_id": "WO-2024-001",
+        "wo_item_id": 5,
+        "wo_item_unique_id": "WOI-2024-001-001",
+        "saran_id": 10,
+        "item_barang_id": 25,
+        "item_barang_name": "Plat Aluminium 5mm",
+        "canvas_file_path": "canvas_woitem5_25/canvas_image.jpg",
+        "canvas_image_base64": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...",
+        "is_selected": true,
+        "quantity": 2.5,
+        "created_at": "2024-01-15T10:30:00.000000Z",
+        "updated_at": "2024-01-15T10:30:00.000000Z"
+      },
+      {
+        "wo_id": 1,
+        "wo_unique_id": "WO-2024-001",
+        "wo_item_id": 6,
+        "wo_item_unique_id": "WOI-2024-001-002",
+        "saran_id": 11,
+        "item_barang_id": 30,
+        "item_barang_name": "Plat Steel 10mm",
+        "canvas_file_path": "canvas_woitem6_30/canvas_image.jpg",
+        "canvas_image_base64": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...",
+        "is_selected": false,
+        "quantity": 1.0,
+        "created_at": "2024-01-15T11:00:00.000000Z",
+        "updated_at": "2024-01-15T11:00:00.000000Z"
+      }
+    ]
+  }
+}
+```
+
 ### Saran Plat/Shaft Dasar Management
 
-#### 15. Get Saran Plat Dasar by Item
+#### 16. Get Saran Plat Dasar by Item
 - **GET** `/api/work-order-planning/item/{itemId}/saran-plat-dasar`
 - **Description**: Mendapatkan semua saran plat/shaft dasar untuk item tertentu
 - **Response**: List saran plat dasar dengan relasi item barang, diurutkan berdasarkan created_at
 
-#### 16. Save Canvas (Saran Plat)
+#### 17. Save Canvas (Saran Plat)
 - **POST** `/api/work-order-planning/saran-plat-dasar`
 - **Description**: Menyimpan canvas JSON dan/atau canvas image untuk `item_barang_id`. Tidak membuat record saran; mapping saran dilakukan saat create Work Order.
 - **Request Body**:
@@ -1068,10 +1150,11 @@ Authorization: Bearer your_jwt_token
   "foto_bukti": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...",
   "actualWorkOrderId": 1,
   "planningWorkOrderId": 1,
-  "items": [
-    {
+  "items": {
+    "1": {
       "qtyActual": 10,
       "beratActual": 25.5,
+      "timestamp": "2024-01-01T08:00:00Z",
       "assignments": [
         {
           "id": 1,
@@ -1082,7 +1165,8 @@ Authorization: Bearer your_jwt_token
           "tanggal": "2024-01-01",
           "jamMulai": "08:00:00",
           "jamSelesai": "12:00:00",
-          "catatan": "Shift pagi"
+          "catatan": "Shift pagi",
+          "status": "Selesai"
         },
         {
           "id": 2,
@@ -1093,41 +1177,79 @@ Authorization: Bearer your_jwt_token
           "tanggal": "2024-01-01",
           "jamMulai": "13:00:00",
           "jamSelesai": "17:00:00",
-          "catatan": "Shift siang"
+          "catatan": "Shift siang",
+          "status": "Selesai"
         }
       ]
     }
-  ]
+  }
 }
 ```
 - **Parameters**:
   - `foto_bukti` (required): Base64 encoded image sebagai bukti pelaksanaan work order actual
   - `actualWorkOrderId` (required): ID work order actual yang akan menyimpan data ini
   - `planningWorkOrderId` (required): ID work order planning sebagai referensi
-  - `items` (required): Array items dengan data actual yang direalisasikan
+  - `items` (required): Object items dengan data actual yang direalisasikan
     - Key: ID work order planning item (sebagai key object)
-    - `qtyActual` (required): Quantity actual yang berhasil dikerjakan
-    - `beratActual` (required): Berat actual yang berhasil dikerjakan
+    - `qtyActual` (required): Quantity actual yang berhasil dikerjakan (numeric, min: 0)
+    - `beratActual` (required): Berat actual yang berhasil dikerjakan (numeric, min: 0)
+    - `timestamp` (required): Timestamp pelaksanaan (format: ISO 8601)
     - `assignments` (required): Array assignment pelaksana yang mengerjakan item ini
-      - `id` (required): ID work order planning item
-      - `qty` (required): Quantity yang dikerjakan oleh pelaksana ini
-      - `berat` (required): Berat yang dikerjakan oleh pelaksana ini
-      - `pelaksana` (required): Nama pelaksana
-      - `pelaksana_id` (required): ID pelaksana
+      - `id` (required): ID work order planning item (integer)
+      - `qty` (required): Quantity yang dikerjakan oleh pelaksana ini (integer, min: 1)
+      - `berat` (required): Berat yang dikerjakan oleh pelaksana ini (numeric, min: 0)
+      - `pelaksana` (required): Nama pelaksana (string)
+      - `pelaksana_id` (required): ID pelaksana (integer)
       - `tanggal` (required): Tanggal pelaksanaan (format: YYYY-MM-DD)
       - `jamMulai` (required): Jam mulai kerja (format: HH:MM:SS)
       - `jamSelesai` (required): Jam selesai kerja (format: HH:MM:SS)
-      - `catatan` (optional): Catatan pelaksanaan
+      - `catatan` (optional): Catatan pelaksanaan (string)
+      - `status` (required): Status pelaksanaan (string)
 - **Response**:
 ```json
 {
   "success": true,
-  "message": "Work Order Actual berhasil disimpan",
+  "message": "Data WorkOrderActual berhasil disimpan",
   "data": {
-    "work_order_actual_id": 1,
-    "items_saved": 1,
-    "assignments_saved": 2
+    "actualWorkOrderId": 1,
+    "planningWorkOrderId": 1,
+    "items": [
+      {
+        "plan_item_id": 1,
+        "actual_item_id": 1,
+        "qty_actual": 10,
+        "berat_actual": 25.5,
+        "assignments_count": 2,
+        "timestamp": "2024-01-01T08:00:00Z"
+      }
+    ]
   }
+}
+```
+
+- **Error Responses**:
+```json
+// Validation Error (422)
+{
+  "success": false,
+  "message": "Validasi gagal",
+  "errors": {
+    "foto_bukti": ["The foto bukti field is required."],
+    "actualWorkOrderId": ["The actual work order id field is required."]
+  }
+}
+
+// Not Found Error (500)
+{
+  "success": false,
+  "message": "Terjadi kesalahan saat menyimpan data",
+  "error": "ActualWorkOrder dengan ID 999 tidak ditemukan"
+}
+
+// Empty Request Error (400)
+{
+  "success": false,
+  "message": "Data tidak boleh kosong"
 }
 ```
 
@@ -1142,6 +1264,9 @@ Authorization: Bearer your_jwt_token
 - **Form Structure**: Form add mengikuti struktur yang mirip dengan work order planning namun fokus pada data realisasi
 - **Validation**: Validasi lengkap untuk semua field required dan format data
 - **Transaction Safety**: Menggunakan database transaction untuk memastikan konsistensi data
+- **Auto Status Update**: Otomatis mengubah status Work Order Planning menjadi 'Selesai' dan mengisi `close_wo_at` timestamp
+- **Data Cleanup**: Menghapus data actual items dan pelaksana yang sudah ada sebelum menyimpan data baru
+- **File Management**: Menyimpan foto bukti ke folder `work-order-actual/{actualWorkOrderId}/` dengan nama `foto_bukti.jpg`
 
 
 ## Notes

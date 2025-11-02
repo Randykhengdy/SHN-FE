@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Save, Plus, Trash2, Calendar, User, Package, FileText } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Trash2, Calendar, User, Package, FileText, Search } from 'lucide-react';
 import { useAlert } from '@/hooks/useAlert';
 import PageLayout from '@/components/PageLayout';
 import { woActualService } from '@/services/woActualService';
@@ -17,26 +17,29 @@ export default function AddWOActualPage() {
   const navigate = useNavigate();
   const { showAlert, AlertComponent } = useAlert();
 
-  // Form State
+  // Form State - Updated to match new API structure
   const [formData, setFormData] = useState({
-    work_order_planning_id: '',
-    nomor_wo_actual: '',
-    tanggal_mulai: '',
-    tanggal_selesai: '',
+    planningWorkOrderId: '',
+    actualWorkOrderId: '',
+    tanggal_mulai: new Date().toISOString().split('T')[0], // Default to today
     jam_mulai: '',
     jam_selesai: '',
-    status: 'Pending',
+    status: 'Pending', // Default status
+    prioritas: 'MEDIUM', // Default priority
     catatan: '',
-    prioritas: 'MEDIUM'
+    foto_bukti: null, // Will store base64 encoded image
+    foto_bukti_preview: null // For preview display
   });
 
   // WO Planning Options
   const [woPlanningList, setWoPlanningList] = useState([]);
   const [selectedWOPlanning, setSelectedWOPlanning] = useState(null);
   const [loadingWOPlanning, setLoadingWOPlanning] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
 
-  // Items State
-  const [actualItems, setActualItems] = useState([]);
+  // Items State - Updated structure
+  const [actualItems, setActualItems] = useState({});
 
   // Loading State
   const [loading, setLoading] = useState(false);
@@ -57,12 +60,23 @@ export default function AddWOActualPage() {
     }
   }, [showAlert]);
 
+  // Filter WO Planning based on search term
+  const filteredWOPlanningList = woPlanningList.filter(planning => {
+    if (!searchTerm) return true;
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      planning.nomor_wo?.toLowerCase().includes(searchLower) ||
+      planning.pelanggan?.nama?.toLowerCase().includes(searchLower) ||
+      planning.id?.toString().includes(searchLower)
+    );
+  });
+
   // Load WO Planning detail when selected
   const handleWOPlanningChange = async (planningId) => {
     if (!planningId) {
       setSelectedWOPlanning(null);
-      setActualItems([]);
-      setFormData(prev => ({ ...prev, work_order_planning_id: '' }));
+      setActualItems({});
+      setFormData(prev => ({ ...prev, planningWorkOrderId: '' }));
       return;
     }
 
@@ -70,26 +84,42 @@ export default function AddWOActualPage() {
       setLoading(true);
       // Find selected planning from list
       const planning = woPlanningList.find(p => p.id === planningId);
+      console.log('Selected planning:', planning);
+      
       if (planning) {
         setSelectedWOPlanning(planning);
         setFormData(prev => ({
           ...prev,
-          work_order_planning_id: planningId,
-          nomor_wo_actual: `WOA-${Date.now()}`
+          planningWorkOrderId: planningId,
+          actualWorkOrderId: planning.id // Use planning ID as actual ID for now
         }));
 
-        // Initialize actual items based on planning items
+        // Initialize actual items based on planning items with new structure
         if (planning.items && planning.items.length > 0) {
-          const initialItems = planning.items.map(item => ({
-            work_order_item_id: item.id,
-            jumlah_actual: 0,
-            jumlah_cacat: 0,
-            catatan: '',
-            status: 'Pending',
-            // Planning item details for display
-            planning_item: item
-          }));
+          console.log('Planning items:', planning.items);
+          const initialItems = {};
+          planning.items.forEach(item => {
+            initialItems[item.id] = {
+              qtyActual: item.jumlah || 0, // Mirror planning quantity as default
+              beratActual: item.berat || 0, // Mirror planning weight as default
+              timestamp: new Date().toISOString(),
+              assignments: []
+            };
+          });
+          console.log('Initial actual items:', initialItems);
           setActualItems(initialItems);
+        } else {
+          console.log('No items found in planning, creating sample items');
+          // Create sample items if planning doesn't have items
+          const sampleItems = {
+            'sample-1': {
+              qtyActual: 0,
+              beratActual: 0,
+              timestamp: new Date().toISOString(),
+              assignments: []
+            }
+          };
+          setActualItems(sampleItems);
         }
       }
     } catch (error) {
@@ -109,45 +139,110 @@ export default function AddWOActualPage() {
   };
 
   // Handle actual item changes
-  const handleActualItemChange = (index, field, value) => {
-    setActualItems(prev => {
-      const updated = [...prev];
-      updated[index] = {
-        ...updated[index],
-        [field]: value
-      };
-      return updated;
-    });
+  const handleActualItemChange = (itemId, field, value) => {
+    setActualItems(prev => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        [field]: value,
+        timestamp: new Date().toISOString() // Update timestamp on any change
+      }
+    }));
   };
 
-  // Add new actual item
-  const addActualItem = () => {
-    if (!selectedWOPlanning) {
-      showAlert('Please select WO Planning first', 'warning');
-      return;
-    }
-
-    const newItem = {
-      work_order_item_id: '',
-      jumlah_actual: 0,
-      jumlah_cacat: 0,
+  // Add assignment to item
+  const addAssignment = (itemId) => {
+    const newAssignment = {
+      id: Date.now(), // Temporary ID
+      qty: 0,
+      berat: 0,
+      pelaksana: '',
+      pelaksana_id: null,
+      tanggal: new Date().toISOString().split('T')[0],
+      jamMulai: '',
+      jamSelesai: '',
       catatan: '',
-      status: 'Pending',
-      planning_item: null
+      status: 'Pending'
     };
-    setActualItems(prev => [...prev, newItem]);
+
+    setActualItems(prev => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        assignments: [...(prev[itemId]?.assignments || []), newAssignment]
+      }
+    }));
   };
 
-  // Remove actual item
-  const removeActualItem = (index) => {
-    setActualItems(prev => prev.filter((_, i) => i !== index));
+  // Remove assignment from item
+  const removeAssignment = (itemId, assignmentIndex) => {
+    setActualItems(prev => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        assignments: prev[itemId].assignments.filter((_, index) => index !== assignmentIndex)
+      }
+    }));
+  };
+
+  // Handle assignment changes
+  const handleAssignmentChange = (itemId, assignmentIndex, field, value) => {
+    setActualItems(prev => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        assignments: prev[itemId].assignments.map((assignment, index) => 
+          index === assignmentIndex 
+            ? { ...assignment, [field]: value }
+            : assignment
+        )
+      }
+    }));
+  };
+
+  // Handle foto bukti upload
+  const handleFotoBuktiChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        showAlert('Please select an image file', 'error');
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        showAlert('File size must be less than 5MB', 'error');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64 = e.target.result;
+        setFormData(prev => ({
+          ...prev,
+          foto_bukti: base64,
+          foto_bukti_preview: base64
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Remove foto bukti
+  const removeFotoBukti = () => {
+    setFormData(prev => ({
+      ...prev,
+      foto_bukti: '',
+      foto_bukti_preview: ''
+    }));
   };
 
   // Save WO Actual
   const handleSave = async () => {
     try {
       // Validation
-      if (!formData.work_order_planning_id) {
+      if (!formData.planningWorkOrderId) {
         showAlert('Please select WO Planning', 'warning');
         return;
       }
@@ -157,16 +252,31 @@ export default function AddWOActualPage() {
         return;
       }
 
-      if (actualItems.length === 0) {
-        showAlert('Please add at least one actual item', 'warning');
-        return;
-      }
+      // Validate that at least one item has actual data
+      const hasActualData = Object.keys(actualItems).some(itemId => {
+        const item = actualItems[itemId];
+        return item.qtyActual > 0 || item.beratActual > 0 || item.assignments.length > 0;
+      });
+
+      if (!hasActualData) {
+         showAlert('Please enter actual data for at least one item', 'warning');
+         return;
+       }
 
       setSaving(true);
 
+      // Prepare data according to new API structure
       const saveData = {
-        ...formData,
-        items: actualItems.filter(item => item.work_order_item_id)
+        planningWorkOrderId: formData.planningWorkOrderId,
+        actualWorkOrderId: formData.actualWorkOrderId,
+        tanggal_mulai: formData.tanggal_mulai,
+        jam_mulai: formData.jam_mulai,
+        jam_selesai: formData.jam_selesai,
+        status: formData.status,
+        prioritas: formData.prioritas,
+        catatan: formData.catatan || '',
+        foto_bukti: formData.foto_bukti || '',
+        items: actualItems
       };
 
       console.log('Saving WO Actual:', saveData);
@@ -193,6 +303,20 @@ export default function AddWOActualPage() {
   useEffect(() => {
     loadWOPlanningOptions();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showDropdown && !event.target.closest('.relative')) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDropdown]);
 
   return (
     <PageLayout>
@@ -242,34 +366,60 @@ export default function AddWOActualPage() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="work_order_planning_id">WO Planning *</Label>
-                    <Select
-                      value={formData.work_order_planning_id}
-                      onValueChange={(value) => handleWOPlanningChange(value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih WO Planning" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {loadingWOPlanning ? (
-                          <SelectItem value="loading" disabled>Loading...</SelectItem>
-                        ) : (
-                          woPlanningList.map((planning) => (
-                            <SelectItem key={planning.id} value={planning.id}>
-                              {planning.nomor_wo} - {planning.pelanggan?.nama || 'N/A'}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="planningWorkOrderId">WO Planning *</Label>
+                    <div className="relative">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          type="text"
+                          placeholder={selectedWOPlanning ? selectedWOPlanning.nomor_wo : "Cari WO Planning..."}
+                          value={searchTerm}
+                          onChange={(e) => {
+                            setSearchTerm(e.target.value);
+                            setShowDropdown(true);
+                          }}
+                          onFocus={() => setShowDropdown(true)}
+                          className="pl-10"
+                        />
+                      </div>
+                      
+                      {/* Dropdown */}
+                      {showDropdown && (
+                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                          {loadingWOPlanning ? (
+                            <div className="p-3 text-center text-gray-500">Loading...</div>
+                          ) : filteredWOPlanningList.length === 0 ? (
+                            <div className="p-3 text-center text-gray-500">
+                              {searchTerm ? 'Tidak ada WO Planning yang cocok' : 'Tidak ada WO Planning tersedia'}
+                            </div>
+                          ) : (
+                            filteredWOPlanningList.map((planning) => (
+                              <div
+                                key={planning.id}
+                                className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                                onClick={() => {
+                                  handleWOPlanningChange(planning.id);
+                                  setSearchTerm('');
+                                  setShowDropdown(false);
+                                }}
+                              >
+                                <div className="font-medium text-gray-900">
+                                  {planning.nomor_wo}
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div>
-                    <Label htmlFor="nomor_wo_actual">No. WO Actual</Label>
+                    <Label htmlFor="actualWorkOrderId">Actual WO ID</Label>
                     <Input
-                      id="nomor_wo_actual"
-                      value={formData.nomor_wo_actual}
-                      onChange={(e) => handleInputChange('nomor_wo_actual', e.target.value)}
+                      id="actualWorkOrderId"
+                      value={formData.actualWorkOrderId}
+                      onChange={(e) => handleInputChange('actualWorkOrderId', e.target.value)}
                       placeholder="Auto generated"
                       readOnly
                     />
@@ -282,16 +432,6 @@ export default function AddWOActualPage() {
                       type="date"
                       value={formData.tanggal_mulai}
                       onChange={(e) => handleInputChange('tanggal_mulai', e.target.value)}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="tanggal_selesai">Tanggal Selesai</Label>
-                    <Input
-                      id="tanggal_selesai"
-                      type="date"
-                      value={formData.tanggal_selesai}
-                      onChange={(e) => handleInputChange('tanggal_selesai', e.target.value)}
                     />
                   </div>
 
@@ -322,7 +462,7 @@ export default function AddWOActualPage() {
                       onValueChange={(value) => handleInputChange('status', value)}
                     >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Pilih Status" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Pending">Pending</SelectItem>
@@ -340,7 +480,7 @@ export default function AddWOActualPage() {
                       onValueChange={(value) => handleInputChange('prioritas', value)}
                     >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Pilih Prioritas" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="LOW">Low</SelectItem>
@@ -362,133 +502,192 @@ export default function AddWOActualPage() {
                     rows={3}
                   />
                 </div>
+
+                {/* Foto Bukti Upload */}
+                <div>
+                  <Label htmlFor="foto_bukti">Foto Bukti</Label>
+                  <div className="space-y-2">
+                    <Input
+                      id="foto_bukti"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFotoBuktiChange}
+                      className="cursor-pointer"
+                    />
+                    {formData.foto_bukti_preview && (
+                      <div className="relative inline-block">
+                        <img
+                          src={formData.foto_bukti_preview}
+                          alt="Preview foto bukti"
+                          className="w-32 h-32 object-cover rounded-lg border"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={removeFotoBukti}
+                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                        >
+                          ×
+                        </Button>
+                      </div>
+                    )}
+                    <p className="text-sm text-gray-500">
+                      Format: JPG, PNG, GIF. Maksimal 5MB.
+                    </p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
             {/* Actual Items */}
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Package className="h-5 w-5" />
-                    Item Actual
-                  </CardTitle>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={addActualItem}
-                    className="flex items-center gap-2"
-                    disabled={!selectedWOPlanning}
-                  >
-                    <Plus className="h-4 w-4" />
-                    Tambah Item
-                  </Button>
-                </div>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Item Actual
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                {actualItems.length === 0 ? (
+                {Object.keys(actualItems).length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     {!selectedWOPlanning 
                       ? 'Pilih WO Planning terlebih dahulu'
-                      : 'Belum ada item actual. Klik "Tambah Item" untuk menambah.'
+                      : 'Belum ada item actual. Item akan muncul setelah memilih WO Planning.'
                     }
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Item Planning</TableHead>
-                          <TableHead>Qty Planning</TableHead>
-                          <TableHead>Qty Actual</TableHead>
-                          <TableHead>Qty Cacat</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Catatan</TableHead>
-                          <TableHead className="text-center">Aksi</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {actualItems.map((item, index) => (
-                          <TableRow key={index}>
-                            <TableCell>
-                              {item.planning_item ? (
+                  <div className="space-y-4">
+                    {/* Display items from planning if available, otherwise show actual items */}
+                    {selectedWOPlanning?.items && selectedWOPlanning.items.length > 0 ? (
+                      selectedWOPlanning.items.map((planningItem) => {
+                        const actualItem = actualItems[planningItem.id] || {};
+                        return (
+                          <Card key={planningItem.id} className="p-4">
+                            <div className="space-y-4">
+                              {/* Item Header */}
+                              <div className="flex justify-between items-start">
                                 <div>
-                                  <div className="font-medium">
-                                    {item.planning_item.jenis_barang?.nama || 'N/A'}
-                                  </div>
-                                  <div className="text-sm text-gray-500">
-                                    {item.planning_item.bentuk_barang?.nama || 'N/A'} - 
-                                    {item.planning_item.grade_barang?.nama || 'N/A'}
-                                  </div>
+                                  <h4 className="font-medium">
+                                    {planningItem.jenis_barang?.nama || 'Item'}
+                                  </h4>
+                                  <p className="text-sm text-gray-500">
+                                    {planningItem.bentuk_barang?.nama || 'Bentuk'} - 
+                                    {planningItem.grade_barang?.nama || 'Grade'}
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    Qty Planning: {planningItem.jumlah || 0}
+                                  </p>
                                 </div>
-                              ) : (
-                                'N/A'
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {item.planning_item?.jumlah || 0}
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="number"
-                                value={item.jumlah_actual}
-                                onChange={(e) => handleActualItemChange(index, 'jumlah_actual', parseInt(e.target.value) || 0)}
-                                className="w-20"
-                                min="0"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="number"
-                                value={item.jumlah_cacat}
-                                onChange={(e) => handleActualItemChange(index, 'jumlah_cacat', parseInt(e.target.value) || 0)}
-                                className="w-20"
-                                min="0"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Select
-                                value={item.status}
-                                onValueChange={(value) => handleActualItemChange(index, 'status', value)}
-                              >
-                                <SelectTrigger className="w-32">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Pending">Pending</SelectItem>
-                                  <SelectItem value="On Progress">On Progress</SelectItem>
-                                  <SelectItem value="Completed">Completed</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                value={item.catatan}
-                                onChange={(e) => handleActualItemChange(index, 'catatan', e.target.value)}
-                                placeholder="Catatan..."
-                                className="w-32"
-                              />
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => removeActualItem(index)}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                              </div>
+
+                              {/* Actual Data */}
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                  <Label>Qty Actual</Label>
+                                  <Input
+                                    type="number"
+                                    value={actualItem.qtyActual || 0}
+                                    onChange={(e) => handleActualItemChange(planningItem.id, 'qtyActual', parseInt(e.target.value) || 0)}
+                                    min="0"
+                                  />
+                                </div>
+                                <div>
+                                  <Label>Berat Actual (kg)</Label>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={actualItem.beratActual || 0}
+                                    onChange={(e) => handleActualItemChange(planningItem.id, 'beratActual', parseFloat(e.target.value) || 0)}
+                                    min="0"
+                                  />
+                                </div>
+                                <div>
+                                  <Label>Status</Label>
+                                  <Select
+                                    value={actualItem.status || 'PENDING'}
+                                    onValueChange={(value) => handleActualItemChange(planningItem.id, 'status', value)}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="PENDING">Pending</SelectItem>
+                                      <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                                      <SelectItem value="COMPLETED">Completed</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                            </div>
+                          </Card>
+                        );
+                      })
+                    ) : (
+                      // Fallback: show actual items even without planning items
+                      Object.keys(actualItems).map((itemId) => {
+                        const actualItem = actualItems[itemId];
+                        return (
+                          <Card key={itemId} className="p-4">
+                            <div className="space-y-4">
+                              {/* Item Header */}
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h4 className="font-medium">Item Actual</h4>
+                                  <p className="text-sm text-gray-500">
+                                    Item dari WO Planning yang dipilih
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Actual Data */}
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                  <Label>Qty Actual</Label>
+                                  <Input
+                                    type="number"
+                                    value={actualItem.qtyActual || 0}
+                                    onChange={(e) => handleActualItemChange(itemId, 'qtyActual', parseInt(e.target.value) || 0)}
+                                    min="0"
+                                  />
+                                </div>
+                                <div>
+                                  <Label>Berat Actual (kg)</Label>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={actualItem.beratActual || 0}
+                                    onChange={(e) => handleActualItemChange(itemId, 'beratActual', parseFloat(e.target.value) || 0)}
+                                    min="0"
+                                  />
+                                </div>
+                                <div>
+                                  <Label>Status</Label>
+                                  <Select
+                                    value={actualItem.status || 'PENDING'}
+                                    onValueChange={(value) => handleActualItemChange(itemId, 'status', value)}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="PENDING">Pending</SelectItem>
+                                      <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                                      <SelectItem value="COMPLETED">Completed</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                            </div>
+                          </Card>
+                        );
+                      })
+                    )}
                   </div>
                 )}
               </CardContent>
             </Card>
           </div>
-
           {/* Right Column - Summary */}
           <div className="space-y-6">
             {/* WO Planning Info */}
@@ -538,18 +737,18 @@ export default function AddWOActualPage() {
               <CardContent className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Total Item:</span>
-                  <span className="text-sm font-medium">{actualItems.length}</span>
+                  <span className="text-sm font-medium">{Object.keys(actualItems).length}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Total Qty Actual:</span>
                   <span className="text-sm font-medium">
-                    {actualItems.reduce((sum, item) => sum + (item.jumlah_actual || 0), 0)}
+                    {Object.values(actualItems).reduce((sum, item) => sum + (item.qtyActual || 0), 0)}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Total Qty Cacat:</span>
-                  <span className="text-sm font-medium text-red-600">
-                    {actualItems.reduce((sum, item) => sum + (item.jumlah_cacat || 0), 0)}
+                  <span className="text-sm text-gray-600">Total Berat Actual:</span>
+                  <span className="text-sm font-medium text-blue-600">
+                    {Object.values(actualItems).reduce((sum, item) => sum + (item.beratActual || 0), 0)} kg
                   </span>
                 </div>
               </CardContent>

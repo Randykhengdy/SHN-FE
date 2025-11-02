@@ -643,17 +643,16 @@ export default function AddWorkOrderPage() {
   const calculateRequiredArea = (item) => {
     const panjang = parseFloat(item.panjang || 0);
     const lebar = parseFloat(item.lebar || 0);
-    const qty = parseInt(item.qty || 0);
     
     // Get bentuk barang info to determine dimension
     const bentukBarang = bentukBarangList.find(b => b.value === item.bentuk_barang_id);
     
     if (bentukBarang && bentukBarang.dimensi === '1D') {
-      // For 1D (shaft), only use panjang
-      return panjang * qty;
+      // For 1D (shaft), only use panjang (no quantity multiplication)
+      return panjang;
     } else {
-      // For 2D (plat), use panjang × lebar
-      return panjang * lebar * qty;
+      // For 2D (plat), use panjang × lebar (no quantity multiplication)
+      return panjang * lebar;
     }
   };
 
@@ -1416,6 +1415,7 @@ export default function AddWorkOrderPage() {
                         </TableCell>
                         <TableCell className="text-left">
                           <div className="flex items-center gap-2">
+                            {/* Hidden Pilih button as requested by user
                             <Button
                               type="button"
                               variant="outline"
@@ -1427,6 +1427,7 @@ export default function AddWorkOrderPage() {
                               <Package className="w-3 h-3 mr-1" />
                               Pilih
                             </Button>
+                            */}
                             {item.jenis_potongan !== 'utuh' ? (
                               <Button
                                 type="button"
