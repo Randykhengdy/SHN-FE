@@ -48,6 +48,10 @@ import AddWOActualPage from "@/pages/wo-actual/add";
 import ItemBarangRequestPage from "@/pages/item-barang-request";
 import AddItemBarangRequestPage from "@/pages/item-barang-request/add";
 import ViewItemBarangRequestPage from "@/pages/item-barang-request/view";
+import SalesOrderReportPage from "@/pages/reports/SalesOrderReport";
+import SalesOrderAdvancedReportPage from "@/pages/reports/SalesOrderAdvancedReport";
+import WorkOrderPlanningReportPage from "@/pages/reports/WorkOrderPlanningReport";
+import WorkOrderActualReportPage from "@/pages/reports/WorkOrderActualReport";
 
 const AppRouter = () => {
     return (
@@ -74,6 +78,11 @@ const AppRouter = () => {
         <Route path="/sales-order" element={<SalesOrderPage />} />
         <Route path="/sales-order/add" element={<AddSalesOrderPage />} />
         <Route path="/sales-order/view/:id" element={<ViewSalesOrderPage />} />
+        {/* Laporan */}
+        <Route path="/laporan/sales-order" element={<SalesOrderReportPage />} />
+        <Route path="/laporan/sales-order-advanced" element={<SalesOrderAdvancedReportPage />} />
+        <Route path="/laporan/work-order-planning" element={<WorkOrderPlanningReportPage />} />
+        <Route path="/laporan/work-order-actual" element={<WorkOrderActualReportPage />} />
         <Route path="/approval" element={<ApprovalPage />} />
         <Route path="/work-order" element={<WorkOrderPage />} />
         <Route path="/work-order/add" element={<AddWorkOrderPage />} />

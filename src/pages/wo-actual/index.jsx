@@ -10,6 +10,9 @@ import { Search, Eye, RefreshCw, Filter, X, Plus } from 'lucide-react';
 import { useAlert } from '@/hooks/useAlert';
 import PageLayout from '@/components/PageLayout';
 import { woActualService } from '@/services/woActualService';
+import apiConfig, { API_ENDPOINTS } from '@/config/api';
+import { getAuthHeader } from '@/api/GetAuthHeader';
+import { checkAndRefreshToken } from '@/lib/tokenUtils';
 
 const statusOptions = [
   { value: "all", label: "Semua Status" },
@@ -56,6 +59,7 @@ export default function WOActualPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [periodFilter, setPeriodFilter] = useState('all');
+  const [isExporting, setIsExporting] = useState(false);
   
   // Filter states
   const [filterWoNumber, setFilterWoNumber] = useState('');
@@ -129,6 +133,163 @@ export default function WOActualPage() {
     setSearchTerm('');
   };
 
+  // Helper for period → tanggal_actual range
+  const pad = (n) => String(n).padStart(2, '0');
+  const formatDateLocal = (date) => `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
+  const getPeriodRange = (period) => {
+    const now = new Date();
+    let start = null;
+    let end = null;
+    switch (period) {
+      case 'today':
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case 'week': {
+        const day = now.getDay();
+        const diffToMonday = (day + 6) % 7;
+        start = new Date(now);
+        start.setDate(now.getDate() - diffToMonday);
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        break;
+      }
+      case 'month':
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        break;
+      case 'quarter': {
+        const qStartMonth = Math.floor(now.getMonth() / 3) * 3;
+        start = new Date(now.getFullYear(), qStartMonth, 1);
+        end = new Date(now.getFullYear(), qStartMonth + 3, 0);
+        break;
+      }
+      case 'year':
+        start = new Date(now.getFullYear(), 0, 1);
+        end = new Date(now.getFullYear(), 11, 31);
+        break;
+      default:
+        return null;
+    }
+    return {
+      tanggal_actual_start: formatDateLocal(start),
+      tanggal_actual_end: formatDateLocal(end),
+    };
+  };
+
+  // Build workbook for actual report JSON
+  const buildWorkbookFromActual = (json) => {
+    const rows = Array.isArray(json?.data) ? json.data : [];
+    const formatDate = (s) => (s ? String(s).slice(0, 10) : '');
+    const dataRows = rows.map((r) => ({
+      'Nomor WO': r?.nomor_wo ?? '',
+      'Tanggal WO': formatDate(r?.tanggal_wo),
+      'Tanggal Actual': formatDate(r?.tanggal_actual),
+      'Status Actual': r?.status ?? '',
+      'Prioritas': r?.prioritas ?? '',
+      'Nomor SO': r?.nomor_so ?? '',
+      'Pelanggan': r?.nama_pelanggan ?? '',
+      'Gudang': r?.nama_gudang ?? ''
+    }));
+
+    const wb = window.XLSX.utils.book_new();
+    const wsData = window.XLSX.utils.json_to_sheet(dataRows);
+    window.XLSX.utils.book_append_sheet(wb, wsData, 'Data');
+    return wb;
+  };
+
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+      await checkAndRefreshToken();
+
+      const queryParams = new URLSearchParams();
+      if (searchTerm) queryParams.append('search', searchTerm);
+      if (statusFilter && statusFilter !== 'all') queryParams.append('status', statusFilter);
+      if (filterWoNumber) queryParams.append('nomor_wo', filterWoNumber);
+      if (filterSoNumber) queryParams.append('nomor_so', filterSoNumber);
+      if (periodFilter && periodFilter !== 'all') {
+        const range = getPeriodRange(periodFilter);
+        if (range) {
+          queryParams.append('tanggal_actual_start', range.tanggal_actual_start);
+          queryParams.append('tanggal_actual_end', range.tanggal_actual_end);
+        }
+      }
+      queryParams.append('per_page', '10000');
+
+      const url = `${apiConfig.baseUrl}${API_ENDPOINTS.workOrderActual}/report${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...getAuthHeader(),
+          Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/octet-stream, application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const ct = response.headers.get('Content-Type') || response.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+          const err = await response.json().catch(() => null);
+          throw new Error(err?.message || `Export failed (HTTP ${response.status})`);
+        } else {
+          const text = await response.text();
+          throw new Error(text || `Export failed (HTTP ${response.status})`);
+        }
+      }
+
+      const contentType = response.headers.get('Content-Type') || response.headers.get('content-type') || '';
+      const isExcel = contentType.includes('spreadsheet') || contentType.includes('excel') || contentType.includes('octet-stream');
+      const isJson = contentType.includes('application/json');
+      const timestamp = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+
+      if (isExcel) {
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const fileName = `wo-actual-report_${timestamp}.xlsx`;
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+        showAlert('Unduhan dimulai', 'File Excel sedang diunduh', 'info');
+      } else if (isJson) {
+        const json = await response.json();
+        if (!window.XLSX) {
+          try {
+            const mod = await import(/* @vite-ignore */ 'xlsx');
+            window.XLSX = mod;
+          } catch (e) {
+            throw new Error("Dependency 'xlsx' belum terpasang. Jalankan: npm install xlsx");
+          }
+        }
+        const wb = buildWorkbookFromActual(json);
+        const wbout = window.XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const objectUrl = URL.createObjectURL(blob);
+        const fileName = `wo-actual-report_${timestamp}.xlsx`;
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+        showAlert('Unduhan dimulai', 'Laporan XLSX sedang diunduh', 'info');
+      } else {
+        const text = await response.text();
+        throw new Error(text || 'Server tidak mengembalikan file yang dapat diunduh');
+      }
+    } catch (error) {
+      console.error('Error exporting WO Actual:', error);
+      showAlert('Error', `Gagal export WO Actual: ${error.message || error}`, 'error');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // Pagination calculations
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startItem = (currentPage - 1) * itemsPerPage + 1;
@@ -154,6 +315,12 @@ export default function WOActualPage() {
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div className="bg-white rounded-lg px-4 py-2 border border-gray-200">
           <h2 className="text-lg font-semibold text-gray-800">Daftar Work Order Actual</h2>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={handleAddWOActual} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
+            <Plus className="w-4 h-4 mr-2" />
+            Tambah WO Actual
+          </Button>
         </div>
       </div>
 

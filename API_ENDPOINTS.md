@@ -358,6 +358,66 @@
   - **Description:** Mendapatkan detail sales order dengan atribut header saja (tanpa salesOrderItems)
   - **Response:** `{ "id": "int", "nomor_so": "string", "tanggal_so": "date", "tanggal_pengiriman": "date", "syarat_pembayaran": "string", "gudang_id": "int", "pelanggan_id": "int", "subtotal": "decimal", "total_diskon": "decimal", "ppn_percent": "decimal", "ppn_amount": "decimal", "total_harga_so": "decimal", "status": "string", "created_at": "datetime", "updated_at": "datetime", "pelanggan": { "id": "int", "nama_pelanggan": "string" }, "gudang": { "id": "int", "kode": "string", "nama_gudang": "string" } }`
 
+### Sales Order Report Endpoints
+- `GET /api/sales-order/report` - Laporan Sales Order ringkas dengan summary dan filter
+  - **Description:** Mendapatkan daftar Sales Order untuk kebutuhan report dengan atribut header, jumlah item, dan summary agregat berdasarkan filter.
+  - **Query Parameters:**
+    - `per_page`: Jumlah data per halaman (default: 100)
+    - `search`: Pencarian berdasarkan `nomor_so`, `syarat_pembayaran`, `status`
+    - `sort` atau `sort_by` + `order`: Sorting multiple (`sort` menerima format `field,order;field,order`) atau single (`sort_by` + `order`)
+    - `tanggal_mulai`: Filter tanggal mulai (`YYYY-MM-DD`)
+    - `tanggal_akhir`: Filter tanggal akhir (`YYYY-MM-DD`)
+    - `pelanggan_id`: Filter berdasarkan ID pelanggan
+    - `gudang_id`: Filter berdasarkan ID gudang
+    - `status`: Filter status (`active`, `delete_requested`, `deleted`)
+    - `min_total`: Filter total minimal (`total_harga_so`)
+    - `max_total`: Filter total maksimal (`total_harga_so`)
+  - **Response:**
+    ```json
+    {
+      "success": true,
+      "message": "Data ditemukan",
+      "data": [
+        {
+          "id": 123,
+          "nomor_so": "SO-2024-001",
+          "tanggal_so": "2024-10-01",
+          "tanggal_pengiriman": "2024-10-05",
+          "status": "active",
+          "pelanggan": { "id": 10, "nama_pelanggan": "PT Maju Jaya" },
+          "gudang": { "id": 3, "kode": "GD-01", "nama_gudang": "Gudang Utama" },
+          "subtotal": 150000000.00,
+          "total_diskon": 5000000.00,
+          "ppn_amount": 14500000.00,
+          "total_harga_so": 159500000.00,
+          "items_count": 12
+        }
+      ],
+      "summary": {
+        "orders_count": 250,
+        "items_count": 1200,
+        "subtotal_sum": 2500000000.00,
+        "total_diskon_sum": 75000000.00,
+        "ppn_amount_sum": 275000000.00,
+        "total_amount_sum": 2700000000.00
+      },
+      "pagination": {
+        "current_page": 1,
+        "per_page": 100,
+        "last_page": 25,
+        "total": 250
+      }
+    }
+    ```
+  - **Request Examples:**
+    ```
+    GET /api/sales-order/report?search=SO-2024
+    GET /api/sales-order/report?tanggal_mulai=2024-01-01&tanggal_akhir=2024-03-31
+    GET /api/sales-order/report?pelanggan_id=10&gudang_id=3&status=active
+    GET /api/sales-order/report?min_total=100000000&max_total=500000000
+    GET /api/sales-order/report?sort=tanggal_so,desc;nomor_so,asc
+    ```
+
 ## Static Data APIs (Temporary)
 - `GET /api/static/tipe-gudang` - Get tipe gudang data
   - **Response:** `{ "data": [{ "id": "int", "kode": "string", "nama": "string", "deskripsi": "string" }] }`
@@ -479,6 +539,55 @@
   - **Advanced Filtering**: Filter spesifik per field dengan operator yang fleksibel
   - **Join Optimization**: Menggunakan leftJoin untuk performa optimal
   - **Count Relationship**: Menampilkan jumlah item terkait tanpa memuat semua data
+
+#### Report Work Order Planning (Header Only)
+- **GET** `/api/work-order-planning/report`
+- **Description**: Laporan Work Order Planning dengan atribut header/parent saja (tanpa item). Cocok untuk tampilan ringkas dan export header data.
+- **Query Parameters**:
+  - `per_page`: Jumlah data per halaman (default: 100)
+  - `search`: Pencarian global (`nomor_wo`, `nomor_so`, `nama_pelanggan`, `nama_gudang`, `status`, `prioritas`)
+  - `sort` atau `sort_by` + `order`: Sorting multiple atau single
+  - `tanggal_wo_start`: Filter tanggal mulai (`YYYY-MM-DD`)
+  - `tanggal_wo_end`: Filter tanggal akhir (`YYYY-MM-DD`)
+  - `id_pelanggan`: Filter berdasarkan ID pelanggan
+  - `id_gudang`: Filter berdasarkan ID gudang
+  - `status`: Filter status WO Planning
+  - `prioritas`: Filter prioritas WO Planning
+  - `nomor_wo`: Filter nomor WO (like)
+  - `nomor_so`: Filter nomor SO (like)
+- **Response**:
+```json
+{
+  "success": true,
+  "message": "Data ditemukan",
+  "data": [
+    {
+      "id": 1,
+      "wo_unique_id": "WO-20240101-ABC123",
+      "nomor_wo": "WO/2024/001",
+      "tanggal_wo": "2024-01-01",
+      "id_sales_order": 10,
+      "id_pelanggan": 5,
+      "id_gudang": 3,
+      "id_pelaksana": 7,
+      "prioritas": "HIGH",
+      "status": "DRAFT",
+      "handover_method": "pickup",
+      "created_at": "2024-01-01T08:00:00.000000Z",
+      "updated_at": "2024-01-01T08:00:00.000000Z",
+      "nama_pelanggan": "PT Maju Jaya",
+      "nama_gudang": "Gudang Utama",
+      "nomor_so": "SO/2024/001"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 100,
+    "last_page": 10,
+    "total": 1000
+  }
+}
+```
 
 #### 2. Get Work Order Planning by ID
 - **GET** `/api/work-order-planning/{id}`
@@ -1267,6 +1376,56 @@ Authorization: Bearer your_jwt_token
 - **Auto Status Update**: Otomatis mengubah status Work Order Planning menjadi 'Selesai' dan mengisi `close_wo_at` timestamp
 - **Data Cleanup**: Menghapus data actual items dan pelaksana yang sudah ada sebelum menyimpan data baru
 - **File Management**: Menyimpan foto bukti ke folder `work-order-actual/{actualWorkOrderId}/` dengan nama `foto_bukti.jpg`
+
+#### Report Work Order Actual (Header Only)
+- **GET** `/api/work-order-actual/report`
+- **Description**: Laporan Work Order Actual dengan atribut header/parent saja. Menyertakan konteks header WO Planning (nomor_wo, tanggal_wo) dan referensi pelanggan/gudang.
+- **Query Parameters**:
+  - `per_page`: Jumlah data per halaman (default: 100)
+  - `search`: Pencarian global (`status`, `nomor_wo`, `nomor_so`, `nama_pelanggan`, `nama_gudang`)
+  - `sort` atau `sort_by` + `order`: Sorting multiple atau single
+  - `tanggal_actual_start`: Filter tanggal mulai actual (`YYYY-MM-DD`)
+  - `tanggal_actual_end`: Filter tanggal akhir actual (`YYYY-MM-DD`)
+  - `id_pelanggan`: Filter berdasarkan ID pelanggan (via planning)
+  - `id_gudang`: Filter berdasarkan ID gudang (via planning)
+  - `status`: Filter status actual
+  - `nomor_wo`: Filter nomor WO (like)
+  - `nomor_so`: Filter nomor SO (like)
+- **Response**:
+```json
+{
+  "success": true,
+  "message": "Data ditemukan",
+  "data": [
+    {
+      "id": 9,
+      "work_order_planning_id": 1,
+      "tanggal_actual": "2024-01-03",
+      "status": "On Progress",
+      "catatan": "",
+      "foto_bukti": "work-order-actual/9/foto_bukti.jpg",
+      "created_at": "2024-01-03T10:00:00.000000Z",
+      "updated_at": "2024-01-03T10:00:00.000000Z",
+      "nomor_wo": "WO/2024/001",
+      "tanggal_wo": "2024-01-01",
+      "id_pelanggan": 5,
+      "id_gudang": 3,
+      "id_pelaksana": 7,
+      "prioritas": "HIGH",
+      "handover_method": "pickup",
+      "nama_pelanggan": "PT Maju Jaya",
+      "nama_gudang": "Gudang Utama",
+      "nomor_so": "SO/2024/001"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 100,
+    "last_page": 10,
+    "total": 1000
+  }
+}
+```
 
 
 ## Notes
