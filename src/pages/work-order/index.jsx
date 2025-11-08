@@ -6,13 +6,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Eye, Trash2, RefreshCw, Download, Filter, Edit3, Palette, X } from 'lucide-react';
+import { Plus, Search, Eye, Trash2, RefreshCw, Filter, Edit3, Palette, X } from 'lucide-react';
 import { useAlert } from '@/hooks/useAlert';
 import { isAdmin } from '@/lib/utils';
 import CustomAlert from '@/components/modals/CustomAlert';
 import DeleteRequestModal from '@/components/modals/DeleteRequestModal';
 import PageLayout from '@/components/PageLayout';
 import { workOrderService } from '@/services/workOrderService';
+import apiConfig, { API_ENDPOINTS } from '@/config/api';
+import { getAuthHeader } from '@/api/GetAuthHeader';
+import { checkAndRefreshToken } from '@/lib/tokenUtils';
 
 const statusOptions = [
   { value: "all", label: "Semua Status" },
@@ -64,6 +67,8 @@ export default function WorkOrderPage() {
   const [deleteModalType, setDeleteModalType] = useState('admin'); // 'admin' or 'request'
   const [selectedWO, setSelectedWO] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false); // Prevent multiple delete operations
+  const [isExporting, setIsExporting] = useState(false); // planning export
+  const [isExportingActual, setIsExportingActual] = useState(false);
   
   // Delete request modal state
   const [showDeleteRequestModal, setShowDeleteRequestModal] = useState(false);
@@ -268,9 +273,276 @@ export default function WorkOrderPage() {
     setSearchTerm('');
   };
 
-  const handleExport = () => {
-    // TODO: Implement export functionality
-    showAlertRef.current('Info', 'Fitur export akan segera tersedia', 'info');
+  // Helper for period → tanggal_wo range
+  const pad = (n) => String(n).padStart(2, '0');
+  const formatDateLocal = (date) => `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
+  const getPeriodRange = (period) => {
+    const now = new Date();
+    let start = null;
+    let end = null;
+    switch (period) {
+      case 'today':
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case 'week': {
+        const day = now.getDay();
+        const diffToMonday = (day + 6) % 7;
+        start = new Date(now);
+        start.setDate(now.getDate() - diffToMonday);
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        break;
+      }
+      case 'month':
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        break;
+      case 'quarter': {
+        const qStartMonth = Math.floor(now.getMonth() / 3) * 3;
+        start = new Date(now.getFullYear(), qStartMonth, 1);
+        end = new Date(now.getFullYear(), qStartMonth + 3, 0);
+        break;
+      }
+      case 'year':
+        start = new Date(now.getFullYear(), 0, 1);
+        end = new Date(now.getFullYear(), 11, 31);
+        break;
+      default:
+        return null;
+    }
+    return {
+      tanggal_wo_start: formatDateLocal(start),
+      tanggal_wo_end: formatDateLocal(end),
+    };
+  };
+
+  // Build workbook for planning report JSON
+  const buildWorkbookFromPlanning = (json) => {
+    const rows = Array.isArray(json?.data) ? json.data : [];
+    const formatDate = (s) => (s ? String(s).slice(0, 10) : '');
+    const dataRows = rows.map((r) => ({
+      'Nomor WO': r?.nomor_wo ?? '',
+      'Tanggal WO': formatDate(r?.tanggal_wo),
+      'Status': r?.status ?? '',
+      'Prioritas': r?.prioritas ?? '',
+      'Nomor SO': r?.nomor_so ?? '',
+      'Pelanggan': r?.nama_pelanggan ?? '',
+      'Gudang': r?.nama_gudang ?? '',
+      'Handover Method': r?.handover_method ?? ''
+    }));
+
+    const wb = window.XLSX.utils.book_new();
+    const wsData = window.XLSX.utils.json_to_sheet(dataRows);
+    window.XLSX.utils.book_append_sheet(wb, wsData, 'Data');
+    return wb;
+  };
+
+  // Build workbook for actual report JSON (reuse mapping)
+  const buildWorkbookFromActual = (json) => {
+    const rows = Array.isArray(json?.data) ? json.data : [];
+    const formatDate = (s) => (s ? String(s).slice(0, 10) : '');
+    const dataRows = rows.map((r) => ({
+      'Nomor WO': r?.nomor_wo ?? '',
+      'Tanggal WO': formatDate(r?.tanggal_wo),
+      'Tanggal Actual': formatDate(r?.tanggal_actual),
+      'Status Actual': r?.status ?? '',
+      'Prioritas': r?.prioritas ?? '',
+      'Nomor SO': r?.nomor_so ?? '',
+      'Pelanggan': r?.nama_pelanggan ?? '',
+      'Gudang': r?.nama_gudang ?? ''
+    }));
+
+    const wb = window.XLSX.utils.book_new();
+    const wsData = window.XLSX.utils.json_to_sheet(dataRows);
+    window.XLSX.utils.book_append_sheet(wb, wsData, 'Data');
+    return wb;
+  };
+
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+      await checkAndRefreshToken();
+
+      const queryParams = new URLSearchParams();
+      if (searchTerm) queryParams.append('search', searchTerm);
+      if (statusFilter && statusFilter !== 'all') queryParams.append('status', statusFilter);
+      if (filterWoNumber) queryParams.append('nomor_wo', filterWoNumber);
+      if (filterSoNumber) queryParams.append('nomor_so', filterSoNumber);
+      if (periodFilter && periodFilter !== 'all') {
+        const range = getPeriodRange(periodFilter);
+        if (range) {
+          queryParams.append('tanggal_wo_start', range.tanggal_wo_start);
+          queryParams.append('tanggal_wo_end', range.tanggal_wo_end);
+        }
+      }
+      queryParams.append('per_page', '10000');
+
+      const url = `${apiConfig.baseUrl}${API_ENDPOINTS.workOrderPlanning}/report${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...getAuthHeader(),
+          Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/octet-stream, application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const ct = response.headers.get('Content-Type') || response.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+          const err = await response.json().catch(() => null);
+          throw new Error(err?.message || `Export failed (HTTP ${response.status})`);
+        } else {
+          const text = await response.text();
+          throw new Error(text || `Export failed (HTTP ${response.status})`);
+        }
+      }
+
+      const contentType = response.headers.get('Content-Type') || response.headers.get('content-type') || '';
+      const isExcel = contentType.includes('spreadsheet') || contentType.includes('excel') || contentType.includes('octet-stream');
+      const isJson = contentType.includes('application/json');
+      const timestamp = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+
+      if (isExcel) {
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const fileName = `wo-planning-report_${timestamp}.xlsx`;
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+        showAlertRef.current('Unduhan dimulai', 'File Excel sedang diunduh', 'info');
+      } else if (isJson) {
+        const json = await response.json();
+        if (!window.XLSX) {
+          try {
+            const mod = await import(/* @vite-ignore */ 'xlsx');
+            window.XLSX = mod;
+          } catch (e) {
+            throw new Error("Dependency 'xlsx' belum terpasang. Jalankan: npm install xlsx");
+          }
+        }
+        const wb = buildWorkbookFromPlanning(json);
+        const wbout = window.XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const objectUrl = URL.createObjectURL(blob);
+        const fileName = `wo-planning-report_${timestamp}.xlsx`;
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+        showAlertRef.current('Unduhan dimulai', 'Laporan XLSX sedang diunduh', 'info');
+      } else {
+        const text = await response.text();
+        throw new Error(text || 'Server tidak mengembalikan file yang dapat diunduh');
+      }
+    } catch (error) {
+      console.error('Error exporting WO Planning:', error);
+      showAlertRef.current('Error', `Gagal export WO Planning: ${error.message || error}`, 'error');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Export WO Actual directly from this page (same filters)
+  const handleExportActual = async () => {
+    try {
+      setIsExportingActual(true);
+      await checkAndRefreshToken();
+
+      const queryParams = new URLSearchParams();
+      if (searchTerm) queryParams.append('search', searchTerm);
+      if (statusFilter && statusFilter !== 'all') queryParams.append('status', statusFilter);
+      if (filterWoNumber) queryParams.append('nomor_wo', filterWoNumber);
+      if (filterSoNumber) queryParams.append('nomor_so', filterSoNumber);
+      if (periodFilter && periodFilter !== 'all') {
+        const range = getPeriodRange(periodFilter);
+        if (range) {
+          // Use same date values but target actual fields
+          queryParams.append('tanggal_actual_start', range.tanggal_wo_start);
+          queryParams.append('tanggal_actual_end', range.tanggal_wo_end);
+        }
+      }
+      queryParams.append('per_page', '10000');
+
+      const url = `${apiConfig.baseUrl}${API_ENDPOINTS.workOrderActual}/report${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...getAuthHeader(),
+          Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/octet-stream, application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const ct = response.headers.get('Content-Type') || response.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+          const err = await response.json().catch(() => null);
+          throw new Error(err?.message || `Export failed (HTTP ${response.status})`);
+        } else {
+          const text = await response.text();
+          throw new Error(text || `Export failed (HTTP ${response.status})`);
+        }
+      }
+
+      const contentType = response.headers.get('Content-Type') || response.headers.get('content-type') || '';
+      const isExcel = contentType.includes('spreadsheet') || contentType.includes('excel') || contentType.includes('octet-stream');
+      const isJson = contentType.includes('application/json');
+      const timestamp = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+
+      if (isExcel) {
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const fileName = `wo-actual-report_${timestamp}.xlsx`;
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+        showAlertRef.current('Unduhan dimulai', 'File Excel sedang diunduh', 'info');
+      } else if (isJson) {
+        const json = await response.json();
+        if (!window.XLSX) {
+          try {
+            const mod = await import(/* @vite-ignore */ 'xlsx');
+            window.XLSX = mod;
+          } catch (e) {
+            throw new Error("Dependency 'xlsx' belum terpasang. Jalankan: npm install xlsx");
+          }
+        }
+        const wb = buildWorkbookFromActual(json);
+        const wbout = window.XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const objectUrl = URL.createObjectURL(blob);
+        const fileName = `wo-actual-report_${timestamp}.xlsx`;
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+        showAlertRef.current('Unduhan dimulai', 'Laporan XLSX sedang diunduh', 'info');
+      } else {
+        const text = await response.text();
+        throw new Error(text || 'Server tidak mengembalikan file yang dapat diunduh');
+      }
+    } catch (error) {
+      console.error('Error exporting WO Actual:', error);
+      showAlertRef.current('Error', `Gagal export WO Actual: ${error.message || error}`, 'error');
+    } finally {
+      setIsExportingActual(false);
+    }
   };
 
   // Pagination calculations

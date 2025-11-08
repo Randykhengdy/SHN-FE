@@ -13,13 +13,16 @@ export async function request(path, options = {}) {
     // Continue with request even if proactive check fails
   }
 
+  const isFormData = options && options.body && options.body instanceof FormData;
+  const mergedHeaders = {
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
+    ...getAuthHeader(),
+    ...(options.headers || {}),
+  };
+
   const response = await fetch(`${apiConfig.baseUrl}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...getAuthHeader(),
-      ...(options.headers || {}),
-    },
     ...options,
+    headers: mergedHeaders,
   });
 
   if (!response.ok) {

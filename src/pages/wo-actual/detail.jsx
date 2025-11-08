@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Label } from "@/components/ui/label";
 import { useAlert } from "@/hooks/useAlert";
 import { woActualService } from '@/services/woActualService';
+import apiConfig from '@/config/api';
 import PageLayout from "@/components/PageLayout";
 
 export default function WOActualDetailPage() {
@@ -52,6 +53,22 @@ export default function WOActualDetailPage() {
     }
   };
 
+  // Build storage URL from relative file path when API returns non-base64
+  const buildStorageUrl = (path) => {
+    if (!path) return null;
+    try {
+      const base = apiConfig.baseUrl.replace(/\/api$/, '');
+      let normalized = path.replace(/^\/+/, '');
+      // Normalize: remove actual ID segment from item path
+      // e.g. work-order-actual/10/items/4/foto_bukti.jpg -> work-order-actual/items/4/foto_bukti.jpg
+      normalized = normalized.replace(/^work-order-actual\/\d+\/items\//, 'work-order-actual/items/');
+      const hasStoragePrefix = /^storage\//.test(normalized);
+      return hasStoragePrefix ? `${base}/${normalized}` : `${base}/storage/${normalized}`;
+    } catch (e) {
+      return null;
+    }
+  };
+
   // Load WO Actual data
   const loadWOActualData = useCallback(async () => {
     if (isLoadingRef.current) {
@@ -88,11 +105,11 @@ export default function WOActualDetailPage() {
       }
 
       // Process items data
-      const actualItems = woActualData.work_order_actual_items || [];
+      const actualItems = woActualData.work_order_actual_items || woActualData.items || [];
       const processedItems = actualItems.map((actualItem, index) => {
         const planningItem = actualItem.work_order_planning_item || {};
         const itemBarang = planningItem.item_barang || {};
-        const pelaksanas = actualItem.work_order_actual_pelaksanas || [];
+        const pelaksanas = actualItem.work_order_actual_pelaksanas || actualItem.has_many_pelaksana || [];
         
         return {
           id: actualItem.id,
@@ -104,7 +121,7 @@ export default function WOActualDetailPage() {
           dimensi: `${planningItem.panjang || 0} x ${planningItem.lebar || 0} mm`,
           qtyPlanning: planningItem.qty || 0,
           qtyActual: actualItem.qty_actual || 0,
-          beratActual: actualItem.berat_actual || 0,
+          beratActual: (actualItem.berat ?? actualItem.berat_actual ?? 0),
           jenisPotongan: planningItem.jenis_potongan || 'N/A',
           pelaksanas: pelaksanas
         };
@@ -114,7 +131,7 @@ export default function WOActualDetailPage() {
       
     } catch (error) {
       console.error('❌ Error loading WO Actual data:', error);
-      showAlert('error', 'Gagal memuat data WO Actual: ' + error.message);
+      showAlert('Gagal Memuat WO Actual', 'Gagal memuat data WO Actual: ' + error.message, 'error');
     } finally {
       setLoading(false);
       isLoadingRef.current = false;
@@ -212,7 +229,7 @@ export default function WOActualDetailPage() {
             <div>
               <Label className="text-sm font-medium text-gray-700">Tanggal Actual</Label>
               <Input 
-                value={formatDate(woActual?.created_at)} 
+                value={formatDate(woActual?.tanggal_actual || woActual?.created_at)} 
                 disabled 
                 className="bg-gray-50"
               />
@@ -221,15 +238,34 @@ export default function WOActualDetailPage() {
               <Label className="text-sm font-medium text-gray-700">Foto Bukti</Label>
               <div className="flex items-center gap-2">
                 {woActual?.foto_bukti ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open(woActual.foto_bukti, '_blank')}
-                    className="text-blue-600 hover:text-blue-800"
-                  >
-                    <Eye className="h-4 w-4 mr-1" />
-                    Lihat Foto
-                  </Button>
+                  (() => {
+                    const foto = woActual.foto_bukti;
+                    const url = (typeof foto === 'string' && /^https?:\/\//i.test(foto)) 
+                      ? foto 
+                      : buildStorageUrl(foto);
+                    return (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            const blob = await woActualService.getWOActualHeaderImageBlob(woActual?.id);
+                            const blobUrl = URL.createObjectURL(blob);
+                            window.open(blobUrl, '_blank');
+                          } catch (e) {
+                            console.warn('Gagal memuat foto bukti header:', e);
+                            if (url) {
+                              window.open(url, '_blank');
+                            }
+                          }
+                        }}
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Lihat Foto
+                      </Button>
+                    );
+                  })()
                 ) : (
                   <span className="text-gray-400 text-sm">Tidak ada foto</span>
                 )}

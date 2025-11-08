@@ -227,6 +227,32 @@ function createWindow() {
           { label: 'Merge Barang', accelerator: 'CmdOrCtrl+Shift+M', click: () => mainWindow.webContents.send('navigate-to', '/merge-barang')}
         ]
       },
+      {
+        label: 'Laporan',
+        submenu: [
+          {
+            label: 'Sales Order (Simple)',
+            click: () => mainWindow.webContents.send('navigate-to', '/laporan/sales-order')
+          },
+          {
+            label: 'Sales Order (Advanced)',
+            click: () => mainWindow.webContents.send('navigate-to', '/laporan/sales-order-advanced')
+          },
+          { type: 'separator' },
+          {
+            label: 'Work Order (Planning)',
+            click: () => mainWindow.webContents.send('navigate-to', '/laporan/work-order-planning')
+          },
+          {
+            label: 'Work Order (Actual)',
+            click: () => mainWindow.webContents.send('navigate-to', '/laporan/work-order-actual')
+          },
+          {
+            label: 'Purchase Order',
+            click: () => mainWindow.webContents.send('navigate-to', '/purchase-order')
+          }
+        ]
+      },
           {
         label: 'Tools',
         submenu: [

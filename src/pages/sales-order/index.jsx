@@ -8,6 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { salesOrderService } from "@/services/salesOrderService";
+import apiConfig, { API_ENDPOINTS } from "@/config/api";
+import { getAuthHeader } from "@/api/GetAuthHeader";
+import { checkAndRefreshToken } from "@/lib/tokenUtils";
 import { useAlert } from "@/hooks/useAlert";
 import { isAdmin } from "@/lib/utils";
 import CustomAlert from "@/components/modals/CustomAlert";
@@ -263,9 +266,46 @@ export default function SalesOrderListPage() {
     setCurrentPage(1);
   };
 
-  const handleExport = () => {
-    // TODO: Implement export functionality
-    console.log("Exporting sales orders...");
+  const handleExport = async () => {
+    try {
+      await checkAndRefreshToken();
+
+      const queryParams = new URLSearchParams();
+      if (searchTerm) queryParams.append("search", searchTerm);
+      if (statusFilter && statusFilter !== "all") queryParams.append("status", statusFilter);
+      if (periodFilter && periodFilter !== "all") queryParams.append("period", periodFilter);
+
+      const url = `${apiConfig.baseUrl}${API_ENDPOINTS.salesOrder}/report${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          ...getAuthHeader(),
+        },
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || "Export failed");
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+      const fileName = `sales-order-report_${timestamp}.xlsx`;
+
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+
+      showAlert("Sukses", "File Excel berhasil diunduh", "success");
+    } catch (error) {
+      console.error("Error exporting sales orders:", error);
+      showAlert("Error", "Gagal export Sales Order", "error");
+    }
   };
 
   const handleTestConvert = () => {
