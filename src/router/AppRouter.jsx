@@ -45,6 +45,7 @@ import SplitBarangPage from "@/pages/split-barang";
 import WOActualPage from "@/pages/wo-actual";
 import WOActualDetailPage from "@/pages/wo-actual/detail";
 import AddWOActualPage from "@/pages/wo-actual/add";
+import ViewWOActualPage from "@/pages/wo-actual/view";
 import ItemBarangRequestPage from "@/pages/item-barang-request";
 import AddItemBarangRequestPage from "@/pages/item-barang-request/add";
 import ViewItemBarangRequestPage from "@/pages/item-barang-request/view";
@@ -111,6 +112,7 @@ const AppRouter = () => {
         <Route path="/wo-actual" element={<WOActualPage />} />
         <Route path="/wo-actual/add" element={<AddWOActualPage />} />
         <Route path="/wo-actual/detail/:id" element={<WOActualDetailPage />} />
+        <Route path="/wo-actual/view/:id" element={<ViewWOActualPage />} />
       </Routes>
     );
 };

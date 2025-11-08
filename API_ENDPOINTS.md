@@ -126,7 +126,7 @@
     - `search` (optional): Pencarian berdasarkan kode_barang atau nama_item_barang
     - `sort` (optional): Field untuk sorting
     - `order` (optional): Arah sorting (asc/desc, default: asc)
-  - **Response:** `{ "data": [{ "id": "int", "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "quantity": "decimal", "quantity_tebal_sama": "decimal", "jenis_potongan": "string", "is_available": "boolean", "is_edit": "boolean", "is_edit_by": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "gudang_id": "int" }] }`
+  - **Response:** `{ "data": [{ "id": "int", "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "berat": "decimal", "quantity": "decimal", "quantity_tebal_sama": "decimal", "jenis_potongan": "string", "is_available": "boolean", "is_edit": "boolean", "is_edit_by": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "gudang_id": "int" }] }`
   - **Example**: `GET /api/item-barang?gudang_id=1&search=aluminium&per_page=20`
 - `GET /api/item-barang/by-gudang/{gudangId}` - Get item barang by gudang ID with search functionality
   - **Description**: Mendapatkan daftar item barang berdasarkan gudang ID dengan fitur pencarian
@@ -740,6 +740,7 @@ Authorization: Bearer your_jwt_token
       "panjang": 100.00,
       "lebar": 50.00,
       "tebal": 2.00,
+      "berat": 12.50,
       "jenis_barang_id": 1,
       "bentuk_barang_id": 1,
       "grade_barang_id": 1,
@@ -775,6 +776,7 @@ Authorization: Bearer your_jwt_token
       "panjang": 80.00,
       "lebar": 40.00,
       "tebal": 1.50,
+      "berat": 7.80,
       "jenis_barang_id": 2,
       "bentuk_barang_id": 1,
       "grade_barang_id": 2,
@@ -801,8 +803,12 @@ Authorization: Bearer your_jwt_token
   - `items.*.panjang` (optional): Panjang item
   - `items.*.lebar` (optional): Lebar item
   - `items.*.tebal` (optional): Tebal item
+  - `items.*.berat` (optional): Berat item (decimal)
   - `items.*.pelaksana` (optional, array of object): Detail pelaksana per item
-  - `items.*.saran_plat_dasar` (optional, array of object): Mapping saran plat/shaft dasar per item saat create WO
+    - `pelaksana_id` (required): ID pelaksana
+    - `qty` (optional): Qty yang dikerjakan pelaksana
+    - `weight` (optional, number): Berat yang dikerjakan pelaksana
+    - `items.*.saran_plat_dasar` (optional, array of object): Mapping saran plat/shaft dasar per item saat create WO
     - `item_barang_id` (required): ID item barang yang dijadikan saran
     - `quantity` (optional, number): Jumlah yang digunakan
     - `canvas_image` (optional, string): Base64 encoded image data untuk canvas gambar (format: data:image/[type];base64,[data])
@@ -852,6 +858,7 @@ Authorization: Bearer your_jwt_token
   "panjang": 120.00,
   "lebar": 60.00,
   "tebal": 2.50,
+  "berat": 20.00,
   "jenis_barang_id": 1,
   "bentuk_barang_id": 1,
   "grade_barang_id": 1,
@@ -908,7 +915,7 @@ Authorization: Bearer your_jwt_token
 #### 11. Update Pelaksana
 - **PUT/PATCH** `/api/work-order-planning/item/{itemId}/pelaksana/{pelaksanaId}`
 - **Description**: Mengupdate data pelaksana
-- **Request Body**: Field yang ingin diupdate (qty, weight, tanggal, jam_mulai, jam_selesai, catatan)
+- **Request Body**: Field yang ingin diupdate (qty, weight, tanggal, jam_mulai, jam_selesai, catatan).
 
 #### 12. Remove Pelaksana
 - **DELETE** `/api/work-order-planning/item/{itemId}/pelaksana/{pelaksanaId}`
@@ -1010,7 +1017,7 @@ Authorization: Bearer your_jwt_token
         "saran_id": 10,
         "item_barang_id": 25,
         "item_barang_name": "Plat Aluminium 5mm",
-        "canvas_file_path": "canvas_woitem5_25/canvas_image.jpg",
+        "canvas_file_path": "canvas_woitem/5_25/canvas_image.jpg",
         "canvas_image_base64": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...",
         "is_selected": true,
         "quantity": 2.5,
@@ -1025,7 +1032,7 @@ Authorization: Bearer your_jwt_token
         "saran_id": 11,
         "item_barang_id": 30,
         "item_barang_name": "Plat Steel 10mm",
-        "canvas_file_path": "canvas_woitem6_30/canvas_image.jpg",
+        "canvas_file_path": "canvas_woitem/6_30/canvas_image.jpg",
         "canvas_image_base64": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...",
         "is_selected": false,
         "quantity": 1.0,
@@ -1120,7 +1127,10 @@ Authorization: Bearer your_jwt_token
           {
             "id": 1,
             "qty_actual": 10,
-            "berat_actual": 25.5,
+            "berat": 25.5,
+            "foto_bukti": "work-order-actual/1/items/1/foto_bukti.jpg",
+            "qty_planning": 10,
+            "berat_planning": 30.0,
             "work_order_planning_item": {
               "id": 1,
               "qty": 10,
@@ -1133,7 +1143,7 @@ Authorization: Bearer your_jwt_token
               {
                 "id": 1,
                 "qty": 5,
-                "berat": 12.5,
+                "weight": 12.5,
                 "tanggal": "2024-01-01",
                 "jam_mulai": "08:00:00",
                 "jam_selesai": "12:00:00",
@@ -1195,7 +1205,10 @@ Authorization: Bearer your_jwt_token
         "id": 1,
         "work_order_planning_item_id": 1,
         "qty_actual": 10,
-        "berat_actual": 25.5,
+        "berat": 25.5,
+        "foto_bukti": "work-order-actual/1/items/1/foto_bukti.jpg",
+        "qty_planning": 10,
+        "berat_planning": 30.0,
         "created_at": "2024-01-01T10:00:00.000000Z",
         "updated_at": "2024-01-01T10:00:00.000000Z",
         "work_order_planning_item": {
@@ -1226,7 +1239,7 @@ Authorization: Bearer your_jwt_token
           {
             "id": 1,
             "qty": 5,
-            "berat": 12.5,
+            "weight": 12.5,
             "tanggal": "2024-01-01",
             "jam_mulai": "08:00:00",
             "jam_selesai": "12:00:00",
@@ -1249,45 +1262,49 @@ Authorization: Bearer your_jwt_token
 #### 3. Save Work Order Actual (Add New)
 - **POST** `/api/work-order-actual`
 - **Description**: Menyimpan data work order actual baru dengan foto bukti dan detail pelaksanaan. Endpoint ini digunakan untuk menambahkan work order actual baru berdasarkan work order planning yang sudah ada. Form structure mengikuti pola yang sama dengan work order planning namun fokus pada data realisasi/actual.
-- **Form Requirements**: 
-  - **Header**: Foto bukti (required), ID work order actual, ID work order planning
-  - **Items**: Setiap item memiliki qty actual, berat actual, dan assignments pelaksana
-  - **Assignments**: Detail pelaksana dengan qty, berat, tanggal, jam kerja, dan catatan
+- **Content-Type**: Wajib `application/json` (bukan `multipart/form-data`).
+- **JSON Requirements**:
+  - **Header**: `foto_bukti` (required, base64), `actualWorkOrderId` (optional), `planningWorkOrderId` (required)
+  - **Items**: Setiap item memiliki `qtyActual` (required), `berat` (required, berat actual), opsional `foto_bukti` (base64), dan `assignments` pelaksana
+  - Catatan: Field `beratActual` tidak digunakan lagi. Gunakan `berat` sebagai satu-satunya nama field berat di item.
+  - **Assignments**: Detail pelaksana dengan qty, weight/berat, tanggal, jam kerja, dan catatan
+ - **Headers**:
+  - `Authorization: Bearer <token>`
+  - `Content-Type: application/json`
 - **Request Body**:
 ```json
 {
   "foto_bukti": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...",
-  "actualWorkOrderId": 1,
+  "actualWorkOrderId": null,
   "planningWorkOrderId": 1,
   "items": {
     "1": {
       "qtyActual": 10,
-      "beratActual": 25.5,
+      "berat": 25.5,
+      "foto_bukti": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...",
       "timestamp": "2024-01-01T08:00:00Z",
       "assignments": [
         {
-          "id": 1,
+          "id": null,
           "qty": 5,
-          "berat": 12.5,
-          "pelaksana": "John Doe",
+          "weight": 12.5,
           "pelaksana_id": 1,
           "tanggal": "2024-01-01",
           "jamMulai": "08:00:00",
           "jamSelesai": "12:00:00",
           "catatan": "Shift pagi",
-          "status": "Selesai"
+          "status": null
         },
         {
-          "id": 2,
+          "id": null,
           "qty": 5,
-          "berat": 13.0,
-          "pelaksana": "Jane Smith",
+          "weight": 13.0,
           "pelaksana_id": 2,
           "tanggal": "2024-01-01",
           "jamMulai": "13:00:00",
           "jamSelesai": "17:00:00",
           "catatan": "Shift siang",
-          "status": "Selesai"
+          "status": null
         }
       ]
     }
@@ -1296,43 +1313,30 @@ Authorization: Bearer your_jwt_token
 ```
 - **Parameters**:
   - `foto_bukti` (required): Base64 encoded image sebagai bukti pelaksanaan work order actual
-  - `actualWorkOrderId` (required): ID work order actual yang akan menyimpan data ini
+  - `actualWorkOrderId` (optional): ID work order actual. Jika `null` atau tidak ditemukan, sistem otomatis membuat Work Order Actual baru berdasarkan `planningWorkOrderId`.
   - `planningWorkOrderId` (required): ID work order planning sebagai referensi
   - `items` (required): Object items dengan data actual yang direalisasikan
     - Key: ID work order planning item (sebagai key object)
     - `qtyActual` (required): Quantity actual yang berhasil dikerjakan (numeric, min: 0)
-    - `beratActual` (required): Berat actual yang berhasil dikerjakan (numeric, min: 0)
-    - `timestamp` (required): Timestamp pelaksanaan (format: ISO 8601)
+    - `berat` (required): Berat actual yang berhasil dikerjakan (numeric, min: 0)
+    - `foto_bukti` (optional): Base64 image bukti per item (akan disimpan di folder item)
+    - `timestamp` (optional): Timestamp pelaksanaan (format: ISO 8601)
     - `assignments` (required): Array assignment pelaksana yang mengerjakan item ini
-      - `id` (required): ID work order planning item (integer)
+      - `id` (optional): ID assignment (integer, nullable saat create)
       - `qty` (required): Quantity yang dikerjakan oleh pelaksana ini (integer, min: 1)
-      - `berat` (required): Berat yang dikerjakan oleh pelaksana ini (numeric, min: 0)
-      - `pelaksana` (required): Nama pelaksana (string)
+      - `weight` atau `berat` (required): Berat yang dikerjakan oleh pelaksana ini (numeric, min: 0)
+      - `pelaksana` (optional): Nama pelaksana (string, tidak wajib saat create)
       - `pelaksana_id` (required): ID pelaksana (integer)
       - `tanggal` (required): Tanggal pelaksanaan (format: YYYY-MM-DD)
-      - `jamMulai` (required): Jam mulai kerja (format: HH:MM:SS)
-      - `jamSelesai` (required): Jam selesai kerja (format: HH:MM:SS)
+      - `jamMulai` (required): Jam mulai kerja (string, format fleksibel)
+      - `jamSelesai` (required): Jam selesai kerja (string, format fleksibel)
       - `catatan` (optional): Catatan pelaksanaan (string)
-      - `status` (required): Status pelaksanaan (string)
+      - `status` (optional): Status pelaksanaan (string, tidak wajib saat create)
 - **Response**:
 ```json
 {
   "success": true,
-  "message": "Data WorkOrderActual berhasil disimpan",
-  "data": {
-    "actualWorkOrderId": 1,
-    "planningWorkOrderId": 1,
-    "items": [
-      {
-        "plan_item_id": 1,
-        "actual_item_id": 1,
-        "qty_actual": 10,
-        "berat_actual": 25.5,
-        "assignments_count": 2,
-        "timestamp": "2024-01-01T08:00:00Z"
-      }
-    ]
-  }
+  "message": "Data WorkOrderActual berhasil disimpan"
 }
 ```
 
@@ -1348,12 +1352,7 @@ Authorization: Bearer your_jwt_token
   }
 }
 
-// Not Found Error (500)
-{
-  "success": false,
-  "message": "Terjadi kesalahan saat menyimpan data",
-  "error": "ActualWorkOrder dengan ID 999 tidak ditemukan"
-}
+// Catatan: Jika `actualWorkOrderId` tidak ditemukan, API akan membuat WO Actual baru secara otomatis.
 
 // Empty Request Error (400)
 {
@@ -1368,7 +1367,7 @@ Authorization: Bearer your_jwt_token
 - **Filter**: Filter berdasarkan berbagai field seperti work_order_planning_id, created_at, dll
 - **Sorting**: Sorting berdasarkan field apapun dengan urutan ascending/descending
 - **Eager Loading**: Otomatis memuat relasi work order planning, items, dan pelaksana
-- **File Upload**: Support upload foto bukti dalam format base64
+- **File Upload**: Upload foto bukti dalam format base64 via JSON (tidak mendukung `multipart/form-data`)
 - **Multiple Assignments**: Mendukung multiple pelaksana per item dengan detail waktu kerja
 - **Form Structure**: Form add mengikuti struktur yang mirip dengan work order planning namun fokus pada data realisasi
 - **Validation**: Validasi lengkap untuk semua field required dan format data
@@ -1376,6 +1375,20 @@ Authorization: Bearer your_jwt_token
 - **Auto Status Update**: Otomatis mengubah status Work Order Planning menjadi 'Selesai' dan mengisi `close_wo_at` timestamp
 - **Data Cleanup**: Menghapus data actual items dan pelaksana yang sudah ada sebelum menyimpan data baru
 - **File Management**: Menyimpan foto bukti ke folder `work-order-actual/{actualWorkOrderId}/` dengan nama `foto_bukti.jpg`
+
+#### 4. Get WO Actual Image (Header)
+- **GET** `/api/work-order-actual/{id}/image`
+- **Description**: Mengembalikan file image foto bukti header Work Order Actual secara langsung (stream/file). Cocok untuk `<img src="...">` di frontend.
+- **Response**: Konten binary image (`image/jpeg`), bukan JSON.
+- **Notes**: Jika file tidak ditemukan atau tidak tersedia, API akan mengembalikan JSON error dengan status 404.
+
+#### 5. Get WO Actual Item Image by Item ID
+- **GET** `/api/work-order-actual/item/{itemId}/image`
+- **Description**: Mengembalikan file image foto bukti untuk satu Work Order Actual Item berdasarkan ID item (stream/file).
+- **Response**: Konten binary image (`image/jpeg`), bukan JSON.
+- **Notes**: Jika file tidak ditemukan atau tidak tersedia, API akan mengembalikan JSON error dengan status 404.
+
+<!-- Endpoint untuk mengambil semua image item dihapus untuk menghindari membuka seluruh file/folder. Gunakan endpoint item per item di atas. -->
 
 #### Report Work Order Actual (Header Only)
 - **GET** `/api/work-order-actual/report`

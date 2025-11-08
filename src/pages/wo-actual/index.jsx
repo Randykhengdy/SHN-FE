@@ -71,29 +71,29 @@ export default function WOActualPage() {
   const loadWorkOrders = useCallback(async () => {
     try {
       setLoading(true);
+      const range = periodFilter !== 'all' ? getPeriodRange(periodFilter) : null;
       const result = await woActualService.getWOActuals({
         page: currentPage,
         per_page: itemsPerPage,
         search: searchTerm,
         status: statusFilter !== 'all' ? statusFilter : undefined,
-        wo_number: filterWoNumber,
-        so_number: filterSoNumber,
-        period: periodFilter !== 'all' ? periodFilter : undefined
+        nomor_wo: filterWoNumber,
+        nomor_so: filterSoNumber,
+        date_from: range?.date_from,
+        date_to: range?.date_to
       });
       
       // Transform API data to match our UI structure
-      const transformedData = result.data.map(woActual => ({
+      const transformedData = (result.data || []).map(woActual => ({
         id: woActual.id,
-        woNumber: woActual.work_order_planning?.nomor_wo || 'N/A',
-        soNumber: woActual.work_order_planning?.sales_order?.nomor_so || 'N/A',
-        customer: woActual.work_order_planning?.sales_order?.pelanggan?.nama_pelanggan || 'N/A',
-        warehouse: woActual.work_order_planning?.sales_order?.gudang?.nama_gudang || 'N/A',
-        itemCount: woActual.items?.length || 0,
+        woNumber: woActual.nomor_wo || 'N/A',
+        soNumber: woActual.nomor_so || 'N/A',
+        customer: woActual.nama_pelanggan || 'N/A',
+        warehouse: woActual.nama_gudang || 'N/A',
+        itemCount: woActual.jumlah_item ?? 0,
         status: woActual.status || "Pending",
-        createdAt: formatDate(woActual.created_at),
-        items: woActual.items || [],
-        planningId: woActual.planningWorkOrderId,
-        fotoBukti: woActual.foto_bukti
+        createdAt: formatDate(woActual.tanggal_actual || woActual.created_at),
+        planningId: woActual.work_order_planning_id
       }));
       
       // Since filtering is now handled by API, we can directly use the data
@@ -120,7 +120,7 @@ export default function WOActualPage() {
 
   // Handle view detail
   const handleViewDetail = (woId) => {
-    navigate(`/wo-actual/detail/${woId}`);
+    navigate(`/wo-actual/view/${woId}`);
   };
 
   const handleClearFilter = () => {
@@ -133,7 +133,7 @@ export default function WOActualPage() {
     setSearchTerm('');
   };
 
-  // Helper for period → tanggal_actual range
+  // Helper for period → date range (actual date)
   const pad = (n) => String(n).padStart(2, '0');
   const formatDateLocal = (date) => `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
   const getPeriodRange = (period) => {
@@ -172,8 +172,8 @@ export default function WOActualPage() {
         return null;
     }
     return {
-      tanggal_actual_start: formatDateLocal(start),
-      tanggal_actual_end: formatDateLocal(end),
+      date_from: formatDateLocal(start),
+      date_to: formatDateLocal(end),
     };
   };
 
@@ -211,8 +211,8 @@ export default function WOActualPage() {
       if (periodFilter && periodFilter !== 'all') {
         const range = getPeriodRange(periodFilter);
         if (range) {
-          queryParams.append('tanggal_actual_start', range.tanggal_actual_start);
-          queryParams.append('tanggal_actual_end', range.tanggal_actual_end);
+          queryParams.append('date_from', range.date_from);
+          queryParams.append('date_to', range.date_to);
         }
       }
       queryParams.append('per_page', '10000');
@@ -438,13 +438,6 @@ export default function WOActualPage() {
           </div>
           
           <div className="flex justify-end gap-2">
-            <Button 
-              onClick={handleAddWOActual}
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Tambah WO Actual
-            </Button>
             <Button 
               variant="outline" 
               onClick={loadWorkOrders} 

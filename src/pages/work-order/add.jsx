@@ -1102,7 +1102,7 @@ export default function AddWorkOrderPage() {
           pelaksana: item.pelaksana.map(p => ({
             pelaksana_id: p.pelaksana_id,
             qty: p.qty,
-            weight: 0, // Default weight, bisa diisi nanti
+            weight: (typeof p.berat !== 'undefined') ? (parseFloat(p.berat) || 0) : (parseFloat(p.weight) || 0),
             tanggal: workOrderData.tanggal_wo, // Use WO date as default
             jam_mulai: "08:00", // Default start time
             jam_selesai: "17:00", // Default end time
