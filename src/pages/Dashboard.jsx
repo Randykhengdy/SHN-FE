@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Chart from "chart.js/auto";
 import Header from "@/components/Header";
+import { dashboardService } from "@/services/dashboardService";
 
 function formatRupiah(num) {
   return "Rp " + (num || 0).toLocaleString("id-ID");
@@ -51,23 +52,34 @@ export default function Dashboard() {
     .slice(0, 10);
 
   // Chart refs
+  const monthlyPurchaseRef = useRef(null);
   const monthlySalesRef = useRef(null);
+  const monthlyWorkPlanningRef = useRef(null);
+  const monthlyWorkActualRef = useRef(null);
   const materialDistRef = useRef(null);
   const inventoryStatusRef = useRef(null);
+  const [monthlyPurchaseData, setMonthlyPurchaseData] = useState(null);
+  const [monthlySalesData, setMonthlySalesData] = useState(null);
+  const [monthlyWorkPlanningData, setMonthlyWorkPlanningData] = useState(null);
+  const [monthlyWorkActualData, setMonthlyWorkActualData] = useState(null);
+
+  useEffect(() => {
+    initPurchaseOrderDashboard();
+    initSalesOrderDashboard();
+    initWorkOrderPlanningDashboard();
+    initWorkOrderActualDashboard();
+  }, []);
 
   // Chart.js setup
   useEffect(() => {
-    // Monthly Sales Chart
-    const monthlySalesChart = new Chart(monthlySalesRef.current, {
+    // Monthly Purchase Chart
+    const monthlyPurchaseChart = new Chart(monthlyPurchaseRef.current, {
       type: "bar",
       data: {
-        labels: [
-          "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-        ],
+        labels: monthlyPurchaseData?.map(item => item.day),
         datasets: [{
           label: "Penjualan (Juta Rupiah)",
-          data: [12.5, 15.2, 18.7, 14.3, 22.1, 19.8, 25.4, 21.6, 28.9, 24.3, 31.2, 27.8],
+          data: monthlyPurchaseData?.map(item => item.total),
           backgroundColor: "rgba(44, 62, 80, 0.8)",
           borderColor: "rgba(44, 62, 80, 1)",
           borderWidth: 1
@@ -80,14 +92,94 @@ export default function Dashboard() {
           y: {
             beginAtZero: true,
             ticks: {
-              callback: value => "Rp " + value + "M"
+              callback: value => value
             }
           }
         },
         plugins: { legend: { display: false } }
       }
     });
-
+    // Monthly Sales Chart
+    const monthlySalesChart = new Chart(monthlySalesRef.current, {
+      type: "bar",
+      data: {
+        labels: monthlySalesData?.map(item => item.day),
+        datasets: [{
+          label: "Penjualan (Juta Rupiah)",
+          data: monthlySalesData?.map(item => item.total),
+          backgroundColor: "rgba(44, 62, 80, 0.8)",
+          borderColor: "rgba(44, 62, 80, 1)",
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: value => value
+            }
+          }
+        },
+        plugins: { legend: { display: false } }
+      }
+    });
+    // Monthly Work Order Planning Chart
+    const monthlyWorkPlanningChart = new Chart(monthlyWorkPlanningRef.current, {
+      type: "bar",
+      data: {
+        labels: monthlyWorkPlanningData?.map(item => item.day),
+        datasets: [{
+          label: "Penjualan (Juta Rupiah)",
+          data: monthlyWorkPlanningData?.map(item => item.total),
+          backgroundColor: "rgba(44, 62, 80, 0.8)",
+          borderColor: "rgba(44, 62, 80, 1)",
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: value => value
+            }
+          }
+        },
+        plugins: { legend: { display: false } }
+      }
+    });
+    // Monthly Work Order Actual Chart
+    const monthlyWorkActualChart = new Chart(monthlyWorkActualRef.current, {
+      type: "bar",
+      data: {
+        labels: monthlyWorkActualData?.map(item => item.day),
+        datasets: [{
+          label: "Penjualan (Juta Rupiah)",
+          data: monthlyWorkActualData?.map(item => item.total),
+          backgroundColor: "rgba(44, 62, 80, 0.8)",
+          borderColor: "rgba(44, 62, 80, 1)",
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: value => value
+            }
+          }
+        },
+        plugins: { legend: { display: false } }
+      }
+    });
     // Material Distribution Chart
     const materialDistChart = new Chart(materialDistRef.current, {
       type: "pie",
@@ -138,11 +230,52 @@ export default function Dashboard() {
 
     // Cleanup
     return () => {
+      monthlyPurchaseChart.destroy();
       monthlySalesChart.destroy();
+      monthlyWorkPlanningChart.destroy();
+      monthlyWorkActualChart.destroy();
       materialDistChart.destroy();
       inventoryStatusChart.destroy();
     };
-  }, []);
+  }, [monthlyPurchaseData, monthlySalesData, monthlyWorkPlanningData, monthlyWorkActualData]);
+
+  const initPurchaseOrderDashboard = async () => {
+    const data = await dashboardService.getPurchaseOrderDashboard();
+    explodeDataToDaysInMonth(data, setMonthlyPurchaseData);
+  }
+  const initSalesOrderDashboard = async () => {
+    const data = await dashboardService.getSalesOrderDashboard();
+    explodeDataToDaysInMonth(data, setMonthlySalesData);
+  }
+
+  const initWorkOrderPlanningDashboard = async () => {
+    const data = await dashboardService.getWorkOrderPlanningDashboard();
+    explodeDataToDaysInMonth(data, setMonthlyWorkPlanningData);
+  }
+
+  const initWorkOrderActualDashboard = async () => {
+    const data = await dashboardService.getWorkOrderActualDashboard();
+    explodeDataToDaysInMonth(data, setMonthlyWorkActualData);
+  }
+
+  const explodeDataToDaysInMonth = (data, setData) => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const map = {};
+    data.forEach(item => {
+      map[Number(item.day)] = item.total;
+    });
+    const chartData = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      chartData.push({
+        day: d,
+        total: map[d] ?? 0
+      });
+    }
+    setData(chartData);
+  }
 
   // Logout confirmation modal sudah tidak diperlukan karena ada di Header
 
@@ -161,118 +294,138 @@ export default function Dashboard() {
       <Header />
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-        <div className="mb-7 text-lg font-semibold text-gray-700">
-          Selamat datang di Sistem Inventory & Workshop SURYA LOGAM JAYA
-        </div>
+      <div className="h-screen flex overflow-scroll">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
+          <div className="mb-7 text-lg font-semibold text-gray-700">
+            Selamat datang di Sistem Inventory & Workshop SURYA LOGAM JAYA
+          </div>
 
-        {/* Key Metrics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white p-5 rounded-xl shadow-sm">
-            <div className="text-gray-500 text-sm mb-1">Total PO</div>
-            <div className="text-2xl font-bold text-gray-800">{totalPO}</div>
+          {/* Key Metrics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white p-5 rounded-xl shadow-sm">
+              <div className="text-gray-500 text-sm mb-1">Total PO</div>
+              <div className="text-2xl font-bold text-gray-800">{totalPO}</div>
+            </div>
+            <div className="bg-white p-5 rounded-xl shadow-sm">
+              <div className="text-gray-500 text-sm mb-1">Total Pembelian Plat</div>
+              <div className="text-2xl font-bold text-gray-800">{formatRupiah(totalPembelian)}</div>
+            </div>
+            <div className="bg-white p-5 rounded-xl shadow-sm">
+              <div className="text-gray-500 text-sm mb-1">Total AR (Piutang)</div>
+              <div className="text-2xl font-bold text-gray-800">{formatRupiah(totalAR)}</div>
+            </div>
+            <div className="bg-white p-5 rounded-xl shadow-sm">
+              <div className="text-gray-500 text-sm mb-1">Total AP (Hutang)</div>
+              <div className="text-2xl font-bold text-gray-800">{formatRupiah(totalAP)}</div>
+            </div>
           </div>
-          <div className="bg-white p-5 rounded-xl shadow-sm">
-            <div className="text-gray-500 text-sm mb-1">Total Pembelian Plat</div>
-            <div className="text-2xl font-bold text-gray-800">{formatRupiah(totalPembelian)}</div>
-          </div>
-          <div className="bg-white p-5 rounded-xl shadow-sm">
-            <div className="text-gray-500 text-sm mb-1">Total AR (Piutang)</div>
-            <div className="text-2xl font-bold text-gray-800">{formatRupiah(totalAR)}</div>
-          </div>
-          <div className="bg-white p-5 rounded-xl shadow-sm">
-            <div className="text-gray-500 text-sm mb-1">Total AP (Hutang)</div>
-            <div className="text-2xl font-bold text-gray-800">{formatRupiah(totalAP)}</div>
-          </div>
-        </div>
 
-        {/* Charts Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div className="bg-white p-5 rounded-xl shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-700 mb-3">Penjualan Bulanan (2025)</h3>
-            <div className="relative h-56">
-              <canvas ref={monthlySalesRef}></canvas>
-            </div>
-          </div>
-          <div className="bg-white p-5 rounded-xl shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-700 mb-3">Distribusi Material</h3>
-            <div className="relative h-56">
-              <canvas ref={materialDistRef}></canvas>
-            </div>
-          </div>
-          <div className="bg-white p-5 rounded-xl shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-700 mb-3">Statistik Produksi</h3>
-            <div className="grid grid-cols-2 gap-3 mt-3">
-              <div className="border border-gray-100 rounded-lg p-3 text-center">
-                <div className="text-2xl font-bold text-gray-800">156</div>
-                <div className="text-sm text-gray-500">Total Produksi</div>
-              </div>
-              <div className="border border-gray-100 rounded-lg p-3 text-center">
-                <div className="text-2xl font-bold text-gray-800">89%</div>
-                <div className="text-sm text-gray-500">Efisiensi</div>
-              </div>
-              <div className="border border-gray-100 rounded-lg p-3 text-center">
-                <div className="text-2xl font-bold text-gray-800">12</div>
-                <div className="text-sm text-gray-500">Proyek Aktif</div>
-              </div>
-              <div className="border border-gray-100 rounded-lg p-3 text-center">
-                <div className="text-2xl font-bold text-gray-800">2.4</div>
-                <div className="text-sm text-gray-500">Rata-rata Hari</div>
+          {/* Charts Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div className="bg-white p-5 rounded-xl shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-700 mb-3">Pembelian Bulan {new Date().toLocaleString('en-US', { month: 'long' })} (2025)</h3>
+              <div className="relative h-56">
+                <canvas ref={monthlyPurchaseRef}></canvas>
               </div>
             </div>
-          </div>
-          <div className="bg-white p-5 rounded-xl shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-700 mb-3">Status Inventory</h3>
-            <div className="relative h-56">
-              <canvas ref={inventoryStatusRef}></canvas>
+            <div className="bg-white p-5 rounded-xl shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-700 mb-3">Penjualan Bulan {new Date().toLocaleString('en-US', { month: 'long' })} (2025)</h3>
+              <div className="relative h-56">
+                <canvas ref={monthlySalesRef}></canvas>
+              </div>
             </div>
-          </div>
-        </div>
-
-        {/* Low Stock Alerts */}
-        <div className="mb-8">
-          <div className="bg-white p-5 rounded-xl shadow-sm">
-            <div className="flex items-center mb-4 text-lg font-semibold text-gray-700">
-              <span className="text-red-500 mr-2">⚠️</span>
-              Stok Menipis
+            <div className="bg-white p-5 rounded-xl shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-700 mb-3">Pengerjaan Bulan Planning {new Date().toLocaleString('en-US', { month: 'long' })} (2025)</h3>
+              <div className="relative h-56">
+                <canvas ref={monthlyWorkPlanningRef}></canvas>
+              </div>
             </div>
-            <div className="space-y-2">
-              {lowStockItems.map((item, idx) => (
-                <div key={idx} className={`flex items-center p-3 ${item.bgColor} rounded-lg border-l-4`} style={{ borderLeftColor: item.color }}>
-                  <div className="flex-1">
-                    <div className="font-semibold text-gray-800">{item.name}</div>
-                    <div className="text-sm text-gray-600">Sisa: {item.sisa}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-semibold" style={{ color: item.color }}>{item.status}</div>
-                    <div className="text-sm text-gray-600">Min: {item.min}</div>
-                  </div>
+            <div className="bg-white p-5 rounded-xl shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-700 mb-3">Pengerjaan Bulan Actual {new Date().toLocaleString('en-US', { month: 'long' })} (2025)</h3>
+              <div className="relative h-56">
+                <canvas ref={monthlyWorkActualRef}></canvas>
+              </div>
+            </div>
+            <div className="bg-white p-5 rounded-xl shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-700 mb-3">Distribusi Material</h3>
+              <div className="relative h-56">
+                <canvas ref={materialDistRef}></canvas>
+              </div>
+            </div>
+            <div className="bg-white p-5 rounded-xl shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-700 mb-3">Statistik Produksi</h3>
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                <div className="border border-gray-100 rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-gray-800">156</div>
+                  <div className="text-sm text-gray-500">Total Produksi</div>
                 </div>
-              ))}
+                <div className="border border-gray-100 rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-gray-800">89%</div>
+                  <div className="text-sm text-gray-500">Efisiensi</div>
+                </div>
+                <div className="border border-gray-100 rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-gray-800">12</div>
+                  <div className="text-sm text-gray-500">Proyek Aktif</div>
+                </div>
+                <div className="border border-gray-100 rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-gray-800">2.4</div>
+                  <div className="text-sm text-gray-500">Rata-rata Hari</div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white p-5 rounded-xl shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-700 mb-3">Status Inventory</h3>
+              <div className="relative h-56">
+                <canvas ref={inventoryStatusRef}></canvas>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Recent Activity */}
-        <div>
-          <div className="bg-white p-5 rounded-xl shadow-sm">
-            <div className="text-lg font-semibold text-gray-700 mb-4">
-              Aktivitas Terbaru
+          {/* Low Stock Alerts */}
+          <div className="mb-8">
+            <div className="bg-white p-5 rounded-xl shadow-sm">
+              <div className="flex items-center mb-4 text-lg font-semibold text-gray-700">
+                <span className="text-red-500 mr-2">⚠️</span>
+                Stok Menipis
+              </div>
+              <div className="space-y-2">
+                {lowStockItems.map((item, idx) => (
+                  <div key={idx} className={`flex items-center p-3 ${item.bgColor} rounded-lg border-l-4`} style={{ borderLeftColor: item.color }}>
+                    <div className="flex-1">
+                      <div className="font-semibold text-gray-800">{item.name}</div>
+                      <div className="text-sm text-gray-600">Sisa: {item.sisa}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-semibold" style={{ color: item.color }}>{item.status}</div>
+                      <div className="text-sm text-gray-600">Min: {item.min}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <ul className="space-y-2">
-              {activities.length === 0 ? (
-                <li>Tidak ada aktivitas terbaru.</li>
-              ) : (
-                activities.map((act, idx) => (
-                  <li key={idx} className="mb-2">
-                    <span className="text-gray-500 text-sm">{act.date}</span>
-                    {" — "}
-                    <span dangerouslySetInnerHTML={{ __html: act.text }} />
-                  </li>
-                ))
-              )}
-            </ul>
+          </div>
+
+          {/* Recent Activity */}
+          <div>
+            <div className="bg-white p-5 rounded-xl shadow-sm">
+              <div className="text-lg font-semibold text-gray-700 mb-4">
+                Aktivitas Terbaru
+              </div>
+              <ul className="space-y-2">
+                {activities.length === 0 ? (
+                  <li>Tidak ada aktivitas terbaru.</li>
+                ) : (
+                  activities.map((act, idx) => (
+                    <li key={idx} className="mb-2">
+                      <span className="text-gray-500 text-sm">{act.date}</span>
+                      {" — "}
+                      <span dangerouslySetInnerHTML={{ __html: act.text }} />
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>
           </div>
         </div>
       </div>

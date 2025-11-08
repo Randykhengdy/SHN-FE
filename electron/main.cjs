@@ -217,7 +217,7 @@ function createWindow() {
           { label: 'WO Actual', accelerator: 'CmdOrCtrl+Shift+W', click: () => mainWindow.webContents.send('navigate-to', '/wo-actual') },
           { label: 'Surat Jalan \& Invoicing', accelerator: 'CmdOrCtrl+F', click: () => mainWindow.webContents.send('navigate-to', '/finance-invoice-pod') },
           { type: 'separator' },
-          { label: 'AR / AP', accelerator: 'CmdOrCtrl+A', click: () => mainWindow.webContents.send('navigate-to', '/ar-ap') },
+          { label: 'AR / AP', click: () => mainWindow.webContents.send('navigate-to', '/ar-ap') },
           { label: 'Mutasi Stock', accelerator: 'CmdOrCtrl+M', click: () => mainWindow.webContents.send('navigate-to', '/mutasi-stock') },
           { label: 'Item Barang Request', accelerator: 'CmdOrCtrl+I', click: () => mainWindow.webContents.send('navigate-to', '/item-barang-request') },
           { label: 'Approval', accelerator: 'CmdOrCtrl+Shift+A', click: () => mainWindow.webContents.send('navigate-to', '/approval') },
@@ -232,7 +232,7 @@ function createWindow() {
         submenu: [
           { label: 'FUI', accelerator: 'CmdOrCtrl+F', click: () => mainWindow.webContents.send('navigate-to', '/tools/fui') },
           { label: 'Workshop', accelerator: 'CmdOrCtrl+Shift+W', click: () => mainWindow.webContents.send('navigate-to', '/tools/workshop') },
-          { label: 'Report', accelerator: 'CmdOrCtrl+R', click: () => mainWindow.webContents.send('navigate-to', '/tools/report') }
+          { label: 'Report', click: () => mainWindow.webContents.send('navigate-to', '/tools/report') }
         ]
       },
     {
