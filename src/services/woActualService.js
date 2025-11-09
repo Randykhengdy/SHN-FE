@@ -13,19 +13,24 @@ export const woActualService = {
     if (params.per_page) queryParams.append('per_page', params.per_page);
     if (params.search) queryParams.append('search', params.search);
     if (params.status) queryParams.append('status', params.status);
+    // Sorting support (multiple or single)
+    if (params.sort) queryParams.append('sort', params.sort);
+    if (params.sort_by) queryParams.append('sort_by', params.sort_by);
+    if (params.order) queryParams.append('order', params.order);
     // Adjusted to new compact list API: id_gudang, id_pelanggan, nomor_wo, nomor_so, date_from, date_to
     const idGudang = params.id_gudang ?? params.gudang_id ?? params.warehouse_id;
     const idPelanggan = params.id_pelanggan ?? params.pelanggan_id ?? params.customer_id;
     const nomorWo = params.nomor_wo ?? params.wo_number;
     const nomorSo = params.nomor_so ?? params.so_number;
-    const dateFrom = params.date_from ?? params.tanggal_actual_start;
-    const dateTo = params.date_to ?? params.tanggal_actual_end;
+    // Prefer new params `date_start/date_end` but accept legacy `date_from/date_to`
+    const dateStart = params.date_start ?? params.date_from ?? params.tanggal_actual_start;
+    const dateEnd = params.date_end ?? params.date_to ?? params.tanggal_actual_end;
     if (idGudang) queryParams.append('id_gudang', idGudang);
     if (idPelanggan) queryParams.append('id_pelanggan', idPelanggan);
     if (nomorWo) queryParams.append('nomor_wo', nomorWo);
     if (nomorSo) queryParams.append('nomor_so', nomorSo);
-    if (dateFrom) queryParams.append('date_from', dateFrom);
-    if (dateTo) queryParams.append('date_to', dateTo);
+    if (dateStart) queryParams.append('date_start', dateStart);
+    if (dateEnd) queryParams.append('date_end', dateEnd);
     if (params.sort_by) queryParams.append('sort_by', params.sort_by);
     if (params.sort_order) queryParams.append('sort_order', params.sort_order);
     

@@ -128,28 +128,32 @@ export default function NavigationMenu() {
           </Button>
         ))}
 
-        {/* Divider */}
-        <div className="w-px h-6 bg-gray-300 mx-2"></div>
+        {false && (
+          <>
+            {/* Divider */}
+            <div className="w-px h-6 bg-gray-300 mx-2"></div>
 
-        {/* Laporan Menu */}
-        <div className="flex items-center gap-1">
-          <span className="text-xs font-medium text-gray-500 mr-2">LAPORAN:</span>
-          {getCategoryItems("laporan").map((item) => (
-            <Button
-              key={item.path}
-              variant={isActive(item.path) ? "default" : "ghost"}
-              size="sm"
-              onClick={() => navigate(item.path)}
-              className="flex items-center gap-2"
-            >
-              <item.icon className="w-4 h-4" />
-              {item.label}
-            </Button>
-          ))}
-        </div>
+            {/* Laporan Menu */}
+            <div className="flex items-center gap-1">
+              <span className="text-xs font-medium text-gray-500 mr-2">LAPORAN:</span>
+              {getCategoryItems("laporan").map((item) => (
+                <Button
+                  key={item.path}
+                  variant={isActive(item.path) ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => navigate(item.path)}
+                  className="flex items-center gap-2"
+                >
+                  <item.icon className="w-4 h-4" />
+                  {item.label}
+                </Button>
+              ))}
+            </div>
 
-        {/* Divider */}
-        <div className="w-px h-6 bg-gray-300 mx-2"></div>
+            {/* Divider */}
+            <div className="w-px h-6 bg-gray-300 mx-2"></div>
+          </>
+        )}
 
         {/* Transaksi Menu */}
         <div className="flex items-center gap-1">

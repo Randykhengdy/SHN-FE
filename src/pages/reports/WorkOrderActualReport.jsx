@@ -111,7 +111,6 @@ export default function WorkOrderActualReportPage() {
           queryParams.append("tanggal_actual_end", range.tanggal_actual_end);
         }
       }
-      queryParams.append("per_page", "10000");
       const url = `${apiConfig.baseUrl}${API_ENDPOINTS.workOrderActual}/report${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
 
       const response = await fetch(url, {

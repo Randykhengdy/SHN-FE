@@ -114,6 +114,8 @@ export default function ViewWorkOrderPage() {
         customer: workOrder?.pelanggan,
         warehouse: workOrder?.gudang,
         items: items.map(item => ({
+          id: item.id,
+          wo_item_unique_id: item.wo_item_unique_id || item.id,
           nama_item: item.jenisBarang?.nama_jenis_barang || item.jenisBarang?.nama || item.nama_item || 'N/A',
           jenisBarang: item.jenisBarang,
           bentukBarang: item.bentukBarang,
@@ -334,6 +336,7 @@ export default function ViewWorkOrderPage() {
             
             return {
               id: item.id,
+              wo_item_unique_id: item.wo_item_unique_id || item.work_order_planning_item_id || item.wo_item_id || item.item_id || item.id,
               jenisBarang: item.jenis_barang || item.jenisBarang,
               bentukBarang: item.bentuk_barang || item.bentukBarang,
               gradeBarang: item.grade_barang || item.gradeBarang,

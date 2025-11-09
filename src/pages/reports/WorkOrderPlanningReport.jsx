@@ -110,7 +110,6 @@ export default function WorkOrderPlanningReportPage() {
           queryParams.append("tanggal_wo_end", range.tanggal_wo_end);
         }
       }
-      queryParams.append("per_page", "10000");
       const url = `${apiConfig.baseUrl}${API_ENDPOINTS.workOrderPlanning}/report${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
 
       const response = await fetch(url, {

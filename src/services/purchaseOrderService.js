@@ -4,10 +4,21 @@ import { API_ENDPOINTS } from "@/config/api";
 export const purchaseOrderService = {
   // Get all sales orders
   getAll: async (params = {}) => {
-    return await request(API_ENDPOINTS.purchaseOrder, {
-      method: 'GET',
-      params
-    });
+    // Build query string manually because request() does not append params
+    const qp = new URLSearchParams();
+    if (params.page) qp.append('page', params.page);
+    if (params.per_page) qp.append('per_page', params.per_page);
+    if (params.search) qp.append('search', params.search);
+    if (params.status && params.status !== 'all') qp.append('status', params.status);
+    if (params.date_start) qp.append('date_start', params.date_start);
+    if (params.date_end) qp.append('date_end', params.date_end);
+    // Sorting supports either sort (multiple) or sort_by + order
+    if (params.sort) qp.append('sort', params.sort);
+    if (params.sort_by) qp.append('sort_by', params.sort_by);
+    if (params.order || params.sort_order) qp.append('order', params.order || params.sort_order);
+
+    const url = `${API_ENDPOINTS.purchaseOrder}${qp.toString() ? `?${qp.toString()}` : ''}`;
+    return await request(url, { method: 'GET' });
   },
 
   // Get sales order by ID

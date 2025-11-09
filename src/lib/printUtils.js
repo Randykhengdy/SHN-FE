@@ -653,56 +653,92 @@ export const generateWOPlanningPrintContent = (woPlanningData) => {
     </tr>
   `).join('') || '<tr><td colspan="9" style="text-align: center; padding: 12px;">Tidak ada item</td></tr>';
 
-  // Render canvas images similar to previous PDF template grouping
+  // Render canvas images with robust item-based grouping and naming
   const canvasImagesHtml = (woPlanningData.canvasImages || []).length > 0
     ? (() => {
-        const grouped = {};
-        let itemCounter = 1;
-
-        (woPlanningData.canvasImages || []).forEach((img, idx) => {
-          const groupKey = img.wo_item_id || img.item_barang_id || img.item_barang_name || `Item_${itemCounter}`;
-          if (!grouped[groupKey]) {
-            grouped[groupKey] = {
-              itemNumber: itemCounter++,
-              itemName: img.item_barang_name || `Item ${itemCounter - 1}`,
-              images: []
-            };
-          }
-          grouped[groupKey].images.push({ ...img, originalIndex: idx });
+        // Build map from item IDs to index and display name
+        const itemsArr = woPlanningData.items || [];
+        const itemMap = new Map();
+        itemsArr.forEach((item, index) => {
+          const name = item.nama_item || item.jenisBarang?.nama_jenis_barang || item.jenisBarang?.nama || `Item ${index + 1}`;
+          const idCandidates = [
+            item.wo_item_unique_id,
+            item.id,
+            item.wo_item_id,
+            item.item_id
+          ].filter(Boolean);
+          idCandidates.forEach(id => {
+            itemMap.set(String(id), { index: index + 1, name });
+          });
         });
 
-        const sections = Object.entries(grouped).map(([key, group]) => {
-          const items = group.images.map((image, imageIndex) => {
-            const src = image.canvas_image_base64 || image.image_base64 || image.image_url || image.src || '';
+        const groupedMap = new Map();
+        let unknownCounter = 1;
+        const unknownStartIndex = itemsArr.length + 1;
+
+        (woPlanningData.canvasImages || []).forEach((img, idx) => {
+          const idCandidates = [
+            img.work_order_planning_item_id,
+            img.wo_item_id,
+            img.wo_plan_item_id,
+            img.item_id,
+            img.wo_item_unique_id
+          ].filter(Boolean);
+
+          let key = null;
+          let info = null;
+          for (const id of idCandidates) {
+            const found = itemMap.get(String(id));
+            if (found) { key = String(id); info = found; break; }
+          }
+
+          if (!key) {
+            key = `unknown_${unknownCounter}`;
+            info = { index: unknownStartIndex + unknownCounter - 1, name: `Item ${unknownStartIndex + unknownCounter - 1}` };
+            unknownCounter++;
+          }
+
+          if (!groupedMap.has(key)) {
+            groupedMap.set(key, { itemNumber: info.index, itemName: info.name, images: [] });
+          }
+          groupedMap.get(key).images.push({ ...img, originalIndex: idx });
+        });
+
+        // Sort sections by item number (ascending) for consistent ordering
+        const sections = Array.from(groupedMap.values())
+          .sort((a, b) => a.itemNumber - b.itemNumber)
+          .map(group => {
+            const items = group.images.map((image, imageIndex) => {
+              const src = image.canvas_image_base64 || image.image_base64 || image.image_url || image.src || '';
+              return `
+                <div style="margin-bottom: 16px; page-break-inside: avoid;">
+                  <div style="font-weight: bold; margin-bottom: 6px; font-size: 12px; color: #555;">WO Item ${group.itemNumber} - Image ${imageIndex + 1}</div>
+                  <div style="text-align: center; border: 1px solid #ddd; padding: 8px; background-color: #f9f9f9;">
+                    ${src ? `
+                      <img src="${src}" alt="WO Item ${group.itemNumber} - Image ${imageIndex + 1}" style="max-width: 100%; max-height: 320px; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                      <div style="display: none; padding: 16px; color: #666; font-style: italic;">Gambar tidak dapat dimuat</div>
+                    ` : `
+                      <div style="padding: 16px; color: #666; font-style: italic;">Canvas image tidak tersedia</div>
+                    `}
+                  </div>
+                  ${image.quantity || image.dimensi || image.wo_item_id ? `
+                  <div style="margin-top: 6px; font-size: 11px; color: #666;">
+                    ${image.quantity ? `Quantity: ${image.quantity}` : ''}
+                    ${image.dimensi ? ` | Dimensi: ${image.dimensi}` : ''}
+                    ${image.wo_item_id ? ` | WO Item ID: ${image.wo_item_id}` : ''}
+                  </div>
+                  ` : ''}
+                </div>
+              `;
+            }).join('');
+
             return `
-              <div style="margin-bottom: 16px; page-break-inside: avoid;">
-                <div style="font-weight: bold; margin-bottom: 6px; font-size: 12px; color: #555;">WO Item ${group.itemNumber} - Image ${imageIndex + 1}</div>
-                <div style="text-align: center; border: 1px solid #ddd; padding: 8px; background-color: #f9f9f9;">
-                  ${src ? `
-                    <img src="${src}" alt="WO Item ${group.itemNumber} - Image ${imageIndex + 1}" style="max-width: 100%; max-height: 320px; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
-                    <div style="display: none; padding: 16px; color: #666; font-style: italic;">Gambar tidak dapat dimuat</div>
-                  ` : `
-                    <div style="padding: 16px; color: #666; font-style: italic;">Canvas image tidak tersedia</div>
-                  `}
-                </div>
-                ${image.quantity || image.dimensi || image.wo_item_id ? `
-                <div style="margin-top: 6px; font-size: 11px; color: #666;">
-                  ${image.quantity ? `Quantity: ${image.quantity}` : ''}
-                  ${image.dimensi ? ` | Dimensi: ${image.dimensi}` : ''}
-                  ${image.wo_item_id ? ` | WO Item ID: ${image.wo_item_id}` : ''}
-                </div>
-                ` : ''}
+              <div style="margin-bottom: 20px;">
+                <div style="font-weight: bold; margin-bottom: 8px;">Canvas Layout - Item ${group.itemNumber}</div>
+                ${items}
               </div>
             `;
           }).join('');
-
-          return `
-            <div style="margin-bottom: 20px;">
-              <div style="font-weight: bold; margin-bottom: 8px;">Canvas Layout - ${group.itemName}</div>
-              ${items}
-            </div>
-          `;
-        }).join('');
 
         return `
           <div class="section" style="margin-top: 16px;">

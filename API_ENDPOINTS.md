@@ -323,6 +323,16 @@
   - **Response:** `{ success, message, data: ItemBarang(with relations) }`
 
 - `GET /api/sales-order` - List all sales order
+  - **Query Parameters (optional):**
+    - `per_page` (integer): Jumlah data per halaman. Jika `per_page`/`page` tidak dikirim, semua hasil dikembalikan dalam satu halaman.
+    - `page` (integer): Nomor halaman.
+    - `search` (string): Pencarian global (`nomor_so`, `syarat_pembayaran`, `status`).
+    - `sort` atau `sort_by` + `order`: Sorting multiple (`sort` menerima format `field,order;field,order`) atau single (`sort_by` + `order`).
+    - `date_start`, `date_end` (date): Filter periode berdasarkan `tanggal_so`.
+  - **Catatan Response:** Menyertakan `items_count` sebagai jumlah item SO (alias dari `sales_order_items_count`)
+  - **Contoh Request:**
+    - `GET /api/sales-order?per_page=50&sort=tanggal_so,desc;nomor_so,asc`
+    - `GET /api/sales-order?date_start=2024-01-01&date_end=2024-03-31`
   - **Response:** `{ "data": [{ "id": "int", "nomor_so": "string", "tanggal_so": "date", "tanggal_pengiriman": "date", "syarat_pembayaran": "string", "gudang_id": "int", "pelanggan_id": "int", "subtotal": "decimal", "total_diskon": "decimal", "ppn_percent": "decimal", "ppn_amount": "decimal", "total_harga_so": "decimal", "status": "string", "salesOrderItems": [{ "id": "int", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "qty": "int", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "harga": "decimal", "satuan": "string", "jenis_potongan": "string", "diskon": "decimal", "catatan": "string", "jenis_barang": { "id": "int", "nama_jenis_barang": "string" }, "bentuk_barang": { "id": "int", "nama_bentuk_barang": "string" }, "grade_barang": { "id": "int", "nama_grade_barang": "string" } }], "pelanggan": { "id": "int", "nama_pelanggan": "string", "alamat": "string", "telepon": "string" }, "gudang": { "id": "int", "kode": "string", "nama_gudang": "string", "tipe_gudang": "string" } }] }`
 - `POST /api/sales-order` - Create new sales order
   - **Request:** `{ "nomor_so": "string", "tanggal_so": "date", "tanggal_pengiriman": "date", "syarat_pembayaran": "string", "gudang_id": "int", "pelanggan_id": "int", "subtotal": "decimal", "total_diskon": "decimal", "ppn_percent": "decimal", "ppn_amount": "decimal", "total_harga_so": "decimal", "items": [{ "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "qty": "int", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "harga": "decimal", "satuan": "string", "jenis_potongan": "string", "diskon": "decimal", "catatan": "string" }] }`
@@ -353,6 +363,7 @@
     - `tanggal_akhir`: Filter tanggal akhir (format: YYYY-MM-DD)
     - `pelanggan_id`: Filter berdasarkan ID pelanggan
     - `gudang_id`: Filter berdasarkan ID gudang
+  - **Catatan Response:** Menyertakan `items_count` sebagai jumlah item SO (alias dari `sales_order_items_count`)
   - **Response:** `{ "data": [{ "id": "int", "nomor_so": "string", "tanggal_so": "date", "tanggal_pengiriman": "date", "syarat_pembayaran": "string", "gudang_id": "int", "pelanggan_id": "int", "subtotal": "decimal", "total_diskon": "decimal", "ppn_percent": "decimal", "ppn_amount": "decimal", "total_harga_so": "decimal", "status": "string", "pelanggan": { "id": "int", "nama_pelanggan": "string" }, "gudang": { "id": "int", "kode": "string", "nama_gudang": "string" } }] }`
 - `GET /api/sales-order/header/{id}` - Get sales order by ID (header attributes only)
   - **Description:** Mendapatkan detail sales order dengan atribut header saja (tanpa salesOrderItems)
@@ -507,10 +518,11 @@
 - **GET** `/api/work-order-planning`
 - **Description**: Mendapatkan semua data work order planning dengan pagination, pencarian, filter, dan sorting
 - **Query Parameters**:
-  - `per_page`: Jumlah data per halaman (default: 10)
+  - `per_page`: Jumlah data per halaman (default: 10). Jika `per_page`/`page` tidak dikirim, semua hasil dikembalikan dalam satu halaman.
+  - `page`: Nomor halaman.
   - `search`: Pencarian global berdasarkan field yang dapat dicari
-  - `sort`: Field untuk sorting (dapat multiple, dipisah koma)
-  - `order`: Arah sorting (asc/desc, dapat multiple, dipisah koma)
+  - `sort` atau `sort_by` + `order`: Sorting multiple (`sort` menerima format `field,order;field,order`) atau single (`sort_by` + `order`)
+  - `date_start`, `date_end`: Filter periode berdasarkan `created_at` (format: `YYYY-MM-DD`).
   - `filter[field_name]`: Filter spesifik berdasarkan field tertentu
 - **Searchable Fields**: 
   - `sales_order.nomor_so`: Nomor Sales Order
@@ -526,9 +538,10 @@
 - **Request Examples**:
   ```
   GET /api/work-order-planning?search=WO001
-  GET /api/work-order-planning?sort=tanggal_wo&order=desc
+  GET /api/work-order-planning?sort=tanggal_wo,desc
   GET /api/work-order-planning?filter[status]=DRAFT&filter[prioritas]=HIGH
-  GET /api/work-order-planning?sort=nomor_wo,tanggal_wo&order=asc,desc
+  GET /api/work-order-planning?sort=nomor_wo,asc;tanggal_wo,desc
+  GET /api/work-order-planning?date_start=2024-01-01&date_end=2024-03-31
   ```
 - **Response**: List work order planning dengan kolom referensi ringkas dan jumlah item
 - **Returned Fields**: mencakup `nomor_wo`, `tanggal_wo`, `prioritas`, `status`, `nomor_so`, `nama_pelanggan`, `nama_gudang`, `count` (jumlah item terkait)
@@ -1088,22 +1101,24 @@ Authorization: Bearer your_jwt_token
 ### Overview
 Work Order Actual API menyediakan endpoint untuk mengelola data aktual dari work order yang telah dieksekusi. API ini mendukung operasi untuk melihat daftar work order actual, detail work order actual, dan menyimpan data work order actual.
 
-#### 1. Get All Work Order Actual
+#### 1. Get All Work Order Actual (List Ringkas)
 - **GET** `/api/work-order-actual`
-- **Description**: Mendapatkan daftar semua work order actual dengan pagination, search, filter, dan sorting
+- **Description**: Mendapatkan daftar work order actual dalam format ringkas untuk halaman list. Atribut dikurangi agar hemat bandwidth.
 - **Query Parameters (optional)**:
-  - `page` (integer): Halaman data (default: 1)
+  - `page` (integer): Halaman data (default: 1). Jika `per_page`/`page` tidak dikirim, semua hasil dikembalikan dalam satu halaman.
   - `per_page` (integer): Jumlah data per halaman (default: 10)
-  - `search` (string): Pencarian berdasarkan ID, foto_bukti, atau nomor WO
-  - `sort_by` (string): Field untuk sorting (default: id)
-  - `sort_order` (string): Urutan sorting - asc/desc (default: desc)
-  - Filter fields: `id`, `work_order_planning_id`, `foto_bukti`, `created_at`, `updated_at`
-- **Request Example**:
-```
-GET /api/work-order-actual?page=1&per_page=10&search=WO&sort_by=created_at&sort_order=desc
-Authorization: Bearer your_jwt_token
-```
-- **Response**: Paginated list work order actual dengan relasi work order planning, items, dan pelaksana
+  - `search` (string): Pencarian global (WO/SO/pelanggan/gudang/status)
+  - `sort` atau `sort_by` + `order`: Sorting multiple (`sort` menerima format `field,order;field,order`) atau single (`sort_by` + `order`)
+  - `status` (string): Filter status
+  - `id_pelanggan` (integer): Filter pelanggan
+  - `id_gudang` (integer): Filter gudang
+  - `nomor_wo` (string): Filter nomor WO (like)
+  - `nomor_so` (string): Filter nomor SO (like)
+  - `date_start`, `date_end` (date): Filter periode berdasarkan `created_at` (dukungan legacy `date_from`, `date_to` tetap ada)
+ - **Contoh Request:**
+   - `GET /api/work-order-actual?sort=nomor_wo,asc;status,desc`
+   - `GET /api/work-order-actual?date_start=2024-01-01&date_end=2024-01-31`
+- **Response**: Paginated list ringkas tanpa relasi berat. Hanya field penting untuk list.
 - **Response Format**:
 ```json
 {
@@ -1113,65 +1128,25 @@ Authorization: Bearer your_jwt_token
     "current_page": 1,
     "data": [
       {
-        "id": 1,
-        "work_order_planning_id": 1,
-        "foto_bukti": "bukti/wo_actual_1.jpg",
-        "created_at": "2024-01-01T10:00:00.000000Z",
-        "updated_at": "2024-01-01T10:00:00.000000Z",
-        "work_order_planning": {
-          "id": 1,
-          "nomor_wo": "WO/2024/001",
-          "tanggal_wo": "2024-01-01"
-        },
-        "work_order_actual_items": [
-          {
-            "id": 1,
-            "qty_actual": 10,
-            "berat": 25.5,
-            "foto_bukti": "work-order-actual/1/items/1/foto_bukti.jpg",
-            "qty_planning": 10,
-            "berat_planning": 30.0,
-            "work_order_planning_item": {
-              "id": 1,
-              "qty": 10,
-              "item_barang": {
-                "id": 1,
-                "nama_item_barang": "Aluminium Sheet"
-              }
-            },
-            "work_order_actual_pelaksanas": [
-              {
-                "id": 1,
-                "qty": 5,
-                "weight": 12.5,
-                "tanggal": "2024-01-01",
-                "jam_mulai": "08:00:00",
-                "jam_selesai": "12:00:00",
-                "catatan": "Shift pagi",
-                "pelaksana": {
-                  "id": 1,
-                  "nama_pelaksana": "John Doe"
-                }
-              }
-            ]
-          }
-        ]
+        "id": 10,
+        "work_order_planning_id": 7,
+        "tanggal_actual": "2025-11-08",
+        "status": "Proses",
+        "nomor_wo": "WO-08112025-003",
+        "nomor_so": "SO-000123",
+        "nama_pelanggan": "PT Contoh Pelanggan",
+        "nama_gudang": "Gudang A",
+        "jumlah_item": 1
       }
     ],
-    "first_page_url": "http://localhost/api/work-order-actual?page=1",
-    "from": 1,
-    "last_page": 1,
-    "last_page_url": "http://localhost/api/work-order-actual?page=1",
-    "links": [...],
-    "next_page_url": null,
-    "path": "http://localhost/api/work-order-actual",
     "per_page": 10,
-    "prev_page_url": null,
-    "to": 1,
-    "total": 1
+    "total": 4
   }
 }
 ```
+
+Catatan:
+- Untuk detail lengkap (dengan semua relasi), gunakan endpoint `GET /api/work-order-actual/{id}`.
 
 #### 2. Get Work Order Actual by ID
 - **GET** `/api/work-order-actual/{id}`
@@ -1268,6 +1243,7 @@ Authorization: Bearer your_jwt_token
   - **Items**: Setiap item memiliki `qtyActual` (required), `berat` (required, berat actual), opsional `foto_bukti` (base64), dan `assignments` pelaksana
   - Catatan: Field `beratActual` tidak digunakan lagi. Gunakan `berat` sebagai satu-satunya nama field berat di item.
   - **Assignments**: Detail pelaksana dengan qty, weight/berat, tanggal, jam kerja, dan catatan
+  - Format Items: Harus berupa object dengan key ID `WorkOrderPlanningItem` (contoh: "14": { ... }). Jika dikirim sebagai array, key numerik (0, 1, ...) akan dianggap sebagai ID dan memicu error "WorkOrderPlanningItem dengan ID 0 tidak ditemukan".
  - **Headers**:
   - `Authorization: Bearer <token>`
   - `Content-Type: application/json`
@@ -1348,11 +1324,17 @@ Authorization: Bearer your_jwt_token
   "message": "Validasi gagal",
   "errors": {
     "foto_bukti": ["The foto bukti field is required."],
-    "actualWorkOrderId": ["The actual work order id field is required."]
+    
   }
 }
 
 // Catatan: Jika `actualWorkOrderId` tidak ditemukan, API akan membuat WO Actual baru secara otomatis.
+
+// Format Items Salah (400/404)
+{
+  "success": false,
+  "message": "WorkOrderPlanningItem dengan ID 0 tidak ditemukan"
+}
 
 // Empty Request Error (400)
 {
@@ -1380,13 +1362,40 @@ Authorization: Bearer your_jwt_token
 - **GET** `/api/work-order-actual/{id}/image`
 - **Description**: Mengembalikan file image foto bukti header Work Order Actual secara langsung (stream/file). Cocok untuk `<img src="...">` di frontend.
 - **Response**: Konten binary image (`image/jpeg`), bukan JSON.
-- **Notes**: Jika file tidak ditemukan atau tidak tersedia, API akan mengembalikan JSON error dengan status 404.
+- **Auth**: Endpoint berada dalam group `checkrole` → wajib `Authorization: Bearer <token>`. Browser tidak mengirim header ini untuk `<img src>`. Gunakan fetch → blob → `URL.createObjectURL(blob)` atau generate signed URL jika ingin embed langsung.
+- **Path & Storage**:
+  - Path yang disimpan di DB adalah path relatif terhadap disk `public` (mis. `work-order-actual/{actualId}/foto_bukti.jpg`).
+  - Streaming membangun full path via `storage/app/public/{path_relatif}` menggunakan disk `public`.
+- **Fallback**:
+  - Jika yang tersimpan berupa folder (mis. `work-order-actual/{actualId}/foto_bukti`), endpoint akan mencoba `foto_bukti.jpg` di dalam folder tersebut.
+  - Jika tetap tidak ditemukan, endpoint akan mengambil file gambar pertama (`.jpg/.jpeg/.png`) di folder tersebut.
+- **Contoh**:
+  - `GET /api/work-order-actual/10/image`
+  - Ekspektasi path: `storage/app/public/work-order-actual/10/foto_bukti.jpg`
+  - `curl` (PowerShell):
+    ```powershell
+    curl "http://localhost/api/work-order-actual/10/image" `
+      -H "Authorization: Bearer <token>"
+    ```
 
 #### 5. Get WO Actual Item Image by Item ID
 - **GET** `/api/work-order-actual/item/{itemId}/image`
 - **Description**: Mengembalikan file image foto bukti untuk satu Work Order Actual Item berdasarkan ID item (stream/file).
 - **Response**: Konten binary image (`image/jpeg`), bukan JSON.
-- **Notes**: Jika file tidak ditemukan atau tidak tersedia, API akan mengembalikan JSON error dengan status 404.
+- **Auth**: Wajib `Authorization: Bearer <token>` (bagian dari group `checkrole`). Untuk `<img src>`, gunakan pendekatan fetch blob atau signed URL.
+- **Path & Storage**:
+  - Path item disimpan relatif: `work-order-actual/{actualId}/items/{itemId}/foto_bukti.jpg`.
+  - Streaming menggunakan disk `public` → `storage/app/public/{path_relatif}`.
+- **Fallback**:
+  - Jika yang tersimpan folder (mis. `work-order-actual/{actualId}/items/{itemId}/foto_bukti`), endpoint akan mencoba `foto_bukti.jpg` di dalamnya, lalu mengambil gambar pertama jika masih gagal.
+- **Contoh**:
+  - `GET /api/work-order-actual/item/4/image`
+  - Ekspektasi path: `storage/app/public/work-order-actual/10/items/4/foto_bukti.jpg` (di mana `10` adalah `work_order_actual_id` yang memiliki item `4`).
+  - `curl` (PowerShell):
+    ```powershell
+    curl "http://localhost/api/work-order-actual/item/4/image" `
+      -H "Authorization: Bearer <token>"
+    ```
 
 <!-- Endpoint untuk mengambil semua image item dihapus untuk menghindari membuka seluruh file/folder. Gunakan endpoint item per item di atas. -->
 
@@ -1682,3 +1691,102 @@ Authorization: Bearer your_jwt_token
 - **Validation**: Validasi lengkap untuk semua field required
 - **Pagination & Search**: Support pagination dan pencarian
 - **Soft Delete**: Menggunakan soft delete untuk data integrity
+## Transaction - Purchase Order
+
+### Base URL: `/api/purchase-order`
+
+#### 1. Get All Purchase Order
+- **GET** `/api/purchase-order`
+- **Description**: Mendapatkan daftar Purchase Order dengan pagination, pencarian, filter tanggal, dan sorting.
+- **Query Parameters (optional)**:
+  - `per_page` (integer): Jumlah data per halaman (default: 100). Jika `per_page`/`page` tidak dikirim, semua hasil dikembalikan dalam satu halaman.
+  - `page` (integer): Nomor halaman.
+  - `search` (string): Pencarian global (`nomor_po`, `tanggal_po`, `tanggal_jatuh_tempo`, `status`).
+  - `sort` atau `sort_by` + `order`: Sorting multiple (`sort` menerima format `field,order;field,order`) atau single (`sort_by` + `order`).
+  - `date_start`, `date_end` (date): Filter periode berdasarkan `tanggal_po`.
+- **Contoh Request:**
+  - `GET /api/purchase-order?per_page=50&sort=tanggal_po,desc;nomor_po,asc`
+  - `GET /api/purchase-order?date_start=2024-01-01&date_end=2024-03-31`
+- **Response**: Pagination standar dengan relasi `supplier` dan item (`purchaseOrderItems` dengan `jenisBarang`, `bentukBarang`, `gradeBarang`, `itemBarang`).
+
+#### 2. Create Purchase Order
+- **POST** `/api/purchase-order`
+- **Description**: Menambahkan Purchase Order baru.
+- **Body (JSON)**:
+  - `tanggal_po` (date, optional, default: hari ini)
+  - `tanggal_jatuh_tempo` (date, required)
+  - `tanggal_penerimaan` (date, optional)
+  - `tanggal_pembayaran` (date, optional)
+  - `id_supplier` (integer, required)
+  - `total_amount` (numeric, optional)
+  - `status` (string, optional, default: `draft`)
+  - `catatan` (string, optional, max: 500)
+  - `items` (array, optional)
+    - `qty` (integer, required)
+    - `panjang` (numeric, required)
+    - `lebar` (numeric, optional)
+    - `tebal` (numeric, required)
+    - `jenis_barang_id` (integer, required)
+    - `bentuk_barang_id` (integer, required)
+    - `grade_barang_id` (integer, required)
+    - `harga` (numeric, required)
+    - `satuan` (string, optional)
+    - `diskon` (numeric, optional)
+    - `catatan` (string, optional)
+- **Contoh Request:**
+```http
+POST /api/purchase-order
+Content-Type: application/json
+
+{
+  "tanggal_po": "2025-11-09",
+  "tanggal_jatuh_tempo": "2025-11-16",
+  "tanggal_penerimaan": "2025-11-10",
+  "tanggal_pembayaran": "2025-11-20",
+  "id_supplier": 12,
+  "total_amount": 123456.78,
+  "status": "draft",
+  "catatan": "PO awal",
+  "items": [
+    {
+      "qty": 10,
+      "panjang": 120.5,
+      "lebar": 80.0,
+      "tebal": 1.2,
+      "jenis_barang_id": 1,
+      "bentuk_barang_id": 2,
+      "grade_barang_id": 3,
+      "harga": 15000,
+      "satuan": "PCS"
+    }
+  ]
+}
+```
+- **Response**: Mengembalikan data Purchase Order yang dibuat beserta relasi.
+
+#### 3. Get Purchase Order by ID
+- **GET** `/api/purchase-order/{id}`
+- **Description**: Mendapatkan detail Purchase Order beserta relasi supplier dan semua item.
+
+#### 4. Update Purchase Order
+- **PUT** `/api/purchase-order/{id}`
+- **Description**: Mengupdate Purchase Order yang ada.
+- **Body (JSON)**: Mendukung field yang sama seperti create, termasuk
+  - `tanggal_po`, `tanggal_jatuh_tempo` (date)
+  - `tanggal_penerimaan` (date, optional)
+  - `tanggal_pembayaran` (date, optional)
+  - `id_supplier`, `total_amount`, `status`, `catatan`
+  - `items` (array, optional; jika dikirim, akan menggantikan item lama)
+- **Contoh Request:**
+```http
+PUT /api/purchase-order/123
+Content-Type: application/json
+
+{
+  "tanggal_penerimaan": "2025-11-12",
+  "tanggal_pembayaran": "2025-11-21",
+  "status": "approved",
+  "items": []
+}
+```
+- **Response**: Mengembalikan data Purchase Order yang telah diupdate.

@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Eye, Trash2, RefreshCw, Filter, Edit3, Palette, X } from 'lucide-react';
+import { Plus, Search, Eye, Trash2, RefreshCw, Filter, Edit3, Palette, X, FileText } from 'lucide-react';
 import { useAlert } from '@/hooks/useAlert';
 import { isAdmin } from '@/lib/utils';
 import CustomAlert from '@/components/modals/CustomAlert';
@@ -51,6 +51,8 @@ export default function WorkOrderPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [periodFilter, setPeriodFilter] = useState('all');
+  const [woDateStart, setWoDateStart] = useState('');
+  const [woDateEnd, setWoDateEnd] = useState('');
   
   // Filter states
   const [filterWoNumber, setFilterWoNumber] = useState('');
@@ -61,6 +63,11 @@ export default function WorkOrderPage() {
   // Sort states
   const [sortBy, setSortBy] = useState('none');
   const [sortOrder, setSortOrder] = useState('asc');
+  const handleSort = (field) => {
+    setSortBy((prev) => prev === field ? field : field);
+    setSortOrder((prev) => (sortBy === field && prev === 'asc') ? 'desc' : 'asc');
+    setCurrentPage(1);
+  };
   
   // Delete modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -85,6 +92,8 @@ export default function WorkOrderPage() {
         search: searchTerm || undefined,
         status: statusFilter !== 'all' ? statusFilter : undefined,
         period: periodFilter !== 'all' ? periodFilter : undefined,
+        tanggal_wo_start: woDateStart || undefined,
+        tanggal_wo_end: woDateEnd || undefined,
         wo_number: filterWoNumber || undefined,
         so_number: filterSoNumber || undefined,
         customer: filterCustomer || undefined,
@@ -107,7 +116,8 @@ export default function WorkOrderPage() {
         warehouse: wo.nama_gudang || wo.sales_order?.gudang?.nama_gudang || 'N/A',
         itemCount: wo.count || wo.workOrderItems?.length || 0,
         status: wo.status || "Pending",
-        createdAt: formatDate(wo.created_at),
+        woDateRaw: wo.tanggal_wo || wo.created_at || null,
+        createdAt: formatDate(wo.tanggal_wo || wo.created_at),
         deleteRequestStatus: wo.delete_requested_by ? 'delete_requested' : null,
         deleteRequestedAt: wo.delete_requested_at || null,
         deleteReason: wo.delete_reason || null,
@@ -123,7 +133,7 @@ export default function WorkOrderPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, itemsPerPage, searchTerm, statusFilter, periodFilter, filterWoNumber, filterSoNumber, filterCustomer, filterWarehouse, sortBy, sortOrder]);
+  }, [currentPage, itemsPerPage, searchTerm, statusFilter, periodFilter, woDateStart, woDateEnd, filterWoNumber, filterSoNumber, filterCustomer, filterWarehouse, sortBy, sortOrder]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -363,86 +373,61 @@ export default function WorkOrderPage() {
     try {
       setIsExporting(true);
       await checkAndRefreshToken();
-
-      const queryParams = new URLSearchParams();
-      if (searchTerm) queryParams.append('search', searchTerm);
-      if (statusFilter && statusFilter !== 'all') queryParams.append('status', statusFilter);
-      if (filterWoNumber) queryParams.append('nomor_wo', filterWoNumber);
-      if (filterSoNumber) queryParams.append('nomor_so', filterSoNumber);
-      if (periodFilter && periodFilter !== 'all') {
+      // Export langsung dari endpoint list dengan filter yang sama (tanpa pagination)
+      const listParams = new URLSearchParams();
+      if (searchTerm) listParams.append('search', searchTerm);
+      if (statusFilter && statusFilter !== 'all') listParams.append('status', statusFilter);
+      if (filterWoNumber) listParams.append('wo_number', filterWoNumber);
+      if (filterSoNumber) listParams.append('so_number', filterSoNumber);
+      if (filterCustomer) listParams.append('customer', filterCustomer);
+      if (filterWarehouse) listParams.append('warehouse', filterWarehouse);
+      if (sortBy && sortBy !== 'none') listParams.append('sort_by', sortBy);
+      if (sortOrder) listParams.append('sort_order', sortOrder);
+      // Tanggal mengikuti filter tabel (planning memakai tanggal_wo_*)
+      if (woDateStart) listParams.append('tanggal_wo_start', woDateStart);
+      if (woDateEnd) listParams.append('tanggal_wo_end', woDateEnd);
+      if (!woDateStart && !woDateEnd && periodFilter && periodFilter !== 'all') {
         const range = getPeriodRange(periodFilter);
         if (range) {
-          queryParams.append('tanggal_wo_start', range.tanggal_wo_start);
-          queryParams.append('tanggal_wo_end', range.tanggal_wo_end);
+          listParams.append('tanggal_wo_start', range.tanggal_wo_start);
+          listParams.append('tanggal_wo_end', range.tanggal_wo_end);
         }
       }
-      queryParams.append('per_page', '10000');
+      // Ambil semua data sesuai filter
+      listParams.append('per_page', '10000');
 
-      const url = `${apiConfig.baseUrl}${API_ENDPOINTS.workOrderPlanning}/report${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-
-      const response = await fetch(url, {
+      const listUrl = `${apiConfig.baseUrl}${API_ENDPOINTS.workOrderPlanning}${listParams.toString() ? `?${listParams.toString()}` : ''}`;
+      const listResp = await fetch(listUrl, {
         method: 'GET',
-        headers: {
-          ...getAuthHeader(),
-          Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/octet-stream, application/json'
-        }
+        headers: { ...getAuthHeader(), Accept: 'application/json' }
       });
-
-      if (!response.ok) {
-        const ct = response.headers.get('Content-Type') || response.headers.get('content-type') || '';
-        if (ct.includes('application/json')) {
-          const err = await response.json().catch(() => null);
-          throw new Error(err?.message || `Export failed (HTTP ${response.status})`);
-        } else {
-          const text = await response.text();
-          throw new Error(text || `Export failed (HTTP ${response.status})`);
+      if (!listResp.ok) {
+        const txt = await listResp.text();
+        throw new Error(txt || `Export via list gagal (HTTP ${listResp.status})`);
+      }
+      const json = await listResp.json();
+      if (!window.XLSX) {
+        try {
+          const mod = await import(/* @vite-ignore */ 'xlsx');
+          window.XLSX = mod;
+        } catch (e) {
+          throw new Error("Dependency 'xlsx' belum terpasang. Jalankan: npm install xlsx");
         }
       }
-
-      const contentType = response.headers.get('Content-Type') || response.headers.get('content-type') || '';
-      const isExcel = contentType.includes('spreadsheet') || contentType.includes('excel') || contentType.includes('octet-stream');
-      const isJson = contentType.includes('application/json');
+      const wb = buildWorkbookFromPlanning(json);
+      const wbout = window.XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const objectUrl = URL.createObjectURL(blob);
       const timestamp = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
-
-      if (isExcel) {
-        const blob = await response.blob();
-        const objectUrl = URL.createObjectURL(blob);
-        const fileName = `wo-planning-report_${timestamp}.xlsx`;
-        const link = document.createElement('a');
-        link.href = objectUrl;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
-        showAlertRef.current('Unduhan dimulai', 'File Excel sedang diunduh', 'info');
-      } else if (isJson) {
-        const json = await response.json();
-        if (!window.XLSX) {
-          try {
-            const mod = await import(/* @vite-ignore */ 'xlsx');
-            window.XLSX = mod;
-          } catch (e) {
-            throw new Error("Dependency 'xlsx' belum terpasang. Jalankan: npm install xlsx");
-          }
-        }
-        const wb = buildWorkbookFromPlanning(json);
-        const wbout = window.XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-        const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        const objectUrl = URL.createObjectURL(blob);
-        const fileName = `wo-planning-report_${timestamp}.xlsx`;
-        const link = document.createElement('a');
-        link.href = objectUrl;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
-        showAlertRef.current('Unduhan dimulai', 'Laporan XLSX sedang diunduh', 'info');
-      } else {
-        const text = await response.text();
-        throw new Error(text || 'Server tidak mengembalikan file yang dapat diunduh');
-      }
+      const fileName = `wo-planning-report_${timestamp}.xlsx`;
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+      showAlertRef.current('Unduhan dimulai', 'Laporan XLSX sedang diunduh', 'info');
     } catch (error) {
       console.error('Error exporting WO Planning:', error);
       showAlertRef.current('Error', `Gagal export WO Planning: ${error.message || error}`, 'error');
@@ -457,86 +442,57 @@ export default function WorkOrderPage() {
       setIsExportingActual(true);
       await checkAndRefreshToken();
 
-      const queryParams = new URLSearchParams();
-      if (searchTerm) queryParams.append('search', searchTerm);
-      if (statusFilter && statusFilter !== 'all') queryParams.append('status', statusFilter);
-      if (filterWoNumber) queryParams.append('nomor_wo', filterWoNumber);
-      if (filterSoNumber) queryParams.append('nomor_so', filterSoNumber);
-      if (periodFilter && periodFilter !== 'all') {
+      // Export WO Actual via endpoint list (filter sama, tanpa pagination)
+      const listParams = new URLSearchParams();
+      if (searchTerm) listParams.append('search', searchTerm);
+      if (statusFilter && statusFilter !== 'all') listParams.append('status', statusFilter);
+      if (filterWoNumber) listParams.append('nomor_wo', filterWoNumber);
+      if (filterSoNumber) listParams.append('nomor_so', filterSoNumber);
+      // WO Actual list memakai date_start/date_end
+      if (woDateStart) listParams.append('date_start', woDateStart);
+      if (woDateEnd) listParams.append('date_end', woDateEnd);
+      if (!woDateStart && !woDateEnd && periodFilter && periodFilter !== 'all') {
         const range = getPeriodRange(periodFilter);
         if (range) {
-          // Use same date values but target actual fields
-          queryParams.append('tanggal_actual_start', range.tanggal_wo_start);
-          queryParams.append('tanggal_actual_end', range.tanggal_wo_end);
+          listParams.append('date_start', range.tanggal_wo_start);
+          listParams.append('date_end', range.tanggal_wo_end);
         }
       }
-      queryParams.append('per_page', '10000');
+      // Ambil semua data sesuai filter
+      listParams.append('per_page', '10000');
 
-      const url = `${apiConfig.baseUrl}${API_ENDPOINTS.workOrderActual}/report${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-
-      const response = await fetch(url, {
+      const listUrl = `${apiConfig.baseUrl}${API_ENDPOINTS.workOrderActual}${listParams.toString() ? `?${listParams.toString()}` : ''}`;
+      const listResp = await fetch(listUrl, {
         method: 'GET',
-        headers: {
-          ...getAuthHeader(),
-          Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/octet-stream, application/json'
-        }
+        headers: { ...getAuthHeader(), Accept: 'application/json' }
       });
-
-      if (!response.ok) {
-        const ct = response.headers.get('Content-Type') || response.headers.get('content-type') || '';
-        if (ct.includes('application/json')) {
-          const err = await response.json().catch(() => null);
-          throw new Error(err?.message || `Export failed (HTTP ${response.status})`);
-        } else {
-          const text = await response.text();
-          throw new Error(text || `Export failed (HTTP ${response.status})`);
+      if (!listResp.ok) {
+        const txt = await listResp.text();
+        throw new Error(txt || `Export via list gagal (HTTP ${listResp.status})`);
+      }
+      const json = await listResp.json();
+      if (!window.XLSX) {
+        try {
+          const mod = await import(/* @vite-ignore */ 'xlsx');
+          window.XLSX = mod;
+        } catch (e) {
+          throw new Error("Dependency 'xlsx' belum terpasang. Jalankan: npm install xlsx");
         }
       }
-
-      const contentType = response.headers.get('Content-Type') || response.headers.get('content-type') || '';
-      const isExcel = contentType.includes('spreadsheet') || contentType.includes('excel') || contentType.includes('octet-stream');
-      const isJson = contentType.includes('application/json');
+      const wb = buildWorkbookFromActual(json);
+      const wbout = window.XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const objectUrl = URL.createObjectURL(blob);
       const timestamp = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
-
-      if (isExcel) {
-        const blob = await response.blob();
-        const objectUrl = URL.createObjectURL(blob);
-        const fileName = `wo-actual-report_${timestamp}.xlsx`;
-        const link = document.createElement('a');
-        link.href = objectUrl;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
-        showAlertRef.current('Unduhan dimulai', 'File Excel sedang diunduh', 'info');
-      } else if (isJson) {
-        const json = await response.json();
-        if (!window.XLSX) {
-          try {
-            const mod = await import(/* @vite-ignore */ 'xlsx');
-            window.XLSX = mod;
-          } catch (e) {
-            throw new Error("Dependency 'xlsx' belum terpasang. Jalankan: npm install xlsx");
-          }
-        }
-        const wb = buildWorkbookFromActual(json);
-        const wbout = window.XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-        const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        const objectUrl = URL.createObjectURL(blob);
-        const fileName = `wo-actual-report_${timestamp}.xlsx`;
-        const link = document.createElement('a');
-        link.href = objectUrl;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
-        showAlertRef.current('Unduhan dimulai', 'Laporan XLSX sedang diunduh', 'info');
-      } else {
-        const text = await response.text();
-        throw new Error(text || 'Server tidak mengembalikan file yang dapat diunduh');
-      }
+      const fileName = `wo-actual-report_${timestamp}.xlsx`;
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+      showAlertRef.current('Unduhan dimulai', 'Laporan XLSX sedang diunduh', 'info');
     } catch (error) {
       console.error('Error exporting WO Actual:', error);
       showAlertRef.current('Error', `Gagal export WO Actual: ${error.message || error}`, 'error');
@@ -594,8 +550,9 @@ export default function WorkOrderPage() {
             <Plus className="w-4 h-4 mr-2" />
             Tambah Work Order
           </Button>
-        </div>
-      </div>
+           </div>
+          </div>
+          
 
              {/* Filter Section */}
        <Card className="mb-6">
@@ -664,8 +621,8 @@ export default function WorkOrderPage() {
              </div>
            </div>
            
-           {/* Search and Sort Row */}
-           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+           {/* Search and Date Row */}
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
              <div>
                <label className="block text-sm font-medium text-gray-700 mb-1">
                  Search Global
@@ -676,90 +633,71 @@ export default function WorkOrderPage() {
                  onChange={(e) => setSearchTerm(e.target.value)}
                />
              </div>
-             
-             <div>
-               <label className="block text-sm font-medium text-gray-700 mb-1">
-                 Periode
-               </label>
-               <Select value={periodFilter} onValueChange={setPeriodFilter}>
-                 <SelectTrigger>
-                   <SelectValue placeholder="Semua Periode" />
-                 </SelectTrigger>
-                 <SelectContent>
-                   {periodOptions.map((option) => (
-                     <SelectItem key={option.value} value={option.value}>
-                       {option.label}
-                     </SelectItem>
-                   ))}
-                 </SelectContent>
-               </Select>
-             </div>
-             
-             <div>
-               <label className="block text-sm font-medium text-gray-700 mb-1">
-                 Sort By
-               </label>
-               <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih Sort" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Tidak Ada</SelectItem>
-                    <SelectItem value="nomor_wo">No. WO</SelectItem>
-                    <SelectItem value="nomor_so">No. SO</SelectItem>
-                    <SelectItem value="nama_pelanggan">Pelanggan</SelectItem>
-                    <SelectItem value="nama_gudang">Gudang</SelectItem>
-                    <SelectItem value="status">Status</SelectItem>
-                    <SelectItem value="created_at">Tanggal Dibuat</SelectItem>
-                  </SelectContent>
-                </Select>
-             </div>
-             
-             <div>
-               <label className="block text-sm font-medium text-gray-700 mb-1">
-                 Sort Order
-               </label>
-               <Select value={sortOrder} onValueChange={setSortOrder}>
-                 <SelectTrigger>
-                   <SelectValue placeholder="Urutan" />
-                 </SelectTrigger>
-                 <SelectContent>
-                   <SelectItem value="asc">A-Z / 1-9</SelectItem>
-                   <SelectItem value="desc">Z-A / 9-1</SelectItem>
-                 </SelectContent>
-               </Select>
-             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tanggal WO Dari
+              </label>
+              <Input
+                type="date"
+                placeholder="dd/mm/yyyy"
+                value={woDateStart}
+                onChange={(e) => setWoDateStart(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tanggal WO Sampai
+              </label>
+              <Input
+                type="date"
+                placeholder="dd/mm/yyyy"
+                value={woDateEnd}
+                onChange={(e) => setWoDateEnd(e.target.value)}
+              />
+            </div>
            </div>
            
-           <div className="flex justify-end gap-2">
-             <Button 
-               variant="outline" 
-               onClick={() => {
-                 setSearchTerm('');
-                 setFilterWoNumber('');
-                 setFilterSoNumber('');
-                 setFilterCustomer('');
-                 setFilterWarehouse('');
-                 setStatusFilter('all');
-                 setPeriodFilter('all');
-                 setSortBy('none');
-                 setSortOrder('asc');
-               }}
-               className="flex items-center gap-2"
-             >
-               <X className="h-4 w-4" />
-               Clear Filter
-             </Button>
-             <Button 
-               variant="outline" 
-               onClick={loadWorkOrders} 
-               disabled={loading}
-               className="flex items-center gap-2"
-             >
-               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-               Refresh
-             </Button>
-           </div>
+      <div className="flex justify-end gap-2">
+        <Button 
+          variant="outline" 
+          onClick={() => {
+            setSearchTerm('');
+            setFilterWoNumber('');
+            setFilterSoNumber('');
+            setFilterCustomer('');
+            setFilterWarehouse('');
+            setStatusFilter('all');
+            setPeriodFilter('all');
+            setWoDateStart('');
+            setWoDateEnd('');
+            setSortBy('none');
+            setSortOrder('asc');
+          }}
+          className="flex items-center gap-2"
+        >
+          <X className="h-4 w-4" />
+          Clear Filter
+        </Button>
+        <Button 
+          variant="outline" 
+          onClick={loadWorkOrders} 
+          disabled={loading}
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+        <Button 
+          variant="default"
+          className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
+          onClick={handleExport}
+          disabled={isExporting}
+        >
+          <FileText className="h-4 w-4" />
+          {isExporting ? 'Report Planning...' : 'Report Planning'}
+        </Button>
+        {/* Report Actual dipindahkan ke halaman WO Actual */}
+      </div>
          </CardContent>
        </Card>
 
@@ -770,19 +708,20 @@ export default function WorkOrderPage() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50">
-                  <TableHead className="font-semibold">No. WO</TableHead>
-                  <TableHead className="font-semibold">No. SO</TableHead>
-                  <TableHead className="font-semibold">Pelanggan</TableHead>
-                  <TableHead className="font-semibold">Asal Gudang</TableHead>
-                  <TableHead className="font-semibold text-center">Jumlah Item</TableHead>
-                  <TableHead className="font-semibold">Status</TableHead>
+                  <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('nomor_wo')}>No. WO</TableHead>
+                  <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('nomor_so')}>No. SO</TableHead>
+                  <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('pelanggan')}>Pelanggan</TableHead>
+                  <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('gudang')}>Asal Gudang</TableHead>
+                  <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('tanggal_wo')}>Tanggal WO</TableHead>
+                  <TableHead className="font-semibold text-center cursor-pointer select-none" onClick={() => handleSort('jumlah_item')}>Jumlah Item</TableHead>
+                  <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('status')}>Status</TableHead>
                   <TableHead className="font-semibold text-center">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={8} className="text-center py-8">
                       <div className="flex items-center justify-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                         <span className="ml-2">Loading data...</span>
@@ -791,7 +730,7 @@ export default function WorkOrderPage() {
                   </TableRow>
                 ) : workOrders.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                       Tidak ada data Work Order
                     </TableCell>
                   </TableRow>
@@ -802,6 +741,7 @@ export default function WorkOrderPage() {
                       <TableCell>{wo.soNumber}</TableCell>
                       <TableCell>{wo.customer}</TableCell>
                       <TableCell>{wo.warehouse}</TableCell>
+                      <TableCell>{wo.createdAt}</TableCell>
                       <TableCell className="text-center">{wo.itemCount}</TableCell>
                       <TableCell>
                         {wo.deleteRequestStatus === 'delete_requested' ? (
