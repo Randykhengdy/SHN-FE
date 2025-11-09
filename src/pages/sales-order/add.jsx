@@ -23,7 +23,7 @@ import { request } from "@/lib/request";
 import { API_ENDPOINTS } from "@/config/api";
 import SalesOrderLayout from "@/components/SalesOrderLayout";
 import { documentSequenceService } from "@/services/master-data/documentSequenceService";
-import { generateSalesOrderPDF } from "@/lib/pdfUtils";
+import { generateSalesOrderPrintContent, openPrintDialog } from "@/lib/printUtils";
 
 export default function AddSalesOrderPage() {
   const { showAlert, AlertComponent } = useAlert();
@@ -480,6 +480,41 @@ export default function AddSalesOrderPage() {
       
       console.log("✅ Sales Order berhasil disimpan:", result);
       showAlert("Sukses", "Sales Order berhasil disimpan!", "success");
+      try {
+        // Langsung buka dialog cetak menggunakan data yang baru saja disimpan (data lokal)
+        const printDataOnSave = {
+          nomor_so: soNumber,
+          tanggal_so: soDate,
+          tanggal_pengiriman: deliveryDate,
+          term_of_payment: termOfPayment,
+          gudang_asal: originWarehouse,
+          customer: {
+            nama: customerName,
+            telepon: customerPhone,
+            email: customerEmail,
+            alamat: customerAddress
+          },
+          items: items.map(item => ({
+            nama_item: item.jenisBarang,
+            bentuk_barang: item.bentuk,
+            grade_barang: item.grade,
+            dimensi_potong: item.dimensi,
+            unit: item.satuan,
+            qty: item.qty,
+            total_kg: item.berat || 0,
+            harga_per_unit: typeof item.harga === 'number' ? item.harga : parseInt(String(item.harga).replace(/[^\d]/g, '')) || 0,
+            total_harga: parseInt(String(item.total).replace(/[^\d]/g, '')) || 0
+          })),
+          total_harga: subtotal,
+          discount: totalDiscount,
+          ppn: ppn,
+          grand_total: totalHargaSO
+        };
+        const html = generateSalesOrderPrintContent(printDataOnSave);
+        openPrintDialog(html);
+      } catch (e) {
+        console.error('Gagal membuka dialog cetak setelah simpan SO:', e);
+      }
       
       setTimeout(() => {
         window.history.back();
@@ -505,7 +540,7 @@ export default function AddSalesOrderPage() {
         return;
       }
 
-      // Prepare print data
+      // Prepare print data (use existing local state, no refetch)
       const printData = {
         nomor_so: soNumber,
         tanggal_so: soDate,
@@ -520,27 +555,26 @@ export default function AddSalesOrderPage() {
         },
         items: items.map(item => ({
           nama_item: item.jenisBarang,
-          bentuk_barang: item.bentukBarang,
-          grade_barang: item.gradeBarang,
-          dimensi_potong: item.dimensiPotong,
-          unit: item.unit,
+          bentuk_barang: item.bentuk,
+          grade_barang: item.grade,
+          dimensi_potong: item.dimensi,
+          unit: item.satuan,
           qty: item.qty,
-          total_kg: item.totalKg,
-          harga_per_unit: item.harga,
-          total_harga: item.total
+          total_kg: item.berat || 0,
+          harga_per_unit: typeof item.harga === 'number' ? item.harga : parseInt(String(item.harga).replace(/[^\d]/g, '')) || 0,
+          total_harga: parseInt(String(item.total).replace(/[^\d]/g, '')) || 0
         })),
         total_harga: subtotal,
         discount: totalDiscount,
-        ppn: ppnAmount,
-        grand_total: grandTotal
+        ppn: ppn,
+        grand_total: totalHargaSO
       };
 
       console.log('🖨️ Print data:', printData);
 
-      // Generate and download PDF
-      await generateSalesOrderPDF(printData);
-      
-      showAlert("Sukses", "Sales Order PDF berhasil diunduh!", "success");
+      // Generate printable HTML and open print dialog (no download)
+      const printContent = generateSalesOrderPrintContent(printData);
+      openPrintDialog(printContent);
     } catch (error) {
       console.error('Error printing sales order:', error);
       showAlert("Error", "Gagal generate PDF Sales Order", "error");
@@ -1174,7 +1208,7 @@ export default function AddSalesOrderPage() {
              ) : (
                <Printer className="w-4 h-4 mr-2" />
                 )}
-                Download PDF
+                Cetak
            </Button>
          )}
        </div>

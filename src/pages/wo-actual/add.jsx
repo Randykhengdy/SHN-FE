@@ -12,6 +12,7 @@ import { useAlert } from '@/hooks/useAlert';
 import PageLayout from '@/components/PageLayout';
 import { woActualService } from '@/services/woActualService';
 import { workOrderService } from '@/services/workOrderService';
+import { generateWOActualPrintContent, openPrintDialog } from '@/lib/printUtils';
 import PelaksanaActualModal from '@/components/modals/PelaksanaActualModal';
 import { getPelaksanaOptions } from '@/services/masterDataService';
 import { Label } from '@/components/ui/label';
@@ -23,9 +24,6 @@ export default function AddWOActualPage() {
   // Form State - Updated to match new API structure
   const [formData, setFormData] = useState({
     planningWorkOrderId: '',
-    tanggal_mulai: new Date().toISOString().split('T')[0], // Default to today
-    jam_mulai: '',
-    jam_selesai: '',
     status: 'Pending', // Default status
     prioritas: 'MEDIUM', // Default priority
     catatan: '',
@@ -325,11 +323,6 @@ export default function AddWOActualPage() {
         return;
       }
 
-      if (!formData.tanggal_mulai) {
-        showAlert('Tanggal mulai belum diisi', 'Silakan isi tanggal mulai', 'warning');
-        return;
-      }
-
       // Validate that at least one item has actual data
       const hasActualData = Object.values(actualItems).some(item => {
         return (item.assignments || []).length > 0;
@@ -350,9 +343,9 @@ export default function AddWOActualPage() {
           pelaksana: r.pelaksana || r.pelaksana_name || r.pelaksanaInfo?.nama || r.pelaksana_info?.nama_pelaksana || '',
           qty: parseInt(r.qty) || 0,
           berat: parseFloat(r.weight ?? r.berat) || 0,
-          tanggal: r.tanggal || formData.tanggal_mulai || new Date().toISOString().split('T')[0],
-          jamMulai: r.jamMulai ?? r.jam_mulai ?? formData.jam_mulai ?? '08:00:00',
-          jamSelesai: r.jamSelesai ?? r.jam_selesai ?? formData.jam_selesai ?? '17:00:00',
+          tanggal: r.tanggal || new Date().toISOString().split('T')[0],
+          jamMulai: r.jamMulai ?? r.jam_mulai ?? '08:00:00',
+          jamSelesai: r.jamSelesai ?? r.jam_selesai ?? '17:00:00',
           catatan: r.catatan || '',
           status: r.status || 'PENDING'
         }));
@@ -367,9 +360,9 @@ export default function AddWOActualPage() {
             qty: a.qty || 0,
             weight: a.berat ?? a.weight ?? 0,
             pelaksana_id: a.pelaksana_id || null,
-            tanggal: a.tanggal || formData.tanggal_mulai,
-            jamMulai: a.jamMulai || formData.jam_mulai || '08:00:00',
-            jamSelesai: a.jamSelesai || formData.jam_selesai || '17:00:00',
+            tanggal: a.tanggal || new Date().toISOString().split('T')[0],
+            jamMulai: a.jamMulai || '08:00:00',
+            jamSelesai: a.jamSelesai || '17:00:00',
             catatan: a.catatan || '',
             status: a.status || null
           }))
@@ -390,9 +383,79 @@ export default function AddWOActualPage() {
       console.log('Saving WO Actual:', saveData);
 
       const response = await woActualService.saveWOActual(saveData);
-      
+
       if (response.success || response.data) {
-        showAlert('WO Actual berhasil disimpan', 'Data berhasil disimpan', 'success');
+        // Ambil gambar WO Planning untuk BEFORE
+        let planningCanvasImages = [];
+        try {
+          const imagesResp = await workOrderService.getWorkOrderImages(parseInt(formData.planningWorkOrderId, 10));
+          planningCanvasImages = imagesResp?.data?.images || imagesResp?.images || [];
+        } catch (imgErr) {
+          console.warn('Gagal mengambil gambar WO Planning untuk print:', imgErr);
+        }
+
+        // Bangun items untuk print dengan BEFORE/AFTER
+        const printItems = (selectedWOPlanning?.items || []).map((planningItem, idx) => {
+          const actualItem = actualItems[planningItem.id] || {};
+          const assignments = actualItem.assignments || [];
+          const pelaksanas = assignments.map((r) => ({
+            pelaksana: {
+              nama_pelaksana: r.pelaksana || r.pelaksana_name || r.pelaksanaInfo?.nama || r.pelaksana_info?.nama_pelaksana || '-'
+            }
+          }));
+          const beratPlanningComputed = (planningItem.pelaksana || []).reduce((a, p) => a + (parseFloat(p.weight ?? p.berat) || 0), 0);
+          const qtyActualComputed = assignments.reduce((a, r) => a + (parseInt(r.qty) || 0), 0);
+          const beratActualComputed = assignments.reduce((a, r) => a + (parseFloat(r.berat ?? r.weight) || 0), 0);
+
+          // BEFORE: filter planning images dengan id item planning
+          const beforeImages = (planningCanvasImages || []).filter((img) => {
+            const candidateIds = [
+              img.work_order_planning_item_id,
+              img.wo_plan_item_id,
+              img.wo_item_id,
+              img.work_order_item_id,
+              img.item_id
+            ].filter(Boolean);
+            return candidateIds.includes(planningItem.id);
+          });
+
+          // AFTER: gunakan foto bukti item yang baru diupload (data URL)
+          const afterImages = actualItem.foto_bukti ? [{ src: actualItem.foto_bukti }] : [];
+
+          return {
+            no: idx + 1,
+            itemName: planningItem.jenis_barang?.nama || planningItem.jenis_barang?.nama_jenis_barang || 'Item',
+            jenisBarang: planningItem.jenis_barang?.nama || planningItem.jenis_barang?.nama_jenis_barang || '-',
+            bentukBarang: planningItem.bentuk_barang?.nama || planningItem.bentuk_barang?.nama_bentuk_barang || '-',
+            gradeBarang: planningItem.grade_barang?.nama || planningItem.grade_barang?.nama_grade_barang || '-',
+            dimensi: `${planningItem.panjang || 0}x${planningItem.lebar || 0}x${planningItem.ketebalan || 0}mm`,
+            qtyPlanning: planningItem.jumlah ?? 0,
+            qtyActual: qtyActualComputed,
+            beratActual: Math.round(beratActualComputed || 0),
+            jenisPotongan: planningItem.jenis_potongan || 'N/A',
+            pelaksanas,
+            beforeImages,
+            afterImages,
+            woPlanItemId: planningItem.id
+          };
+        });
+
+        // Bangun data untuk template print
+        const woActualCreated = response?.data || {};
+        const printData = {
+          workOrderPlanning: selectedWOPlanning,
+          woActual: woActualCreated,
+          customer: selectedWOPlanning?.pelanggan || null,
+          warehouse: selectedWOPlanning?.gudang || null,
+          items: printItems,
+          parentImages: formData.foto_bukti ? [{ src: formData.foto_bukti }] : [],
+        };
+
+        // Buka dialog print otomatis
+        const html = generateWOActualPrintContent(printData);
+        openPrintDialog(html);
+
+        showAlert('WO Actual berhasil disimpan', 'Membuka jendela print...', 'success');
         setTimeout(() => {
           navigate('/wo-actual');
         }, 1500);
@@ -532,35 +595,7 @@ export default function AddWOActualPage() {
                         {/* Removed Actual WO ID field as requested */}
                       </div>
 
-                      <div>
-                        <Label htmlFor="tanggal_mulai">Tanggal Mulai *</Label>
-                        <Input
-                          id="tanggal_mulai"
-                          type="date"
-                          value={formData.tanggal_mulai}
-                          onChange={(e) => handleInputChange('tanggal_mulai', e.target.value)}
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="jam_mulai">Jam Mulai</Label>
-                        <Input
-                          id="jam_mulai"
-                          type="time"
-                          value={formData.jam_mulai}
-                          onChange={(e) => handleInputChange('jam_mulai', e.target.value)}
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="jam_selesai">Jam Selesai</Label>
-                        <Input
-                          id="jam_selesai"
-                          type="time"
-                          value={formData.jam_selesai}
-                          onChange={(e) => handleInputChange('jam_selesai', e.target.value)}
-                        />
-                      </div>
+                      {/* Tanggal/Jam dihapus sesuai permintaan */}
 
                       <div>
                         <Label htmlFor="status">Status</Label>

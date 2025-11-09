@@ -10,6 +10,7 @@ import { useAlert } from "@/hooks/useAlert";
 import { woActualService } from '@/services/woActualService';
 import apiConfig from '@/config/api';
 import PageLayout from "@/components/PageLayout";
+import { generateWOActualPrintContent, openPrintDialog } from "@/lib/printUtils";
 
 export default function WOActualDetailPage() {
   const { id } = useParams();
@@ -487,6 +488,30 @@ export default function WOActualDetailPage() {
       <div className="flex justify-center gap-4 mt-6">
         <Button size="lg" variant="outline" onClick={() => navigate('/wo-actual')}>
           Kembali ke List
+        </Button>
+        <Button
+          size="lg"
+          className="border-blue-600 text-blue-600 hover:bg-blue-50"
+          variant="outline"
+          onClick={() => {
+            try {
+              const printData = {
+                workOrderPlanning,
+                woActual,
+                customer: customerData,
+                warehouse: warehouseData,
+                items
+              };
+              const html = generateWOActualPrintContent(printData);
+              openPrintDialog(html);
+              showAlert('Sukses', 'Dialog print dibuka untuk WO Actual', 'success');
+            } catch (e) {
+              console.error('Gagal membuka dialog print WO Actual:', e);
+              showAlert('Error', 'Gagal membuka dialog print WO Actual', 'error');
+            }
+          }}
+        >
+          Print
         </Button>
       </div>
       

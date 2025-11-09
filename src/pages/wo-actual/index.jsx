@@ -106,7 +106,7 @@ export default function WOActualPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterWoNumber, filterSoNumber, filterCustomer, filterWarehouse, statusFilter, searchTerm]);
+  }, [filterWoNumber, filterSoNumber, filterCustomer, filterWarehouse, statusFilter, searchTerm, currentPage, itemsPerPage, periodFilter]);
 
   // Load data on component mount and when filters change
   useEffect(() => {

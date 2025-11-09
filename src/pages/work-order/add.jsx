@@ -10,6 +10,7 @@ import SelectPlatShaftDasar from './select-platshaftdasar';
 import { useAlert } from '@/hooks/useAlert';
 import PageLayout from '@/components/PageLayout';
 import { workOrderService } from '@/services/workOrderService';
+import { openPrintDialog, generateWOPlanningPrintContent } from '@/lib/printUtils';
 import { request } from '@/lib/request';
 import { Table, TableHead, TableBody, TableRow, TableCell, TableHeader } from '@/components/Table';
 import PelaksanaModal from '@/components/modals/PelaksanaModal';
@@ -1139,9 +1140,58 @@ export default function AddWorkOrderPage() {
       // Clear the stored work order ID since work order is now saved
       // localStorage.removeItem('WO_current_work_order_id');
       
-      showAlert('Sukses', `Work Order ${workOrderNumber} berhasil dibuat!\n\nID: ${workOrderId}\n\nKlik OK untuk melihat daftar Work Order.`, 'success', () => {
-        navigate('/work-order');
-      });
+      // Siapkan data cetak menggunakan data lokal yang baru saja dikirim (tanpa refetch)
+      const mapLabel = (list, value) => {
+        const found = list.find(opt => String(opt.value) === String(value));
+        return found ? (found.label || found.nama || found.text || String(value)) : String(value || 'N/A');
+      };
+
+      const printData = {
+        nomor_wo: workOrderNumber || workOrderData.nomor_wo,
+        tanggal_wo: workOrderData.tanggal_wo,
+        due_date: workOrderData.tanggal_target,
+        priority: workOrderData.prioritas,
+        status: workOrderData.status,
+        assigned_to: workOrderData.handover_method,
+        customer: (() => {
+          const cust = pelangganList.find(p => String(p.value) === String(workOrderData.pelanggan_id));
+          return cust ? { nama: cust.label } : { nama: 'N/A' };
+        })(),
+        warehouse: (() => {
+          const wh = gudangList.find(g => String(g.value) === String(workOrderData.gudang_id));
+          return wh ? { nama_gudang: wh.label } : { nama_gudang: 'N/A' };
+        })(),
+        items: workOrderItems.map(item => ({
+          nama_item: mapLabel(jenisBarangList, item.jenis_barang_id),
+          bentukBarang: { nama: mapLabel(bentukBarangList, item.bentuk_barang_id) },
+          gradeBarang: { nama: mapLabel(gradeBarangList, item.grade_barang_id) },
+          dimensi: `${item.panjang || 0}x${item.lebar || 0}x${item.tebal || 0}mm`,
+          qtyPlanning: item.qty || 0,
+          jenisPotongan: item.jenis_potongan || 'potongan',
+          keterangan: item.catatan || ''
+        })),
+        // Ambil gambar canvas dari folder public berdasarkan saran ItemId yang dipakai
+        canvasImages: (() => {
+          try {
+            const used = JSON.parse(localStorage.getItem('WO_used_saran_plats') || '[]');
+            const images = [];
+            used.forEach(id => {
+              const fileName = `canvas-preview-ItemId-${id}.jpg`;
+              const src = `/canvas-previews/${fileName}`;
+              images.push({ item_id: parseInt(id), src });
+            });
+            return images;
+          } catch (e) {
+            console.warn('Gagal menyiapkan canvas images untuk cetak:', e);
+            return [];
+          }
+        })()
+      };
+
+      const html = generateWOPlanningPrintContent(printData);
+      openPrintDialog(html);
+      // Setelah dialog cetak dibuka, tutup halaman Add dan kembali ke daftar WO
+      navigate('/work-order');
     } catch (error) {
       console.error('Error creating work order:', error);
       

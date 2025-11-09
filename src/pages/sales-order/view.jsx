@@ -13,7 +13,7 @@ import RoleGuard from "@/components/RoleGuard";
 import { request } from "@/lib/request";
 import { API_ENDPOINTS } from "@/config/api";
 import SalesOrderLayout from "@/components/SalesOrderLayout";
-import { generateSalesOrderPDF } from "@/lib/pdfUtils";
+import { generateSalesOrderPrintContent, openPrintDialog } from "@/lib/printUtils";
 
 export default function ViewSalesOrderPage() {
   const { id } = useParams();
@@ -302,10 +302,9 @@ export default function ViewSalesOrderPage() {
 
       console.log('🖨️ Print data:', printData);
 
-      // Generate and download PDF
-      await generateSalesOrderPDF(printData);
-      
-      showAlert("Sukses", "Sales Order PDF siap diunduh!", "success");
+      // Generate printable HTML and open print dialog (no download)
+      const printContent = generateSalesOrderPrintContent(printData);
+      openPrintDialog(printContent);
     } catch (error) {
       console.error('Error printing sales order:', error);
       showAlert("Error", "Gagal generate PDF Sales Order", "error");
@@ -631,7 +630,7 @@ export default function ViewSalesOrderPage() {
               ) : (
                 <Printer className="w-4 h-4 mr-2" />
               )}
-              Download PDF
+              Cetak
             </Button>
           </RoleGuard>
         </div>

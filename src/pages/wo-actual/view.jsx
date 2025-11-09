@@ -13,6 +13,8 @@ import PelaksanaActualModal from '@/components/modals/PelaksanaActualModal';
 import { useAlert } from '@/hooks/useAlert';
 import apiConfig from '@/config/api';
 import { woActualService } from '@/services/woActualService';
+import { workOrderService } from '@/services/workOrderService';
+import { generateWOActualPrintContent, openPrintDialog } from '@/lib/printUtils';
 
 export default function ViewWOActualPage() {
   const navigate = useNavigate();
@@ -207,6 +209,7 @@ export default function ViewWOActualPage() {
               <p className="text-gray-600">Halaman view (read-only) WO Actual</p>
             </div>
           </div>
+          {/* Tombol Print dipindahkan ke bagian bawah halaman */}
         </div>
 
         {/* Main Content */}
@@ -502,6 +505,110 @@ export default function ViewWOActualPage() {
           value={pelaksanaModalData}
           readOnly={true}
         />
+
+        {/* Action Buttons (Bottom) */}
+        <div className="flex justify-center gap-4 mt-6">
+          <Button size="lg" variant="outline" onClick={() => navigate('/wo-actual')}>
+            Kembali ke List
+          </Button>
+          <Button
+            size="lg"
+            className="border-blue-600 text-blue-600 hover:bg-blue-50"
+            variant="outline"
+            onClick={async () => {
+              try {
+                // Build items for print
+                const printItems = (items || []).map((actualItem, index) => {
+                  const planningItem = actualItem.work_order_planning_item || {};
+                  const itemBarang = planningItem.item_barang || {};
+                  const pelaksanas = actualItem.work_order_actual_pelaksanas || actualItem.has_many_pelaksana || [];
+                  return {
+                    id: actualItem.id,
+                    woPlanItemId: actualItem.work_order_planning_item_id || actualItem.wo_plan_item_id || planningItem.id,
+                    no: index + 1,
+                    itemName: itemBarang.nama_item_barang || itemBarang.nama || 'N/A',
+                    jenisBarang: itemBarang.jenis_barang?.nama_jenis_barang || itemBarang.jenis_barang?.nama || planningItem.jenis_barang?.nama || 'N/A',
+                    bentukBarang: itemBarang.bentuk_barang?.nama_bentuk_barang || itemBarang.bentuk_barang?.nama || planningItem.bentuk_barang?.nama || 'N/A',
+                    gradeBarang: itemBarang.grade_barang?.nama_grade_barang || itemBarang.grade_barang?.nama || planningItem.grade_barang?.nama || 'N/A',
+                    dimensi: `${planningItem.panjang || 0} x ${planningItem.lebar || 0} mm`,
+                    qtyPlanning: planningItem.qty || actualItem.qty_planning || 0,
+                    qtyActual: actualItem.qty_actual || 0,
+                    beratActual: (actualItem.berat ?? actualItem.berat_actual ?? 0),
+                    jenisPotongan: planningItem.jenis_potongan || 'N/A',
+                    pelaksanas
+                  };
+                });
+
+                // Fetch WO Planning images (for BEFORE) and filter per planning item id
+                let planningCanvasImages = [];
+                try {
+                  if (planning?.id) {
+                    const imagesResp = await workOrderService.getWorkOrderImages(planning.id);
+                    planningCanvasImages = imagesResp?.data?.images || imagesResp?.images || [];
+                  }
+                } catch (imgErr) {
+                  console.warn('Gagal mengambil gambar WO Planning untuk print:', imgErr);
+                }
+                // Build print items with BEFORE/AFTER images per item
+                const printItemsWithImages = await Promise.all(
+                  printItems.map(async (pi) => {
+                    // BEFORE: filter planning images by planning item id
+                    const beforeImages = (planningCanvasImages || []).filter((img) => {
+                      const candidateIds = [
+                        img.work_order_planning_item_id,
+                        img.wo_plan_item_id,
+                        img.wo_item_id,
+                        img.work_order_item_id,
+                        img.item_id
+                      ].filter(Boolean);
+                      return candidateIds.includes(pi.woPlanItemId);
+                    });
+
+                    // AFTER: fetch actual item image by item id (Blob stream -> object URL)
+                    let afterImages = [];
+                    try {
+                      const blob = await woActualService.getWOActualItemImageBlob(pi.id);
+                      const url = URL.createObjectURL(blob);
+                      if (url) {
+                        afterImages = [{ src: url, work_order_actual_item_id: pi.id }];
+                      }
+                    } catch (aImgErr) {
+                      console.warn(`Gagal mengambil gambar WO Actual item ${pi.id} untuk print:`, aImgErr);
+                    }
+
+                    return { ...pi, beforeImages, afterImages };
+                  })
+                );
+
+                const printData = {
+                  workOrderPlanning: planning,
+                  woActual,
+                  customer: planning?.pelanggan || planning?.customer || null,
+                  warehouse: planning?.gudang || planning?.warehouse || null,
+                  items: printItemsWithImages,
+                  planningCanvasImages,
+                  // Tambahkan foto parent (header) WO Actual sebelum Before/After
+                  parentImages: (() => {
+                    try {
+                      const parentSrc = resolveImageSrc(headerImageBase64 || woActual.foto_bukti);
+                      return parentSrc ? [{ src: parentSrc }] : [];
+                    } catch (_) {
+                      return [];
+                    }
+                  })()
+                };
+
+                const html = generateWOActualPrintContent(printData);
+                openPrintDialog(html);
+              } catch (e) {
+                console.error('Gagal membuka dialog print WO Actual (view):', e);
+                showAlert('Error', 'Gagal membuka dialog print WO Actual', 'error');
+              }
+            }}
+          >
+            Print
+          </Button>
+        </div>
       </div>
     </PageLayout>
     {previewOpen && (

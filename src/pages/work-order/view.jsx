@@ -16,7 +16,7 @@ import { workOrderService } from "@/services/workOrderService";
 import PageLayout from "@/components/PageLayout";
 import PelaksanaViewModal from "@/components/modals/PelaksanaViewModal";
 import SaranViewModal from "@/components/modals/SaranViewModal";
-import { generateWorkOrderPDF } from "@/lib/pdfUtils";
+import { openPrintDialog, generateWOPlanningPrintContent } from "@/lib/printUtils";
 
 export default function ViewWorkOrderPage() {
   const { id } = useParams();
@@ -89,24 +89,21 @@ export default function ViewWorkOrderPage() {
     setSelectedItemInfo(null);
   };
 
-  // Handle Print WO
+  // Handle Print WO (Planning)
   const handlePrint = async () => {
     try {
       setLoading(true);
-      
-      // Get canvas images for this work order
+
+      // Ambil gambar canvas (opsional)
       let canvasImages = [];
       try {
-        console.log('🖼️ Fetching canvas images for WO ID:', id);
         const imagesResponse = await workOrderService.getWorkOrderImages(id);
         canvasImages = imagesResponse.data?.images || [];
-        console.log('✅ Canvas images fetched:', canvasImages);
       } catch (error) {
-        console.warn('⚠️ Failed to fetch canvas images:', error);
-        // Continue without images if API fails
+        console.warn('⚠️ Gagal mengambil gambar canvas, lanjut tanpa gambar.', error);
       }
-      
-      // Prepare print data using workOrder object directly for more complete data
+
+      // Siapkan data WO Planning untuk cetak
       const printData = {
         nomor_wo: workOrder?.nomor_wo || woNumber || 'N/A',
         tanggal_wo: workOrder?.tanggal_wo || woDate || 'N/A',
@@ -114,29 +111,27 @@ export default function ViewWorkOrderPage() {
         priority: workOrder?.prioritas || priority || 'N/A',
         status: workOrder?.status || status || 'N/A',
         assigned_to: workOrder?.handover_method || assignedTo || 'N/A',
+        customer: workOrder?.pelanggan,
+        warehouse: workOrder?.gudang,
         items: items.map(item => ({
           nama_item: item.jenisBarang?.nama_jenis_barang || item.jenisBarang?.nama || item.nama_item || 'N/A',
-          bentuk_barang: {
-            nama_bentuk: item.bentukBarang?.nama_bentuk || item.bentukBarang?.nama || 'N/A',
-            dimensi: item.bentukBarang?.dimensi || `${item.panjang || 0}x${item.lebar || 0}x${item.ketebalan || 0}mm`
-          },
-          grade_barang: item.gradeBarang?.nama_grade || item.gradeBarang?.nama || item.grade_barang || 'N/A',
-          qty: item.qty || 0,
-          status: item.status || 'N/A',
+          jenisBarang: item.jenisBarang,
+          bentukBarang: item.bentukBarang,
+          gradeBarang: item.gradeBarang,
+          dimensi: item.bentukBarang?.dimensi || `${item.panjang || 0}x${item.lebar || 0}x${item.ketebalan || 0}mm`,
+          qtyPlanning: item.qty || 0,
+          jenisPotongan: item.jenisPotongan || item.jenis_potongan,
           keterangan: item.catatan || item.keterangan || 'N/A'
         })),
-        canvasImages: canvasImages // Add canvas images to print data
+        canvasImages
       };
 
-      console.log('🖨️ Generating Work Order PDF with data:', printData);
-      
-      // Generate and download PDF
-      await generateWorkOrderPDF(printData);
-      
-      showAlert('Work Order PDF siap diunduh!', 'success');
+      // Buka dialog print dengan konten HTML
+      const html = generateWOPlanningPrintContent(printData);
+      openPrintDialog(html);
     } catch (error) {
-      console.error('❌ Error generating Work Order PDF:', error);
-      showAlert('Gagal mengunduh Work Order PDF. Silakan coba lagi.', 'error');
+      console.error('❌ Error saat membuka dialog cetak WO Planning:', error);
+      showAlert('Gagal membuka dialog cetak. Silakan coba lagi.', 'error');
     } finally {
       setLoading(false);
     }
@@ -867,7 +862,7 @@ export default function ViewWorkOrderPage() {
               onClick={handlePrint}
               disabled={loading}
             >
-              {loading ? 'Generating PDF...' : 'Print WO'}
+              {loading ? 'Menyiapkan cetak...' : 'Cetak WO'}
             </Button>
           </RoleGuard>
         </div>
