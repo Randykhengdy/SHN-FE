@@ -787,15 +787,15 @@ export default function AddSalesOrderPage() {
           <div className="flex justify-between items-center">
             <CardTitle className="page-title">Input Sales Order Baru</CardTitle>
             <div className="flex space-sm">
-              {isUserAdmin && (
+              {/* {isUserAdmin && (
                 <Button variant="outline" size="sm" onClick={handleAutoFill} className="btn-outline">
                   🎲 Auto Fill
                 </Button>
-              )}
+              )} */}
               
-              <Button variant="default" size="sm" onClick={handleTestSimpanSO} className="btn-primary">
+              {/* <Button variant="default" size="sm" onClick={handleTestSimpanSO} className="btn-primary">
                 Simpan Sales Order
-              </Button>
+              </Button> */}
 
               <Button variant="secondary" size="sm" onClick={handleBackToList} className="btn-secondary">
                 <ArrowLeft className="w-4 h-4 mr-2" />
