@@ -1,5 +1,6 @@
 import { request } from '@/lib/request';
 import { API_ENDPOINTS } from '@/config/api';
+import { processWorkOrderItemsWithCanvasPreviews } from '@/lib/canvasPreviewUtils';
 
 const BASE_URL = API_ENDPOINTS.workOrderPlanning;
 
@@ -14,6 +15,13 @@ export const workOrderService = {
     if (params.status) queryParams.append('status', params.status);
     if (params.gudang_id) queryParams.append('gudang_id', params.gudang_id);
     if (params.pelanggan_id) queryParams.append('pelanggan_id', params.pelanggan_id);
+    if (params.wo_number) queryParams.append('wo_number', params.wo_number);
+    if (params.so_number) queryParams.append('so_number', params.so_number);
+    if (params.customer) queryParams.append('customer', params.customer);
+    if (params.warehouse) queryParams.append('warehouse', params.warehouse);
+    if (params.period) queryParams.append('period', params.period);
+    if (params.sort_by) queryParams.append('sort_by', params.sort_by);
+    if (params.sort_order) queryParams.append('sort_order', params.sort_order);
     
     const url = `${BASE_URL}?${queryParams.toString()}`;
     return request(url, { method: 'GET' });
@@ -26,18 +34,46 @@ export const workOrderService = {
 
   // Create new work order
   createWorkOrder: async (workOrderData) => {
-    return request(BASE_URL, {
-      method: 'POST',
-      body: JSON.stringify(workOrderData)
-    });
+    try {
+      // Process items to add canvas previews if they exist
+      if (workOrderData.items && Array.isArray(workOrderData.items)) {
+        workOrderData.items = await processWorkOrderItemsWithCanvasPreviews(workOrderData.items);
+      }
+      
+      return request(BASE_URL, {
+        method: 'POST',
+        body: JSON.stringify(workOrderData)
+      });
+    } catch (error) {
+      console.error('Error in createWorkOrder:', error);
+      // If canvas processing fails, still proceed with the original data
+      return request(BASE_URL, {
+        method: 'POST',
+        body: JSON.stringify(workOrderData)
+      });
+    }
   },
 
   // Update work order
   updateWorkOrder: async (id, workOrderData) => {
-    return request(`${BASE_URL}/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(workOrderData)
-    });
+    try {
+      // Process items to add canvas previews if they exist
+      if (workOrderData.items && Array.isArray(workOrderData.items)) {
+        workOrderData.items = await processWorkOrderItemsWithCanvasPreviews(workOrderData.items);
+      }
+      
+      return request(`${BASE_URL}/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(workOrderData)
+      });
+    } catch (error) {
+      console.error('Error in updateWorkOrder:', error);
+      // If canvas processing fails, still proceed with the original data
+      return request(`${BASE_URL}/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(workOrderData)
+      });
+    }
   },
 
   // Delete work order
@@ -134,6 +170,11 @@ export const workOrderService = {
 
   // Get canvas data by item barang ID
   getCanvasDataByItemBarangId: async (itemBarangId) => {
-    return request(`${BASE_URL}/item-barang/${itemBarangId}/canvas`, { method: 'GET' });
+    return request(`${API_ENDPOINTS.itemBarang}/${itemBarangId}/canvas`, { method: 'GET' });
+  },
+
+  // Get all canvas images by Work Order ID
+  getWorkOrderImages: async (workOrderId) => {
+    return request(`${BASE_URL}/${workOrderId}/images`, { method: 'GET' });
   }
 };

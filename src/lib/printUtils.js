@@ -253,6 +253,583 @@ export const generateInvoicePrintContent = (invoiceData) => {
   `;
 };
 
+export const generateSalesOrderPrintContent = (salesOrderData) => {
+  const itemsHtml = salesOrderData.items?.map(item => `
+    <tr>
+      <td style="border: 1px solid #ddd; padding: 8px;">${item.nama_item || item.jenis_barang || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 8px;">${item.bentuk_barang || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 8px;">${item.grade_barang || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 8px;">${item.dimensi_potong || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 8px;">${item.unit || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.qty || 0}</td>
+      <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${item.total_kg || 0} kg</td>
+      <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">Rp ${parseFloat(item.harga_per_unit || 0).toLocaleString('id-ID')}</td>
+      <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">Rp ${parseFloat(item.total_harga || 0).toLocaleString('id-ID')}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="9" style="text-align: center; padding: 20px;">Tidak ada item</td></tr>';
+
+  const formatCurrency = (amount) => {
+    return `Rp ${parseFloat(amount || 0).toLocaleString('id-ID')}`;
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: '2-digit', 
+      year: 'numeric'
+    });
+  };
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Sales Order - ${salesOrderData.nomor_so || salesOrderData.so_number || 'N/A'}</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { display: flex; align-items: flex-start; margin-bottom: 30px; position: relative; min-height: 100px; padding-top: 10px; }
+        .logo { width: 80px; height: auto; margin-right: 20px; object-fit: contain; }
+        .header-content { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; top: 10px; }
+        .company-name { font-size: 24px; font-weight: bold; margin-bottom: 10px; line-height: 1.2; }
+        .document-title { font-size: 18px; font-weight: bold; margin-bottom: 20px; line-height: 1.2; }
+        .info-section { margin-bottom: 20px; }
+        .info-row { display: flex; margin-bottom: 5px; }
+        .info-label { font-weight: bold; min-width: 200px; }
+        .info-value { margin-left: 1px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 12px; }
+        td { border: 1px solid #ddd; padding: 8px; font-size: 12px; }
+        .summary-section { margin-top: 20px; }
+        .summary-table { width: 50%; margin-left: auto; }
+        .summary-row { display: flex; justify-content: space-between; padding: 5px 0; }
+        .summary-label { font-weight: bold; }
+        .summary-value { text-align: right; }
+        .grand-total { border-top: 2px solid #333; font-weight: bold; font-size: 16px; }
+        .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
+        .customer-section { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; background-color: #f9f9f9; }
+        .customer-title { font-weight: bold; margin-bottom: 10px; font-size: 14px; }
+        @media print {
+          body { margin: 0; }
+          .no-print { display: none; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <img src="/src/assets/logo.png" alt="PT. SHN Logo" class="logo" />
+        <div class="header-content">
+          <div class="company-name">PT. SURYA HARSA NAGARA</div>
+          <div class="document-title">SALES ORDER</div>
+        </div>
+      </div>
+      
+      <div class="info-section">
+        <div class="info-row">
+          <span class="info-label">Nomor SO</span>
+          <span class="info-value">${salesOrderData.nomor_so || salesOrderData.so_number || 'N/A'}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Tanggal SO</span>
+          <span class="info-value">${formatDate(salesOrderData.tanggal_so || salesOrderData.so_date)}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Tanggal Pengiriman</span>
+          <span class="info-value">${formatDate(salesOrderData.tanggal_pengiriman || salesOrderData.delivery_date)}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Term of Payment</span>
+          <span class="info-value">${salesOrderData.term_of_payment || 'N/A'}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Gudang Asal</span>
+          <span class="info-value">${salesOrderData.gudang_asal || salesOrderData.origin_warehouse || 'N/A'}</span>
+        </div>
+      </div>
+
+      ${salesOrderData.customer ? `
+      <div class="customer-section">
+        <div class="customer-title">Informasi Customer</div>
+        <div class="info-row">
+          <span class="info-label">Nama Customer</span>
+          <span class="info-value">${salesOrderData.customer.nama_customer || 'N/A'}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Alamat</span>
+          <span class="info-value">${salesOrderData.customer.alamat || 'N/A'}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Telepon</span>
+          <span class="info-value">${salesOrderData.customer.telepon || 'N/A'}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Email</span>
+          <span class="info-value">${salesOrderData.customer.email || 'N/A'}</span>
+        </div>
+      </div>
+      ` : ''}
+      
+      <table>
+        <thead>
+          <tr>
+            <th>Nama Item</th>
+            <th>Bentuk</th>
+            <th>Grade</th>
+            <th>Dimensi Potong</th>
+            <th>Unit</th>
+            <th>Qty</th>
+            <th>Total Berat</th>
+            <th>Harga per Unit</th>
+            <th>Total Harga</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsHtml}
+        </tbody>
+      </table>
+      
+      <div class="summary-section">
+        <table class="summary-table">
+          <tbody>
+            <tr>
+              <td class="summary-label">Total Harga:</td>
+              <td class="summary-value">${formatCurrency(salesOrderData.total_harga || salesOrderData.total_amount)}</td>
+            </tr>
+            ${salesOrderData.discount ? `
+            <tr>
+              <td class="summary-label">Discount:</td>
+              <td class="summary-value">- ${formatCurrency(salesOrderData.discount)}</td>
+            </tr>
+            ` : ''}
+            ${salesOrderData.ppn ? `
+            <tr>
+              <td class="summary-label">PPN (11%):</td>
+              <td class="summary-value">${formatCurrency(salesOrderData.ppn)}</td>
+            </tr>
+            ` : ''}
+            <tr class="grand-total">
+              <td class="summary-label">Grand Total:</td>
+              <td class="summary-value">${formatCurrency(salesOrderData.grand_total || salesOrderData.total_amount)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <div class="footer">
+        <p>Dokumen ini dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
+        <p>Sales Order - PT. Surya Harsa Nagara</p>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
+// Generate printable HTML for Work Order Actual (WO Actual)
+export const generateWOActualPrintContent = (woActualData) => {
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    try {
+      return new Date(dateString).toLocaleDateString('id-ID', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (e) {
+      return '-';
+    }
+  };
+
+  const itemsHtml = (woActualData.items || []).map((item, idx) => `
+    <tr>
+      <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${idx + 1}</td>
+      <td style="border: 1px solid #ddd; padding: 6px;">${item.itemName || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 6px;">${item.jenisBarang || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 6px;">${item.bentukBarang || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 6px;">${item.gradeBarang || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 6px;">${item.dimensi || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">${item.qtyPlanning ?? 0}</td>
+      <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">${item.qtyActual ?? 0}</td>
+      <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">${item.beratActual ?? 0} kg</td>
+      <td style="border: 1px solid #ddd; padding: 6px;">${item.jenisPotongan || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 6px;">${(item.pelaksanas || []).map(p => p.pelaksana?.nama_pelaksana || '-').join(', ')}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="11" style="text-align: center; padding: 12px;">Tidak ada item</td></tr>';
+
+  // Render Parent image section (WO Actual header photo) before Before/After
+  const parentSectionHtml = (() => {
+    const imgs = Array.isArray(woActualData.parentImages) ? woActualData.parentImages : [];
+    if (!imgs.length) return '';
+    const tiles = imgs.map((img, idx) => {
+      const src = img.canvas_image_base64 || img.image_base64 || img.image_url || img.src || img.url || '';
+      return `
+        <div style="margin-bottom: 10px;">
+          <div style="font-size: 11px; color: #666; margin-bottom: 4px;">Parent #${idx + 1}</div>
+          <div style="border: 1px solid #ddd; background-color: #fafafa; padding: 8px; text-align: center;">
+            ${src ? `
+              <img src="${src}" alt="Parent #${idx + 1}" style="max-width: 100%; max-height: 280px; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+              <div style="display: none; padding: 12px; color: #666; font-style: italic;">Gambar tidak dapat dimuat</div>
+            ` : `
+              <div style="padding: 12px; color: #666; font-style: italic;">Gambar tidak tersedia</div>
+            `}
+          </div>
+        </div>
+      `;
+    }).join('');
+    return `
+      <div class="section" style="margin-top: 16px;">
+        <div style="font-weight: bold; margin-bottom: 8px;">Foto Bukti WO Actual</div>
+        ${tiles}
+      </div>
+    `;
+  })();
+
+  // Render Before/After images per item (Planning vs Actual) using mapped arrays
+  const beforeAfterSectionHtml = (woActualData.items || []).length > 0
+    ? (() => {
+        const itemSections = (woActualData.items || []).map((it) => {
+          const beforeImages = Array.isArray(it.beforeImages) ? it.beforeImages : [];
+          const afterImages = Array.isArray(it.afterImages) ? it.afterImages : [];
+
+          const renderImages = (images, label) => {
+            if (!images || images.length === 0) {
+              return `<div style="padding: 16px; color: #666; font-style: italic;">Tidak ada gambar ${label}</div>`;
+            }
+            const tiles = images.map((img, idx) => {
+              const src = img.canvas_image_base64 || img.image_base64 || img.image_url || img.src || img.url || '';
+              return `
+                <div style="margin-bottom: 10px;">
+                  <div style="font-size: 11px; color: #666; margin-bottom: 4px;">${label} #${idx + 1}</div>
+                  <div style="border: 1px solid #ddd; background-color: #fafafa; padding: 8px; text-align: center;">
+                    ${src ? `
+                      <img src="${src}" alt="${label} #${idx + 1}" style="max-width: 100%; max-height: 280px; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                      <div style="display: none; padding: 12px; color: #666; font-style: italic;">Gambar tidak dapat dimuat</div>
+                    ` : `
+                      <div style="padding: 12px; color: #666; font-style: italic;">Gambar tidak tersedia</div>
+                    `}
+                  </div>
+                </div>
+              `;
+            }).join('');
+            return tiles;
+          };
+
+          return `
+            <div class="section" style="margin-top: 16px; page-break-inside: avoid;">
+              <div style="font-weight: bold; margin-bottom: 8px;">Item ${it.no || '-'} — ${it.itemName || '-'}</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                  <div style="font-weight: bold; margin-bottom: 6px;">Before (WO Planning)</div>
+                  ${renderImages(beforeImages, 'Before')}
+                </div>
+                <div>
+                  <div style="font-weight: bold; margin-bottom: 6px;">After (WO Actual)</div>
+                  ${renderImages(afterImages, 'After')}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <div class="section" style="margin-top: 16px;">
+            <div style="font-weight: bold; margin-bottom: 8px;">Foto Before/After per Item</div>
+            ${itemSections}
+          </div>
+        `;
+      })()
+    : '';
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>WO Actual - ${woActualData.workOrderPlanning?.nomor_wo || 'N/A'}</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { display: flex; align-items: flex-start; margin-bottom: 20px; position: relative; min-height: 80px; padding-top: 10px; }
+        .logo { width: 70px; height: auto; margin-right: 16px; object-fit: contain; }
+        .header-content { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; top: 10px; }
+        .company-name { font-size: 22px; font-weight: bold; margin-bottom: 6px; line-height: 1.2; }
+        .document-title { font-size: 16px; font-weight: bold; margin-bottom: 14px; line-height: 1.2; }
+        .section { margin-bottom: 16px; }
+        .info-row { display: flex; margin-bottom: 4px; }
+        .info-label { font-weight: bold; min-width: 180px; }
+        .info-value { margin-left: 1px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+        th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+        td { border: 1px solid #ddd; padding: 6px; font-size: 12px; }
+        .footer { margin-top: 20px; text-align: center; font-size: 12px; color: #666; }
+        @media print { body { margin: 0; } .no-print { display: none; } }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <img src="/src/assets/logo.png" alt="PT. SHN Logo" class="logo" />
+        <div class="header-content">
+          <div class="company-name">PT. SURYA HARSA NAGARA</div>
+          <div class="document-title">WORK ORDER ACTUAL</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="info-row"><span class="info-label">Nomor WO</span><span class="info-value">${woActualData.workOrderPlanning?.nomor_wo || 'N/A'}</span></div>
+        <div class="info-row"><span class="info-label">Tanggal WO</span><span class="info-value">${formatDate(woActualData.workOrderPlanning?.tanggal_wo)}</span></div>
+        <div class="info-row"><span class="info-label">Prioritas</span><span class="info-value">${woActualData.workOrderPlanning?.prioritas || 'N/A'}</span></div>
+        <div class="info-row"><span class="info-label">Status WO</span><span class="info-value">${woActualData.workOrderPlanning?.status || 'N/A'}</span></div>
+        <div class="info-row"><span class="info-label">Tanggal Actual</span><span class="info-value">${formatDate(woActualData.woActual?.tanggal_actual || woActualData.woActual?.created_at)}</span></div>
+      </div>
+
+      ${(woActualData.customer || woActualData.warehouse) ? `
+      <div class="section" style="padding: 12px; border: 1px solid #ddd; background-color: #fafafa;">
+        ${woActualData.customer ? `
+        <div class="info-row"><span class="info-label">Pelanggan</span><span class="info-value">${woActualData.customer?.nama_pelanggan || woActualData.customer?.nama || 'N/A'}</span></div>
+        ` : ''}
+        ${woActualData.warehouse ? `
+        <div class="info-row"><span class="info-label">Gudang</span><span class="info-value">${woActualData.warehouse?.nama_gudang || woActualData.warehouse?.nama || 'N/A'}</span></div>
+        ` : ''}
+      </div>
+      ` : ''}
+
+      <table>
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>Nama Item</th>
+            <th>Jenis</th>
+            <th>Bentuk</th>
+            <th>Grade</th>
+            <th>Dimensi</th>
+            <th>Qty Planning</th>
+            <th>Qty Actual</th>
+            <th>Berat Actual</th>
+            <th>Jenis Potongan</th>
+            <th>Pelaksana</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsHtml}
+        </tbody>
+      </table>
+
+      ${parentSectionHtml}
+
+      ${beforeAfterSectionHtml}
+
+      <div class="footer">
+        <p>Dokumen ini di-print pada: ${new Date().toLocaleString('id-ID')}</p>
+        <p>Work Order Actual - PT. Surya Harsa Nagara</p>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
+// Generate printable HTML for Work Order Planning (WO Planning)
+export const generateWOPlanningPrintContent = (woPlanningData) => {
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    try {
+      return new Date(dateString).toLocaleDateString('id-ID', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (e) {
+      return '-';
+    }
+  };
+
+  const itemsHtml = (woPlanningData.items || []).map((item, idx) => `
+    <tr>
+      <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${idx + 1}</td>
+      <td style="border: 1px solid #ddd; padding: 6px;">${item.nama_item || item.jenisBarang?.nama_jenis_barang || item.jenisBarang?.nama || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 6px;">${item.jenisBarang?.nama_jenis_barang || item.jenisBarang?.nama || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 6px;">${item.bentukBarang?.nama_bentuk || item.bentukBarang?.nama || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 6px;">${item.gradeBarang?.nama_grade || item.gradeBarang?.nama || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 6px;">${item.bentukBarang?.dimensi || item.dimensi || `${item.panjang || 0}x${item.lebar || 0}x${item.ketebalan || 0}mm`}</td>
+      <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">${item.qty ?? item.qtyPlanning ?? 0}</td>
+      <td style="border: 1px solid #ddd; padding: 6px;">${item.jenisPotongan || item.jenis_potongan || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 6px;">${item.keterangan || item.catatan || '-'}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="9" style="text-align: center; padding: 12px;">Tidak ada item</td></tr>';
+
+  // Render canvas images with robust item-based grouping and naming
+  const canvasImagesHtml = (woPlanningData.canvasImages || []).length > 0
+    ? (() => {
+        // Build map from item IDs to index and display name
+        const itemsArr = woPlanningData.items || [];
+        const itemMap = new Map();
+        itemsArr.forEach((item, index) => {
+          const name = item.nama_item || item.jenisBarang?.nama_jenis_barang || item.jenisBarang?.nama || `Item ${index + 1}`;
+          const idCandidates = [
+            item.wo_item_unique_id,
+            item.id,
+            item.wo_item_id,
+            item.item_id
+          ].filter(Boolean);
+          idCandidates.forEach(id => {
+            itemMap.set(String(id), { index: index + 1, name });
+          });
+        });
+
+        const groupedMap = new Map();
+        let unknownCounter = 1;
+        const unknownStartIndex = itemsArr.length + 1;
+
+        (woPlanningData.canvasImages || []).forEach((img, idx) => {
+          const idCandidates = [
+            img.work_order_planning_item_id,
+            img.wo_item_id,
+            img.wo_plan_item_id,
+            img.item_id,
+            img.wo_item_unique_id
+          ].filter(Boolean);
+
+          let key = null;
+          let info = null;
+          for (const id of idCandidates) {
+            const found = itemMap.get(String(id));
+            if (found) { key = String(id); info = found; break; }
+          }
+
+          if (!key) {
+            key = `unknown_${unknownCounter}`;
+            info = { index: unknownStartIndex + unknownCounter - 1, name: `Item ${unknownStartIndex + unknownCounter - 1}` };
+            unknownCounter++;
+          }
+
+          if (!groupedMap.has(key)) {
+            groupedMap.set(key, { itemNumber: info.index, itemName: info.name, images: [] });
+          }
+          groupedMap.get(key).images.push({ ...img, originalIndex: idx });
+        });
+
+        // Sort sections by item number (ascending) for consistent ordering
+        const sections = Array.from(groupedMap.values())
+          .sort((a, b) => a.itemNumber - b.itemNumber)
+          .map(group => {
+            const items = group.images.map((image, imageIndex) => {
+              const src = image.canvas_image_base64 || image.image_base64 || image.image_url || image.src || '';
+              return `
+                <div style="margin-bottom: 16px; page-break-inside: avoid;">
+                  <div style="font-weight: bold; margin-bottom: 6px; font-size: 12px; color: #555;">WO Item ${group.itemNumber} - Image ${imageIndex + 1}</div>
+                  <div style="text-align: center; border: 1px solid #ddd; padding: 8px; background-color: #f9f9f9;">
+                    ${src ? `
+                      <img src="${src}" alt="WO Item ${group.itemNumber} - Image ${imageIndex + 1}" style="max-width: 100%; max-height: 320px; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                      <div style="display: none; padding: 16px; color: #666; font-style: italic;">Gambar tidak dapat dimuat</div>
+                    ` : `
+                      <div style="padding: 16px; color: #666; font-style: italic;">Canvas image tidak tersedia</div>
+                    `}
+                  </div>
+                  ${image.quantity || image.dimensi || image.wo_item_id ? `
+                  <div style="margin-top: 6px; font-size: 11px; color: #666;">
+                    ${image.quantity ? `Quantity: ${image.quantity}` : ''}
+                    ${image.dimensi ? ` | Dimensi: ${image.dimensi}` : ''}
+                    ${image.wo_item_id ? ` | WO Item ID: ${image.wo_item_id}` : ''}
+                  </div>
+                  ` : ''}
+                </div>
+              `;
+            }).join('');
+
+            return `
+              <div style="margin-bottom: 20px;">
+                <div style="font-weight: bold; margin-bottom: 8px;">Canvas Layout - Item ${group.itemNumber}</div>
+                ${items}
+              </div>
+            `;
+          }).join('');
+
+        return `
+          <div class="section" style="margin-top: 16px;">
+            ${sections}
+          </div>
+        `;
+      })()
+    : '';
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>WO Planning - ${woPlanningData.nomor_wo || 'N/A'}</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { display: flex; align-items: flex-start; margin-bottom: 20px; position: relative; min-height: 80px; padding-top: 10px; }
+        .logo { width: 70px; height: auto; margin-right: 16px; object-fit: contain; }
+        .header-content { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; top: 10px; }
+        .company-name { font-size: 22px; font-weight: bold; margin-bottom: 6px; line-height: 1.2; }
+        .document-title { font-size: 16px; font-weight: bold; margin-bottom: 14px; line-height: 1.2; }
+        .section { margin-bottom: 16px; }
+        .info-row { display: flex; margin-bottom: 4px; }
+        .info-label { font-weight: bold; min-width: 180px; }
+        .info-value { margin-left: 1px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+        th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+        td { border: 1px solid #ddd; padding: 6px; font-size: 12px; }
+        .footer { margin-top: 20px; text-align: center; font-size: 12px; color: #666; }
+        @media print { body { margin: 0; } .no-print { display: none; } }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <img src="/src/assets/logo.png" alt="PT. SHN Logo" class="logo" />
+        <div class="header-content">
+          <div class="company-name">PT. SURYA HARSA NAGARA</div>
+          <div class="document-title">WORK ORDER PLANNING</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="info-row"><span class="info-label">Nomor WO</span><span class="info-value">${woPlanningData.nomor_wo || 'N/A'}</span></div>
+        <div class="info-row"><span class="info-label">Tanggal WO</span><span class="info-value">${formatDate(woPlanningData.tanggal_wo)}</span></div>
+        <div class="info-row"><span class="info-label">Tanggal Target</span><span class="info-value">${formatDate(woPlanningData.due_date || woPlanningData.tanggal_target)}</span></div>
+        <div class="info-row"><span class="info-label">Prioritas</span><span class="info-value">${woPlanningData.priority || woPlanningData.prioritas || 'N/A'}</span></div>
+        <div class="info-row"><span class="info-label">Status</span><span class="info-value">${woPlanningData.status || 'N/A'}</span></div>
+        <div class="info-row"><span class="info-label">Metode Handover</span><span class="info-value">${woPlanningData.assigned_to || woPlanningData.handover_method || 'N/A'}</span></div>
+      </div>
+
+      ${(woPlanningData.customer || woPlanningData.warehouse) ? `
+      <div class="section" style="padding: 12px; border: 1px solid #ddd; background-color: #fafafa;">
+        ${woPlanningData.customer ? `
+        <div class="info-row"><span class="info-label">Pelanggan</span><span class="info-value">${woPlanningData.customer?.nama_pelanggan || woPlanningData.customer?.nama || '-'}</span></div>
+        ` : ''}
+        ${woPlanningData.warehouse ? `
+        <div class="info-row"><span class="info-label">Gudang</span><span class="info-value">${woPlanningData.warehouse?.nama_gudang || woPlanningData.warehouse?.nama || '-'}</span></div>
+        ` : ''}
+      </div>
+      ` : ''}
+
+      <table>
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>Nama Item</th>
+            <th>Jenis</th>
+            <th>Bentuk</th>
+            <th>Grade</th>
+            <th>Dimensi</th>
+            <th>Qty Planning</th>
+            <th>Jenis Potongan</th>
+            <th>Keterangan</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsHtml}
+        </tbody>
+      </table>
+
+      ${canvasImagesHtml}
+
+      <div class="footer">
+        <p>Dokumen ini dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
+        <p>Work Order Planning - PT. Surya Harsa Nagara</p>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
 // Utility function to open print dialog
 export const openPrintDialog = (printContent) => {
   const printWindow = window.open('', '_blank');

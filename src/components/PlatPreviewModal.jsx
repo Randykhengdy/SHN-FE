@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { X, Package, Eye, Loader2 } from 'lucide-react';
-import { getCanvasPreviewByItemId, getPreviewImageUrl, previewImageExists, clearCanvasPreviews } from '@/lib/canvasUtils';
+import { getCanvasPreviewByItemId, getPreviewImageUrl, previewImageExists } from '@/lib/canvasUtils';
 import PlatShaftCanvas from '@/components/PlatShaftCanvas';
 
 const PlatPreviewModal = ({
@@ -222,7 +222,7 @@ const PlatPreviewModal = ({
                           {item.nama || `Plat ${item.id}`}
                         </h3>
                         <p className="text-xs text-gray-500 mt-1">
-                          {item.panjang}×{item.lebar}×{item.tebal}mm
+                          {item.ukuran} mm
                         </p>
                       </div>
 

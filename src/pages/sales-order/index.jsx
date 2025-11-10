@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Plus, Search, Filter, Download, FileText, Eye, Trash2, ArrowRight, Calendar, RefreshCw, X } from "lucide-react";
+import { Plus, Search, Filter, FileText, Eye, Trash2, ArrowRight, Calendar, RefreshCw, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { salesOrderService } from "@/services/salesOrderService";
+import apiConfig, { API_ENDPOINTS } from "@/config/api";
+import { getAuthHeader } from "@/api/GetAuthHeader";
+import { checkAndRefreshToken } from "@/lib/tokenUtils";
 import { useAlert } from "@/hooks/useAlert";
 import { isAdmin } from "@/lib/utils";
 import CustomAlert from "@/components/modals/CustomAlert";
@@ -23,14 +26,7 @@ const statusOptions = [
   { value: "completed", label: "Completed" }
 ];
 
-const periodOptions = [
-  { value: "all", label: "Semua Periode" },
-  { value: "today", label: "Hari Ini" },
-  { value: "week", label: "Minggu Ini" },
-  { value: "month", label: "Bulan Ini" },
-  { value: "quarter", label: "Kuartal Ini" },
-  { value: "year", label: "Tahun Ini" }
-];
+// Periode filter dihapus sesuai permintaan
 
 export default function SalesOrderListPage() {
   const navigate = useNavigate();
@@ -40,7 +36,12 @@ export default function SalesOrderListPage() {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [periodFilter, setPeriodFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  // Sorting state
+  const [sortKey, setSortKey] = useState(null); // e.g., 'noSo', 'pelanggan', 'tanggalSo', 'tanggalPengiriman', 'asalGudang', 'jumlahItem', 'subtotal', 'totalDiskon', 'ppnAmount', 'totalHarga', 'status'
+  const [sortOrder, setSortOrder] = useState('asc'); // 'asc' | 'desc'
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -67,7 +68,9 @@ export default function SalesOrderListPage() {
         id: so.id,
         noSo: so.nomor_so,
         pelanggan: so.pelanggan?.nama_pelanggan || 'N/A',
+        tanggalSoRaw: so.tanggal_so || null,
         tanggalSo: formatDate(so.tanggal_so),
+        tanggalPengirimanRaw: so.tanggal_pengiriman || null,
         tanggalPengiriman: formatDate(so.tanggal_pengiriman),
         asalGudang: so.gudang?.nama_gudang || 'N/A',
         jumlahItem: so.salesOrderItems?.length || 0,
@@ -86,6 +89,23 @@ export default function SalesOrderListPage() {
       
       // Apply filters
       let filteredData = transformedData;
+
+      // Filter by date range (tanggal SO)
+      if (dateFrom || dateTo) {
+        const from = dateFrom ? new Date(dateFrom) : null;
+        const to = dateTo ? new Date(dateTo) : null;
+        if (to) {
+          // include the whole end day
+          to.setHours(23,59,59,999);
+        }
+        filteredData = filteredData.filter(so => {
+          const d = so.tanggalSoRaw ? new Date(so.tanggalSoRaw) : null;
+          if (!d) return false;
+          const afterFrom = from ? d >= from : true;
+          const beforeTo = to ? d <= to : true;
+          return afterFrom && beforeTo;
+        });
+      }
       
       if (searchTerm) {
         filteredData = filteredData.filter(so => 
@@ -98,6 +118,39 @@ export default function SalesOrderListPage() {
         filteredData = filteredData.filter(so => so.status.toLowerCase() === statusFilter);
       }
       
+      // Apply sorting
+      if (sortKey) {
+        const getVal = (rec) => {
+          switch (sortKey) {
+            case 'noSo': return rec.noSo || '';
+            case 'pelanggan': return rec.pelanggan || '';
+            case 'tanggalSo': return rec.tanggalSoRaw ? new Date(rec.tanggalSoRaw).getTime() : 0;
+            case 'tanggalPengiriman': return rec.tanggalPengirimanRaw ? new Date(rec.tanggalPengirimanRaw).getTime() : 0;
+            case 'asalGudang': return rec.asalGudang || '';
+            case 'jumlahItem': return Number(rec.jumlahItem) || 0;
+            case 'subtotal': return Number(rec.subtotal) || 0;
+            case 'totalDiskon': return Number(rec.totalDiskon) || 0;
+            case 'ppnAmount': return Number(rec.ppnAmount) || 0;
+            case 'totalHarga': return Number(rec.totalHarga) || 0;
+            case 'status': return rec.status || '';
+            default: return '';
+          }
+        };
+
+        filteredData = [...filteredData].sort((a, b) => {
+          const va = getVal(a);
+          const vb = getVal(b);
+          if (typeof va === 'number' && typeof vb === 'number') {
+            return sortOrder === 'asc' ? va - vb : vb - va;
+          }
+          const sa = String(va).toLowerCase();
+          const sb = String(vb).toLowerCase();
+          if (sa < sb) return sortOrder === 'asc' ? -1 : 1;
+          if (sa > sb) return sortOrder === 'asc' ? 1 : -1;
+          return 0;
+        });
+      }
+
       // Apply pagination
       const startIndex = (currentPage - 1) * itemsPerPage;
       const endIndex = startIndex + itemsPerPage;
@@ -111,7 +164,7 @@ export default function SalesOrderListPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, itemsPerPage, searchTerm, statusFilter, periodFilter]);
+  }, [currentPage, itemsPerPage, searchTerm, statusFilter, dateFrom, dateTo, sortKey, sortOrder]);
 
   // Load sales orders from API
   useEffect(() => {
@@ -259,19 +312,108 @@ export default function SalesOrderListPage() {
   const handleClearFilter = () => {
     setSearchTerm("");
     setStatusFilter("all");
-    setPeriodFilter("all");
+    setDateFrom("");
+    setDateTo("");
     setCurrentPage(1);
   };
 
-  const handleExport = () => {
-    // TODO: Implement export functionality
-    console.log("Exporting sales orders...");
+  const handleExport = async () => {
+    try {
+      await checkAndRefreshToken();
+
+      const queryParams = new URLSearchParams();
+      if (searchTerm) queryParams.append("search", searchTerm);
+      if (statusFilter && statusFilter !== "all") queryParams.append("status", statusFilter);
+      if (dateFrom) queryParams.append('date_from', dateFrom);
+      if (dateTo) queryParams.append('date_to', dateTo);
+
+      const url = `${apiConfig.baseUrl}${API_ENDPOINTS.salesOrder}/report${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          ...getAuthHeader(),
+          Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/octet-stream, application/json'
+        },
+      });
+
+      if (!response.ok) {
+        const ct = response.headers.get('Content-Type') || response.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+          const err = await response.json().catch(() => null);
+          throw new Error(err?.message || `Export failed (HTTP ${response.status})`);
+        } else {
+          const text = await response.text();
+          throw new Error(text || `Export failed (HTTP ${response.status})`);
+        }
+      }
+
+      const contentType = response.headers.get('Content-Type') || response.headers.get('content-type') || '';
+      const isExcel = contentType.includes('spreadsheet') || contentType.includes('excel') || contentType.includes('octet-stream');
+      const isJson = contentType.includes('application/json');
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+
+      if (isExcel) {
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const fileName = `sales-order-report_${timestamp}.xlsx`;
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+        showAlert("Sukses", "File Excel berhasil diunduh", "success");
+      } else if (isJson) {
+        const json = await response.json();
+        if (!window.XLSX) {
+          try {
+            const mod = await import(/* @vite-ignore */ 'xlsx');
+            window.XLSX = mod;
+          } catch (e) {
+            throw new Error("Dependency 'xlsx' belum terpasang. Jalankan: npm install xlsx");
+          }
+        }
+        const rows = Array.isArray(json?.data) ? json.data : (Array.isArray(json) ? json : []);
+        const formatDateCell = (s) => (s ? String(s).slice(0, 10) : '');
+        const dataRows = rows.map((r) => ({
+          'Nomor SO': r?.nomor_so ?? '',
+          'Tanggal SO': formatDateCell(r?.tanggal_so),
+          'Tanggal Pengiriman': formatDateCell(r?.tanggal_pengiriman),
+          'Pelanggan': r?.nama_pelanggan ?? r?.pelanggan?.nama_pelanggan ?? '',
+          'Gudang': r?.nama_gudang ?? r?.gudang?.nama_gudang ?? '',
+          'Jumlah Item': r?.jumlah_item ?? r?.salesOrderItems?.length ?? 0,
+          'Subtotal': r?.subtotal ?? '',
+          'Diskon': r?.total_diskon ?? '',
+          'PPN': r?.ppn_amount ?? '',
+          'Total Harga': r?.total_harga_so ?? r?.total_harga ?? ''
+        }));
+        const wb = window.XLSX.utils.book_new();
+        const wsData = window.XLSX.utils.json_to_sheet(dataRows);
+        window.XLSX.utils.book_append_sheet(wb, wsData, 'Data');
+        const wbout = window.XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const objectUrl = URL.createObjectURL(blob);
+        const fileName = `sales-order-report_${timestamp}.xlsx`;
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+        showAlert('Sukses', 'Laporan XLSX berhasil dibuat dari JSON', 'success');
+      } else {
+        const text = await response.text();
+        throw new Error(text || 'Server tidak mengembalikan file yang dapat diunduh');
+      }
+    } catch (error) {
+      console.error("Error exporting sales orders:", error);
+      showAlert("Error", `Gagal export Sales Order: ${error.message || error}`, "error");
+    }
   };
 
-  const handleTestConvert = () => {
-    // TODO: Implement test convert functionality
-    console.log("Testing convert...");
-  };
+  // Removed: test convert handler (tidak diperlukan)
 
   const handleView = (id) => {
     navigate(`/sales-order/view/${id}`);
@@ -331,6 +473,34 @@ export default function SalesOrderListPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tanggal SO Dari
+                </label>
+                <Input
+                  type="date"
+                  placeholder="dd/mm/yyyy"
+                  value={dateFrom}
+                  onChange={(e) => {
+                    setDateFrom(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tanggal SO Sampai
+                </label>
+                <Input
+                  type="date"
+                  placeholder="dd/mm/yyyy"
+                  value={dateTo}
+                  onChange={(e) => {
+                    setDateTo(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Status:
                 </label>
                 <Select value={statusFilter} onValueChange={(value) => {
@@ -349,49 +519,23 @@ export default function SalesOrderListPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Periode:
-                </label>
-                <Select value={periodFilter} onValueChange={(value) => {
-                  setPeriodFilter(value);
-                  setCurrentPage(1);
-                }}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {periodOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={loadSalesOrders} 
-                  disabled={loading}
-                  className="w-full"
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                  Refresh
-                </Button>
-              </div>
+              
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex justify-end flex-wrap gap-2">
+              <Button 
+                variant="outline" 
+                onClick={loadSalesOrders} 
+                disabled={loading}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
               <Button variant="outline" onClick={handleClearFilter}>
                 Clear Filter
               </Button>
-              <Button variant="outline" onClick={handleExport}>
-                <Download className="w-4 h-4 mr-2" />
-                Export
-              </Button>
-              <Button variant="outline" onClick={handleTestConvert}>
+              <Button variant="default" className="bg-blue-600 hover:bg-blue-700" onClick={handleExport}>
                 <FileText className="w-4 h-4 mr-2" />
-                Test Convert
+                Report
               </Button>
             </div>
           </CardContent>
@@ -404,17 +548,50 @@ export default function SalesOrderListPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50">
-                    <TableHead className="font-semibold">No SO</TableHead>
-                    <TableHead className="font-semibold">Pelanggan</TableHead>
-                    <TableHead className="font-semibold">Tanggal SO</TableHead>
-                    <TableHead className="font-semibold">Tanggal Pengiriman</TableHead>
-                    <TableHead className="font-semibold">Asal Gudang</TableHead>
-                    <TableHead className="font-semibold text-center">Jumlah Item</TableHead>
-                    <TableHead className="font-semibold">Subtotal</TableHead>
-                    <TableHead className="font-semibold">Diskon</TableHead>
-                    <TableHead className="font-semibold">PPN</TableHead>
-                    <TableHead className="font-semibold">Total Harga</TableHead>
-                    <TableHead className="font-semibold">Status</TableHead>
+                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => {
+                      setSortKey(prev => prev === 'noSo' ? 'noSo' : 'noSo');
+                      setSortOrder(prev => (sortKey === 'noSo' && prev === 'asc') ? 'desc' : 'asc');
+                    }}>No SO</TableHead>
+                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => {
+                      setSortKey(prev => prev === 'pelanggan' ? 'pelanggan' : 'pelanggan');
+                      setSortOrder(prev => (sortKey === 'pelanggan' && prev === 'asc') ? 'desc' : 'asc');
+                    }}>Pelanggan</TableHead>
+                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => {
+                      setSortKey(prev => prev === 'tanggalSo' ? 'tanggalSo' : 'tanggalSo');
+                      setSortOrder(prev => (sortKey === 'tanggalSo' && prev === 'asc') ? 'desc' : 'asc');
+                    }}>Tanggal SO</TableHead>
+                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => {
+                      setSortKey(prev => prev === 'tanggalPengiriman' ? 'tanggalPengiriman' : 'tanggalPengiriman');
+                      setSortOrder(prev => (sortKey === 'tanggalPengiriman' && prev === 'asc') ? 'desc' : 'asc');
+                    }}>Tanggal Pengiriman</TableHead>
+                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => {
+                      setSortKey(prev => prev === 'asalGudang' ? 'asalGudang' : 'asalGudang');
+                      setSortOrder(prev => (sortKey === 'asalGudang' && prev === 'asc') ? 'desc' : 'asc');
+                    }}>Asal Gudang</TableHead>
+                    <TableHead className="font-semibold text-center cursor-pointer select-none" onClick={() => {
+                      setSortKey(prev => prev === 'jumlahItem' ? 'jumlahItem' : 'jumlahItem');
+                      setSortOrder(prev => (sortKey === 'jumlahItem' && prev === 'asc') ? 'desc' : 'asc');
+                    }}>Jumlah Item</TableHead>
+                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => {
+                      setSortKey(prev => prev === 'subtotal' ? 'subtotal' : 'subtotal');
+                      setSortOrder(prev => (sortKey === 'subtotal' && prev === 'asc') ? 'desc' : 'asc');
+                    }}>Subtotal</TableHead>
+                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => {
+                      setSortKey(prev => prev === 'totalDiskon' ? 'totalDiskon' : 'totalDiskon');
+                      setSortOrder(prev => (sortKey === 'totalDiskon' && prev === 'asc') ? 'desc' : 'asc');
+                    }}>Diskon</TableHead>
+                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => {
+                      setSortKey(prev => prev === 'ppnAmount' ? 'ppnAmount' : 'ppnAmount');
+                      setSortOrder(prev => (sortKey === 'ppnAmount' && prev === 'asc') ? 'desc' : 'asc');
+                    }}>PPN</TableHead>
+                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => {
+                      setSortKey(prev => prev === 'totalHarga' ? 'totalHarga' : 'totalHarga');
+                      setSortOrder(prev => (sortKey === 'totalHarga' && prev === 'asc') ? 'desc' : 'asc');
+                    }}>Total Harga</TableHead>
+                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => {
+                      setSortKey(prev => prev === 'status' ? 'status' : 'status');
+                      setSortOrder(prev => (sortKey === 'status' && prev === 'asc') ? 'desc' : 'asc');
+                    }}>Status</TableHead>
                     <TableHead className="font-semibold text-center">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>

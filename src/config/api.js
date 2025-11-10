@@ -26,10 +26,12 @@ export const API_ENDPOINTS = {
   jenisBarang: "/jenis-barang",
   salesOrder: "/sales-order",
   workOrderPlanning: "/work-order-planning",
+  workOrderActual: "/work-order-actual",
   purchaseOrder: "/purchase-order",
   dashboardWorkshop: "/dashboard/workshop",
   stockMutation: "/stock-mutation",
   konversiBarang: "/konversi-barang",
   splitBarang: "/split-barang",
-  mergeBarang: "/merge-barang"
+  mergeBarang: "/merge-barang",
+  itemBarangRequest: "/item-barang-request"
 };

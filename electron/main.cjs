@@ -214,15 +214,43 @@ function createWindow() {
           { label: 'Purchase Order', accelerator: 'CmdOrCtrl+P', click: () => mainWindow.webContents.send('navigate-to', '/purchase-order') },
           { label: 'Sales Order', accelerator: 'CmdOrCtrl+S', click: () => mainWindow.webContents.send('navigate-to', '/sales-order') },
           { label: 'Work Order', accelerator: 'CmdOrCtrl+W', click: () => mainWindow.webContents.send('navigate-to', '/work-order') },
-          { label: 'Surat Jalan \& Invoicing', accelerator: 'CmdOrCtrl+F', click: () => mainWindow.webContents.send('navigate-to', '/finance-invoice-pod') },
+          { label: 'WO Actual', accelerator: 'CmdOrCtrl+Shift+W', click: () => mainWindow.webContents.send('navigate-to', '/wo-actual') },
+          { label: 'Surat Jalan Invoicing', accelerator: 'CmdOrCtrl+F', click: () => mainWindow.webContents.send('navigate-to', '/finance-invoice-pod') },
           { type: 'separator' },
           { label: 'AR / AP', accelerator: 'CmdOrCtrl+A', click: () => mainWindow.webContents.send('navigate-to', '/ar-ap') },
           { label: 'Mutasi Stock', accelerator: 'CmdOrCtrl+M', click: () => mainWindow.webContents.send('navigate-to', '/mutasi-stock') },
+          { label: 'Item Barang Request', accelerator: 'CmdOrCtrl+I', click: () => mainWindow.webContents.send('navigate-to', '/item-barang-request') },
           { label: 'Approval', accelerator: 'CmdOrCtrl+Shift+A', click: () => mainWindow.webContents.send('navigate-to', '/approval') },
           { type: 'separator' },
           { label: 'Konversi Barang', accelerator: 'CmdOrCtrl+K', click: () => mainWindow.webContents.send('navigate-to', '/konversi-barang')},
           { label: 'Split Barang', accelerator: 'CmdOrCtrl+Shift+S', click: () => mainWindow.webContents.send('navigate-to', '/split-barang')},
           { label: 'Merge Barang', accelerator: 'CmdOrCtrl+Shift+M', click: () => mainWindow.webContents.send('navigate-to', '/merge-barang')}
+        ]
+      },
+      {
+        label: 'Laporan',
+        submenu: [
+          {
+            label: 'Sales Order (Simple)',
+            click: () => mainWindow.webContents.send('navigate-to', '/laporan/sales-order')
+          },
+          {
+            label: 'Sales Order (Advanced)',
+            click: () => mainWindow.webContents.send('navigate-to', '/laporan/sales-order-advanced')
+          },
+          { type: 'separator' },
+          {
+            label: 'Work Order (Planning)',
+            click: () => mainWindow.webContents.send('navigate-to', '/laporan/work-order-planning')
+          },
+          {
+            label: 'Work Order (Actual)',
+            click: () => mainWindow.webContents.send('navigate-to', '/laporan/work-order-actual')
+          },
+          {
+            label: 'Purchase Order',
+            click: () => mainWindow.webContents.send('navigate-to', '/purchase-order')
+          }
         ]
       },
           {

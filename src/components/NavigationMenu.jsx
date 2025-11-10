@@ -11,7 +11,8 @@ import {
   Warehouse,
   Wrench,
   ClipboardList,
-  Edit3
+  Edit3,
+  Activity
 } from "lucide-react";
 
 export default function NavigationMenu() {
@@ -40,7 +41,13 @@ export default function NavigationMenu() {
     {
       label: "Work Order",
       path: "/work-order",
-      icon: ClipboardList,
+      icon: Wrench,
+      category: "transaksi"
+    },
+    {
+      label: "WO Actual",
+      path: "/wo-actual",
+      icon: Activity,
       category: "transaksi"
     },
     {
@@ -72,20 +79,32 @@ export default function NavigationMenu() {
       path: "/users",
       icon: Users,
       category: "admin"
+    },
+    // Laporan items
+    {
+      label: "WO Planning Report",
+      path: "/laporan/work-order-planning",
+      icon: ClipboardList,
+      category: "laporan"
+    },
+    {
+      label: "WO Actual Report",
+      path: "/laporan/work-order-actual",
+      icon: ClipboardList,
+      category: "laporan"
     }
   ];
 
   const isActive = (path) => {
-    if (path === "/dashboard") {
-      return location.pathname === "/dashboard";
+    if (path === "/work-order") {
+      return location.pathname === "/work-order" || 
+             location.pathname.startsWith("/work-order/");
     }
-    if (path === "/masterdata/jenis-barang") {
-      return location.pathname.startsWith("/masterdata");
+    if (path === "/wo-actual") {
+      return location.pathname === "/wo-actual" || 
+             location.pathname.startsWith("/wo-actual/");
     }
-    if (path === "/sales-order") {
-      return location.pathname.startsWith("/sales-order");
-    }
-    return location.pathname === path;
+    return location.pathname === path || location.pathname.startsWith(path + "/");
   };
 
   const getCategoryItems = (category) => {
@@ -109,8 +128,32 @@ export default function NavigationMenu() {
           </Button>
         ))}
 
-        {/* Divider */}
-        <div className="w-px h-6 bg-gray-300 mx-2"></div>
+        {false && (
+          <>
+            {/* Divider */}
+            <div className="w-px h-6 bg-gray-300 mx-2"></div>
+
+            {/* Laporan Menu */}
+            <div className="flex items-center gap-1">
+              <span className="text-xs font-medium text-gray-500 mr-2">LAPORAN:</span>
+              {getCategoryItems("laporan").map((item) => (
+                <Button
+                  key={item.path}
+                  variant={isActive(item.path) ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => navigate(item.path)}
+                  className="flex items-center gap-2"
+                >
+                  <item.icon className="w-4 h-4" />
+                  {item.label}
+                </Button>
+              ))}
+            </div>
+
+            {/* Divider */}
+            <div className="w-px h-6 bg-gray-300 mx-2"></div>
+          </>
+        )}
 
         {/* Transaksi Menu */}
         <div className="flex items-center gap-1">

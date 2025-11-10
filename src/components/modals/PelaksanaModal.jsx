@@ -36,6 +36,7 @@ const PelaksanaModal = ({
         id: Date.now(),
         pelaksana_id: "",
         qty: 1,
+        berat: 0,
         catatan: "",
       }
     ]));
@@ -98,7 +99,7 @@ const PelaksanaModal = ({
                 <div key={row.id} className="bg-white border rounded-lg p-3">
                   <div className="grid grid-cols-12 gap-3 items-end">
                     {/* Pelaksana */}
-                    <div className="col-span-6">
+                    <div className="col-span-5">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Pelaksana
                       </label>
@@ -129,8 +130,22 @@ const PelaksanaModal = ({
                       />
                     </div>
 
+                    {/* Berat */}
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Berat
+                      </label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={row.berat ?? 0}
+                        onChange={(e) => updateRow(row.id, "berat", parseFloat(e.target.value) || 0)}
+                        className="h-8 text-center"
+                      />
+                    </div>
+
                     {/* Catatan */}
-                    <div className="col-span-3">
+                    <div className="col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Catatan
                       </label>

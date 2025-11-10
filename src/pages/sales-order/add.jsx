@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, ArrowLeft, Calendar, Trash2 } from "lucide-react";
+import { Plus, ArrowLeft, Calendar, Trash2, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +23,7 @@ import { request } from "@/lib/request";
 import { API_ENDPOINTS } from "@/config/api";
 import SalesOrderLayout from "@/components/SalesOrderLayout";
 import { documentSequenceService } from "@/services/master-data/documentSequenceService";
+import { generateSalesOrderPrintContent, openPrintDialog } from "@/lib/printUtils";
 
 export default function AddSalesOrderPage() {
   const { showAlert, AlertComponent } = useAlert();
@@ -49,6 +50,7 @@ export default function AddSalesOrderPage() {
   const [loadingItemShape, setLoadingItemShape] = useState(false);
   const [loadingItemGrade, setLoadingItemGrade] = useState(false);
   const [loadingUnit, setLoadingUnit] = useState(false);
+  const [printLoading, setPrintLoading] = useState(false);
 
   // Customer Information
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -460,7 +462,10 @@ export default function AddSalesOrderPage() {
           grade_barang_id: parseInt(item.gradeBarangId) || 0,
           harga: parseFloat(item.harga) || 0,
           satuan: item.satuan,
-          jenis_potongan: item.jenis_potongan || null,
+          jenis_potongan: (() => {
+            const label = (unitOptions.find(opt => opt.value === item.satuan)?.label || item.satuan || '').toString().toLowerCase();
+            return label.includes('utuh') ? 'utuh' : 'potongan';
+          })(),
           diskon: parseFloat(item.diskonPercent) || 0,
           catatan: item.catatan || ""
         }))
@@ -475,6 +480,41 @@ export default function AddSalesOrderPage() {
       
       console.log("✅ Sales Order berhasil disimpan:", result);
       showAlert("Sukses", "Sales Order berhasil disimpan!", "success");
+      try {
+        // Langsung buka dialog cetak menggunakan data yang baru saja disimpan (data lokal)
+        const printDataOnSave = {
+          nomor_so: soNumber,
+          tanggal_so: soDate,
+          tanggal_pengiriman: deliveryDate,
+          term_of_payment: termOfPayment,
+          gudang_asal: originWarehouse,
+          customer: {
+            nama: customerName,
+            telepon: customerPhone,
+            email: customerEmail,
+            alamat: customerAddress
+          },
+          items: items.map(item => ({
+            nama_item: item.jenisBarang,
+            bentuk_barang: item.bentuk,
+            grade_barang: item.grade,
+            dimensi_potong: item.dimensi,
+            unit: item.satuan,
+            qty: item.qty,
+            total_kg: item.berat || 0,
+            harga_per_unit: typeof item.harga === 'number' ? item.harga : parseInt(String(item.harga).replace(/[^\d]/g, '')) || 0,
+            total_harga: parseInt(String(item.total).replace(/[^\d]/g, '')) || 0
+          })),
+          total_harga: subtotal,
+          discount: totalDiscount,
+          ppn: ppn,
+          grand_total: totalHargaSO
+        };
+        const html = generateSalesOrderPrintContent(printDataOnSave);
+        openPrintDialog(html);
+      } catch (e) {
+        console.error('Gagal membuka dialog cetak setelah simpan SO:', e);
+      }
       
       setTimeout(() => {
         window.history.back();
@@ -488,6 +528,59 @@ export default function AddSalesOrderPage() {
 
   const handleBackToList = () => {
     window.history.back();
+  };
+
+  // Handle print sales order
+  const handlePrintSalesOrder = async () => {
+    try {
+      setPrintLoading(true);
+      
+      if (!soNumber || items.length === 0) {
+        showAlert("Error", "Pastikan nomor SO dan items sudah terisi", "error");
+        return;
+      }
+
+      // Prepare print data (use existing local state, no refetch)
+      const printData = {
+        nomor_so: soNumber,
+        tanggal_so: soDate,
+        tanggal_pengiriman: deliveryDate,
+        term_of_payment: termOfPayment,
+        gudang_asal: originWarehouse,
+        customer: {
+          nama: customerName,
+          telepon: customerPhone,
+          email: customerEmail,
+          alamat: customerAddress
+        },
+        items: items.map(item => ({
+          nama_item: item.jenisBarang,
+          bentuk_barang: item.bentuk,
+          grade_barang: item.grade,
+          dimensi_potong: item.dimensi,
+          unit: item.satuan,
+          qty: item.qty,
+          total_kg: item.berat || 0,
+          harga_per_unit: typeof item.harga === 'number' ? item.harga : parseInt(String(item.harga).replace(/[^\d]/g, '')) || 0,
+          total_harga: parseInt(String(item.total).replace(/[^\d]/g, '')) || 0
+        })),
+        total_harga: subtotal,
+        discount: totalDiscount,
+        ppn: ppn,
+        grand_total: totalHargaSO
+      };
+
+      console.log('🖨️ Print data:', printData);
+
+      // Generate printable HTML and open print dialog (no download)
+      const printContent = generateSalesOrderPrintContent(printData);
+      openPrintDialog(printContent);
+    } catch (error) {
+      console.error('Error printing sales order:', error);
+      showAlert("Error", "Gagal generate PDF Sales Order", "error");
+    } finally {
+      setPrintLoading(false);
+    }
   };
 
   const handleAutoFill = () => {
@@ -1103,8 +1196,19 @@ export default function AddSalesOrderPage() {
            Simpan SO
          </Button>
          {hasRole(['admin', 'manager', 'supervisor']) && (
-           <Button size="lg" variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
-             Print SO
+           <Button 
+             size="lg" 
+             variant="outline" 
+             className="border-blue-600 text-blue-600 hover:bg-blue-50"
+             onClick={handlePrintSalesOrder}
+             disabled={printLoading}
+           >
+             {printLoading ? (
+               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+             ) : (
+               <Printer className="w-4 h-4 mr-2" />
+                )}
+                Cetak
            </Button>
          )}
        </div>

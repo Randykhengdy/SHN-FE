@@ -2092,10 +2092,18 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         const fileExtension = format === 'png' ? 'png' : 'jpg';
         
         let filename;
+        let woItemIdFilename; // New filename for woitemid_itemid format
+        
         if (saveMode === 'preview') {
           // For preview mode, use itemBarangId (saranId) format
           const itemBarangId = workOrderData?.selectedItem?.id || 'unknown';
+          const woItemUniqueId = workOrderData?.workOrderItem?.wo_item_unique_id || 'unknown';
+          
+          // Original filename format (per item ID)
           filename = `canvas-preview-ItemId-${itemBarangId}.${fileExtension}`;
+          
+          // New filename format (per woitemid_itemid)
+          woItemIdFilename = `canvas-preview-WoItemId-${woItemUniqueId}_ItemId-${itemBarangId}.${fileExtension}`;
         } else {
           // For download mode, use generic name
           filename = `canvas-layout-${timestamp}.${fileExtension}`;
@@ -2103,13 +2111,17 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         
         // Save to app folder instead of downloads
         console.log('Saving to app folder:', filename);
+        if (woItemIdFilename) {
+          console.log('Also saving with woitemid_itemid format:', woItemIdFilename);
+        }
         
         if (saveMode === 'preview') {
           // For preview mode, save to app folder using Electron API
           try {
             console.log('=== SAVE CANVAS DEBUG ===');
             console.log('Save mode:', saveMode);
-            console.log('Filename:', filename);
+            console.log('Filename (ItemId):', filename);
+            console.log('Filename (WoItemId_ItemId):', woItemIdFilename);
             console.log('DataURL length:', dataURL ? dataURL.length : 'null');
             console.log('window.electronAPI exists:', !!window.electronAPI);
             console.log('saveCanvasFile exists:', !!(window.electronAPI && window.electronAPI.saveCanvasFile));
@@ -2117,16 +2129,38 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
             // Check if we're in Electron environment
             if (window.electronAPI && window.electronAPI.saveCanvasFile) {
               console.log('Calling Electron API to save canvas...');
+              
+              // Save with original filename format (per item ID)
               const result = await window.electronAPI.saveCanvasFile(dataURL, filename);
-              console.log('Electron API result:', result);
+              console.log('Electron API result (ItemId):', result);
+              
+              // Save with new filename format (per woitemid_itemid)
+              let woItemResult = null;
+              if (woItemIdFilename) {
+                console.log('Saving additional copy with woitemid_itemid format...');
+                woItemResult = await window.electronAPI.saveCanvasFile(dataURL, woItemIdFilename);
+                console.log('Electron API result (WoItemId_ItemId):', woItemResult);
+              }
               
               if (result.success) {
-                console.log('✅ CANVAS SAVE SUCCESS!');
+                console.log('✅ CANVAS SAVE SUCCESS (ItemId format)!');
                 console.log(`📁 File saved to: ${result.path}`);
                 console.log(`📄 Filename: ${filename}`);
+                
+                if (woItemResult && woItemResult.success) {
+                  console.log('✅ CANVAS SAVE SUCCESS (WoItemId_ItemId format)!');
+                  console.log(`📁 Additional file saved to: ${woItemResult.path}`);
+                  console.log(`📄 Additional filename: ${woItemIdFilename}`);
+                }
+                
                 console.log(`📊 DataURL length: ${dataURL.length} characters`);
                 console.log(`💾 Full path: public/canvas-previews/${filename}`);
-                showAlert('Success', `Canvas berhasil disimpan!\n\nFile: ${filename}\nLokasi: public/canvas-previews/`, 'success');
+                
+                const successMessage = woItemResult && woItemResult.success 
+                  ? `Canvas berhasil disimpan!\n\nFile 1: ${filename}\nFile 2: ${woItemIdFilename}\nLokasi: public/canvas-previews/`
+                  : `Canvas berhasil disimpan!\n\nFile: ${filename}\nLokasi: public/canvas-previews/`;
+                
+                showAlert('Success', successMessage, 'success');
               } else {
                 console.error('❌ CANVAS SAVE FAILED!');
                 console.error('Error details:', result.error);
@@ -2750,7 +2784,14 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       // Generate unique key for localStorage
       const workOrderUniqueId = localStorage.getItem('WO_current_work_order_id') || 'unknown';
       const saranId = workOrderData?.selectedItem?.id || 'unknown';
+      const woItemUniqueId = workOrderData?.workOrderItem?.wo_item_unique_id || workOrderData?.workOrderItem?.id || 'unknown';
+      const itemBarangId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
+      
+      // Primary storage key (existing format)
       const storageKey = `WO_canvas_layout_${saranId}_${workOrderUniqueId}`;
+      
+      // Additional storage key with woitemid_itemid format
+      const woItemIdStorageKey = `WO_canvas_layout_WoItemId-${woItemUniqueId}_ItemId-${itemBarangId}_${workOrderUniqueId}`;
       
       // Check if current work order ID matches stored ID
       const storedWorkOrderId = localStorage.getItem('WO_current_work_order_id');
@@ -2760,7 +2801,10 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         current: workOrderUniqueId,
         stored: storedWorkOrderId,
         isCurrent: isCurrentWorkOrder,
-        storageKey: storageKey
+        storageKey: storageKey,
+        woItemIdStorageKey: woItemIdStorageKey,
+        woItemUniqueId: woItemUniqueId,
+        itemBarangId: itemBarangId
       });
       
       try {
@@ -2781,14 +2825,21 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         
         localStorage.setItem(storageKey, jsonString);
         
-        // Verify save integrity
+        // Also save with woitemid_itemid format for additional access pattern
+        localStorage.setItem(woItemIdStorageKey, jsonString);
+        
+        // Verify save integrity for both keys
         const savedData = localStorage.getItem(storageKey);
-        if (savedData && savedData.length === jsonString.length) {
-          console.log('✅ Canvas saved successfully');
+        const savedWoItemData = localStorage.getItem(woItemIdStorageKey);
+        
+        if (savedData && savedData.length === jsonString.length && 
+            savedWoItemData && savedWoItemData.length === jsonString.length) {
+          console.log('✅ Canvas saved successfully to both storage keys');
         } else {
           console.error('❌ Canvas save verification failed:', {
             originalLength: jsonString.length,
-            savedLength: savedData?.length || 0
+            savedLength: savedData?.length || 0,
+            savedWoItemLength: savedWoItemData?.length || 0
           });
         }
         
@@ -2908,7 +2959,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         }
         
         const idStatus = isCurrentWorkOrder ? 'Current Work Order' : 'Different Work Order';
-        showAlert('Success', `Canvas saved for ${itemName}!\n\nID Status: ${idStatus}\nStorage Key: ${storageKey}\n\nJPG preview will be saved to /canvas-previews/ folder.`, 'success');
+        showAlert('Success', `Canvas saved for ${itemName}!\n\nID Status: ${idStatus}\nPrimary Key: ${storageKey}\nWoItemId Key: ${woItemIdStorageKey}\n\nJPG preview will be saved to /canvas-previews/ folder in both formats.`, 'success');
         
         // Recalculate quantity after save
         setForceUpdate(prev => prev + 1);

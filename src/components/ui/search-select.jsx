@@ -100,7 +100,7 @@ const SearchSelect = ({
         <Button
           type="button"
           variant="outline"
-          className={`w-full justify-between text-left font-normal ${
+          className={`w-full justify-between text-left font-normal overflow-hidden ${
             disabled ? 'bg-gray-50 cursor-not-allowed' : 'hover:bg-gray-50'
           } ${error ? 'border-red-500' : ''}`}
           onClick={() => {
@@ -120,10 +120,10 @@ const SearchSelect = ({
           }}
           disabled={disabled}
         >
-          <span className={selectedOption ? 'text-gray-900' : 'text-gray-500'}>
+          <span className={`${selectedOption ? 'text-gray-900' : 'text-gray-500'} truncate`}>
             {selectedOption ? selectedOption[displayKey] : placeholder}
           </span>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             {value && !disabled && (
               <X
                 className="h-4 w-4 text-gray-400 hover:text-gray-600"

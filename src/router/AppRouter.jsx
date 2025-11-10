@@ -42,6 +42,17 @@ import ViewMutasiStockPage from "@/pages/mutasi-stock/view";
 import KonversiBarangPage from "@/pages/konversi-barang";
 import MergeBarangPage from "@/pages/merge-barang";
 import SplitBarangPage from "@/pages/split-barang";
+import WOActualPage from "@/pages/wo-actual";
+import WOActualDetailPage from "@/pages/wo-actual/detail";
+import AddWOActualPage from "@/pages/wo-actual/add";
+import ViewWOActualPage from "@/pages/wo-actual/view";
+import ItemBarangRequestPage from "@/pages/item-barang-request";
+import AddItemBarangRequestPage from "@/pages/item-barang-request/add";
+import ViewItemBarangRequestPage from "@/pages/item-barang-request/view";
+import SalesOrderReportPage from "@/pages/reports/SalesOrderReport";
+import SalesOrderAdvancedReportPage from "@/pages/reports/SalesOrderAdvancedReport";
+import WorkOrderPlanningReportPage from "@/pages/reports/WorkOrderPlanningReport";
+import WorkOrderActualReportPage from "@/pages/reports/WorkOrderActualReport";
 
 const AppRouter = () => {
     return (
@@ -68,6 +79,11 @@ const AppRouter = () => {
         <Route path="/sales-order" element={<SalesOrderPage />} />
         <Route path="/sales-order/add" element={<AddSalesOrderPage />} />
         <Route path="/sales-order/view/:id" element={<ViewSalesOrderPage />} />
+        {/* Laporan */}
+        <Route path="/laporan/sales-order" element={<SalesOrderReportPage />} />
+        <Route path="/laporan/sales-order-advanced" element={<SalesOrderAdvancedReportPage />} />
+        <Route path="/laporan/work-order-planning" element={<WorkOrderPlanningReportPage />} />
+        <Route path="/laporan/work-order-actual" element={<WorkOrderActualReportPage />} />
         <Route path="/approval" element={<ApprovalPage />} />
         <Route path="/work-order" element={<WorkOrderPage />} />
         <Route path="/work-order/add" element={<AddWorkOrderPage />} />
@@ -86,10 +102,17 @@ const AppRouter = () => {
         <Route path="/mutasi-stock" element={<MutasiStockPage/>} />
         <Route path="/mutasi-stock/add" element={<AddMutasiStockPage />} />
         <Route path="/mutasi-stock/view/:id" element={<ViewMutasiStockPage />} />
+        <Route path="/item-barang-request" element={<ItemBarangRequestPage />} />
+        <Route path="/item-barang-request/add" element={<AddItemBarangRequestPage />} />
+        <Route path="/item-barang-request/view/:id" element={<ViewItemBarangRequestPage />} />
         <Route path="/konversi-barang" element={<KonversiBarangPage/>}/>
         <Route path="/split-barang" element={<SplitBarangPage/>}/>
         <Route path="/merge-barang" element={<MergeBarangPage/>}/>
 
+        <Route path="/wo-actual" element={<WOActualPage />} />
+        <Route path="/wo-actual/add" element={<AddWOActualPage />} />
+        <Route path="/wo-actual/detail/:id" element={<WOActualDetailPage />} />
+        <Route path="/wo-actual/view/:id" element={<ViewWOActualPage />} />
       </Routes>
     );
 };
