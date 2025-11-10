@@ -73,7 +73,7 @@ export default function SalesOrderListPage() {
         tanggalPengirimanRaw: so.tanggal_pengiriman || null,
         tanggalPengiriman: formatDate(so.tanggal_pengiriman),
         asalGudang: so.gudang?.nama_gudang || 'N/A',
-        jumlahItem: so.salesOrderItems?.length || 0,
+        jumlahItem: so.items_count || so.sales_order_items?.length || 0,
         totalHarga: parseFloat(so.total_harga_so) || 0,
         subtotal: parseFloat(so.subtotal) || 0,
         totalDiskon: parseFloat(so.total_diskon) || 0,
@@ -84,7 +84,7 @@ export default function SalesOrderListPage() {
          deleteRequestedAt: so.delete_requested_at || null,
          deleteReason: so.delete_reason || null,
          deleteRequestedBy: so.delete_requested_by?.name || null,
-        items: so.salesOrderItems || []
+        items: so.sales_order_items || []
       }));
       
       // Apply filters
@@ -382,7 +382,7 @@ export default function SalesOrderListPage() {
           'Tanggal Pengiriman': formatDateCell(r?.tanggal_pengiriman),
           'Pelanggan': r?.nama_pelanggan ?? r?.pelanggan?.nama_pelanggan ?? '',
           'Gudang': r?.nama_gudang ?? r?.gudang?.nama_gudang ?? '',
-          'Jumlah Item': r?.jumlah_item ?? r?.salesOrderItems?.length ?? 0,
+          'Jumlah Item': r?.items_count ?? r?.jumlah_item ?? r?.sales_order_items?.length ?? 0,
           'Subtotal': r?.subtotal ?? '',
           'Diskon': r?.total_diskon ?? '',
           'PPN': r?.ppn_amount ?? '',
@@ -640,10 +640,10 @@ export default function SalesOrderListPage() {
                             <Button size="sm" variant="outline" onClick={() => handleView(so.id)}>
                               <Eye className="w-4 h-4" />
                             </Button>
-                            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleConvertToWO(so.id)}>
+                            {/* <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleConvertToWO(so.id)}>
                               <ArrowRight className="w-4 h-4 mr-1" />
                               <span className="hidden sm:inline">Convert to WO</span>
-                            </Button>
+                            </Button> */}
                             {isAdmin() ? (
                               <Button 
                                 size="sm" 
