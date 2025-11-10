@@ -16,10 +16,8 @@ import PageLayout from "@/components/PageLayout";
 const statusOptions = [
   { value: "all", label: "Semua Status" },
   { value: "draft", label: "Draft" },
-  { value: "confirmed", label: "Confirmed" },
-  { value: "in-progress", label: "In Progress" },
-  { value: "partial-wo", label: "Partial WO" },
-  { value: "completed", label: "Completed" }
+  { value: "received", label: "Received" },
+  { value: "paid", label: "Paid" }
 ];
 
 const periodOptions = [
@@ -124,20 +122,16 @@ export default function PurchaseOrderPage() {
 
   // Calculate status breakdown
   const statusBreakdown = {
-    Draft: purchaseOrders.filter(po => po.status === "Draft").length,
-    Confirmed: purchaseOrders.filter(po => po.status === "Confirmed").length,
-    "In Progress": purchaseOrders.filter(po => po.status === "In Progress").length,
-    "Partial WO": purchaseOrders.filter(po => po.status === "Partial WO").length,
-    Completed: purchaseOrders.filter(po => po.status === "Completed").length
+    Draft: purchaseOrders.filter(po => po.status?.toLowerCase() === "draft").length,
+    Received: purchaseOrders.filter(po => po.status?.toLowerCase() === "received").length,
+    Paid: purchaseOrders.filter(po => po.status?.toLowerCase() === "paid").length
   };
 
   const getStatusColor = (status) => {
-    switch (status) {
-      case "Draft": return "bg-orange-100 text-orange-800";
-      case "Confirmed": return "bg-blue-100 text-blue-800";
-      case "In Progress": return "bg-yellow-100 text-yellow-800";
-      case "Partial WO": return "bg-purple-100 text-purple-800";
-      case "Completed": return "bg-green-100 text-green-800";
+    switch (status?.toLowerCase()) {
+      case "draft": return "bg-orange-100 text-orange-800";
+      case "received": return "bg-blue-100 text-blue-800";
+      case "paid": return "bg-green-100 text-green-800";
       default: return "bg-gray-100 text-gray-800";
     }
   };

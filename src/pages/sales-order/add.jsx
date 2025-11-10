@@ -387,8 +387,8 @@ export default function AddSalesOrderPage() {
         dimensi: dimensiString,
         qty: parseInt(itemQty),
         luasPerItem: itemArea,
-        harga: itemPricePerUnit,
-        satuan: unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit,
+        hargaDisplay: itemPricePerUnit,
+        satuanDisplay: unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit,
         diskon: `${itemDiscount}%`,
         total: `Rp ${finalTotal.toLocaleString('id-ID')}`,
         jenisBarangId: itemType,
@@ -398,8 +398,8 @@ export default function AddSalesOrderPage() {
         lebar: selectedShape.dimensi === "1D" ? 0 : parseFloat(itemWidth) || 0, // 1D doesn't use lebar
         tebal: parseFloat(itemDiameter) || 0,
         berat: parseFloat(itemWeight) || 0,
-        harga: parseFloat(itemPrice) || 0,
-        satuan: itemUnit,
+        harga: parseFloat(itemPrice) || 0, // Backend value
+        satuan: itemUnit, // Backend value
         // Derive jenis_potongan from selected satuan: 'utuh' => 'utuh', others => 'potongan'
         jenis_potongan: (() => {
           const label = (unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit || '').toString().toLowerCase();
@@ -585,8 +585,8 @@ export default function AddSalesOrderPage() {
         dimensi: firstItemDims.dimensiString,
         qty: 3,
         luasPerItem: firstShape.dimensi === "1D" ? `${firstItemArea} m` : `${firstItemArea} m²`,
-        harga: `Rp ${(75000).toLocaleString('id-ID')}/m²`,
-        satuan: firstSatuan,
+        hargaDisplay: `Rp ${(75000).toLocaleString('id-ID')}/m²`,
+        satuanDisplay: firstSatuan,
         diskon: "5%",
         total: `Rp ${firstFinalTotal.toLocaleString('id-ID')}`,
         jenisBarangId: itemTypeOptions.length > 0 ? itemTypeOptions[0].value : "1",
@@ -596,8 +596,8 @@ export default function AddSalesOrderPage() {
         lebar: firstItemDims.lebar,
         tebal: firstItemDims.tebal,
         berat: 0,
-        harga: 75000,
-        satuan: unitOptions.length > 0 ? unitOptions[0].value : "PER_DIMENSI",
+        harga: 75000, // Backend value
+        satuan: unitOptions.length > 0 ? unitOptions[0].value : "PER_DIMENSI", // Backend value
         diskonPercent: 5,
         catatan: `Auto-filled item 1 - ${firstShape.nama} (${firstShape.dimensi}) 😄`
       },
@@ -609,8 +609,8 @@ export default function AddSalesOrderPage() {
         dimensi: secondItemDims.dimensiString,
         qty: 2,
         luasPerItem: secondShape.dimensi === "1D" ? `${secondItemArea} m` : `${secondItemArea} m²`,
-        harga: `Rp ${(45000).toLocaleString('id-ID')}/m²`,
-        satuan: firstSatuan,
+        hargaDisplay: `Rp ${(45000).toLocaleString('id-ID')}/m²`,
+        satuanDisplay: firstSatuan,
         diskon: "3%",
         total: `Rp ${(() => {
           const secondUnitPrice = calculatePriceBySatuan(firstSatuan, secondItemDims.panjang, secondItemDims.lebar, secondItemDims.tebal, 2, 45000, 0, secondShape);
@@ -629,8 +629,8 @@ export default function AddSalesOrderPage() {
         lebar: secondItemDims.lebar,
         tebal: secondItemDims.tebal,
         berat: 0,
-        harga: 45000,
-        satuan: unitOptions.length > 0 ? unitOptions[0].value : "PER_DIMENSI",
+        harga: 45000, // Backend value
+        satuan: unitOptions.length > 0 ? unitOptions[0].value : "PER_DIMENSI", // Backend value
         diskonPercent: 3,
         catatan: `Auto-filled item 2 - ${secondShape.nama} (${secondShape.dimensi}) 🎯`
       }
@@ -1045,8 +1045,8 @@ export default function AddSalesOrderPage() {
                   <TableCell className="table-cell-standard">{item.dimensi}</TableCell>
                   <TableCell className="table-cell-standard">{item.qty}</TableCell>
                   <TableCell className="table-cell-standard">{item.luasPerItem}</TableCell>
-                  <TableCell className="table-cell-standard">{item.harga}</TableCell>
-                  <TableCell className="table-cell-standard">{item.satuan}</TableCell>
+                  <TableCell className="table-cell-standard">{item.hargaDisplay}</TableCell>
+                  <TableCell className="table-cell-standard">{item.satuanDisplay}</TableCell>
                   <TableCell className="table-cell-standard">{item.diskon}</TableCell>
                   <TableCell className="table-cell-standard">{item.total}</TableCell>
                   <TableCell className="table-cell-standard">
