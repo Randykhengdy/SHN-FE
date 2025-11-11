@@ -33,5 +33,9 @@ export const API_ENDPOINTS = {
   konversiBarang: "/konversi-barang",
   splitBarang: "/split-barang",
   mergeBarang: "/merge-barang",
-  itemBarangRequest: "/item-barang-request"
+  itemBarangRequest: "/item-barang-request",
+  purchaseOrderDashboard: "/dashboard/purchase-order",
+  salesOrderDashboard: "/dashboard/sales-order",
+  workOrderPlanningDashboard: "/dashboard/work-order-planning",
+  workOrderActualDashboard: "/dashboard/work-order-actual",
 };
