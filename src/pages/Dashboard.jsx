@@ -99,6 +99,13 @@ export default function Dashboard() {
         plugins: { legend: { display: false } }
       }
     });
+    // Cleanup
+    return () => {
+      monthlyPurchaseChart.destroy();
+    };
+  }, [monthlyPurchaseData]);
+    // Chart.js setup
+  useEffect(() => {
     // Monthly Sales Chart
     const monthlySalesChart = new Chart(monthlySalesRef.current, {
       type: "bar",
@@ -126,6 +133,13 @@ export default function Dashboard() {
         plugins: { legend: { display: false } }
       }
     });
+    // Cleanup
+    return () => {
+      monthlySalesChart.destroy();
+    };
+  }, [monthlySalesData]);
+    // Chart.js setup
+  useEffect(() => {
     // Monthly Work Order Planning Chart
     const monthlyWorkPlanningChart = new Chart(monthlyWorkPlanningRef.current, {
       type: "bar",
@@ -153,6 +167,13 @@ export default function Dashboard() {
         plugins: { legend: { display: false } }
       }
     });
+    // Cleanup
+    return () => {
+      monthlyWorkPlanningChart.destroy();
+    };
+  }, [monthlyWorkPlanningData]);
+    // Chart.js setup
+  useEffect(() => {
     // Monthly Work Order Actual Chart
     const monthlyWorkActualChart = new Chart(monthlyWorkActualRef.current, {
       type: "bar",
@@ -230,14 +251,11 @@ export default function Dashboard() {
 
     // Cleanup
     return () => {
-      monthlyPurchaseChart.destroy();
-      monthlySalesChart.destroy();
-      monthlyWorkPlanningChart.destroy();
       monthlyWorkActualChart.destroy();
       materialDistChart.destroy();
       inventoryStatusChart.destroy();
     };
-  }, [monthlyPurchaseData, monthlySalesData, monthlyWorkPlanningData, monthlyWorkActualData]);
+  }, [monthlyWorkActualData]);
 
   const initPurchaseOrderDashboard = async () => {
     const data = await dashboardService.getPurchaseOrderDashboard();
