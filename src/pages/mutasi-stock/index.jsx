@@ -53,6 +53,7 @@ export default function MutasiStockPage() {
             // Transform API data to match our UI structure
             const transformedData = result.data.map(sm => ({
                 id: sm.id,
+                nomor_mutasi: sm.nomor_mutasi,
                 requestDate: formatDate(sm.created_at),
                 requestor: sm.requestor?.username || 'N/A',
                 status: sm.status || "N/A",
@@ -289,6 +290,7 @@ export default function MutasiStockPage() {
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-gray-50">
+                                <TableHead className="font-semibold">Nomor Mutasi</TableHead>
                                 <TableHead className="font-semibold">Waktu Request</TableHead>
                                 <TableHead className="font-semibold">Requestor</TableHead>
                                 <TableHead className="font-semibold">Status</TableHead>
@@ -314,6 +316,7 @@ export default function MutasiStockPage() {
                             ) : (
                                 stockMutations.map((sm) => (
                                     <TableRow key={sm.id} className="hover:bg-gray-50">
+                                        <TableCell className="font-medium">{sm.nomor_mutasi}</TableCell>
                                         <TableCell className="font-medium">{sm.requestDate}</TableCell>
                                         <TableCell>{sm.requestor}</TableCell>
                                         <TableCell>

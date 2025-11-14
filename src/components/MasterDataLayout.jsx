@@ -14,6 +14,7 @@ export default function MasterDataLayout({
   fields,
   service,
   customEditComponent,
+  customActions,
 }) {
   const { showConfirm, AlertComponent } = useAlert();
   const [data, setData] = useState([]);
@@ -376,6 +377,22 @@ export default function MasterDataLayout({
                           ))}
                           <td className="px-4 py-3 text-center">
                             <div className="flex gap-2 justify-center opacity-90 group-hover:opacity-100 transition-opacity duration-200">
+                              {/* Custom Actions - Always show when not in trashed mode */}
+                              {!showTrashed && customActions && customActions.map((action, index) => (
+                                <Button
+                                  key={index}
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => action.onClick(item)}
+                                  className={action.className || "bg-blue-500 hover:bg-blue-600 text-white border-blue-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-blue-300 focus:ring-offset-1"}
+                                >
+                                  <span className="flex items-center gap-1">
+                                    {action.icon}
+                                    {action.label}
+                                  </span>
+                                </Button>
+                              ))}
+                              
                               {!showTrashed ? (
                                 <>
                                   <Button

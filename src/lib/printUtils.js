@@ -352,19 +352,19 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
         <div class="customer-title">Informasi Customer</div>
         <div class="info-row">
           <span class="info-label">Nama Customer</span>
-          <span class="info-value">${salesOrderData.customer.nama_customer || 'N/A'}</span>
+          <span class="info-value">${salesOrderData.customer.nama_customer || salesOrderData.customer.nama_pelanggan || salesOrderData.customer.nama || salesOrderData.customer.name || 'N/A'}</span>
         </div>
         <div class="info-row">
           <span class="info-label">Alamat</span>
-          <span class="info-value">${salesOrderData.customer.alamat || 'N/A'}</span>
+          <span class="info-value">${salesOrderData.customer.alamat || salesOrderData.customer.address || salesOrderData.customer.kota || 'N/A'}</span>
         </div>
         <div class="info-row">
           <span class="info-label">Telepon</span>
-          <span class="info-value">${salesOrderData.customer.telepon || 'N/A'}</span>
+          <span class="info-value">${salesOrderData.customer.telepon || salesOrderData.customer.telepon_hp || salesOrderData.customer.phone || 'N/A'}</span>
         </div>
         <div class="info-row">
           <span class="info-label">Email</span>
-          <span class="info-value">${salesOrderData.customer.email || 'N/A'}</span>
+          <span class="info-value">${salesOrderData.customer.email || salesOrderData.customer.email_address || 'N/A'}</span>
         </div>
       </div>
       ` : ''}

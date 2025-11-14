@@ -268,19 +268,18 @@ export default function AddPurchaseOrderPage() {
         luasPerItem: itemArea,
         hargaDisplay: itemPricePerUnit,
         satuanDisplay: unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit,
-        diskon: `${itemDiscount}%`,
+        diskonDisplay: `${itemDiscount}%`,
         total: itemTotal,
         // Backend fields - sesuai dengan validasi backend
         jenis_barang_id: itemType, // ID jenis barang
         bentuk_barang_id: selectedShape.id, // ID bentuk barang
         grade_barang_id: itemGrade, // ID grade barang
-        qty: qty,
         panjang: length,
         lebar: width,
         tebal: parseFloat(itemDiameter) || 0,
         harga: hargaSatuan, // harga per satuan
         satuan: itemUnit, // satuan
-        diskon: parseFloat(itemDiscount) || 0, // persentase diskon
+        diskon: parseFloat(itemDiscount) || 0, // persentase diskon (backend value)
         catatan: itemNotes || null
       };
 
@@ -309,12 +308,6 @@ export default function AddPurchaseOrderPage() {
 
   const handleTestSimpanPO = async () => {
     console.log("Testing save PO...");
-    
-    // Validasi input wajib
-    if (!poNumber) {
-      showAlert("Peringatan", "Nomor PO harus diisi", "warning");
-      return;
-    }
     
     if (!selectedSupplier) {
       showAlert("Peringatan", "Supplier harus dipilih", "warning");
@@ -434,7 +427,7 @@ export default function AddPurchaseOrderPage() {
         luasPerItem: "3.00 m²",
         hargaDisplay: "Rp 75,000/m²",
         satuanDisplay: unitOptions.length > 0 ? unitOptions[0].label : "Per Dimensi",
-        diskon: "5%",
+        diskonDisplay: "5%",
         total: "Rp 213,750",
         // Backend fields - sesuai dengan validasi backend
         jenis_barang_id: itemTypeOptions.length > 0 ? itemTypeOptions[0].value : 1,
@@ -445,7 +438,7 @@ export default function AddPurchaseOrderPage() {
         tebal: 0.50,
         harga: 75000,
         satuan: "per-dimensi",
-        diskon: 5,
+        diskon: 5, // Backend value
         catatan: "Auto-filled item 1 😄"
       },
       {
@@ -458,7 +451,7 @@ export default function AddPurchaseOrderPage() {
         luasPerItem: "0.72 m²",
         hargaDisplay: "Rp 45,000/m²",
         satuanDisplay: unitOptions.length > 0 ? unitOptions[0].label : "Per Dimensi",
-        diskon: "3%",
+        diskonDisplay: "3%",
         total: "Rp 62,856",
         // Backend fields - sesuai dengan validasi backend
         jenis_barang_id: itemTypeOptions.length > 1 ? itemTypeOptions[1].value : 2,
@@ -469,7 +462,7 @@ export default function AddPurchaseOrderPage() {
         tebal: 0.12,
         harga: 45000,
         satuan: "per-dimensi",
-        diskon: 3,
+        diskon: 3, // Backend value
         catatan: "Auto-filled item 2 🎯"
       }
     ];
@@ -615,8 +608,8 @@ export default function AddPurchaseOrderPage() {
                   id="poNumber"
                   value={poNumber}
                   onChange={(e) => setPoNumber(e.target.value)}
-                  placeholder="Masukkan nomor PO atau klik Auto Fill"
-                  required
+                  placeholder="Nomor PO akan otomatis terisi di database"
+                  disabled
                 />
               </div>
               <div>
@@ -627,7 +620,7 @@ export default function AddPurchaseOrderPage() {
                     type="date"
                     value={poDate}
                     onChange={(e) => setPoDate(e.target.value)}
-                    required
+                    disabled
                   />
                   <Calendar className="absolute right-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
                 </div>
@@ -640,6 +633,7 @@ export default function AddPurchaseOrderPage() {
                     type="date"
                     value={tanggalPenerimaan}
                     onChange={(e) => setTanggalPenerimaan(e.target.value)}
+                    disabled
                   />
                   <Calendar className="absolute right-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
                 </div>
@@ -665,6 +659,7 @@ export default function AddPurchaseOrderPage() {
                     type="date"
                     value={tanggalPembayaran}
                     onChange={(e) => setTanggalPembayaran(e.target.value)}
+                    disabled
                   />
                   <Calendar className="absolute right-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
                 </div>
@@ -678,12 +673,10 @@ export default function AddPurchaseOrderPage() {
                   onValueChange={setStatus}
                   options={[
                     { value: 'draft', label: 'Draft' },
-                    { value: 'pending', label: 'Pending' },
-                    { value: 'approved', label: 'Approved' },
-                    { value: 'rejected', label: 'Rejected' },
-                    { value: 'completed', label: 'Completed' }
+                    { value: 'received', label: 'Received' },
+                    { value: 'paid', label: 'Paid' },
                   ]}
-                  required
+                  disabled
                 />
               </div>
             </div>
@@ -939,7 +932,7 @@ export default function AddPurchaseOrderPage() {
                   <TableCell className="table-cell-standard">{item.luasPerItem}</TableCell>
                   <TableCell className="table-cell-standard">{item.hargaDisplay}</TableCell>
                   <TableCell className="table-cell-standard">{item.satuanDisplay}</TableCell>
-                  <TableCell className="table-cell-standard">{item.diskon}</TableCell>
+                  <TableCell className="table-cell-standard">{item.diskonDisplay}</TableCell>
                   <TableCell className="table-cell-standard">{item.total}</TableCell>
                   <TableCell className="table-cell-standard">
                     <Button

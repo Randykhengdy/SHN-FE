@@ -205,13 +205,13 @@ export default function ViewSalesOrderPage() {
             
             return {
               id: item.id,
-              jenisBarang: item.jenis_barang?.nama_jenis || 'N/A',
-              bentukBarang: item.bentuk_barang?.nama_bentuk || 'N/A',
-              gradeBarang: item.grade_barang?.nama || 'N/A',
+              jenisBarang: item.jenis_barang?.nama_jenis_barang || item.jenis_barang?.nama_jenis || item.jenis_barang?.nama || 'N/A',
+              bentukBarang: item.bentuk_barang?.nama_bentuk_barang || item.bentuk_barang?.nama_bentuk || item.bentuk_barang?.nama || 'N/A',
+              gradeBarang: item.grade_barang?.nama_grade_barang || item.grade_barang?.nama || item.grade_barang?.nama_grade || 'N/A',
               panjang: item.panjang || item.length || 0,
               lebar: item.lebar || item.width || 0,
               diameter: item.diameter || 0,
-              ketebalan: item.ketebalan || item.thickness || 0,
+              ketebalan: item.tebal || item.ketebalan || item.thickness || 0,
               berat: item.berat || item.weight || 0,
               qty: qty,
               harga: harga,
@@ -276,24 +276,54 @@ export default function ViewSalesOrderPage() {
       }
 
       // Prepare print data
+      // Map customer data to match print template expectations
+      // Note: API returns pelanggan with nama_pelanggan, alamat, telepon
+      // But form UI uses kota and telepon_hp, so we map both
+      const mappedCustomer = customerData ? {
+        nama_customer: customerData.nama_pelanggan || customerData.nama || customerData.name || 'N/A',
+        alamat: customerData.alamat || customerData.address || customerData.kota || 'N/A',
+        telepon: customerData.telepon || customerData.telepon_hp || customerData.phone || 'N/A',
+        email: customerData.email || customerData.email_address || 'N/A'
+      } : null;
+
       const printData = {
         nomor_so: soNumber,
         tanggal_so: soDate,
         tanggal_pengiriman: deliveryDate,
         term_of_payment: termOfPayment,
         gudang_asal: originWarehouse,
-        customer: customerData,
-        items: items.map(item => ({
-          nama_item: item.jenisBarang || item.nama_item,
-          bentuk_barang: item.bentukBarang || item.bentuk_barang,
-          grade_barang: item.gradeBarang || item.grade_barang,
-          dimensi_potong: item.dimensiPotong || item.dimensi_potong,
-          unit: item.unit,
-          qty: item.qty || item.quantity,
-          total_kg: item.totalKg || item.total_kg || (parseFloat(item.qty || 0) * parseFloat(item.beratPerUnit || 0)),
-          harga_per_unit: item.harga || item.harga_per_unit,
-          total_harga: item.total || item.total_harga
-        })),
+        customer: mappedCustomer,
+        items: items.map(item => {
+          // Build dimensi_potong from panjang, lebar, and tebal/ketebalan
+          const panjang = parseFloat(item.panjang) || 0;
+          const lebar = parseFloat(item.lebar) || 0;
+          const tebal = parseFloat(item.ketebalan) || 0; // ketebalan already mapped from tebal
+          
+          let dimensi_potong = '-';
+          if (lebar > 0) {
+            dimensi_potong = `${panjang} x ${lebar} x ${tebal} mm`;
+          } else {
+            dimensi_potong = `${panjang} x ${tebal} mm`;
+          }
+          
+          // Use satuan as unit (handle 'N/A' case)
+          const unit = (item.satuan && item.satuan !== 'N/A') ? item.satuan : (item.unit || '-');
+          
+          // Calculate total_kg from berat (weight) if available
+          const total_kg = parseFloat(item.berat) || 0;
+          
+          return {
+            nama_item: item.jenisBarang || item.nama_item,
+            bentuk_barang: item.bentukBarang || item.bentuk_barang,
+            grade_barang: item.gradeBarang || item.grade_barang,
+            dimensi_potong: dimensi_potong,
+            unit: unit,
+            qty: item.qty || item.quantity || 0,
+            total_kg: total_kg,
+            harga_per_unit: item.harga || item.harga_per_unit || 0,
+            total_harga: item.total || item.total_harga || 0
+          };
+        }),
         total_harga: subtotal,
         discount: totalDiscount,
         ppn: ppnAmount,
@@ -423,7 +453,7 @@ export default function ViewSalesOrderPage() {
                 />
               </div>
                              <div>
-                 <Label className="text-sm font-medium text-gray-700">Syarat Pembayaran</Label>
+                 <Label className="text-sm font-medium text-gray-700">Termin Pembayaran</Label>
                  <Input 
                    value={termOfPayment || 'N/A'} 
                    disabled 
@@ -533,10 +563,13 @@ export default function ViewSalesOrderPage() {
                        // Calculate luas per item
                        const panjang = parseFloat(item.panjang) || 0;
                        const lebar = parseFloat(item.lebar) || 0;
-                       const luasPerItem = panjang * lebar;
+                       const tebal = parseFloat(item.ketebalan) || 0;
+                       const luasPerItem = panjang * lebar * tebal;
                        
                        // Format dimensi
-                       const dimensi = `${panjang} x ${lebar} mm`;
+                       const dimensi = lebar > 0
+                         ? `${panjang} x ${lebar} x ${tebal} mm`
+                         : `${panjang} x ${tebal} mm`;
                        
                        return (
                          <TableRow key={item.id || index} className="hover:bg-gray-50">
