@@ -389,18 +389,22 @@ export default function AddWorkOrderPage() {
     try {
       console.log('Loading Sales Order detail for ID:', salesOrderId);
       
-      // Get Sales Order detail with items and generate WO number in parallel
-      const [salesOrderResponse, woNumberResponse] = await Promise.all([
-        request(`/sales-order/${salesOrderId}`, {
-          method: 'GET'
-        }),
+      const [salesOrderHeaderResponse, salesOrderItemsResponse, woNumberResponse] = await Promise.all([
+        request(`/sales-order/header/${salesOrderId}`, { method: 'GET' }),
+        request(`/sales-order/sales-order-for-woplanning?sales_order_id=${salesOrderId}`, { method: 'GET' }),
         documentSequenceService.generateWONumber()
       ]);
       
-      console.log('Sales Order detail response:', salesOrderResponse);
+      console.log('Sales Order header response:', salesOrderHeaderResponse);
       console.log('Generated WO number:', woNumberResponse);
+      try {
+        localStorage.setItem('WO_current_work_order_id', woNumberResponse);
+        setWorkOrderId(woNumberResponse);
+      } catch (e) {
+        console.warn('Failed to persist generated WO number to storage/state', e);
+      }
       
-      let soData = salesOrderResponse.data || salesOrderResponse;
+      let soData = salesOrderHeaderResponse.data || salesOrderHeaderResponse;
       
       // If response is an array, take the first item
       if (Array.isArray(soData)) {
@@ -413,9 +417,9 @@ export default function AddWorkOrderPage() {
       
       setSelectedSalesOrder(soData);
       
-      // Extract items from Sales Order
-      const itemsData = soData.salesOrderItems || soData.items || soData.sales_order_items || soData.orderItems || [];
-      console.log('Sales Order items:', itemsData);
+      const itemsDataRaw = salesOrderItemsResponse?.data || salesOrderItemsResponse || [];
+      const itemsData = Array.isArray(itemsDataRaw) ? itemsDataRaw : (itemsDataRaw.data || []);
+      console.log('Sales Order items (for WO planning):', itemsData);
       
       if (itemsData && itemsData.length > 0) {
         // Transform Sales Order items to Work Order items
@@ -428,11 +432,11 @@ export default function AddWorkOrderPage() {
           return {
             id: timestamp,
             workOrderUniqueId: workOrderUniqueId, // Add workOrderUniqueId to each WO item
-            sales_order_item_id: item.id, // Add hidden sales order item ID
-            panjang: item.panjang || item.length || 0,
-            lebar: item.lebar || item.width || 0,
-            tebal: item.tebal || item.ketebalan || item.thickness || 0,
-            qty: item.qty || item.quantity || item.jumlah || 1,
+            sales_order_item_id: item.id,
+            panjang: item.panjang || 0,
+            lebar: item.lebar || 0,
+            tebal: item.tebal || 0,
+            qty: item.sisa_qty || item.qty_so || 1,
             jenis_barang_id: item.jenis_barang_id || item.jenis_barang?.id,
             bentuk_barang_id: item.bentuk_barang_id || item.bentuk_barang?.id,
             grade_barang_id: item.grade_barang_id || item.grade_barang?.id,
@@ -763,20 +767,23 @@ export default function AddWorkOrderPage() {
                 
                 // Only change color to red if it's from current work order
                 // Preserve yellow color for boxes from other work orders
-                if (isFromCurrentWO) {
-                  return {
-                    ...box,
-                    color: "#ef4444", // Red color for saved boxes from current WO
-                    isDisabled: true, // Mark as disabled/saved
-                    isSave: true // Mark as saved to database
-                  };
-                } else {
-                  // Keep original color for boxes from other work orders (preserve yellow)
-                  return {
-                    ...box,
-                    // Don't change color, isDisabled, or isSave for boxes from other WO
-                  };
-                }
+              if (isFromCurrentWO) {
+                return {
+                  ...box,
+                  color: "#ef4444", // Red color for saved boxes from current WO
+                  isDisabled: true, // Mark as disabled/saved
+                  isSave: true, // Mark as saved to database
+                  workOrderId: workOrderUniqueId
+                  // workItemUniqueId: boxWoItemId
+                };
+              } else {
+                // Keep original color for boxes from other work orders (preserve yellow)
+                return {
+                  ...box,
+                  // Don't change color, isDisabled, or isSave for boxes from other WO
+                  // workItemUniqueId: boxWoItemId
+                };
+              }
               });
               
               console.log(`Changed ${currentWOBoxes.length} boxes to red color for saran item ${saranItemId} (preserved ${canvasLayout.boxes.length - currentWOBoxes.length} boxes from other WO items)`);

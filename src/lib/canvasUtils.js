@@ -93,6 +93,9 @@ export async function convertBase64ToPreview(itemId, base64Image) {
         console.log(`Electron saveCanvasFile result:`, result);
         
         if (result.success) {
+          if (typeof window !== 'undefined') {
+            window.canvasPreviewCacheBuster = Date.now();
+          }
           console.log(`✅ Saved preview file to public folder: ${fileName}`);
         } else {
           console.warn(`⚠️ Failed to save preview file: ${result.error}`);
@@ -116,6 +119,9 @@ export async function convertBase64ToPreview(itemId, base64Image) {
         document.body.removeChild(link);
         
         console.log(`✅ Triggered download for preview file: ${fileName}`);
+        if (typeof window !== 'undefined') {
+          window.canvasPreviewCacheBuster = Date.now();
+        }
       } catch (downloadError) {
         console.warn(`⚠️ Download method failed: ${downloadError.message}`);
       }
@@ -375,7 +381,8 @@ function drawPlaceholder(ctx, canvasWidth, canvasHeight) {
  * @returns {string} - The preview image URL
  */
 export function getPreviewImageUrl(itemId) {
-  return `/canvas-previews/canvas-preview-ItemId-${itemId}.jpg`;
+  const buster = typeof window !== 'undefined' && window.canvasPreviewCacheBuster ? window.canvasPreviewCacheBuster : Date.now();
+  return `/canvas-previews/canvas-preview-ItemId-${itemId}.jpg?cb=${buster}`;
 }
 
 /**
@@ -385,11 +392,15 @@ export function getPreviewImageUrl(itemId) {
  */
 export async function previewImageExists(itemId) {
   try {
-    // Check if file exists without cache busting (check actual file existence)
-    const baseUrl = `/canvas-previews/canvas-preview-ItemId-${itemId}.jpg`;
-    
-    const response = await fetch(baseUrl, { method: 'HEAD' });
-    return response.ok;
+    const buster = typeof window !== 'undefined' && window.canvasPreviewCacheBuster ? window.canvasPreviewCacheBuster : Date.now();
+    const baseUrl = `/canvas-previews/canvas-preview-ItemId-${itemId}.jpg?cb=${buster}`;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 1500);
+    const response = await fetch(baseUrl, { method: 'GET', cache: 'no-store', signal: controller.signal });
+    clearTimeout(timeout);
+    if (!response.ok) return false;
+    const contentType = response.headers.get('content-type') || '';
+    return contentType.includes('image');
   } catch (error) {
     return false;
   }

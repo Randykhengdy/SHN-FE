@@ -466,7 +466,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               
               const processedBoxes = cachedBoxes.map(box => {
                 const boxWoItemId = box.woItemId || 'unknown';
-                const workItemUniqueId = box.workItemUniqueId || 'unknown';
+                // const workItemUniqueId = box.workItemUniqueId || 'unknown';
                 const isFromDifferentWO = boxWoItemId !== currentWoItemId;
                 
               // Determine color based on woItemId array check (simpler) - memoized to avoid repeated parsing
@@ -485,7 +485,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                   ...box,
                   woItemId: boxWoItemId,
                   isSave: box.isSave || false,
-                  workItemUniqueId: workItemUniqueId,
+                  // workItemUniqueId: workItemUniqueId,
                   isDisabled: box.isDisabled !== undefined ? box.isDisabled : false,
                   isFromDifferentWO: isFromDifferentWO,
                   color: boxColor
@@ -793,7 +793,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       console.log('Box color: RED - Saved box', { 
         boxId: box.id, 
         isSave: box.isSave,
-        workItemUniqueId: box.workItemUniqueId
+        // workItemUniqueId: box.workItemUniqueId
       });
     } else if (box.color && box.color !== '#10b981') {
       // Use box color if it's explicitly set (for loaded boxes)
@@ -1444,7 +1444,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     
     const mousePos = getMousePos(e);
     const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    const newZoom = Math.max(0.05, Math.min(3, zoom + delta)); // Minimum 5% (0.05x)
+    const newZoom = Math.max(0.01, Math.min(3, zoom + delta)); // Minimum 1% (0.01x)
     
     if (newZoom !== zoom) {
       // Zoom towards mouse cursor
@@ -1578,7 +1578,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
             const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
             const workOrderId = workOrderData?.workOrderId || 'unknown';
             const saranId = workOrderData?.selectedItem?.id || 'unknown';
-            const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
+            // const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
             
             newBox = {
               id: newId,
@@ -1593,13 +1593,13 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               workOrderId: workOrderId,
               saranId: saranId,
               isSave: false, // Will be true when saving
-              workItemUniqueId: workItemUniqueId
+              // workItemUniqueId: workItemUniqueId
             };
             console.log('Created new box with isSave and workItemUniqueId:', {
               boxId: newId,
               woItemId: woItemId,
               isSave: false,
-              workItemUniqueId: workItemUniqueId,
+              // workItemUniqueId: workItemUniqueId,
               workOrderItem: workOrderData?.workOrderItem,
               itemId: workOrderData?.itemId,
               workOrderData: workOrderData
@@ -1673,7 +1673,6 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                 const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
                 const workOrderId = workOrderData?.workOrderId || 'unknown';
                 const saranId = workOrderData?.selectedItem?.id || 'unknown';
-                const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
                 
                 newBox = {
                   id: newId,
@@ -1687,8 +1686,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                   woItemId: woItemId,
                   workOrderId: workOrderId,
                   saranId: saranId,
-                  isSave: false,
-                  workItemUniqueId: workItemUniqueId
+                  isSave: false
                 };
                 console.log(`✅ Placed box ${newId} with rotation at (${x}, ${y}) - dimensions: ${rotatedWidth}×${rotatedHeight}`);
                 placed = true;
@@ -1714,7 +1712,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                   const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
                   const workOrderId = workOrderData?.workOrderId || 'unknown';
                   const saranId = workOrderData?.selectedItem?.id || 'unknown';
-                  const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
+                  // const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
                   
                   newBox = {
                     id: newId,
@@ -1729,7 +1727,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                     workOrderId: workOrderId,
                     saranId: saranId,
                     isSave: false,
-                    workItemUniqueId: workItemUniqueId
+                    // workItemUniqueId: workItemUniqueId
                   };
                   console.log(`✅ Placed box ${newId} with rotation at (${x}, ${y}) - dimensions: ${rotatedWidth}×${rotatedHeight}`);
                   placed = true;
@@ -2143,15 +2141,33 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               }
               
               if (result.success) {
+                if (typeof window !== 'undefined') {
+                  window.canvasPreviewCacheBuster = Date.now();
+                }
+                try {
+                  const itemBarangId = workOrderData?.selectedItem?.id || null;
+                  if (itemBarangId) {
+                    window.dispatchEvent(new CustomEvent('canvasPreviewSaved', { detail: { itemId: itemBarangId } }));
+                  }
+                } catch {}
                 console.log('✅ CANVAS SAVE SUCCESS (ItemId format)!');
                 console.log(`📁 File saved to: ${result.path}`);
                 console.log(`📄 Filename: ${filename}`);
                 
                 if (woItemResult && woItemResult.success) {
-                  console.log('✅ CANVAS SAVE SUCCESS (WoItemId_ItemId format)!');
-                  console.log(`📁 Additional file saved to: ${woItemResult.path}`);
-                  console.log(`📄 Additional filename: ${woItemIdFilename}`);
+                console.log('✅ CANVAS SAVE SUCCESS (WoItemId_ItemId format)!');
+                if (typeof window !== 'undefined') {
+                  window.canvasPreviewCacheBuster = Date.now();
                 }
+                try {
+                  const itemBarangId = workOrderData?.selectedItem?.id || null;
+                  if (itemBarangId) {
+                    window.dispatchEvent(new CustomEvent('canvasPreviewSaved', { detail: { itemId: itemBarangId } }));
+                  }
+                } catch {}
+                console.log(`📁 Additional file saved to: ${woItemResult.path}`);
+                console.log(`📄 Additional filename: ${woItemIdFilename}`);
+              }
                 
                 console.log(`📊 DataURL length: ${dataURL.length} characters`);
                 console.log(`💾 Full path: public/canvas-previews/${filename}`);
@@ -2379,7 +2395,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               }
               
               const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
-              const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
+              // const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
               const workOrderId = workOrderData?.workOrderId || 'unknown';
               const saranId = workOrderData?.selectedItem?.id || 'unknown';
               
@@ -2396,7 +2412,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                 workOrderId: workOrderId,
                 saranId: saranId,
                 isSave: false, // Will be true when saving
-                workItemUniqueId: workItemUniqueId // Set workItemUniqueId to storage
+                // workItemUniqueId: workItemUniqueId // Set workItemUniqueId to storage
               });
               
               placed = true; // Mark as placed and break out of loops
@@ -2429,7 +2445,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                 }
                 
                 const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
-                const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
+                // const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
                 const workOrderId = workOrderData?.workOrderId || 'unknown';
                 const saranId = workOrderData?.selectedItem?.id || 'unknown';
                 
@@ -2445,7 +2461,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                   workOrderId: workOrderId,
                   saranId: saranId,
                   isSave: false,
-                  workItemUniqueId: workItemUniqueId
+                  // workItemUniqueId: workItemUniqueId
                 });
                 placed = true;
               }
@@ -2485,7 +2501,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                   }
                   
                   const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
-                  const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
+                  // const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
                   const workOrderId = workOrderData?.workOrderId || 'unknown';
                   const saranId = workOrderData?.selectedItem?.id || 'unknown';
                   
@@ -2502,7 +2518,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                     workOrderId: workOrderId,
                     saranId: saranId,
                     isSave: false,
-                    workItemUniqueId: workItemUniqueId
+                    // workItemUniqueId: workItemUniqueId
                   });
                   console.log(`✅ Placed box ${boxId} with rotation at (${x}, ${y}) - dimensions: ${rotatedWidth}×${rotatedHeight}`);
                   placed = true;
@@ -2535,7 +2551,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                     }
                     
                     const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
-                    const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
+                    // const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
                     const workOrderId = workOrderData?.workOrderId || 'unknown';
                     const saranId = workOrderData?.selectedItem?.id || 'unknown';
                     
@@ -2552,7 +2568,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                       workOrderId: workOrderId,
                       saranId: saranId,
                       isSave: false,
-                      workItemUniqueId: workItemUniqueId
+                      // workItemUniqueId: workItemUniqueId
                     });
                     console.log(`✅ Placed box ${boxId} with rotation at (${x}, ${y}) - dimensions: ${rotatedWidth}×${rotatedHeight}`);
                     placed = true;
@@ -2643,7 +2659,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   }, [zoom]);
   
   const zoomOut = useCallback(() => {
-    const newZoom = Math.max(zoom - 0.2, 0.05); // Minimum 5% (0.05x)
+    const newZoom = Math.max(zoom - 0.2, 0.01); // Minimum 1% (0.01x)
     if (newZoom !== zoom) {
       setZoom(newZoom);
     }
@@ -2674,8 +2690,10 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     const scaleX = canvasWidth / (containerWidth * gridSize);
     const scaleY = canvasHeight / (containerHeight * gridSize);
     
-    // Choose the smaller scale to ensure the container fits completely
-    const newZoom = Math.min(scaleX, scaleY);
+    // Choose the smaller scale and apply slight padding so edges are visible
+    const fitZoom = Math.min(scaleX, scaleY);
+    const paddingFactor = 0.95;
+    const newZoom = Math.max(fitZoom * paddingFactor, 0.01);
     
     // Apply the new zoom
     setZoom(newZoom);
@@ -2716,7 +2734,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       allBoxes: boxes?.map(box => ({ 
         id: box.id, 
         woItemId: box.woItemId, 
-        workItemUniqueId: box.workItemUniqueId,
+        // workItemUniqueId: box.workItemUniqueId,
         area: box.width * box.height
       })) || []
     });
@@ -3176,7 +3194,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
             boxes.forEach(box => {
               // Data WO sekarang ada di box attributes
               const boxWoItemId = box.woItemId || 'unknown';
-              const workItemUniqueId = box.workItemUniqueId || 'unknown';
+              // const workItemUniqueId = box.workItemUniqueId || 'unknown';
               const boxWorkOrderId = box.workOrderId || 'unknown';
               const boxSaranId = box.saranId || 'unknown';
               const isFromDifferentWO = boxWoItemId !== currentWoItemId;
@@ -3194,12 +3212,12 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                 boxWoItemId: boxWoItemId,
                 boxWorkOrderId: boxWorkOrderId,
                 boxSaranId: boxSaranId,
-                workItemUniqueId: workItemUniqueId,
+                // workItemUniqueId: workItemUniqueId,
                 currentWorkOrderId: currentWorkOrderId,
                 currentWorkOrderUniqueId: currentWorkOrderUniqueId,
                 isSave: box.isSave,
                 boxColor: boxColor,
-                isSameWorkOrderUniqueId: workItemUniqueId === currentWorkOrderUniqueId
+                // isSameWorkOrderUniqueId: workItemUniqueId === currentWorkOrderUniqueId
               });
               
               additionalBoxes.push({
@@ -3208,7 +3226,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                 workOrderId: boxWorkOrderId,
                 saranId: boxSaranId,
                 isSave: box.isSave || false,
-                workItemUniqueId: workItemUniqueId,
+                // workItemUniqueId: workItemUniqueId,
                 isDisabled: box.isDisabled !== undefined ? box.isDisabled : false,
                 isFromDifferentWO: isFromDifferentWO,
                 color: boxColor
@@ -3230,7 +3248,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         woItemId: box.woItemId, 
         workOrderId: box.workOrderId,
         saranId: box.saranId,
-        workItemUniqueId: box.workItemUniqueId,
+        // workItemUniqueId: box.workItemUniqueId,
         color: box.color,
         isFromDifferentWO: box.isFromDifferentWO 
       }))
@@ -3284,7 +3302,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
             boxes.forEach(box => {
               // Data WO sekarang ada di box attributes
               const boxWoItemId = box.woItemId || 'unknown';
-              const workItemUniqueId = box.workItemUniqueId || 'unknown';
+              // const workItemUniqueId = box.workItemUniqueId || 'unknown';
               const boxWorkOrderId = box.workOrderId || 'unknown';
               const boxSaranId = box.saranId || 'unknown';
               const isFromDifferentWO = boxWoItemId !== currentWoItemId;
@@ -3302,19 +3320,19 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                 boxWoItemId: boxWoItemId,
                 boxWorkOrderId: boxWorkOrderId,
                 boxSaranId: boxSaranId,
-                workItemUniqueId: workItemUniqueId,
+                // workItemUniqueId: workItemUniqueId,
                 currentWorkOrderId: currentWorkOrderId,
                 currentWorkOrderUniqueId: currentWorkOrderUniqueId,
                 isSave: box.isSave,
                 boxColor: boxColor,
-                isSameWorkOrderUniqueId: workItemUniqueId === currentWorkOrderUniqueId
+                // isSameWorkOrderUniqueId: workItemUniqueId === currentWorkOrderUniqueId
               });
               
               allBoxes.push({
                 ...box,
                 woItemId: boxWoItemId,
                 isSave: box.isSave || false, // Will be true when saving
-                workItemUniqueId: workItemUniqueId, // Set workItemUniqueId from storage
+                // workItemUniqueId: workItemUniqueId, // Set workItemUniqueId from storage
                 isDisabled: box.isDisabled !== undefined ? box.isDisabled : false, // Don't disable, let color logic handle it
                 isFromDifferentWO: isFromDifferentWO,
                 color: boxColor // Set color based on workItemUniqueId comparison
@@ -3331,15 +3349,15 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
           totalBoxes: allBoxes.length,
           currentWoItemBoxes: allBoxes.filter(box => box.woItemId === currentWoItemId).length,
           otherWoItemBoxes: allBoxes.filter(box => box.woItemId !== currentWoItemId).length,
-          allBoxes: allBoxes.map(box => ({ 
-            id: box.id, 
-            woItemId: box.woItemId, 
-            workOrderId: box.workOrderId,
-            saranId: box.saranId,
-            workItemUniqueId: box.workItemUniqueId,
-            color: box.color,
-            isFromDifferentWO: box.isFromDifferentWO 
-          }))
+            allBoxes: allBoxes.map(box => ({ 
+              id: box.id, 
+              woItemId: box.woItemId, 
+              workOrderId: box.workOrderId,
+              saranId: box.saranId,
+              // workItemUniqueId: box.workItemUniqueId,
+              color: box.color,
+              isFromDifferentWO: box.isFromDifferentWO 
+            }))
         });
     
     setBoxes(allBoxes);
@@ -3369,14 +3387,14 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
           if (data.boxes && data.boxes.length > 0) {
             const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
             const currentWorkOrderId = workOrderData?.workOrderId;
-            const currentWorkOrderUniqueId = localStorage.getItem('WO_current_work_order_item_id') || currentWorkOrderId;
+            // const currentWorkOrderUniqueId = localStorage.getItem('WO_current_work_order_item_id') || currentWorkOrderId;
             
             const processedBoxes = data.boxes.map(box => {
               const boxWoItemId = box.woItemId || 'unknown';
-              const workItemUniqueId = box.workItemUniqueId || 'unknown';
+              // const workItemUniqueId = box.workItemUniqueId || 'unknown';
               const isFromDifferentWO = boxWoItemId !== currentWoItemId;
               
-              // Determine color based on workItemUniqueId comparison
+              // Determine color based on woItemId comparison
               let boxColor = '#10b981'; // Default green
               if (box.isSave === true || box.isDisabled === true) {
                 boxColor = '#ef4444'; // Red for saved boxes (preserve red from database)
@@ -3388,7 +3406,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                 ...box,
                 woItemId: boxWoItemId,
                 isSave: box.isSave || false,
-                workItemUniqueId: workItemUniqueId,
+                // workItemUniqueId: workItemUniqueId,
                 isDisabled: box.isDisabled !== undefined ? box.isDisabled : false,
                 isFromDifferentWO: isFromDifferentWO,
                 color: boxColor
@@ -4174,11 +4192,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                         <div className="text-xs text-gray-500">
                           Size: {newBoxSize.width}×{newBoxSize.height} units
                         </div>
-                        {workOrderData && (
-                          <div className="text-xs text-green-600 mt-1">
-                            WO Item: {workOrderData.itemPanjang} × {workOrderData.itemLebar}
-                          </div>
-                        )}
+                        {/* Removed repetitive WO item size info */}
                         <div className="text-xs text-blue-600 mt-1">
                           💡 Double-click a box to rotate it 90°
                         </div>
@@ -4285,62 +4299,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                         >
                           Rotate Selected Box
                         </Button>
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              id="usePNG"
-                              checked={usePNG}
-                              onChange={(e) => setUsePNG(e.target.checked)}
-                              className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500"
-                            />
-                            <label htmlFor="usePNG" className="text-xs text-gray-600">
-                              Gunakan PNG (lebih kecil untuk canvas kecil)
-                            </label>
-                          </div>
-                          <Button
-                            onClick={generateJPG}
-                            disabled={isGeneratingJPG}
-                            className={`w-full h-8 text-sm ${isGeneratingJPG ? 'bg-gray-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700'}`}
-                          >
-                            <Camera className="w-4 h-4 mr-1" />
-                            {isGeneratingJPG ? 'Generating...' : `Generate ${usePNG ? 'PNG' : 'JPG'}`}
-                          </Button>
-                          <Button
-                            onClick={async () => {
-                              console.log('=== TEST ELECTRON API ===');
-                              console.log('window.electronAPI:', window.electronAPI);
-                              if (window.electronAPI && window.electronAPI.saveCanvasFile) {
-                                console.log('Testing Electron API...');
-                                const testDataURL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
-                                const result = await window.electronAPI.saveCanvasFile(testDataURL, 'test-image.png');
-                                console.log('Test result:', result);
-                                alert(`Test result: ${JSON.stringify(result)}`);
-                              } else {
-                                console.log('Electron API not available');
-                                alert('Electron API not available');
-                              }
-                            }}
-                            className="w-full h-8 text-sm bg-red-600 hover:bg-red-700 mt-2"
-                          >
-                            Test Electron API
-                          </Button>
-                        </div>
-                        
-                        {/* Progress indicator */}
-                        {isGeneratingJPG && (
-                          <div className="mt-2 space-y-1">
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div 
-                                className="bg-purple-600 h-2 rounded-full transition-all duration-300"
-                                style={{ width: `${jpgProgress}%` }}
-                              ></div>
-                            </div>
-                            <div className="text-xs text-gray-600 text-center">
-                              {jpgStatus}
-                            </div>
-                          </div>
-                        )}
+                        {/* Controls for image generation have been removed intentionally */}
                       </div>
                     </div>
 

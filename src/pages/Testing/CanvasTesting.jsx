@@ -950,8 +950,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     
     const mousePos = getMousePos(e);
     const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    const newZoom = Math.max(0.05, Math.min(3, zoom + delta)); // Minimum 5% (0.05x)
-    
+    const newZoom = Math.max(0.01, Math.min(3, zoom + delta)); // Minimum 1% (0.01x)
+  
     if (newZoom !== zoom) {
       // Zoom towards mouse cursor
       const zoomFactor = newZoom / zoom;
@@ -1335,7 +1335,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   }, [zoom]);
   
   const zoomOut = useCallback(() => {
-    const newZoom = Math.max(zoom - 0.2, 0.05); // Minimum 5% (0.05x)
+    const newZoom = Math.max(zoom - 0.2, 0.01); // Minimum 1% (0.01x)
     if (newZoom !== zoom) {
       setZoom(newZoom);
     }

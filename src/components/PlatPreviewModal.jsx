@@ -22,6 +22,17 @@ const PlatPreviewModal = ({
   const [showCanvas, setShowCanvas] = useState(false);
   const [selectedCanvasItem, setSelectedCanvasItem] = useState(null);
 
+  useEffect(() => {
+    const handler = (e) => {
+      const id = e?.detail?.itemId;
+      if (id) {
+        refreshPreviewForItem(id);
+      }
+    };
+    window.addEventListener('canvasPreviewSaved', handler);
+    return () => window.removeEventListener('canvasPreviewSaved', handler);
+  }, []);
+
   // Generate canvas previews when modal opens
   useEffect(() => {
     if (isOpen && previewItems && previewItems.length > 0) {
@@ -45,10 +56,22 @@ const PlatPreviewModal = ({
 
   const generateAllPreviews = async () => {
     for (const item of previewItems) {
-      if (item.id && !previewImages[item.id]) {
-        await generatePreviewForItem(item.id);
-      }
+      if (!item.id) continue;
+      await generatePreviewForItem(item.id);
     }
+  };
+
+  const waitForPreview = async (itemId, attempts = 6, delayMs = 500) => {
+    let delay = delayMs;
+    for (let i = 0; i < attempts; i++) {
+      const exists = await previewImageExists(itemId);
+      if (exists) {
+        return getPreviewImageUrl(itemId);
+      }
+      await new Promise((r) => setTimeout(r, delay));
+      delay = Math.min(Math.floor(delay * 1.5), 2000);
+    }
+    return null;
   };
 
   const generatePreviewForItem = async (itemId) => {
@@ -78,8 +101,14 @@ const PlatPreviewModal = ({
       if (previewPath) {
         setPreviewImages(prev => ({ ...prev, [itemId]: previewPath }));
         console.log(`✅ Generated new preview from API for item ${itemId}`);
+      }
+
+      const refreshedUrl = await waitForPreview(itemId);
+      if (refreshedUrl) {
+        setPreviewImages(prev => ({ ...prev, [itemId]: refreshedUrl }));
+        console.log(`✅ Confirmed preview file exists, updated URL for item ${itemId}`);
       } else {
-        console.log(`❌ No preview path returned for item ${itemId}`);
+        console.log(`❌ Preview file still not detected after retries for item ${itemId}`);
       }
     } catch (error) {
       console.error(`❌ Error generating preview for item ${itemId}:`, error);
@@ -96,7 +125,9 @@ const PlatPreviewModal = ({
     setPreviewImages({});
     setGeneratingPreviews({});
     if (previewItems && previewItems.length > 0) {
-      generateAllPreviews();
+      setTimeout(() => {
+        generateAllPreviews();
+      }, 800);
     }
   };
 

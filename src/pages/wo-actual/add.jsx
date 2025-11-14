@@ -55,7 +55,7 @@ export default function AddWOActualPage() {
   const loadWOPlanningOptions = useCallback(async () => {
     try {
       setLoadingWOPlanning(true);
-      const response = await woActualService.getWOPlanningForActual();
+      const response = await woActualService.getWOPlanningForActual({ exclude_status: 'Selesai' });
       const planningList = response.data || response || [];
       setWoPlanningList(planningList);
     } catch (error) {

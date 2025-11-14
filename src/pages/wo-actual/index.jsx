@@ -474,17 +474,14 @@ export default function WOActualPage() {
                     setSortBy(prev => prev === 'jumlah_item' ? 'jumlah_item' : 'jumlah_item');
                     setSortOrder(prev => (sortBy === 'jumlah_item' && prev === 'asc') ? 'desc' : 'asc');
                   }}>Jumlah Item</TableHead>
-                  <TableHead className="font-semibold cursor-pointer select-none" onClick={() => {
-                    setSortBy(prev => prev === 'status' ? 'status' : 'status');
-                    setSortOrder(prev => (sortBy === 'status' && prev === 'asc') ? 'desc' : 'asc');
-                  }}>Status</TableHead>
+                  
                   <TableHead className="font-semibold text-center">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={6} className="text-center py-8">
                       <div className="flex items-center justify-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                         <span className="ml-2">Loading data...</span>
@@ -493,7 +490,7 @@ export default function WOActualPage() {
                   </TableRow>
                 ) : workOrders.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                       Tidak ada data Work Order Actual
                     </TableCell>
                   </TableRow>
@@ -505,11 +502,7 @@ export default function WOActualPage() {
                       <TableCell>{wo.customer}</TableCell>
                       <TableCell>{wo.warehouse}</TableCell>
                       <TableCell className="text-center">{wo.itemCount}</TableCell>
-                      <TableCell>
-                        <Badge className={getStatusColor(wo.status)}>
-                          {wo.status}
-                        </Badge>
-                      </TableCell>
+                      
                       <TableCell>
                         <div className="flex flex-col sm:flex-row gap-2 justify-center">
                           <Button

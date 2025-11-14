@@ -80,9 +80,14 @@ export const woActualService = {
     if (params.page) queryParams.append('page', params.page);
     if (params.per_page) queryParams.append('per_page', params.per_page);
     if (params.search) queryParams.append('search', params.search);
-    if (params.status) queryParams.append('status', params.status);
     
-    // Use the correct work order planning endpoint
+    const excludeRaw = params.exclude_status || 'Selesai';
+    if (excludeRaw) {
+      const mapped = excludeRaw.toUpperCase() === 'SELESAI' ? 'completed' : excludeRaw.toLowerCase();
+      queryParams.append('exclude_status', mapped);
+      queryParams.append('filter[exclude_status]', mapped);
+    }
+    
     const url = `${API_ENDPOINTS.workOrderPlanning}?${queryParams.toString()}`;
     return request(url, { method: 'GET' });
   },
