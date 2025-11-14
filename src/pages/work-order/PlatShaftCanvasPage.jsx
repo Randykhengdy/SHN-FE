@@ -394,8 +394,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         }
         
         // Update base container dimensions (Saran Plat)
-        const platWidth = data.selectedItem?.platPanjang || data.platPanjang || 20;
-        const platHeight = data.selectedItem?.platLebar || data.platLebar || 20;
+        const platWidth = data.selectedItem?.platPanjang || data.platPanjang || 1;
+        const platHeight = data.selectedItem?.platLebar || data.platLebar || 1;
         setBaseContainer(prev => ({
           ...prev,
           width: platWidth,

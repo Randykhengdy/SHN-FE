@@ -136,6 +136,11 @@ export default function AddSalesOrderPage() {
   const [itemDiscount, setItemDiscount] = useState("0");
   const [itemNotes, setItemNotes] = useState("");
   const [itemWeight, setItemWeight] = useState("");
+  const [itemCutType, setItemCutType] = useState("potongan");
+  const cutTypeOptions = [
+    { value: "potongan", label: "Potongan" },
+    { value: "utuh", label: "Utuh" }
+  ];
 
   // Modal state
   const [shapeModalOpen, setShapeModalOpen] = useState(false);
@@ -402,11 +407,7 @@ export default function AddSalesOrderPage() {
         berat: parseFloat(itemWeight) || 0,
         harga: parseFloat(itemPrice) || 0, // Backend value
         satuan: itemUnit, // Backend value
-        // Derive jenis_potongan from selected satuan: 'utuh' => 'utuh', others => 'potongan'
-        jenis_potongan: (() => {
-          const label = (unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit || '').toString().toLowerCase();
-          return label.includes('utuh') ? 'utuh' : 'potongan';
-        })(),
+        jenis_potongan: itemCutType,
         diskonPercent: parseFloat(itemDiscount) || 0,
         catatan: itemNotes
       };
@@ -425,6 +426,7 @@ export default function AddSalesOrderPage() {
       setItemDiscount("0");
       setItemNotes("");
       setItemWeight("");
+      setItemCutType("potongan");
     } catch (error) {
       console.error('Error adding item:', error);
       showAlert("Error", "Terjadi kesalahan saat menambahkan item", "error");
@@ -462,10 +464,7 @@ export default function AddSalesOrderPage() {
           grade_barang_id: parseInt(item.gradeBarangId) || 0,
           harga: parseFloat(item.harga) || 0,
           satuan: item.satuan,
-          jenis_potongan: (() => {
-            const label = (unitOptions.find(opt => opt.value === item.satuan)?.label || item.satuan || '').toString().toLowerCase();
-            return label.includes('utuh') ? 'utuh' : 'potongan';
-          })(),
+          jenis_potongan: item.jenis_potongan,
           diskon: parseFloat(item.diskonPercent) || 0,
           catatan: item.catatan || ""
         }))
@@ -972,29 +971,40 @@ export default function AddSalesOrderPage() {
                 required
               />
             </div>
-            <div>
-              <SearchSelect
-                label="Satuan"
-                placeholder="Pilih Satuan"
-                searchPlaceholder="Cari satuan..."
-                value={itemUnit}
-                onValueChange={setItemUnit}
-                options={unitOptions}
-                loading={loadingUnit}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="itemWeight">Timbangan (kg)</Label>
-              <Input
-                id="itemWeight"
-                type="number"
-                step="0.01"
-                value={itemWeight}
-                onChange={(e) => setItemWeight(e.target.value)}
-                placeholder="0.00"
-              />
-            </div>
+          <div>
+            <SearchSelect
+              label="Satuan"
+              placeholder="Pilih Satuan"
+              searchPlaceholder="Cari satuan..."
+              value={itemUnit}
+              onValueChange={setItemUnit}
+              options={unitOptions}
+              loading={loadingUnit}
+              required
+            />
+          </div>
+          <div>
+            <SearchSelect
+              label="Jenis Potongan"
+              placeholder="Pilih Jenis Potongan"
+              searchPlaceholder="Cari jenis potongan..."
+              value={itemCutType}
+              onValueChange={setItemCutType}
+              options={cutTypeOptions}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="itemWeight">Timbangan (kg)</Label>
+            <Input
+              id="itemWeight"
+              type="number"
+              step="0.01"
+              value={itemWeight}
+              onChange={(e) => setItemWeight(e.target.value)}
+              placeholder="0.00"
+            />
+          </div>
 
             {/* Row 3: Panjang, Lebar, Tebal */}
             <div>
@@ -1123,6 +1133,7 @@ export default function AddSalesOrderPage() {
                 <TableHead className="table-header-cell-standard">Luas/item</TableHead>
                 <TableHead className="table-header-cell-standard">Harga</TableHead>
                 <TableHead className="table-header-cell-standard">Satuan</TableHead>
+                <TableHead className="table-header-cell-standard">Jenis Potongan</TableHead>
                 <TableHead className="table-header-cell-standard">Diskon</TableHead>
                 <TableHead className="table-header-cell-standard">Total</TableHead>
                 <TableHead className="table-header-cell-standard">Aksi</TableHead>
@@ -1140,6 +1151,7 @@ export default function AddSalesOrderPage() {
                   <TableCell className="table-cell-standard">{item.luasPerItem}</TableCell>
                   <TableCell className="table-cell-standard">{item.hargaDisplay}</TableCell>
                   <TableCell className="table-cell-standard">{item.satuanDisplay}</TableCell>
+                  <TableCell className="table-cell-standard">{item.jenis_potongan}</TableCell>
                   <TableCell className="table-cell-standard">{item.diskon}</TableCell>
                   <TableCell className="table-cell-standard">{item.total}</TableCell>
                   <TableCell className="table-cell-standard">
@@ -1156,7 +1168,7 @@ export default function AddSalesOrderPage() {
               ))}
               {items.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={12} className="table-cell-standard text-center text-gray-500 py-8">
+                  <TableCell colSpan={13} className="table-cell-standard text-center text-gray-500 py-8">
                     Belum ada item yang ditambahkan
                   </TableCell>
                 </TableRow>
