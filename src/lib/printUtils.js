@@ -830,6 +830,231 @@ export const generateWOPlanningPrintContent = (woPlanningData) => {
   `;
 };
 
+// Generate printable HTML for Payment Receipt (Kwitansi)
+export const generatePaymentReceiptPrintContent = (receiptData) => {
+  const formatCurrency = (amount) => {
+    return `Rp ${parseFloat(amount || 0).toLocaleString('id-ID')}`;
+  };
+
+  // Convert number to Indonesian terbilang (spelled out)
+  const terbilang = (angka) => {
+    if (angka === 0) return 'nol';
+    
+    const bilangan = ['', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan', 'sepuluh', 'sebelas'];
+    
+    const convert = (num) => {
+      if (num < 12) {
+        return bilangan[num];
+      } else if (num < 20) {
+        return convert(num - 10) + ' belas';
+      } else if (num < 100) {
+        const puluhan = Math.floor(num / 10);
+        const satuan = num % 10;
+        return (puluhan === 1 ? 'se' : bilangan[puluhan]) + ' puluh' + (satuan > 0 ? ' ' + convert(satuan) : '');
+      } else if (num < 200) {
+        return 'seratus' + (num % 100 > 0 ? ' ' + convert(num % 100) : '');
+      } else if (num < 1000) {
+        const ratusan = Math.floor(num / 100);
+        return bilangan[ratusan] + ' ratus' + (num % 100 > 0 ? ' ' + convert(num % 100) : '');
+      } else if (num < 2000) {
+        return 'seribu' + (num % 1000 > 0 ? ' ' + convert(num % 1000) : '');
+      } else if (num < 1000000) {
+        const ribuan = Math.floor(num / 1000);
+        return convert(ribuan) + ' ribu' + (num % 1000 > 0 ? ' ' + convert(num % 1000) : '');
+      } else if (num < 1000000000) {
+        const jutaan = Math.floor(num / 1000000);
+        return convert(jutaan) + ' juta' + (num % 1000000 > 0 ? ' ' + convert(num % 1000000) : '');
+      } else if (num < 1000000000000) {
+        const milyaran = Math.floor(num / 1000000000);
+        return convert(milyaran) + ' milyar' + (num % 1000000000 > 0 ? ' ' + convert(num % 1000000000) : '');
+      } else {
+        const triliunan = Math.floor(num / 1000000000000);
+        return convert(triliunan) + ' triliun' + (num % 1000000000000 > 0 ? ' ' + convert(num % 1000000000000) : '');
+      }
+    };
+
+    // Handle decimal numbers (for rupiah, we usually round to nearest integer)
+    const num = Math.round(parseFloat(angka) || 0);
+    return convert(num) + ' rupiah';
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return '-';
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      return `${day}/${month}/${year}, ${hours}:${minutes}:${seconds}`;
+    } catch (e) {
+      return '-';
+    }
+  };
+
+  const formatDateOnly = (dateString) => {
+    if (!dateString) return '-';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return '-';
+      return date.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch (e) {
+      return '-';
+    }
+  };
+
+  const payment = receiptData.payment || {};
+  const receipt = receiptData.receipt || {};
+  const invoice = receiptData.invoice || {};
+  const customer = receiptData.customer || {};
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Kwitansi - ${receipt.nomor_receipt || 'N/A'}</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { display: flex; align-items: flex-start; margin-bottom: 30px; position: relative; min-height: 100px; padding-top: 10px; }
+        .logo { width: 80px; height: auto; margin-right: 20px; object-fit: contain; }
+        .header-content { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; top: 10px; }
+        .company-name { font-size: 24px; font-weight: bold; margin-bottom: 10px; line-height: 1.2; }
+        .document-title { font-size: 18px; font-weight: bold; margin-bottom: 20px; line-height: 1.2; }
+        .info-section { margin-bottom: 20px; }
+        .info-row { display: flex; margin-bottom: 5px; }
+        .info-label { font-weight: bold; min-width: 200px; }
+        .info-value { margin-left: 1px; }
+        .payment-section { background-color: #f9f9f9; padding: 15px; border: 1px solid #ddd; margin-bottom: 20px; }
+        .payment-amount { font-size: 24px; font-weight: bold; color: #2563eb; text-align: center; margin: 20px 0; }
+        .terbilang { text-align: center; font-style: italic; color: #555; margin-top: 10px; margin-bottom: 10px; }
+        .summary-section { margin-top: 20px; }
+        .summary-table { width: 50%; margin-left: auto; }
+        .summary-row { display: flex; justify-content: space-between; padding: 5px 0; }
+        .summary-label { font-weight: bold; }
+        .summary-value { text-align: right; }
+        .grand-total { border-top: 2px solid #333; font-weight: bold; font-size: 16px; }
+        .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
+        .signature-section { margin-top: 40px; display: flex; justify-content: space-between; }
+        .signature-box { width: 45%; text-align: center; }
+        .signature-line { border-top: 1px solid #333; margin-top: 60px; padding-top: 5px; }
+        @media print {
+          body { margin: 0; }
+          .no-print { display: none; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <img src="/src/assets/logo.png" alt="PT. SHN Logo" class="logo" />
+        <div class="header-content">
+          <div class="company-name">PT. SURYA HARSA NAGARA</div>
+          <div class="document-title">KWITANSI PEMBAYARAN</div>
+        </div>
+      </div>
+      
+      <div class="info-section">
+        <div class="info-row">
+          <span class="info-label">Nomor Kwitansi</span>
+          <span class="info-value">${receipt.nomor_receipt || '-'}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Tanggal Generate</span>
+          <span class="info-value">${formatDate(receipt.tanggal_generate)}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Nomor Invoice</span>
+          <span class="info-value">${invoice.nomor_invoice || '-'}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Tanggal Invoice</span>
+          <span class="info-value">${formatDate(invoice.tanggal_cetak_invoice)}</span>
+        </div>
+      </div>
+
+      <div class="payment-section">
+        <div style="text-align: center; margin-bottom: 10px;">
+          <strong>PEMBAYARAN</strong>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Tanggal Pembayaran</span>
+          <span class="info-value">${formatDateOnly(payment.tanggal_payment)}</span>
+        </div>
+        <div class="payment-amount">
+          ${formatCurrency(payment.jumlah_payment)}
+        </div>
+        <div class="terbilang">
+          Terbilang: <strong>${terbilang(payment.jumlah_payment)}</strong>
+        </div>
+        ${payment.catatan ? `
+        <div class="info-row">
+          <span class="info-label">Catatan</span>
+          <span class="info-value">${payment.catatan}</span>
+        </div>
+        ` : ''}
+      </div>
+
+      <div class="info-section">
+        <div class="info-row">
+          <span class="info-label">Nama Pelanggan</span>
+          <span class="info-value">${customer.nama_pelanggan || '-'}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Metode Handover</span>
+          <span class="info-value">${invoice.handover_method || '-'}</span>
+        </div>
+      </div>
+
+      <div class="summary-section">
+        <table class="summary-table">
+          <tbody>
+            <tr>
+              <td class="summary-label">Grand Total Invoice:</td>
+              <td class="summary-value">${formatCurrency(invoice.grand_total)}</td>
+            </tr>
+            <tr>
+              <td class="summary-label">Uang Muka:</td>
+              <td class="summary-value">${formatCurrency(invoice.uang_muka)}</td>
+            </tr>
+            <tr>
+              <td class="summary-label">Jumlah Pembayaran:</td>
+              <td class="summary-value">${formatCurrency(payment.jumlah_payment)}</td>
+            </tr>
+            <tr class="grand-total">
+              <td class="summary-label">Sisa Bayar:</td>
+              <td class="summary-value">${formatCurrency(invoice.sisa_bayar)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="signature-section">
+        <div class="signature-box">
+          <div class="signature-line">
+            <div>Penerima,</div>
+          </div>
+        </div>
+        <div class="signature-box">
+          <div class="signature-line">
+            <div>PT. SURYA HARSA NAGARA</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="footer">
+        <p>Dokumen ini dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
 // Utility function to open print dialog
 export const openPrintDialog = (printContent) => {
   const printWindow = window.open('', '_blank');

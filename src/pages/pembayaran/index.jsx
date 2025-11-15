@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { pembayaranService } from "@/services/pembayaranService";
 import { useAlert } from "@/hooks/useAlert";
 import PageLayout from "@/components/PageLayout";
+import { generatePaymentReceiptPrintContent, openPrintDialog } from "@/lib/printUtils";
 
 const paymentStatusFilterOptions = [
   { value: "all", label: "Semua Status" },
@@ -314,14 +315,34 @@ export default function PembayaranPage() {
   const handlePrintReceipt = async (nomorInvoice) => {
     try {
       setActionLoading(prev => ({ ...prev, [`print_${nomorInvoice}`]: true }));
-      const result = await pembayaranService.printPaymentReceipt(nomorInvoice);
-      console.log('Receipt data:', result);
       
-      // TODO: Implement print functionality similar to invoice printing
-      showAlert("Sukses", "Kwitansi pembayaran berhasil di-print!", "success");
+      // Find invoice to get invoice_id
+      const invoice = invoices.find(inv => inv.nomorInvoice === nomorInvoice);
+      if (!invoice || !invoice.id) {
+        showAlert("Error", "Invoice tidak ditemukan", "error");
+        return;
+      }
+      
+      // Generate receipt and get receipt data
+      const result = await pembayaranService.generatePaymentReceipt(invoice.id);
+      
+      if (result.success && result.data) {
+        console.log('Receipt data:', result.data);
+        
+        // Create print content from receipt data
+        const printContent = generatePaymentReceiptPrintContent(result.data);
+        
+        // Open print dialog
+        openPrintDialog(printContent);
+        
+        showAlert("Sukses", "Kwitansi pembayaran berhasil di-print!", "success");
+      } else {
+        showAlert("Error", result.message || "Gagal generate kwitansi pembayaran", "error");
+      }
     } catch (error) {
       console.error('Error printing receipt:', error);
-      showAlert("Error", "Gagal print kwitansi pembayaran", "error");
+      const errorMessage = error.message || "Gagal print kwitansi pembayaran";
+      showAlert("Error", errorMessage, "error");
     } finally {
       setActionLoading(prev => ({ ...prev, [`print_${nomorInvoice}`]: false }));
     }

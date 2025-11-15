@@ -45,12 +45,12 @@ export const pembayaranService = {
     });
   },
 
-  // Print payment receipt
-  printPaymentReceipt: async (nomorInvoice) => {
-    return await request('/pembayaran/print-receipt', {
+  // Generate and get payment receipt for printing
+  generatePaymentReceipt: async (invoiceId) => {
+    return await request('/payment/generate-receipt', {
       method: 'POST',
       body: JSON.stringify({
-        nomor_invoice: nomorInvoice
+        invoice_id: invoiceId
       })
     });
   },
