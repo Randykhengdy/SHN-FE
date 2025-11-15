@@ -40,8 +40,42 @@ export default function SalesOrderListPage() {
   const [dateTo, setDateTo] = useState("");
 
   // Sorting state
-  const [sortKey, setSortKey] = useState(null); // e.g., 'noSo', 'pelanggan', 'tanggalSo', 'tanggalPengiriman', 'asalGudang', 'jumlahItem', 'subtotal', 'totalDiskon', 'ppnAmount', 'totalHarga', 'status'
+  const [sortBy, setSortBy] = useState('none'); // Backend field name or 'none'
   const [sortOrder, setSortOrder] = useState('asc'); // 'asc' | 'desc'
+  
+  // Map frontend sort keys to backend field names
+  const mapSortKeyToBackend = (frontendKey) => {
+    const mapping = {
+      'noSo': 'nomor_so',
+      'pelanggan': 'pelanggan', // Backend might use 'pelanggan' or 'nama_pelanggan'
+      'tanggalSo': 'tanggal_so',
+      'tanggalPengiriman': 'tanggal_pengiriman',
+      'asalGudang': 'gudang', // Backend might use 'gudang' or 'nama_gudang'
+      'jumlahItem': 'items_count',
+      'subtotal': 'subtotal',
+      'totalDiskon': 'total_diskon',
+      'ppnAmount': 'ppn_amount',
+      'totalHarga': 'total_harga_so',
+      'status': 'status'
+    };
+    return mapping[frontendKey] || frontendKey;
+  };
+  
+  const handleSort = (field) => {
+    const backendField = mapSortKeyToBackend(field);
+    setSortBy((prev) => {
+      if (prev === backendField) {
+        // If clicking the same field, toggle sort order or reset to none
+        setSortOrder((order) => order === 'asc' ? 'desc' : 'asc');
+        return prev; // Keep the same field
+      } else {
+        // New field, set to asc
+        setSortOrder('asc');
+        return backendField;
+      }
+    });
+    setCurrentPage(1);
+  };
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -61,10 +95,26 @@ export default function SalesOrderListPage() {
   const loadSalesOrders = useCallback(async () => {
     try {
       setLoading(true);
-      const result = await salesOrderService.getAll();
+      
+      // Prepare API parameters
+      const params = {
+        page: currentPage,
+        per_page: itemsPerPage,
+        search: searchTerm || undefined,
+        status: statusFilter !== 'all' ? statusFilter : undefined,
+        date_start: dateFrom || undefined,
+        date_end: dateTo || undefined,
+        sort_by: sortBy && sortBy !== 'none' ? sortBy : undefined,
+        sort_order: sortOrder || undefined
+      };
+
+      // Remove undefined values
+      Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
+
+      const result = await salesOrderService.getAll(params);
       
       // Transform API data to match our UI structure
-      const transformedData = result.data.map(so => ({
+      const transformedData = (result.data || []).map(so => ({
         id: so.id,
         noSo: so.nomor_so,
         pelanggan: so.pelanggan?.nama_pelanggan || 'N/A',
@@ -79,92 +129,23 @@ export default function SalesOrderListPage() {
         totalDiskon: parseFloat(so.total_diskon) || 0,
         ppnAmount: parseFloat(so.ppn_amount) || 0,
         syaratPembayaran: so.syarat_pembayaran,
-         status: so.status || "Draft",
-         deleteRequestStatus: so.delete_requested_by ? 'delete_requested' : null,
-         deleteRequestedAt: so.delete_requested_at || null,
-         deleteReason: so.delete_reason || null,
-         deleteRequestedBy: so.delete_requested_by?.name || null,
+        status: so.status || "Draft",
+        deleteRequestStatus: so.delete_requested_by ? 'delete_requested' : null,
+        deleteRequestedAt: so.delete_requested_at || null,
+        deleteReason: so.delete_reason || null,
+        deleteRequestedBy: so.delete_requested_by?.name || null,
         items: so.sales_order_items || []
       }));
       
-      // Apply filters
-      let filteredData = transformedData;
-
-      // Filter by date range (tanggal SO)
-      if (dateFrom || dateTo) {
-        const from = dateFrom ? new Date(dateFrom) : null;
-        const to = dateTo ? new Date(dateTo) : null;
-        if (to) {
-          // include the whole end day
-          to.setHours(23,59,59,999);
-        }
-        filteredData = filteredData.filter(so => {
-          const d = so.tanggalSoRaw ? new Date(so.tanggalSoRaw) : null;
-          if (!d) return false;
-          const afterFrom = from ? d >= from : true;
-          const beforeTo = to ? d <= to : true;
-          return afterFrom && beforeTo;
-        });
-      }
-      
-      if (searchTerm) {
-        filteredData = filteredData.filter(so => 
-          so.noSo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          so.pelanggan.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-      }
-      
-      if (statusFilter !== "all") {
-        filteredData = filteredData.filter(so => so.status.toLowerCase() === statusFilter);
-      }
-      
-      // Apply sorting
-      if (sortKey) {
-        const getVal = (rec) => {
-          switch (sortKey) {
-            case 'noSo': return rec.noSo || '';
-            case 'pelanggan': return rec.pelanggan || '';
-            case 'tanggalSo': return rec.tanggalSoRaw ? new Date(rec.tanggalSoRaw).getTime() : 0;
-            case 'tanggalPengiriman': return rec.tanggalPengirimanRaw ? new Date(rec.tanggalPengirimanRaw).getTime() : 0;
-            case 'asalGudang': return rec.asalGudang || '';
-            case 'jumlahItem': return Number(rec.jumlahItem) || 0;
-            case 'subtotal': return Number(rec.subtotal) || 0;
-            case 'totalDiskon': return Number(rec.totalDiskon) || 0;
-            case 'ppnAmount': return Number(rec.ppnAmount) || 0;
-            case 'totalHarga': return Number(rec.totalHarga) || 0;
-            case 'status': return rec.status || '';
-            default: return '';
-          }
-        };
-
-        filteredData = [...filteredData].sort((a, b) => {
-          const va = getVal(a);
-          const vb = getVal(b);
-          if (typeof va === 'number' && typeof vb === 'number') {
-            return sortOrder === 'asc' ? va - vb : vb - va;
-          }
-          const sa = String(va).toLowerCase();
-          const sb = String(vb).toLowerCase();
-          if (sa < sb) return sortOrder === 'asc' ? -1 : 1;
-          if (sa > sb) return sortOrder === 'asc' ? 1 : -1;
-          return 0;
-        });
-      }
-
-      // Apply pagination
-      const startIndex = (currentPage - 1) * itemsPerPage;
-      const endIndex = startIndex + itemsPerPage;
-      const paginatedData = filteredData.slice(startIndex, endIndex);
-      
-      setSalesOrders(paginatedData);
-      setTotalItems(filteredData.length);
+      setSalesOrders(transformedData);
+      setTotalItems(result.total || result.pagination?.total || transformedData.length);
     } catch (error) {
       console.error('Error loading sales orders:', error);
       showAlert("Error", "Gagal memuat data Sales Order", "error");
     } finally {
       setLoading(false);
     }
-  }, [currentPage, itemsPerPage, searchTerm, statusFilter, dateFrom, dateTo, sortKey, sortOrder]);
+  }, [currentPage, itemsPerPage, searchTerm, statusFilter, dateFrom, dateTo, sortBy, sortOrder]);
 
   // Load sales orders from API
   useEffect(() => {
@@ -182,11 +163,13 @@ export default function SalesOrderListPage() {
   };
 
   // Calculate summary statistics
-  const totalSO = totalItems;
-  const totalNilai = salesOrders.reduce((sum, so) => sum + so.totalHarga, 0);
-  const rataRataPerSO = totalSO > 0 ? totalNilai / totalSO : 0;
+  // Note: With backend pagination, these statistics only reflect the current page data
+  // For accurate totals across all filtered data, consider adding a separate summary endpoint
+  const totalSO = totalItems; // This is correct - total from backend
+  const totalNilai = salesOrders.reduce((sum, so) => sum + so.totalHarga, 0); // Only current page
+  const rataRataPerSO = totalSO > 0 ? totalNilai / totalSO : 0; // Only current page
 
-  // Calculate status breakdown
+  // Calculate status breakdown (only current page)
   const statusBreakdown = {
     Draft: salesOrders.filter(so => so.status === "Draft").length,
     Confirmed: salesOrders.filter(so => so.status === "Confirmed").length,
@@ -314,6 +297,8 @@ export default function SalesOrderListPage() {
     setStatusFilter("all");
     setDateFrom("");
     setDateTo("");
+    setSortBy('none');
+    setSortOrder('asc');
     setCurrentPage(1);
   };
 
@@ -548,50 +533,17 @@ export default function SalesOrderListPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50">
-                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => {
-                      setSortKey(prev => prev === 'noSo' ? 'noSo' : 'noSo');
-                      setSortOrder(prev => (sortKey === 'noSo' && prev === 'asc') ? 'desc' : 'asc');
-                    }}>No SO</TableHead>
-                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => {
-                      setSortKey(prev => prev === 'pelanggan' ? 'pelanggan' : 'pelanggan');
-                      setSortOrder(prev => (sortKey === 'pelanggan' && prev === 'asc') ? 'desc' : 'asc');
-                    }}>Pelanggan</TableHead>
-                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => {
-                      setSortKey(prev => prev === 'tanggalSo' ? 'tanggalSo' : 'tanggalSo');
-                      setSortOrder(prev => (sortKey === 'tanggalSo' && prev === 'asc') ? 'desc' : 'asc');
-                    }}>Tanggal SO</TableHead>
-                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => {
-                      setSortKey(prev => prev === 'tanggalPengiriman' ? 'tanggalPengiriman' : 'tanggalPengiriman');
-                      setSortOrder(prev => (sortKey === 'tanggalPengiriman' && prev === 'asc') ? 'desc' : 'asc');
-                    }}>Tanggal Pengiriman</TableHead>
-                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => {
-                      setSortKey(prev => prev === 'asalGudang' ? 'asalGudang' : 'asalGudang');
-                      setSortOrder(prev => (sortKey === 'asalGudang' && prev === 'asc') ? 'desc' : 'asc');
-                    }}>Asal Gudang</TableHead>
-                    <TableHead className="font-semibold text-center cursor-pointer select-none" onClick={() => {
-                      setSortKey(prev => prev === 'jumlahItem' ? 'jumlahItem' : 'jumlahItem');
-                      setSortOrder(prev => (sortKey === 'jumlahItem' && prev === 'asc') ? 'desc' : 'asc');
-                    }}>Jumlah Item</TableHead>
-                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => {
-                      setSortKey(prev => prev === 'subtotal' ? 'subtotal' : 'subtotal');
-                      setSortOrder(prev => (sortKey === 'subtotal' && prev === 'asc') ? 'desc' : 'asc');
-                    }}>Subtotal</TableHead>
-                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => {
-                      setSortKey(prev => prev === 'totalDiskon' ? 'totalDiskon' : 'totalDiskon');
-                      setSortOrder(prev => (sortKey === 'totalDiskon' && prev === 'asc') ? 'desc' : 'asc');
-                    }}>Diskon</TableHead>
-                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => {
-                      setSortKey(prev => prev === 'ppnAmount' ? 'ppnAmount' : 'ppnAmount');
-                      setSortOrder(prev => (sortKey === 'ppnAmount' && prev === 'asc') ? 'desc' : 'asc');
-                    }}>PPN</TableHead>
-                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => {
-                      setSortKey(prev => prev === 'totalHarga' ? 'totalHarga' : 'totalHarga');
-                      setSortOrder(prev => (sortKey === 'totalHarga' && prev === 'asc') ? 'desc' : 'asc');
-                    }}>Total Harga</TableHead>
-                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => {
-                      setSortKey(prev => prev === 'status' ? 'status' : 'status');
-                      setSortOrder(prev => (sortKey === 'status' && prev === 'asc') ? 'desc' : 'asc');
-                    }}>Status</TableHead>
+                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('noSo')}>No SO</TableHead>
+                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('pelanggan')}>Pelanggan</TableHead>
+                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('tanggalSo')}>Tanggal SO</TableHead>
+                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('tanggalPengiriman')}>Tanggal Pengiriman</TableHead>
+                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('asalGudang')}>Asal Gudang</TableHead>
+                    <TableHead className="font-semibold text-center cursor-pointer select-none" onClick={() => handleSort('jumlahItem')}>Jumlah Item</TableHead>
+                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('subtotal')}>Subtotal</TableHead>
+                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('totalDiskon')}>Diskon</TableHead>
+                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('ppnAmount')}>PPN</TableHead>
+                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('totalHarga')}>Total Harga</TableHead>
+                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('status')}>Status</TableHead>
                     <TableHead className="font-semibold text-center">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>

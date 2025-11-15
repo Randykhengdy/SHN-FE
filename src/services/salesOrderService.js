@@ -2,12 +2,21 @@ import { request } from "@/lib/request";
 import { API_ENDPOINTS } from "@/config/api";
 
 export const salesOrderService = {
-  // Get all sales orders
+  // Get all sales orders with pagination and filters
   getAll: async (params = {}) => {
-    return await request(API_ENDPOINTS.salesOrder, {
-      method: 'GET',
-      params
-    });
+    const queryParams = new URLSearchParams();
+    
+    if (params.page) queryParams.append('page', params.page);
+    if (params.per_page) queryParams.append('per_page', params.per_page);
+    if (params.search) queryParams.append('search', params.search);
+    if (params.status && params.status !== 'all') queryParams.append('status', params.status);
+    if (params.date_start) queryParams.append('date_start', params.date_start);
+    if (params.date_end) queryParams.append('date_end', params.date_end);
+    if (params.sort_by) queryParams.append('sort_by', params.sort_by);
+    if (params.sort_order || params.order) queryParams.append('order', params.sort_order || params.order);
+    
+    const url = `${API_ENDPOINTS.salesOrder}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return await request(url, { method: 'GET' });
   },
 
   // Get sales order by ID
