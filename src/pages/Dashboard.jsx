@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Chart from "chart.js/auto";
 import Header from "@/components/Header";
 import { dashboardService } from "@/services/dashboardService";
+import { Input } from "@/components/ui/input";
 
 function formatRupiah(num) {
   return "Rp " + (num || 0).toLocaleString("id-ID");
@@ -10,6 +11,21 @@ function formatRupiah(num) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+
+  // Date range state - default to current month
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  
+  const formatDateForInput = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const [dateFrom, setDateFrom] = useState(formatDateForInput(startOfMonth));
+  const [dateTo, setDateTo] = useState(formatDateForInput(endOfMonth));
 
   // Data from localStorage
   const poList = JSON.parse(localStorage.getItem("poList") || "[]");
@@ -68,7 +84,7 @@ export default function Dashboard() {
     initSalesOrderDashboard();
     initWorkOrderPlanningDashboard();
     initWorkOrderActualDashboard();
-  }, []);
+  }, [dateFrom, dateTo]);
 
   // Chart.js setup
   useEffect(() => {
@@ -258,40 +274,99 @@ export default function Dashboard() {
   }, [monthlyWorkActualData]);
 
   const initPurchaseOrderDashboard = async () => {
-    const data = await dashboardService.getPurchaseOrderDashboard();
-    explodeDataToDaysInMonth(data, setMonthlyPurchaseData);
+    const data = await dashboardService.getPurchaseOrderDashboard({
+      date_from: dateFrom,
+      date_to: dateTo
+    });
+    explodeDataToDaysInMonth(data, setMonthlyPurchaseData, dateFrom, dateTo);
   }
   const initSalesOrderDashboard = async () => {
-    const data = await dashboardService.getSalesOrderDashboard();
-    explodeDataToDaysInMonth(data, setMonthlySalesData);
+    const data = await dashboardService.getSalesOrderDashboard({
+      date_from: dateFrom,
+      date_to: dateTo
+    });
+    explodeDataToDaysInMonth(data, setMonthlySalesData, dateFrom, dateTo);
   }
 
   const initWorkOrderPlanningDashboard = async () => {
-    const data = await dashboardService.getWorkOrderPlanningDashboard();
-    explodeDataToDaysInMonth(data, setMonthlyWorkPlanningData);
+    const data = await dashboardService.getWorkOrderPlanningDashboard({
+      date_from: dateFrom,
+      date_to: dateTo
+    });
+    explodeDataToDaysInMonth(data, setMonthlyWorkPlanningData, dateFrom, dateTo);
   }
 
   const initWorkOrderActualDashboard = async () => {
-    const data = await dashboardService.getWorkOrderActualDashboard();
-    explodeDataToDaysInMonth(data, setMonthlyWorkActualData);
+    const data = await dashboardService.getWorkOrderActualDashboard({
+      date_from: dateFrom,
+      date_to: dateTo
+    });
+    explodeDataToDaysInMonth(data, setMonthlyWorkActualData, dateFrom, dateTo);
   }
 
-  const explodeDataToDaysInMonth = (data, setData) => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const formatDateRange = (dateFromStr, dateToStr) => {
+    const fromDate = new Date(dateFromStr);
+    const toDate = new Date(dateToStr);
+    
+    const formatDate = (date) => {
+      return date.toLocaleDateString('id-ID', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      });
+    };
+    
+    // Check if same month and year
+    if (fromDate.getMonth() === toDate.getMonth() && 
+        fromDate.getFullYear() === toDate.getFullYear()) {
+      return `${fromDate.getDate()} - ${toDate.getDate()} ${toDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`;
+    }
+    
+    return `${formatDate(fromDate)} - ${formatDate(toDate)}`;
+  };
+
+  const explodeDataToDaysInMonth = (data, setData, dateFromStr, dateToStr) => {
+    const fromDate = new Date(dateFromStr);
+    const toDate = new Date(dateToStr);
+    
+    // Check if range spans multiple months
+    const isMultiMonth = fromDate.getMonth() !== toDate.getMonth() || 
+                         fromDate.getFullYear() !== toDate.getFullYear();
+    
+    // Create a map using date string as key (YYYY-MM-DD format)
     const map = {};
     data.forEach(item => {
-      map[Number(item.day)] = item.total;
+      // Parse the backend data: year, month (name), day
+      // Create a date string key
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'];
+      const monthIndex = monthNames.findIndex(m => m === item.month);
+      if (monthIndex !== -1) {
+        const dateKey = `${item.year}-${String(monthIndex + 1).padStart(2, '0')}-${String(item.day).padStart(2, '0')}`;
+        map[dateKey] = item.total;
+      }
     });
+    
+    // Generate chart data for all days in the range
     const chartData = [];
-    for (let d = 1; d <= daysInMonth; d++) {
+    const currentDate = new Date(fromDate);
+    
+    while (currentDate <= toDate) {
+      const dateKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+      const dayNum = currentDate.getDate();
+      
+      // Create label: show day only for single month, or DD/MM for multi-month
+      const label = isMultiMonth 
+        ? `${String(dayNum).padStart(2, '0')}/${String(currentDate.getMonth() + 1).padStart(2, '0')}`
+        : dayNum;
+      
       chartData.push({
-        day: d,
-        total: map[d] ?? 0
+        day: label,
+        total: map[dateKey] ?? 0
       });
+      currentDate.setDate(currentDate.getDate() + 1);
     }
+    
     setData(chartData);
   }
 
@@ -315,8 +390,34 @@ export default function Dashboard() {
       <div className="h-screen flex overflow-scroll">
         <div className="max-w-7xl mx-auto px-4 py-8">
           <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-          <div className="mb-7 text-lg font-semibold text-gray-700">
+          <div className="mb-4 text-lg font-semibold text-gray-700">
             Selamat datang di Sistem Inventory & Workshop SURYA LOGAM JAYA
+          </div>
+          
+          {/* Date Range Filter */}
+          <div className="flex items-end gap-3 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Dari Tanggal
+              </label>
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Sampai Tanggal
+              </label>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="w-full"
+              />
+            </div>
           </div>
 
           {/* Key Metrics Cards */}
@@ -342,25 +443,25 @@ export default function Dashboard() {
           {/* Charts Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div className="bg-white p-5 rounded-xl shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-700 mb-3">Pembelian Bulan {new Date().toLocaleString('en-US', { month: 'long' })} (2025)</h3>
+              <h3 className="text-lg font-semibold text-gray-700 mb-3">Pembelian {formatDateRange(dateFrom, dateTo)}</h3>
               <div className="relative h-56">
                 <canvas ref={monthlyPurchaseRef}></canvas>
               </div>
             </div>
             <div className="bg-white p-5 rounded-xl shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-700 mb-3">Penjualan Bulan {new Date().toLocaleString('en-US', { month: 'long' })} (2025)</h3>
+              <h3 className="text-lg font-semibold text-gray-700 mb-3">Penjualan {formatDateRange(dateFrom, dateTo)}</h3>
               <div className="relative h-56">
                 <canvas ref={monthlySalesRef}></canvas>
               </div>
             </div>
             <div className="bg-white p-5 rounded-xl shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-700 mb-3">Pengerjaan Bulan Planning {new Date().toLocaleString('en-US', { month: 'long' })} (2025)</h3>
+              <h3 className="text-lg font-semibold text-gray-700 mb-3">Pengerjaan Planning {formatDateRange(dateFrom, dateTo)}</h3>
               <div className="relative h-56">
                 <canvas ref={monthlyWorkPlanningRef}></canvas>
               </div>
             </div>
             <div className="bg-white p-5 rounded-xl shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-700 mb-3">Pengerjaan Bulan Actual {new Date().toLocaleString('en-US', { month: 'long' })} (2025)</h3>
+              <h3 className="text-lg font-semibold text-gray-700 mb-3">Pengerjaan Actual {formatDateRange(dateFrom, dateTo)}</h3>
               <div className="relative h-56">
                 <canvas ref={monthlyWorkActualRef}></canvas>
               </div>

@@ -8,16 +8,32 @@ const WORK_ORDER_ACTUAL = API_ENDPOINTS.workOrderActualDashboard;
 
 export const dashboardService = {
 
-    getPurchaseOrderDashboard: async () => {
-        return request(`${PURCHASE_ORDER}`)
+    getPurchaseOrderDashboard: async (params = {}) => {
+        const qp = new URLSearchParams();
+        if (params.date_from) qp.append('date_from', params.date_from);
+        if (params.date_to) qp.append('date_to', params.date_to);
+        const url = `${PURCHASE_ORDER}${qp.toString() ? `?${qp.toString()}` : ''}`;
+        return request(url);
     },
-    getSalesOrderDashboard: async () => {
-        return request(`${SALES_ORDER}`)
+    getSalesOrderDashboard: async (params = {}) => {
+        const qp = new URLSearchParams();
+        if (params.date_from) qp.append('date_from', params.date_from);
+        if (params.date_to) qp.append('date_to', params.date_to);
+        const url = `${SALES_ORDER}${qp.toString() ? `?${qp.toString()}` : ''}`;
+        return request(url);
     },
-    getWorkOrderPlanningDashboard: async () => {
-        return request(`${WORK_ORDER_PLANNING}`)
+    getWorkOrderPlanningDashboard: async (params = {}) => {
+        const qp = new URLSearchParams();
+        if (params.date_from) qp.append('date_from', params.date_from);
+        if (params.date_to) qp.append('date_to', params.date_to);
+        const url = `${WORK_ORDER_PLANNING}${qp.toString() ? `?${qp.toString()}` : ''}`;
+        return request(url);
     },
-    getWorkOrderActualDashboard: async () => {
-        return request(`${WORK_ORDER_ACTUAL}`)
+    getWorkOrderActualDashboard: async (params = {}) => {
+        const qp = new URLSearchParams();
+        if (params.date_from) qp.append('date_from', params.date_from);
+        if (params.date_to) qp.append('date_to', params.date_to);
+        const url = `${WORK_ORDER_ACTUAL}${qp.toString() ? `?${qp.toString()}` : ''}`;
+        return request(url);
     }
 }
