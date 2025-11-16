@@ -67,6 +67,66 @@ export const pembayaranService = {
     return await request(`/payment/payment-detail?nomor_invoice=${nomorInvoice}`, {
       method: 'GET'
     });
+  },
+
+  // ========== Purchase Order Payment Methods ==========
+  
+  // Get purchase orders for payment
+  getPurchaseOrderPayments: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+    
+    // Add filter parameters if provided
+    if (params.status_bayar) {
+      queryParams.append('status_bayar', params.status_bayar);
+    }
+    if (params.page) {
+      queryParams.append('page', params.page);
+    }
+    if (params.per_page) {
+      queryParams.append('per_page', params.per_page);
+    }
+    if (params.search) {
+      queryParams.append('search', params.search);
+    }
+    
+    const queryString = queryParams.toString();
+    const endpoint = `/purchase-order${queryString ? `?${queryString}` : ''}`;
+    
+    return await request(endpoint, {
+      method: 'GET'
+    });
+  },
+
+  // Process purchase order payment
+  processPurchaseOrderPayment: async (nomorPo, paymentData) => {
+    return await request('/payment/submit-purchase-order-payment', {
+      method: 'POST',
+      body: JSON.stringify({
+        nomor_po: nomorPo,
+        ...paymentData
+      })
+    });
+  },
+
+  // Get purchase order payment detail
+  getPurchaseOrderPaymentDetail: async (params) => {
+    const queryParams = new URLSearchParams();
+    
+    if (params.purchase_order_id) {
+      queryParams.append('purchase_order_id', params.purchase_order_id);
+    }
+    if (params.nomor_po) {
+      queryParams.append('nomor_po', params.nomor_po);
+    }
+    
+    const queryString = queryParams.toString();
+    if (!queryString) {
+      throw new Error('Purchase Order ID atau nomor PO harus disertakan');
+    }
+    
+    return await request(`/payment/purchase-order-payment-detail?${queryString}`, {
+      method: 'GET'
+    });
   }
 };
 
