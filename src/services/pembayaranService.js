@@ -127,6 +127,34 @@ export const pembayaranService = {
     return await request(`/payment/purchase-order-payment-detail?${queryString}`, {
       method: 'GET'
     });
+  },
+
+  // Get financial report
+  getFinancialReport: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+    
+    if (params.date_from) {
+      queryParams.append('date_from', params.date_from);
+    }
+    if (params.date_to) {
+      queryParams.append('date_to', params.date_to);
+    }
+    if (params.search) {
+      queryParams.append('search', params.search);
+    }
+    if (params.page) {
+      queryParams.append('page', params.page);
+    }
+    if (params.per_page) {
+      queryParams.append('per_page', params.per_page);
+    }
+    
+    const queryString = queryParams.toString();
+    const endpoint = `/payment/financial-report${queryString ? `?${queryString}` : ''}`;
+    
+    return await request(endpoint, {
+      method: 'GET'
+    });
   }
 };
 

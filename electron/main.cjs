@@ -217,6 +217,7 @@ function createWindow() {
           { label: 'WO Actual', accelerator: 'CmdOrCtrl+Shift+W', click: () => mainWindow.webContents.send('navigate-to', '/wo-actual') },
           { label: 'Surat Jalan Invoicing', accelerator: 'CmdOrCtrl+F', click: () => mainWindow.webContents.send('navigate-to', '/finance-invoice-pod') },
           { label: 'Pembayaran', click: () => mainWindow.webContents.send('navigate-to', '/pembayaran') },
+          { label: 'Financial Report', click: () => mainWindow.webContents.send('navigate-to', '/financial-report') },
           { type: 'separator' },
           { label: 'AR / AP', click: () => mainWindow.webContents.send('navigate-to', '/ar-ap') },
           { label: 'Mutasi Stock', accelerator: 'CmdOrCtrl+M', click: () => mainWindow.webContents.send('navigate-to', '/mutasi-stock') },

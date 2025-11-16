@@ -12,7 +12,8 @@ import {
   Wrench,
   ClipboardList,
   Edit3,
-  Activity
+  Activity,
+  TrendingUp
 } from "lucide-react";
 
 export default function NavigationMenu() {
@@ -60,6 +61,12 @@ export default function NavigationMenu() {
       label: "Approval",
       path: "/approval",
       icon: CheckSquare,
+      category: "transaksi"
+    },
+    {
+      label: "Financial Report",
+      path: "/financial-report",
+      icon: TrendingUp,
       category: "transaksi"
     },
     {
