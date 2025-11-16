@@ -543,11 +543,11 @@ export default function AddPurchaseOrderPage() {
           <div className="flex justify-between items-center">
             <CardTitle className="page-title">Input Purchase Order Baru</CardTitle>
             <div className="flex space-sm">
-              {isUserAdmin && (
+              {/* {isUserAdmin && (
                 <Button variant="outline" size="sm" onClick={handleAutoFill} className="btn-outline">
-                  🎲 Auto Fill
+                  🎲 Auto Fill (Testing Purposes)
                 </Button>
-              )}
+              )} */}
               
               <Button variant="default" size="sm" onClick={handleTestSimpanPO} className="btn-primary">
                 Simpan Purchase Order

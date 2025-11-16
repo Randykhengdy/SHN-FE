@@ -38,4 +38,5 @@ export const API_ENDPOINTS = {
   salesOrderDashboard: "/dashboard/sales-order",
   workOrderPlanningDashboard: "/dashboard/work-order-planning",
   workOrderActualDashboard: "/dashboard/work-order-actual",
+  generalDashboard: "/dashboard/general",
 };

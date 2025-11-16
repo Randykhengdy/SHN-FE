@@ -27,20 +27,24 @@ export default function Dashboard() {
   const [dateFrom, setDateFrom] = useState(formatDateForInput(startOfMonth));
   const [dateTo, setDateTo] = useState(formatDateForInput(endOfMonth));
 
-  // Data from localStorage
+  // General Dashboard Data from API
+  const [generalDashboardData, setGeneralDashboardData] = useState({
+    total_jumlah_po: 0,
+    total_rupiah_po: 0,
+    total_ar: 0,
+    total_ap: 0
+  });
+
+  // Data from localStorage (for Recent Activity only)
   const poList = JSON.parse(localStorage.getItem("poList") || "[]");
   const apList = JSON.parse(localStorage.getItem("apList") || "[]");
   const invoiceList = JSON.parse(localStorage.getItem("invoiceList") || "[]");
 
-  // Metrics
-  const totalPO = poList.length;
-  const totalPembelian = apList.reduce((sum, ap) => sum + (ap.total || ap.nominal || 0), 0);
-  const totalAR = invoiceList.reduce((sum, inv) => {
-    const pembayaran = (inv.pembayaran || []).reduce((a, b) => a + b, 0);
-    const sisa = (inv.total || 0) - pembayaran;
-    return sisa > 0 ? sum + sisa : sum;
-  }, 0);
-  const totalAP = apList.reduce((sum, ap) => sum + (ap.total || ap.nominal || 0), 0);
+  // Metrics from API
+  const totalPO = generalDashboardData.total_jumlah_po || 0;
+  const totalPembelian = generalDashboardData.total_rupiah_po || 0;
+  const totalAR = generalDashboardData.total_ar || 0;
+  const totalAP = generalDashboardData.total_ap || 0;
 
   // Recent Activity
   let activities = [];
@@ -80,6 +84,7 @@ export default function Dashboard() {
   const [monthlyWorkActualData, setMonthlyWorkActualData] = useState(null);
 
   useEffect(() => {
+    initGeneralDashboard();
     initPurchaseOrderDashboard();
     initSalesOrderDashboard();
     initWorkOrderPlanningDashboard();
@@ -274,34 +279,79 @@ export default function Dashboard() {
   }, [monthlyWorkActualData]);
 
   const initPurchaseOrderDashboard = async () => {
-    const data = await dashboardService.getPurchaseOrderDashboard({
-      date_from: dateFrom,
-      date_to: dateTo
-    });
-    explodeDataToDaysInMonth(data, setMonthlyPurchaseData, dateFrom, dateTo);
+    try {
+      const response = await dashboardService.getPurchaseOrderDashboard({
+        date_from: dateFrom,
+        date_to: dateTo
+      });
+      const data = response?.data || response || [];
+      explodeDataToDaysInMonth(data, setMonthlyPurchaseData, dateFrom, dateTo);
+    } catch (error) {
+      console.error("Error fetching purchase order dashboard:", error);
+      setMonthlyPurchaseData([]);
+    }
   }
   const initSalesOrderDashboard = async () => {
-    const data = await dashboardService.getSalesOrderDashboard({
-      date_from: dateFrom,
-      date_to: dateTo
-    });
-    explodeDataToDaysInMonth(data, setMonthlySalesData, dateFrom, dateTo);
+    try {
+      const response = await dashboardService.getSalesOrderDashboard({
+        date_from: dateFrom,
+        date_to: dateTo
+      });
+      const data = response?.data || response || [];
+      explodeDataToDaysInMonth(data, setMonthlySalesData, dateFrom, dateTo);
+    } catch (error) {
+      console.error("Error fetching sales order dashboard:", error);
+      setMonthlySalesData([]);
+    }
   }
 
   const initWorkOrderPlanningDashboard = async () => {
-    const data = await dashboardService.getWorkOrderPlanningDashboard({
-      date_from: dateFrom,
-      date_to: dateTo
-    });
-    explodeDataToDaysInMonth(data, setMonthlyWorkPlanningData, dateFrom, dateTo);
+    try {
+      const response = await dashboardService.getWorkOrderPlanningDashboard({
+        date_from: dateFrom,
+        date_to: dateTo
+      });
+      const data = response?.data || response || [];
+      explodeDataToDaysInMonth(data, setMonthlyWorkPlanningData, dateFrom, dateTo);
+    } catch (error) {
+      console.error("Error fetching work order planning dashboard:", error);
+      setMonthlyWorkPlanningData([]);
+    }
   }
 
   const initWorkOrderActualDashboard = async () => {
-    const data = await dashboardService.getWorkOrderActualDashboard({
-      date_from: dateFrom,
-      date_to: dateTo
-    });
-    explodeDataToDaysInMonth(data, setMonthlyWorkActualData, dateFrom, dateTo);
+    try {
+      const response = await dashboardService.getWorkOrderActualDashboard({
+        date_from: dateFrom,
+        date_to: dateTo
+      });
+      const data = response?.data || response || [];
+      explodeDataToDaysInMonth(data, setMonthlyWorkActualData, dateFrom, dateTo);
+    } catch (error) {
+      console.error("Error fetching work order actual dashboard:", error);
+      setMonthlyWorkActualData([]);
+    }
+  }
+
+  const initGeneralDashboard = async () => {
+    try {
+      const response = await dashboardService.getGeneralDashboard({
+        date_from: dateFrom,
+        date_to: dateTo
+      });
+      if (response && response.data) {
+        setGeneralDashboardData(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching general dashboard:", error);
+      // Set default values on error
+      setGeneralDashboardData({
+        total_jumlah_po: 0,
+        total_rupiah_po: 0,
+        total_ar: 0,
+        total_ap: 0
+      });
+    }
   }
 
   const formatDateRange = (dateFromStr, dateToStr) => {
@@ -332,6 +382,13 @@ export default function Dashboard() {
     // Check if range spans multiple months
     const isMultiMonth = fromDate.getMonth() !== toDate.getMonth() || 
                          fromDate.getFullYear() !== toDate.getFullYear();
+    
+    // Ensure data is an array
+    if (!Array.isArray(data)) {
+      console.warn("explodeDataToDaysInMonth: data is not an array", data);
+      setData([]);
+      return;
+    }
     
     // Create a map using date string as key (YYYY-MM-DD format)
     const map = {};
@@ -427,7 +484,7 @@ export default function Dashboard() {
               <div className="text-2xl font-bold text-gray-800">{totalPO}</div>
             </div>
             <div className="bg-white p-5 rounded-xl shadow-sm">
-              <div className="text-gray-500 text-sm mb-1">Total Pembelian Plat</div>
+              <div className="text-gray-500 text-sm mb-1">Total Rupiah PO</div>
               <div className="text-2xl font-bold text-gray-800">{formatRupiah(totalPembelian)}</div>
             </div>
             <div className="bg-white p-5 rounded-xl shadow-sm">

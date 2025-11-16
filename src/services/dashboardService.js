@@ -5,6 +5,7 @@ const PURCHASE_ORDER = API_ENDPOINTS.purchaseOrderDashboard;
 const SALES_ORDER = API_ENDPOINTS.salesOrderDashboard;
 const WORK_ORDER_PLANNING = API_ENDPOINTS.workOrderPlanningDashboard;
 const WORK_ORDER_ACTUAL = API_ENDPOINTS.workOrderActualDashboard;
+const GENERAL_DASHBOARD = API_ENDPOINTS.generalDashboard;
 
 export const dashboardService = {
 
@@ -34,6 +35,13 @@ export const dashboardService = {
         if (params.date_from) qp.append('date_from', params.date_from);
         if (params.date_to) qp.append('date_to', params.date_to);
         const url = `${WORK_ORDER_ACTUAL}${qp.toString() ? `?${qp.toString()}` : ''}`;
+        return request(url);
+    },
+    getGeneralDashboard: async (params = {}) => {
+        const qp = new URLSearchParams();
+        if (params.date_from) qp.append('date_from', params.date_from);
+        if (params.date_to) qp.append('date_to', params.date_to);
+        const url = `${GENERAL_DASHBOARD}${qp.toString() ? `?${qp.toString()}` : ''}`;
         return request(url);
     }
 }
