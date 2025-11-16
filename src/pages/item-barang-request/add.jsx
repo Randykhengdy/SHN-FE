@@ -10,7 +10,7 @@ import { ArrowLeft, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { itemBarangRequestService } from "@/services/itemBarangRequestService";
-import { getItemBarangOptions } from "@/services/masterDataService";
+import { getItemBarangOptions, getGudangOptions } from "@/services/masterDataService";
 
 const urgencyOptions = [
     { value: "low", label: "Low" },
@@ -31,10 +31,11 @@ export default function AddItemBarangRequestPage() {
     });
 
     const [itemBarangOptions, setItemBarangOptions] = useState([]);
+    const [gudangOptions, setGudangOptions] = useState([]);
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
-    // Load item barang options
+    // Load item barang options and gudang options
     useEffect(() => {
         const loadItemBarangOptions = async () => {
             try {
@@ -43,6 +44,8 @@ export default function AddItemBarangRequestPage() {
                 if (response.success) {
                     setItemBarangOptions(response.data || []);
                 }
+                const gudangResp = await getGudangOptions();
+                setGudangOptions(gudangResp || []);
             } catch (error) {
                 console.error("Error loading item barang options:", error);
                 showAlert("error", "Gagal memuat data item barang");
@@ -52,7 +55,7 @@ export default function AddItemBarangRequestPage() {
         };
 
         loadItemBarangOptions();
-    }, [showAlert]);
+    }, []);
 
     const handleInputChange = (field, value) => {
         setFormData(prev => ({
@@ -197,6 +200,26 @@ export default function AddItemBarangRequestPage() {
                                 </div>
                             </div>
 
+                            {/* Gudang Tujuan */}
+                            <div className="space-y-2">
+                                <Label>Gudang Tujuan</Label>
+                                <Select
+                                    value={formData.gudang_tujuan_id || ""}
+                                    onValueChange={(value) => handleInputChange("gudang_tujuan_id", value)}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Pilih gudang tujuan" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {gudangOptions.map(g => (
+                                            <SelectItem key={g.value} value={g.value.toString()}>
+                                                {g.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
                             {/* Notes */}
                             <div className="space-y-2">
                                 <Label htmlFor="notes">Notes</Label>
@@ -214,17 +237,16 @@ export default function AddItemBarangRequestPage() {
                                 <Button
                                     type="submit"
                                     disabled={submitting}
-                                    className="flex-1 md:flex-none"
+                                    className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white"
                                 >
                                     <Save className="h-4 w-4 mr-2" />
                                     {submitting ? "Menyimpan..." : "Simpan Request"}
                                 </Button>
                                 <Button
                                     type="button"
-                                    variant="outline"
                                     onClick={handleCancel}
                                     disabled={submitting}
-                                    className="flex-1 md:flex-none"
+                                    className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white"
                                 >
                                     Batal
                                 </Button>

@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAlert } from "@/hooks/useAlert";
 import { Download, Eye, Plus, RefreshCw, Trash2, Check, X, Edit } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getGudangOptions } from "@/services/masterDataService";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { isAdmin } from "@/lib/utils";
@@ -32,6 +33,8 @@ export default function ItemBarangRequestPage() {
     const navigate = useNavigate();
     const [requests, setRequests] = useState([]);
     const { showAlert, AlertComponent } = useAlert();
+    const showAlertRef = useRef(showAlert);
+    useEffect(() => { showAlertRef.current = showAlert; }, [showAlert]);
 
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
@@ -46,6 +49,18 @@ export default function ItemBarangRequestPage() {
 
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [gudangOptions, setGudangOptions] = useState([]);
+    const [destGudangMap, setDestGudangMap] = useState({});
+
+    useEffect(() => {
+        const loadGudang = async () => {
+            try {
+                const resp = await getGudangOptions();
+                setGudangOptions(resp || []);
+            } catch (_) {}
+        };
+        loadGudang();
+    }, []);
 
     const loadRequests = useCallback(async () => {
         try {
@@ -64,15 +79,15 @@ export default function ItemBarangRequestPage() {
                 setRequests(response.data.data || []);
                 setTotalItems(response.data.total || 0);
             } else {
-                showAlert("error", "Gagal memuat data request");
+                showAlertRef.current && showAlertRef.current("error", "Gagal memuat data request");
             }
         } catch (error) {
             console.error("Error loading requests:", error);
-            showAlert("error", "Terjadi kesalahan saat memuat data");
+            showAlertRef.current && showAlertRef.current("error", "Terjadi kesalahan saat memuat data");
         } finally {
             setLoading(false);
         }
-    }, [currentPage, itemsPerPage, searchTerm, statusFilter, urgencyFilter, showAlert]);
+    }, [currentPage, itemsPerPage, searchTerm, statusFilter, urgencyFilter]);
 
     useEffect(() => {
         loadRequests();
@@ -98,14 +113,14 @@ export default function ItemBarangRequestPage() {
             const response = await itemBarangRequestService.delete(selectedRequest.id);
             
             if (response.success) {
-                showAlert("success", "Request berhasil dihapus");
+                showAlertRef.current && showAlertRef.current("success", "Request berhasil dihapus");
                 loadRequests();
             } else {
-                showAlert("error", response.message || "Gagal menghapus request");
+                showAlertRef.current && showAlertRef.current("error", response.message || "Gagal menghapus request");
             }
         } catch (error) {
             console.error("Error deleting request:", error);
-            showAlert("error", "Terjadi kesalahan saat menghapus request");
+            showAlertRef.current && showAlertRef.current("error", "Terjadi kesalahan saat menghapus request");
         } finally {
             setIsDeleting(false);
             setShowDeleteModal(false);
@@ -115,17 +130,19 @@ export default function ItemBarangRequestPage() {
 
     const handleApprove = async (request) => {
         try {
-            const response = await itemBarangRequestService.approve(request.id);
+            const targetGudangId = destGudangMap[request.id] ? parseInt(destGudangMap[request.id]) : null;
+            const payload = targetGudangId ? { approval_notes: "Approved with warehouse switch", gudang_tujuan_id: targetGudangId } : { approval_notes: "Approved" };
+            const response = await itemBarangRequestService.approve(request.id, payload);
             
             if (response.success) {
-                showAlert("success", "Request berhasil disetujui");
+                showAlertRef.current && showAlertRef.current("success", "Request berhasil disetujui");
                 loadRequests();
             } else {
-                showAlert("error", response.message || "Gagal menyetujui request");
+                showAlertRef.current && showAlertRef.current("error", response.message || "Gagal menyetujui request");
             }
         } catch (error) {
             console.error("Error approving request:", error);
-            showAlert("error", "Terjadi kesalahan saat menyetujui request");
+            showAlertRef.current && showAlertRef.current("error", "Terjadi kesalahan saat menyetujui request");
         }
     };
 
@@ -134,14 +151,14 @@ export default function ItemBarangRequestPage() {
             const response = await itemBarangRequestService.reject(request.id);
             
             if (response.success) {
-                showAlert("success", "Request berhasil ditolak");
+                showAlertRef.current && showAlertRef.current("success", "Request berhasil ditolak");
                 loadRequests();
             } else {
-                showAlert("error", response.message || "Gagal menolak request");
+                showAlertRef.current && showAlertRef.current("error", response.message || "Gagal menolak request");
             }
         } catch (error) {
             console.error("Error rejecting request:", error);
-            showAlert("error", "Terjadi kesalahan saat menolak request");
+            showAlertRef.current && showAlertRef.current("error", "Terjadi kesalahan saat menolak request");
         }
     };
 
@@ -177,7 +194,7 @@ export default function ItemBarangRequestPage() {
                     <CardHeader>
                         <div className="flex justify-between items-center">
                             <CardTitle>Daftar Item Barang Request</CardTitle>
-                            <Button onClick={() => navigate("/item-barang-request/add")}>
+                            <Button onClick={() => navigate("/item-barang-request/add")} className="bg-green-600 hover:bg-green-700 text-white"> 
                                 <Plus className="h-4 w-4 mr-2" />
                                 Tambah Request
                             </Button>
@@ -218,12 +235,16 @@ export default function ItemBarangRequestPage() {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <Button onClick={handleSearch} disabled={loading}>
+                            {/* Controls moved to bottom-right */}
+                        </div>
+
+                        <div className="flex justify-end gap-2 mb-4">
+                            <Button onClick={handleReset} variant="outline" className="border-gray-300">
+                                Reset
+                            </Button>
+                            <Button onClick={handleSearch} disabled={loading} variant="outline" className="border-gray-300">
                                 <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
                                 Cari
-                            </Button>
-                            <Button variant="outline" onClick={handleReset}>
-                                Reset
                             </Button>
                         </div>
 
@@ -272,56 +293,68 @@ export default function ItemBarangRequestPage() {
                                                 <TableCell>
                                                     <div className="flex gap-2">
                                                         <Button
-                                                            variant="outline"
                                                             size="sm"
                                                             onClick={() => navigate(`/item-barang-request/view/${request.id}`)}
+                                                            className="bg-blue-600 hover:bg-blue-700 text-white"
                                                         >
                                                             <Eye className="h-4 w-4" />
                                                         </Button>
                                                         
                                                         {request.status === "pending" && request.can_edit && (
                                                             <Button
-                                                                variant="outline"
                                                                 size="sm"
                                                                 onClick={() => navigate(`/item-barang-request/edit/${request.id}`)}
+                                                                className="bg-blue-600 hover:bg-blue-700 text-white"
                                                             >
                                                                 <Edit className="h-4 w-4" />
                                                             </Button>
                                                         )}
 
-                                                        {request.status === "pending" && isAdmin() && (
-                                                            <>
+                                {request.status === "pending" && isAdmin() && (
+                                    <>
                                                                 <Button
-                                                                    variant="outline"
                                                                     size="sm"
                                                                     onClick={() => handleApprove(request)}
-                                                                    className="text-green-600 hover:text-green-700"
+                                                                    className="bg-blue-600 hover:bg-blue-700 text-white"
                                                                 >
                                                                     <Check className="h-4 w-4" />
                                                                 </Button>
                                                                 <Button
-                                                                    variant="outline"
                                                                     size="sm"
                                                                     onClick={() => handleReject(request)}
-                                                                    className="text-red-600 hover:text-red-700"
+                                                                    className="bg-blue-600 hover:bg-blue-700 text-white"
                                                                 >
                                                                     <X className="h-4 w-4" />
                                                                 </Button>
-                                                            </>
-                                                        )}
+                                        <Select
+                                            value={destGudangMap[request.id]?.toString() || ""}
+                                            onValueChange={(val) => setDestGudangMap(prev => ({ ...prev, [request.id]: val }))}
+                                        >
+                                            <SelectTrigger className="w-[180px]">
+                                                <SelectValue placeholder="Gudang Tujuan" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {gudangOptions.map(opt => (
+                                                    <SelectItem key={opt.value} value={opt.value.toString()}>
+                                                        {opt.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </>
+                                )}
 
                                                         {request.can_delete && (
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => {
-                                                                    setSelectedRequest(request);
-                                                                    setShowDeleteModal(true);
-                                                                }}
-                                                                className="text-red-600 hover:text-red-700"
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                setSelectedRequest(request);
+                                                                setShowDeleteModal(true);
+                                                            }}
+                                                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
                                                         )}
                                                     </div>
                                                 </TableCell>

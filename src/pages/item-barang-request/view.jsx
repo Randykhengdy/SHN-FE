@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useAlert } from "@/hooks/useAlert";
 import { ArrowLeft, Edit, Printer, Check, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getGudangOptions } from "@/services/masterDataService";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { itemBarangRequestService } from "@/services/itemBarangRequestService";
@@ -22,6 +24,8 @@ export default function ViewItemBarangRequestPage() {
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [approvalNotes, setApprovalNotes] = useState("");
     const [submitting, setSubmitting] = useState(false);
+    const [gudangOptions, setGudangOptions] = useState([]);
+    const [destGudangId, setDestGudangId] = useState("");
 
     useEffect(() => {
         const loadRequest = async () => {
@@ -47,14 +51,23 @@ export default function ViewItemBarangRequestPage() {
         if (id) {
             loadRequest();
         }
+        const loadGudang = async () => {
+            try {
+                const resp = await getGudangOptions();
+                setGudangOptions(resp || []);
+            } catch (_) {}
+        };
+        loadGudang();
     }, [id, navigate, showAlert]);
 
     const handleApprove = async () => {
         try {
             setSubmitting(true);
-            const response = await itemBarangRequestService.approve(id, {
-                notes: approvalNotes
-            });
+            const payload = {
+                approval_notes: approvalNotes,
+                gudang_tujuan_id: destGudangId ? parseInt(destGudangId) : undefined
+            };
+            const response = await itemBarangRequestService.approve(id, payload);
             
             if (response.success) {
                 showAlert("success", "Request berhasil disetujui");
@@ -161,9 +174,9 @@ export default function ViewItemBarangRequestPage() {
                             </div>
                             <div className="flex gap-2">
                                 <Button
-                                    variant="outline"
                                     size="sm"
                                     onClick={handlePrint}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white"
                                 >
                                     <Printer className="h-4 w-4 mr-2" />
                                     Print
@@ -171,9 +184,9 @@ export default function ViewItemBarangRequestPage() {
                                 
                                 {request.status === "pending" && request.can_edit && (
                                     <Button
-                                        variant="outline"
                                         size="sm"
                                         onClick={() => navigate(`/item-barang-request/edit/${request.id}`)}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white"
                                     >
                                         <Edit className="h-4 w-4 mr-2" />
                                         Edit
@@ -183,19 +196,29 @@ export default function ViewItemBarangRequestPage() {
                                 {request.status === "pending" && isAdmin() && (
                                     <>
                                         <Button
-                                            variant="outline"
                                             size="sm"
                                             onClick={() => setShowApproveModal(true)}
-                                            className="text-green-600 hover:text-green-700"
+                                            className="bg-blue-600 hover:bg-blue-700 text-white"
                                         >
                                             <Check className="h-4 w-4 mr-2" />
                                             Approve
                                         </Button>
+                                        <Select value={destGudangId} onValueChange={setDestGudangId}>
+                                            <SelectTrigger className="w-[200px]">
+                                                <SelectValue placeholder="Gudang Tujuan" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {gudangOptions.map(opt => (
+                                                    <SelectItem key={opt.value} value={opt.value.toString()}>
+                                                        {opt.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                         <Button
-                                            variant="outline"
                                             size="sm"
                                             onClick={() => setShowRejectModal(true)}
-                                            className="text-red-600 hover:text-red-700"
+                                            className="bg-blue-600 hover:bg-blue-700 text-white"
                                         >
                                             <X className="h-4 w-4 mr-2" />
                                             Reject
