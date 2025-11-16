@@ -950,38 +950,42 @@
 
   ### Utility Endpoints
 
-  #### 13. Get Saran Plat Dasar
-  - **POST** `/api/work-order-planning/get-saran-plat-dasar`
-  - **Description**: Mendapatkan saran plat dasar berdasarkan kriteria (jenis, bentuk, grade barang, tebal, dan sisa_luas). Hanya menampilkan item yang jenis_potongan = 'potongan' dan tidak sedang diedit (is_edit = false atau null)
-  - **Request Body**:
-  ```json
-  {
-    "jenis_barang_id": 1,
-    "bentuk_barang_id": 1,
-    "grade_barang_id": 1,
-    "tebal": 10,
-    "sisa_luas": 100
-  }
-  ```
-  - **Response**: List item barang yang memenuhi kriteria, dengan jenis, bentuk, grade barang yang sama, tebal yang sama, sisa_luas lebih besar dari parameter, jenis_potongan = 'potongan', dan tidak sedang diedit (is_edit = false atau null), diurutkan berdasarkan sisa_luas (ascending).
-  - **Response Format**:
-  ```json
-  {
-    "success": true,
-    "data": [
-      {
-        "id": 1,
-        "nama": "Aluminium Shaft Grade A",
-        "ukuran": "80.5 x 45.2 x 5.0",
-        "sisa_luas": 3640.60
-      }
-    ]
-  }
-  ```
+#### 13. Get Saran Plat Dasar
+ - **POST** `/api/work-order-planning/get-saran-plat-dasar`
+ - **Description**: Mendapatkan saran plat dasar berdasarkan kriteria (jenis, bentuk, grade barang, tebal, panjang, dan lebar). Hanya menampilkan item yang `jenis_potongan = 'potongan'` dan tidak sedang diedit (`is_edit = false` atau `null`).
+ - **Request Body**:
+ ```json
+ {
+   "jenis_barang_id": 1,
+   "bentuk_barang_id": 1,
+   "grade_barang_id": 1,
+   "tebal": 10,
+   "panjang": 100,
+   "lebar": 50
+ }
+ ```
+ - **Behavior**:
+   - Tahap 1 (DB): Sistem menghitung `areaNeeded = panjang × lebar` lalu memfilter kandidat dengan `sisa_luas >= areaNeeded`.
+   - Tahap 2 (Canvas): Untuk setiap kandidat, sistem membaca `canvas_file` JSON dan mensimulasikan ketersediaan ruang kontigu untuk `panjang × lebar` (menggunakan irisan strip vertikal dan overlap interval kosong). Hanya item yang benar-benar bisa memuat ukuran tersebut yang dikembalikan.
+ - **Response**: List item barang yang memenuhi kriteria, diurutkan berdasarkan `sisa_luas` (ascending).
+ - **Response Format**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "nama": "Aluminium Shaft Grade A",
+      "ukuran": "100 x 50 x 10",
+      "sisa_luas": 3640.60
+    }
+  ]
+}
+```
 
-  #### 13.1. Get Saran Plat Utuh
-  - **POST** `/api/work-order-planning/get-saran-plat-utuh`
-  - **Description**: Mendapatkan saran plat dasar untuk jenis potongan 'utuh' berdasarkan kriteria (jenis, bentuk, grade barang, tebal, panjang, dan lebar). Hanya menampilkan item yang jenis_potongan = 'utuh' dan tidak sedang diedit (is_edit = false atau null)
+#### 13.1. Get Saran Plat Utuh
+ - **POST** `/api/work-order-planning/get-saran-plat-utuh`
+ - **Description**: Mendapatkan saran plat dasar untuk jenis potongan 'utuh' berdasarkan kriteria (jenis, bentuk, grade barang, tebal, panjang, dan lebar). Hanya menampilkan item yang jenis_potongan = 'utuh' dan tidak sedang diedit (is_edit = false atau null)
   - **Request Body**:
   ```json
   {
