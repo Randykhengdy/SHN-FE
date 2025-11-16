@@ -778,7 +778,7 @@ export default function CanvasTestingPage() {
     const fabricCanvas = canvasInstanceRef.current;
     if (!fabricCanvas) {
       console.error('Canvas belum diinisialisasi!');
-      alert('Canvas belum diinisialisasi!');
+      showAlert('Error', 'Canvas belum diinisialisasi!', 'error');
       return;
     }
     

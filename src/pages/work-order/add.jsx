@@ -951,11 +951,11 @@ export default function AddWorkOrderPage() {
       
       // Copy to clipboard
       navigator.clipboard.writeText(JSON.stringify(dummyPayload, null, 2));
-      alert('Dummy JSON generated and copied to clipboard! Check console for full output.');
+      showAlert('Sukses', 'Dummy JSON generated and copied to clipboard! Check console for full output.', 'success');
       
     } catch (error) {
       console.error('Error generating dummy JSON:', error);
-      alert('Error generating dummy JSON. Check console for details.');
+      showAlert('Error', 'Error generating dummy JSON. Check console for details.', 'error');
     }
   };
 

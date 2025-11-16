@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import WorkshopControlPanel from "@/components/workshop/WorkshopControlPanel";
 import WorkshopCanvas from "@/components/workshop/WorkshopCanvas";
 import ShapeTypeModal from "@/components/workshop/ShapeTypeModal";
+import { useAlert } from "@/hooks/useAlert";
 
 export default function WorkshopPage() {
+  const { showAlert, AlertComponent } = useAlert();
   const [shapeType, setShapeType] = useState(null); // '1D' | '2D'
   const [hasBase, setHasBase] = useState(false)
   const [basePlate, setBasePlate] = useState({
@@ -86,7 +88,7 @@ export default function WorkshopPage() {
   const handleAddCut = (cutInput) => {
     // lengkapi height untuk 1D
     if (!hasBase) {                                       // ⬅️ NEW
-      alert("Buat base terlebih dahulu (Create Base).");
+      showAlert("Error", "Buat base terlebih dahulu (Create Base).", "error");
       return;
     }
     const normalized = {
@@ -97,7 +99,7 @@ export default function WorkshopPage() {
 
     const pos = packCut(normalized, cuts);
     if (!pos) {
-      alert("Tidak ada ruang kosong yang cukup di plat dasar!");
+      showAlert("Error", "Tidak ada ruang kosong yang cukup di plat dasar!", "error");
       return;
     }
 
@@ -112,26 +114,30 @@ export default function WorkshopPage() {
       "workshopProgress",
       JSON.stringify({ shapeType, basePlate, cuts, remainingWeight })
     );
-    alert("Progress disimpan!");
+    showAlert("Sukses", "Progress disimpan!", "success");
   };
   
 
   const onLoadProgress = () => {
     const raw = localStorage.getItem("workshopProgress");
-    if (!raw) return alert("Tidak ada data tersimpan");
+    if (!raw) {
+      showAlert("Info", "Tidak ada data tersimpan", "info");
+      return;
+    }
     try {
       const parsed = JSON.parse(raw);
       setShapeType(parsed.shapeType || "2D");
       setBasePlate(parsed.basePlate || basePlate);
       setCuts(parsed.cuts || []);
       setRemainingWeight(parsed.remainingWeight || 0);
+      showAlert("Sukses", "Data berhasil dimuat", "success");
     } catch {
-      alert("Gagal memuat data.");
+      showAlert("Error", "Gagal memuat data.", "error");
     }
   };
 
   // belum implement download PDF di step ini
-  const onDownloadPDF = () => alert("Download PDF akan kita aktifkan setelah migrasi stabil.");
+  const onDownloadPDF = () => showAlert("Info", "Download PDF akan kita aktifkan setelah migrasi stabil.", "info");
 
   // saat pilih shape di modal, JANGAN auto-create base
   if (!shapeType) {
@@ -165,7 +171,7 @@ export default function WorkshopPage() {
         onSaveProgress={onSaveProgress}
         onLoadProgress={onLoadProgress}
         onDownloadPDF={onDownloadPDF}
-        onShowLayers={() => alert(`Jumlah potongan: ${cuts.length}`)}
+        onShowLayers={() => showAlert("Info", `Jumlah potongan: ${cuts.length}`, "info")}
         hasBase={hasBase}                                  // ⬅️ pass state
         remainingWeight={remainingWeight.toFixed(2)}
       />
@@ -175,6 +181,7 @@ export default function WorkshopPage() {
         cuts={cuts}
         hasBase={hasBase}                                  // ⬅️ pass state
       />
+      <AlertComponent />
     </div>
   );
 }

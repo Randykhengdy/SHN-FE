@@ -6,9 +6,11 @@ import InfoBlock from "@/components/InfoBlock";
 import { Table, TableHead, TableBody, TableRow, TableCell, TableHeader } from "@/components/Table";
 import { platTypes, getPlatData, generateNoPO } from "@/data/platData";
 import useLocalStorage from "@/hooks/useLocalStorage";
+import { useAlert } from "@/hooks/useAlert";
 import "@/styles/po.css";
 
 export default function PurchaseOrderPage() {
+  const { showAlert, AlertComponent } = useAlert();
   // State untuk form dan items
   const [form, setForm] = useState({ panjang: "", lebar: "", qty: 1, jenisPlat: "" });
   const [items, setItems] = useState([]);
@@ -56,7 +58,7 @@ export default function PurchaseOrderPage() {
     const plat = getPlatData(form.jenisPlat);
     
     if (!panjangVal || !lebarVal || !qtyVal || !plat) {
-      alert("Lengkapi data item!");
+      showAlert("Validasi Error", "Lengkapi data item!", "error");
       return;
     }
     
@@ -92,7 +94,7 @@ export default function PurchaseOrderPage() {
   // Handler untuk simpan PO
   const handleSimpanPO = () => {
     if (items.length === 0) {
-      alert("Tambahkan minimal 1 item ke PO!");
+      showAlert("Validasi Error", "Tambahkan minimal 1 item ke PO!", "error");
       return;
     }
     
@@ -107,7 +109,7 @@ export default function PurchaseOrderPage() {
     setPoList([...poList, po]);
     setItems([]);
     setTotalPO(0);
-    alert("PO berhasil disimpan!");
+    showAlert("Sukses", "PO berhasil disimpan!", "success");
   };
 
   return (
@@ -263,6 +265,7 @@ export default function PurchaseOrderPage() {
           </TableBody>
         </Table>
       </div>
+      <AlertComponent />
     </div>
   );
 }

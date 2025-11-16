@@ -65,14 +65,19 @@ export function logoutAndRedirect(showNotification = true) {
   
   // Show user notification if requested and not already on login page
   if (showNotification && !isOnLoginPage) {
-    // Try to show a simple alert first
+    // Dispatch custom event for modal alert (non-blocking)
     try {
-      if (window.confirm) {
-        // Use a non-blocking notification if possible
-        setTimeout(() => {
-          alert('Session expired. You will be redirected to login page.');
-        }, 100);
-      }
+      setTimeout(() => {
+        // Dispatch custom event that can be listened by React components
+        const event = new CustomEvent('showAlert', {
+          detail: {
+            title: 'Session Expired',
+            message: 'Session expired. You will be redirected to login page.',
+            type: 'warning'
+          }
+        });
+        window.dispatchEvent(event);
+      }, 100);
     } catch (error) {
       console.log('Could not show logout notification:', error);
     }

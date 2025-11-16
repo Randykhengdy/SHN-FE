@@ -268,7 +268,14 @@ function createWindow() {
         {
           label: 'Clear All Data',
           accelerator: 'CmdOrCtrl+Shift+C',
-          click: () => mainWindow.webContents.executeJavaScript('localStorage.clear(); alert("Semua data dihapus.")')
+          click: () => {
+            mainWindow.webContents.executeJavaScript('localStorage.clear();');
+            mainWindow.webContents.send('show-alert', {
+              title: 'Sukses',
+              message: 'Semua data dihapus.',
+              type: 'success'
+            });
+          }
         },
         {
           label: 'Export Data',
@@ -281,8 +288,12 @@ function createWindow() {
                 data[key] = localStorage.getItem(key);
               }
               console.log('Exported data:', data);
-              alert('Data exported to console');
             `);
+            mainWindow.webContents.send('show-alert', {
+              title: 'Info',
+              message: 'Data exported to console',
+              type: 'info'
+            });
           }
         }
       ]
@@ -293,9 +304,11 @@ function createWindow() {
         {
           label: 'About',
           click: () => {
-            mainWindow.webContents.executeJavaScript(`
-              alert('SHN React App v1.0.0\\n\\nAplikasi manajemen untuk Surya Logam Jaya');
-            `);
+            mainWindow.webContents.send('show-alert', {
+              title: 'About',
+              message: 'SHN React App v1.0.0\n\nAplikasi manajemen untuk Surya Logam Jaya',
+              type: 'info'
+            });
           }
         },
         {

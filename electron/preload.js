@@ -8,5 +8,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   showMenu: () => ipcRenderer.send('show-menu'),
   hideMenu: () => ipcRenderer.send('hide-menu'),
   saveCanvasFile: (dataUrl, filename) => ipcRenderer.invoke('save-canvas-file', { dataUrl, filename }),
-  clearCanvasPreviews: () => ipcRenderer.invoke('clear-canvas-previews')
+  clearCanvasPreviews: () => ipcRenderer.invoke('clear-canvas-previews'),
+  onShowAlert: (callback) => ipcRenderer.on('show-alert', (event, data) => callback(data))
 });
