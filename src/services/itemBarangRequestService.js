@@ -44,7 +44,7 @@ export const itemBarangRequestService = {
     // Approve item barang request (admin only)
     approve: async (id, data = {}) => {
         return await request(`${API_ENDPOINTS.itemBarangRequest}/${id}/approve`, {
-            method: 'POST',
+            method: 'PATCH',
             body: JSON.stringify(data)
         });
     },
@@ -52,7 +52,7 @@ export const itemBarangRequestService = {
     // Reject item barang request (admin only)
     reject: async (id, data = {}) => {
         return await request(`${API_ENDPOINTS.itemBarangRequest}/${id}/reject`, {
-            method: 'POST',
+            method: 'PATCH',
             body: JSON.stringify(data)
         });
     },

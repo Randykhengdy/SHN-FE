@@ -4216,13 +4216,13 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                         </Button>
                         <Button
                           onClick={addBox}
-                          className="w-full h-8 text-sm bg-green-600 hover:bg-green-700"
+                          className="w-full h-8 text-sm bg-blue-600 hover:bg-blue-700"
                         >
                           Add New Box
                         </Button>
                         <Button
                           onClick={clearAllBoxes}
-                          className="w-full h-8 text-sm bg-red-600 hover:bg-red-700"
+                          className="w-full h-8 text-sm bg-blue-600 hover:bg-blue-700"
                         >
                           Clear All Boxes
                         </Button>
@@ -4359,19 +4359,19 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                         <div className="flex space-x-1">
                           <Button
                             onClick={zoomOut}
-                            className="flex-1 h-8 text-sm bg-gray-600 hover:bg-gray-700"
+                            className="flex-1 h-8 text-sm bg-blue-600 hover:bg-blue-700"
                           >
                             Zoom Out
                           </Button>
                           <Button
                             onClick={resetZoom}
-                            className="flex-1 h-8 text-sm bg-gray-500 hover:bg-gray-600"
+                            className="flex-1 h-8 text-sm bg-blue-600 hover:bg-blue-700"
                           >
                             Reset
                           </Button>
                           <Button
                             onClick={zoomIn}
-                            className="flex-1 h-8 text-sm bg-gray-600 hover:bg-gray-700"
+                            className="flex-1 h-8 text-sm bg-blue-600 hover:bg-blue-700"
                           >
                             Zoom In
                           </Button>
