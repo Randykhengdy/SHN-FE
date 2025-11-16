@@ -249,8 +249,8 @@ export default function SelectPlatShaftDasar({
           bentuk_barang_id: bentukBarangId,
           grade_barang_id: gradeBarangId,
           tebal: tebal,
-          sisa_panjang: parseFloat(workOrderItem?.panjang || 0),
-          sisa_lebar: parseFloat(workOrderItem?.lebar || 0)
+          panjang: parseFloat(workOrderItem?.panjang || 0),
+          lebar: parseFloat(workOrderItem?.lebar || 0)
         })
       });
 

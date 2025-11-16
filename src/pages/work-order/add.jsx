@@ -609,8 +609,8 @@ export default function AddWorkOrderPage() {
           bentuk_barang_id: item.bentuk_barang_id,
           grade_barang_id: item.grade_barang_id,
           tebal: parseFloat(item.tebal) || 0,
-          sisa_panjang: parseFloat(item.panjang) || 0,
-          sisa_lebar: parseFloat(item.lebar) || 0
+          panjang: parseFloat(item.panjang) || 0,
+          lebar: parseFloat(item.lebar) || 0
         })
       });
       
