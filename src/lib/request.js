@@ -45,17 +45,28 @@ export async function request(path, options = {}) {
           refreshSuccess = await performTokenRefresh();
           if (refreshSuccess) {
             if (process.env.NODE_ENV === 'development') {
-              console.log(`✅ Token refreshed on attempt ${attempt}, retrying request...`);
+              console.log(`✅ Token refreshed on attempt ${attempt}, retrying request once...`);
             }
-            // Retry request dengan token baru, batasi total percobaan
-            if (currentRetry + 1 >= MAX_REQUEST_RETRIES) {
-              if (process.env.NODE_ENV === 'development') {
-                console.log("❌ Max request retries reached, aborting");
-              }
-              logoutAndRedirect();
-              throw new Error("Session expired. Please login again.");
+            // Setelah token berhasil di-refresh, lakukan satu kali ulang request tanpa recursion
+            const newHeaders = {
+              ...(isFormData ? {} : { "Content-Type": "application/json" }),
+              ...getAuthHeader(),
+              ...(options.headers || {}),
+            };
+            const retryResponse = await fetch(`${apiConfig.baseUrl}${path}`, {
+              ...options,
+              headers: newHeaders,
+            });
+            if (!retryResponse.ok) {
+              const retryErrorText = await retryResponse.text();
+              let retryMessage = null;
+              try {
+                const retryJson = JSON.parse(retryErrorText);
+                retryMessage = retryJson.message || retryJson.error || retryJson.msg || null;
+              } catch (_) {}
+              throw new Error(retryMessage || `API Error: ${retryResponse.status} ${retryResponse.statusText}`);
             }
-            return request(path, { ...options, __retryTimes: currentRetry + 1 });
+            return retryResponse.json();
           }
         } catch (error) {
           if (process.env.NODE_ENV === 'development') {
