@@ -219,7 +219,6 @@ function createWindow() {
           { label: 'Pembayaran', click: () => mainWindow.webContents.send('navigate-to', '/pembayaran') },
           { label: 'Financial Report', click: () => mainWindow.webContents.send('navigate-to', '/financial-report') },
           { type: 'separator' },
-          { label: 'AR / AP', click: () => mainWindow.webContents.send('navigate-to', '/ar-ap') },
           { label: 'Mutasi Stock', accelerator: 'CmdOrCtrl+M', click: () => mainWindow.webContents.send('navigate-to', '/mutasi-stock') },
           { label: 'Item Barang Request', accelerator: 'CmdOrCtrl+I', click: () => mainWindow.webContents.send('navigate-to', '/item-barang-request') },
           { label: 'Approval', accelerator: 'CmdOrCtrl+Shift+A', click: () => mainWindow.webContents.send('navigate-to', '/approval') },
@@ -229,50 +228,6 @@ function createWindow() {
           { label: 'Merge Barang', accelerator: 'CmdOrCtrl+Shift+M', click: () => mainWindow.webContents.send('navigate-to', '/merge-barang')}
         ]
       },
-          {
-        label: 'Tools',
-        submenu: [
-          { label: 'FUI', accelerator: 'CmdOrCtrl+F', click: () => mainWindow.webContents.send('navigate-to', '/tools/fui') },
-          { label: 'Workshop', accelerator: 'CmdOrCtrl+Shift+W', click: () => mainWindow.webContents.send('navigate-to', '/tools/workshop') },
-          { label: 'Report', click: () => mainWindow.webContents.send('navigate-to', '/tools/report') }
-        ]
-      },
-    {
-      label: 'Data',
-      submenu: [
-        {
-          label: 'Clear All Data',
-          accelerator: 'CmdOrCtrl+Shift+C',
-          click: () => {
-            mainWindow.webContents.executeJavaScript('localStorage.clear();');
-            mainWindow.webContents.send('show-alert', {
-              title: 'Sukses',
-              message: 'Semua data dihapus.',
-              type: 'success'
-            });
-          }
-        },
-        {
-          label: 'Export Data',
-          accelerator: 'CmdOrCtrl+E',
-          click: () => {
-            mainWindow.webContents.executeJavaScript(`
-              const data = {};
-              for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                data[key] = localStorage.getItem(key);
-              }
-              console.log('Exported data:', data);
-            `);
-            mainWindow.webContents.send('show-alert', {
-              title: 'Info',
-              message: 'Data exported to console',
-              type: 'info'
-            });
-          }
-        }
-      ]
-    },
     {
       label: 'Help',
       submenu: [

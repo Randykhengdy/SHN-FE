@@ -29,7 +29,6 @@ export default function MergeBarangPage() {
     const startItem = (currentPage - 1) * itemsPerPage + 1;
     const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
-    // const [showConfirmationModal, setShowConfirmationModal] = useState(false);
     const [showMergeModal, setShowMergeModal] = useState(false);
     const [isMerging, setMerging] = useState(false);
 
@@ -87,9 +86,6 @@ export default function MergeBarangPage() {
             const response = await mergeBarangService.mergeBarang(mergedItem);
 
             console.log('✅ Stock barang merged:', response);
-
-            // Close modal first
-            setShowConfirmationModal(false);
 
             // Show success message and reload data after alert closes
             showAlert("Sukses", "Stock Barang berhasil dimerge!", "success", () => {
