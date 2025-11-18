@@ -209,7 +209,7 @@ function createWindow() {
         ]
       },
           {
-        label: 'Transaksi',
+      label: 'Transaksi',
         submenu: [
           { label: 'Purchase Order', accelerator: 'CmdOrCtrl+P', click: () => mainWindow.webContents.send('navigate-to', '/purchase-order') },
           { label: 'Sales Order', accelerator: 'CmdOrCtrl+S', click: () => mainWindow.webContents.send('navigate-to', '/sales-order') },

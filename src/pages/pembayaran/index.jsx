@@ -338,20 +338,14 @@ export default function PembayaranPage() {
     setPaymentDetail(null);
   };
 
-  // Handle print payment receipt
-  const handlePrintReceipt = async (nomorInvoice) => {
+  // Handle print payment receipt by payment_id
+  const handlePrintReceipt = async (paymentId, nomorInvoice = null) => {
     try {
-      setActionLoading(prev => ({ ...prev, [`print_${nomorInvoice}`]: true }));
+      const loadingKey = nomorInvoice ? `print_${nomorInvoice}` : `print_payment_${paymentId}`;
+      setActionLoading(prev => ({ ...prev, [loadingKey]: true }));
       
-      // Find invoice to get invoice_id
-      const invoice = invoices.find(inv => inv.nomorInvoice === nomorInvoice);
-      if (!invoice || !invoice.id) {
-        showAlert("Error", "Invoice tidak ditemukan", "error");
-        return;
-      }
-      
-      // Generate receipt and get receipt data
-      const result = await pembayaranService.generatePaymentReceipt(invoice.id);
+      // Generate receipt and get receipt data using payment_id
+      const result = await pembayaranService.generatePaymentReceipt(paymentId);
       
       if (result.success && result.data) {
         console.log('Receipt data:', result.data);
@@ -368,6 +362,43 @@ export default function PembayaranPage() {
       }
     } catch (error) {
       console.error('Error printing receipt:', error);
+      const errorMessage = error.message || "Gagal print kwitansi pembayaran";
+      showAlert("Error", errorMessage, "error");
+    } finally {
+      const loadingKey = nomorInvoice ? `print_${nomorInvoice}` : `print_payment_${paymentId}`;
+      setActionLoading(prev => ({ ...prev, [loadingKey]: false }));
+    }
+  };
+
+  // Handle print receipt from invoice (uses latest payment)
+  const handlePrintReceiptFromInvoice = async (nomorInvoice) => {
+    try {
+      setActionLoading(prev => ({ ...prev, [`print_${nomorInvoice}`]: true }));
+      
+      // Get payment detail to find latest payment
+      const result = await pembayaranService.getPaymentDetail(nomorInvoice);
+      
+      if (result.success && result.data) {
+        const payments = result.data.payments || [];
+        if (payments.length === 0) {
+          showAlert("Error", "Tidak ada payment untuk invoice ini", "error");
+          return;
+        }
+        
+        // Use the latest payment (first in array, as API returns sorted by date DESC)
+        const latestPayment = payments[0];
+        if (!latestPayment || !latestPayment.id) {
+          showAlert("Error", "Payment ID tidak ditemukan", "error");
+          return;
+        }
+        
+        // Generate receipt using payment_id
+        await handlePrintReceipt(latestPayment.id, nomorInvoice);
+      } else {
+        showAlert("Error", result.message || "Gagal memuat detail pembayaran", "error");
+      }
+    } catch (error) {
+      console.error('Error printing receipt from invoice:', error);
       const errorMessage = error.message || "Gagal print kwitansi pembayaran";
       showAlert("Error", errorMessage, "error");
     } finally {
@@ -1057,7 +1088,7 @@ export default function PembayaranPage() {
                             <Button 
                               size="sm" 
                               variant="outline" 
-                              onClick={() => handlePrintReceipt(inv.nomorInvoice)}
+                              onClick={() => handlePrintReceiptFromInvoice(inv.nomorInvoice)}
                               disabled={actionLoading[`print_${inv.nomorInvoice}`]}
                             >
                               {actionLoading[`print_${inv.nomorInvoice}`] ? (
@@ -1442,6 +1473,7 @@ export default function PembayaranPage() {
                             <TableHead className="font-semibold">Jumlah Pembayaran</TableHead>
                             <TableHead className="font-semibold">Catatan</TableHead>
                             <TableHead className="font-semibold">Waktu Input</TableHead>
+                            <TableHead className="font-semibold text-center">Aksi</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1457,6 +1489,21 @@ export default function PembayaranPage() {
                               <TableCell>{payment.catatan || '-'}</TableCell>
                               <TableCell>
                                 {formatDateTime(payment.created_at)}
+                              </TableCell>
+                              <TableCell>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => handlePrintReceipt(payment.id)}
+                                  disabled={actionLoading[`print_payment_${payment.id}`]}
+                                >
+                                  {actionLoading[`print_payment_${payment.id}`] ? (
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+                                  ) : (
+                                    <Printer className="w-4 h-4 mr-1" />
+                                  )}
+                                  <span className="hidden sm:inline">Print</span>
+                                </Button>
                               </TableCell>
                             </TableRow>
                           ))}

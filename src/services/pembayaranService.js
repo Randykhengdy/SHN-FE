@@ -46,11 +46,11 @@ export const pembayaranService = {
   },
 
   // Generate and get payment receipt for printing
-  generatePaymentReceipt: async (invoiceId) => {
+  generatePaymentReceipt: async (paymentId) => {
     return await request('/payment/generate-receipt', {
       method: 'POST',
       body: JSON.stringify({
-        invoice_id: invoiceId
+        payment_id: paymentId
       })
     });
   },
