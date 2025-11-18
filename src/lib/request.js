@@ -3,6 +3,8 @@ import apiConfig from "../config/api";
 import { performTokenRefresh, logoutAndRedirect, checkAndRefreshToken } from "./tokenUtils";
 
 export async function request(path, options = {}) {
+  const MAX_REQUEST_RETRIES = 3;
+  const currentRetry = typeof options.__retryTimes === 'number' ? options.__retryTimes : 0;
   // Proactive token check before making request
   try {
     await checkAndRefreshToken();
@@ -45,8 +47,15 @@ export async function request(path, options = {}) {
             if (process.env.NODE_ENV === 'development') {
               console.log(`✅ Token refreshed on attempt ${attempt}, retrying request...`);
             }
-            // Retry request dengan token baru
-            return request(path, options);
+            // Retry request dengan token baru, batasi total percobaan
+            if (currentRetry + 1 >= MAX_REQUEST_RETRIES) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log("❌ Max request retries reached, aborting");
+              }
+              logoutAndRedirect();
+              throw new Error("Session expired. Please login again.");
+            }
+            return request(path, { ...options, __retryTimes: currentRetry + 1 });
           }
         } catch (error) {
           if (process.env.NODE_ENV === 'development') {

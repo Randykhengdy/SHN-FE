@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import SearchSelect from "@/components/ui/search-select";
-import { getItemBarangOptions, getItemBarangOptionsFiltered } from "@/services/masterDataService";
+import { getItemBarangOptionsFiltered, getItemBarangOptionsMergeable } from "@/services/masterDataService";
 import { useAlert } from "../ui/modal";
 import { itemBarangService } from "@/services/master-data";
 import { Label } from "../ui/label";
@@ -45,7 +45,7 @@ const MergeBarangModal = ({
                 const [
                     itemStocks,
                 ] = await Promise.all([
-                    getItemBarangOptions(),
+                    getItemBarangOptionsMergeable(),
                 ]);
                 setItemStockOptions(itemStocks);
             } catch (error) {
@@ -154,7 +154,7 @@ const MergeBarangModal = ({
                     <div className="flex-1">
                         {/* Pilih Item Mutasi */}
                         <div className="flex">
-                            <div className="flex-1 m-lg !mt-0">
+                            <div className="flex-1 m-lg !mt-0 w-[60%]">
                                 <div className="col-span-2">
                                     <SearchSelect
                                         label="Item Barang"
@@ -178,7 +178,7 @@ const MergeBarangModal = ({
                             </div>
                         </div>
                         <div className="flex">
-                            <div className="flex-1 m-lg !mt-0">
+                            <div className="flex-1 m-lg !mt-0 w-[60%]">
                                 <div className="col-span-2">
                                     <SearchSelect
                                         label="Item Barang"

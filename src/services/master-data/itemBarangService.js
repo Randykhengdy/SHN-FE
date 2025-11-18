@@ -11,11 +11,11 @@ export const itemBarangService = {
       page: page.toString(),
       per_page: perPage.toString()
     });
-    
+
     if (sortBy && sortDir) {
       params.append('sort', `${sortBy},${sortDir}`);
     }
-    
+
     return request(`/item-barang?${params}`, { method: "GET" });
   },
 
@@ -73,12 +73,16 @@ export const itemBarangService = {
       page: page.toString(),
       per_page: perPage.toString()
     });
-    
+
     if (sortBy && sortDir) {
       params.append('sort', `${sortBy},${sortDir}`);
     }
-    
+
     return request(`/item-barang/with-trashed/trashed?${params}`, { method: "GET" });
+  },
+
+  async getMergeable() {
+    return request(`/item-barang/mergeable`, { method: "GET" });
   },
 
   async getSimilarType(id) {

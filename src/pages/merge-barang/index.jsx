@@ -93,8 +93,8 @@ export default function MergeBarangPage() {
             });
 
         } catch (error) {
-            console.error('❌ Error memotong barang:', error);
-            showAlert("Error", `Gagal memotong barang. ${error.message}`, "error");
+            console.error('❌ Error menggabungkan barang:', error);
+            showAlert("Error", `Gagal menggabungkan barang. ${error.message}`, "error");
         } finally {
             setMerging(false);
         }
