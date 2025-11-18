@@ -317,10 +317,11 @@ export default function AddSalesOrderPage() {
     if (!customer) return;
     
     setSelectedCustomer(customer);
-    setCustomerName(customer.nama || "");
-    setCustomerPhone(customer.telepon || "");
+    // Update customer form state with proper field names
+    setCustomerName(customer.nama_pelanggan || customer.nama || "");
+    setCustomerPhone(customer.telepon_hp || customer.telepon || "");
     setCustomerEmail(customer.email || "");
-    setCustomerAddress(customer.alamat || "");
+    setCustomerAddress(customer.alamat || customer.kota || "");
   };
 
   const handleAddItem = () => {
@@ -480,19 +481,31 @@ export default function AddSalesOrderPage() {
       console.log("✅ Sales Order berhasil disimpan:", result);
       showAlert("Sukses", "Sales Order berhasil disimpan!", "success");
       try {
+        // Get term label and warehouse name
+        const termLabel = termOptions.find(opt => opt.value === termOfPayment)?.label || termOfPayment;
+        const warehouseName = warehouseOptions.find(opt => opt.value === originWarehouse)?.label || originWarehouse;
+        
+        // Use selectedCustomer data if available, otherwise use form state
+        const customerData = selectedCustomer ? {
+          nama: selectedCustomer.nama_pelanggan || selectedCustomer.nama || customerName || 'N/A',
+          telepon: selectedCustomer.telepon_hp || selectedCustomer.telepon || customerPhone || 'N/A',
+          email: selectedCustomer.email || customerEmail || 'N/A',
+          alamat: selectedCustomer.alamat || selectedCustomer.kota || customerAddress || 'N/A'
+        } : {
+          nama: customerName || 'N/A',
+          telepon: customerPhone || 'N/A',
+          email: customerEmail || 'N/A',
+          alamat: customerAddress || 'N/A'
+        };
+        
         // Langsung buka dialog cetak menggunakan data yang baru saja disimpan (data lokal)
         const printDataOnSave = {
           nomor_so: soNumber,
           tanggal_so: soDate,
           tanggal_pengiriman: deliveryDate,
-          term_of_payment: termOfPayment,
-          gudang_asal: originWarehouse,
-          customer: {
-            nama: customerName,
-            telepon: customerPhone,
-            email: customerEmail,
-            alamat: customerAddress
-          },
+          term_of_payment: termLabel,
+          gudang_asal: warehouseName,
+          customer: customerData,
           items: items.map(item => ({
             nama_item: item.jenisBarang,
             bentuk_barang: item.bentuk,
@@ -539,19 +552,31 @@ export default function AddSalesOrderPage() {
         return;
       }
 
+      // Get term label and warehouse name
+      const termLabel = termOptions.find(opt => opt.value === termOfPayment)?.label || termOfPayment;
+      const warehouseName = warehouseOptions.find(opt => opt.value === originWarehouse)?.label || originWarehouse;
+      
+      // Use selectedCustomer data if available, otherwise use form state
+      const customerData = selectedCustomer ? {
+        nama: selectedCustomer.nama_pelanggan || selectedCustomer.nama || customerName || 'N/A',
+        telepon: selectedCustomer.telepon_hp || selectedCustomer.telepon || customerPhone || 'N/A',
+        email: selectedCustomer.email || customerEmail || 'N/A',
+        alamat: selectedCustomer.alamat || selectedCustomer.kota || customerAddress || 'N/A'
+      } : {
+        nama: customerName || 'N/A',
+        telepon: customerPhone || 'N/A',
+        email: customerEmail || 'N/A',
+        alamat: customerAddress || 'N/A'
+      };
+      
       // Prepare print data (use existing local state, no refetch)
       const printData = {
         nomor_so: soNumber,
         tanggal_so: soDate,
         tanggal_pengiriman: deliveryDate,
-        term_of_payment: termOfPayment,
-        gudang_asal: originWarehouse,
-        customer: {
-          nama: customerName,
-          telepon: customerPhone,
-          email: customerEmail,
-          alamat: customerAddress
-        },
+        term_of_payment: termLabel,
+        gudang_asal: warehouseName,
+        customer: customerData,
         items: items.map(item => ({
           nama_item: item.jenisBarang,
           bentuk_barang: item.bentuk,
@@ -1008,7 +1033,7 @@ export default function AddSalesOrderPage() {
 
             {/* Row 3: Panjang, Lebar, Tebal */}
             <div>
-              <Label htmlFor="itemLength">Panjang</Label>
+              <Label htmlFor="itemLength">Panjang (mm)</Label>
               <Input
                 id="itemLength"
                 type="number"
@@ -1020,7 +1045,7 @@ export default function AddSalesOrderPage() {
               />
             </div>
             <div>
-              <Label htmlFor="itemWidth">Lebar</Label>
+              <Label htmlFor="itemWidth">Lebar (mm)</Label>
               <Input
                 id="itemWidth"
                 type="number"

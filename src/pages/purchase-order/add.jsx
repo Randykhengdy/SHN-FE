@@ -144,18 +144,21 @@ export default function AddPurchaseOrderPage() {
         }
         setItemThickness(thicknessDisplay);
 
-        // Hitung luas persegi berdasarkan dimensi
+        // Hitung luas persegi berdasarkan dimensi (TEBAL TIDAK DIHITUNG)
+        // Input dalam mm, perlu konversi ke m/m²
         let area = 0;
         let areaPerItem = "0.00";
 
         if (selectedShape?.dimensi === "1D") {
-          // Untuk bentuk 1D (persegi panjang), luas = panjang x lebar
-          area = length * width;
-          areaPerItem = area.toFixed(2);
+          // Untuk bentuk 1D (shaft), luas = panjang saja (tanpa tebal)
+          // Convert mm to m
+          area = length;
+          areaPerItem = (area / 1000).toFixed(2); // Convert mm to m
         } else if (selectedShape?.dimensi === "2D") {
-          // Untuk bentuk 2D (persegi), luas = panjang x tebal
+          // Untuk bentuk 2D (plat), luas = panjang x lebar (tanpa tebal)
+          // Convert mm² to m²
           area = length * width;
-          areaPerItem = area.toFixed(2);
+          areaPerItem = (area / 10000).toFixed(2); // Convert mm² to m²
         }
 
         // Hitung harga per m²
@@ -166,16 +169,32 @@ export default function AddPurchaseOrderPage() {
         setItemPricePerUnit(pricePerM2);
 
         // Hitung total item (termasuk diskon)
+        // Menggunakan area dalam m/m² untuk perhitungan
         let totalBeforeDiscount = 0;
         let totalAfterDiscount = 0;
         
-        if (area > 0 && pricePerUnit > 0) {
-          totalBeforeDiscount = area * pricePerUnit * qty;
+        if (pricePerUnit > 0) {
+          let areaInM = 0;
+          if (selectedShape?.dimensi === "1D") {
+            // 1D: panjang dalam m
+            areaInM = length / 1000;
+            totalBeforeDiscount = areaInM * pricePerUnit * qty;
+          } else if (selectedShape?.dimensi === "2D") {
+            // 2D: luas dalam m²
+            areaInM = (length * width) / 10000;
+            totalBeforeDiscount = areaInM * pricePerUnit * qty;
+          }
+          
           const discountAmount = totalBeforeDiscount * (discount / 100);
           totalAfterDiscount = totalBeforeDiscount - discountAmount;
         }
 
-        setItemArea(`${areaPerItem} m²`);
+        // Set area display based on shape
+        if (selectedShape?.dimensi === "1D") {
+          setItemArea(`${areaPerItem} m`); // 1D shows in meters
+        } else {
+          setItemArea(`${areaPerItem} m²`); // 2D shows in square meters
+        }
         setItemTotal(`Rp ${totalAfterDiscount.toLocaleString('id-ID')}`);
 
       } catch (error) {
@@ -242,18 +261,33 @@ export default function AddPurchaseOrderPage() {
 
       let dimensiString = "";
       if (selectedShape.dimensi === "1D") {
-        dimensiString = `${itemLength} x ${itemWidth}`;
-      } else {
+        // 1D: panjang x tebal
         dimensiString = `${itemLength} x ${itemDiameter}`;
+      } else {
+        // 2D: panjang x lebar x tebal
+        dimensiString = `${itemLength} x ${itemWidth} x ${itemDiameter}`;
       }
 
       // Calculate subtotal untuk backend
+      // Input dalam mm, perlu konversi ke m/m² untuk perhitungan
       const length = parseFloat(itemLength) || 0;
       const width = parseFloat(itemWidth) || 0;
-      const area = length * width;
       const qty = parseInt(itemQty);
       const hargaSatuan = parseFloat(itemPrice) || 0;
-      const subtotalBeforeDiscount = area * hargaSatuan * qty;
+      
+      let areaInM = 0;
+      let subtotalBeforeDiscount = 0;
+      
+      if (selectedShape?.dimensi === "1D") {
+        // 1D: panjang dalam m
+        areaInM = length / 1000;
+        subtotalBeforeDiscount = areaInM * hargaSatuan * qty;
+      } else if (selectedShape?.dimensi === "2D") {
+        // 2D: luas dalam m²
+        areaInM = (length * width) / 10000;
+        subtotalBeforeDiscount = areaInM * hargaSatuan * qty;
+      }
+      
       const discountAmount = subtotalBeforeDiscount * (parseFloat(itemDiscount) || 0) / 100;
       const subtotal = subtotalBeforeDiscount - discountAmount;
 
@@ -321,15 +355,25 @@ export default function AddPurchaseOrderPage() {
     
     try {
       // Calculate total amount dari semua items
+      // Konversi mm ke m/m² untuk perhitungan
       const totalAmount = items.reduce((sum, item) => {
         const length = item.panjang || 0;
         const width = item.lebar || 0;
-        const area = length * width;
         const qty = item.qty || 0;
         const harga = item.harga || 0;
         const diskon = item.diskon || 0;
         
-        const subtotalBeforeDiscount = area * harga * qty;
+        // Konversi mm ke m/m²
+        let areaInM = 0;
+        if (width > 0) {
+          // 2D: luas dalam m²
+          areaInM = (length * width) / 10000;
+        } else {
+          // 1D: panjang dalam m
+          areaInM = length / 1000;
+        }
+        
+        const subtotalBeforeDiscount = areaInM * harga * qty;
         const discountAmount = subtotalBeforeDiscount * (diskon / 100);
         const subtotal = subtotalBeforeDiscount - discountAmount;
         
@@ -493,16 +537,28 @@ export default function AddPurchaseOrderPage() {
   ];
 
   // Calculate summary
+  // Perlu mendapatkan dimensi shape untuk setiap item, tapi karena tidak disimpan di item,
+  // kita asumsikan semua item 2D (karena purchase order biasanya untuk plat)
+  // Atau kita bisa hitung berdasarkan apakah lebar > 0
   const subtotal = items.reduce((sum, item) => {
     try {
       const length = item.panjang || 0;
       const width = item.lebar || 0;
-      const area = length * width;
       const qty = item.qty || 0;
       const harga = item.harga || 0;
       const diskon = item.diskon || 0;
       
-      const subtotalBeforeDiscount = area * harga * qty;
+      // Konversi mm ke m/m²
+      let areaInM = 0;
+      if (width > 0) {
+        // 2D: luas dalam m²
+        areaInM = (length * width) / 10000;
+      } else {
+        // 1D: panjang dalam m
+        areaInM = length / 1000;
+      }
+      
+      const subtotalBeforeDiscount = areaInM * harga * qty;
       const discountAmount = subtotalBeforeDiscount * (diskon / 100);
       const subtotal = subtotalBeforeDiscount - discountAmount;
       
@@ -517,12 +573,21 @@ export default function AddPurchaseOrderPage() {
     try {
       const length = item.panjang || 0;
       const width = item.lebar || 0;
-      const area = length * width;
       const qty = item.qty || 0;
       const harga = item.harga || 0;
       const diskon = item.diskon || 0;
       
-      const subtotalBeforeDiscount = area * harga * qty;
+      // Konversi mm ke m/m²
+      let areaInM = 0;
+      if (width > 0) {
+        // 2D: luas dalam m²
+        areaInM = (length * width) / 10000;
+      } else {
+        // 1D: panjang dalam m
+        areaInM = length / 1000;
+      }
+      
+      const subtotalBeforeDiscount = areaInM * harga * qty;
       const discountAmount = subtotalBeforeDiscount * (diskon / 100);
       
       return sum + discountAmount;
@@ -790,7 +855,7 @@ export default function AddPurchaseOrderPage() {
 
             {/* Row 3: Panjang, Lebar, Tebal */}
             <div>
-              <Label htmlFor="itemLength">Panjang</Label>
+              <Label htmlFor="itemLength">Panjang (mm)</Label>
               <Input
                 id="itemLength"
                 type="number"
@@ -802,7 +867,7 @@ export default function AddPurchaseOrderPage() {
               />
             </div>
             <div>
-              <Label htmlFor="itemWidth">Lebar</Label>
+              <Label htmlFor="itemWidth">Lebar (mm)</Label>
               <Input
                 id="itemWidth"
                 type="number"
