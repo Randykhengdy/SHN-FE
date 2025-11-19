@@ -83,7 +83,7 @@ export const woActualService = {
     
     const excludeRaw = params.exclude_status || 'Selesai';
     if (excludeRaw) {
-      const mapped = excludeRaw.toUpperCase() === 'SELESAI' ? 'completed' : excludeRaw.toLowerCase();
+      const mapped = excludeRaw; // backend expects literal "Selesai"
       queryParams.append('exclude_status', mapped);
       queryParams.append('filter[exclude_status]', mapped);
     }

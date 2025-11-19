@@ -20,6 +20,7 @@ export async function request(path, options = {}) {
     ...(options.headers || {}),
   };
 
+  const isCanvasEndpoint = /canvas/i.test(path);
   const response = await fetch(`${apiConfig.baseUrl}${path}`, {
     ...options,
     headers: mergedHeaders,
@@ -27,8 +28,10 @@ export async function request(path, options = {}) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error("API Error:", response.status, errorText);
-    console.log("🔍 Raw error response:", errorText);
+    if (!isCanvasEndpoint && process.env.NODE_ENV === 'development') {
+      console.error("API Error:", response.status, errorText);
+      console.log("🔍 Raw error response:", errorText);
+    }
     
     // Cek apakah error 401 (Unauthorized) - coba refresh token dulu
     if (response.status === 401) {
@@ -61,7 +64,7 @@ export async function request(path, options = {}) {
       }
       
       // Jika semua retry gagal, logout
-      if (process.env.NODE_ENV === 'development') {
+      if (!isCanvasEndpoint && process.env.NODE_ENV === 'development') {
         console.log("❌ All token refresh attempts failed, logging out");
       }
       
@@ -73,9 +76,7 @@ export async function request(path, options = {}) {
     let errorMessage = null;
     
     try {
-      console.log("🔍 Trying to parse error as JSON...");
       const errorJson = JSON.parse(errorText);
-      console.log("🔍 Parsed error JSON:", errorJson);
       
       // Cek berbagai kemungkinan format error message
       if (errorJson.message) {
@@ -88,13 +89,15 @@ export async function request(path, options = {}) {
         errorMessage = errorJson;
       }
       
-      if (errorMessage) {
+      if (errorMessage && !isCanvasEndpoint && process.env.NODE_ENV === 'development') {
         console.log("✅ Using API error message:", errorMessage);
       }
     } catch (e) {
-      // Jika gagal parse JSON, gunakan error text asli
-      console.error("❌ Error parsing error response:", e);
-      console.log("🔍 Using fallback error message");
+      // Silent for canvas endpoints to avoid spam
+      if (!isCanvasEndpoint && process.env.NODE_ENV === 'development') {
+        console.error("❌ Error parsing error response:", e);
+        console.log("🔍 Using fallback error message");
+      }
     }
     
     // Throw error dengan message yang sudah di-parse

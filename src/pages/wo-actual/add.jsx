@@ -46,6 +46,9 @@ export default function AddWOActualPage() {
   const [loadingPelaksana, setLoadingPelaksana] = useState(false);
   const [pelaksanaModalOpen, setPelaksanaModalOpen] = useState(false);
   const [pelaksanaModalItemId, setPelaksanaModalItemId] = useState(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewSrc, setPreviewSrc] = useState('');
+  const [previewTitle, setPreviewTitle] = useState('');
 
   // Loading State
   const [loading, setLoading] = useState(false);
@@ -848,7 +851,7 @@ export default function AddWOActualPage() {
                                     <button
                                       type="button"
                                       className="text-xs text-blue-600 hover:underline"
-                                      onClick={() => window.open(actualItem.foto_bukti, '_blank')}
+                                      onClick={() => { setPreviewSrc(actualItem.foto_bukti); setPreviewTitle(`Foto Bukti Item #${planningItem.id}`); setPreviewOpen(true); }}
                                     >
                                       Lihat
                                     </button>
@@ -906,6 +909,24 @@ export default function AddWOActualPage() {
           }));
         }}
       />
+
+      {previewOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-sm font-medium text-gray-900">{previewTitle || 'Preview Foto Bukti'}</h3>
+              <button type="button" className="text-gray-500 hover:text-gray-700" onClick={() => setPreviewOpen(false)}>✕</button>
+            </div>
+            <div className="p-4">
+              {previewSrc ? (
+                <img src={previewSrc} alt="Preview Foto Bukti" className="max-h-[70vh] w-full object-contain rounded" />
+              ) : (
+                <div className="text-center text-gray-500 py-8">Tidak ada gambar</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </PageLayout>
   );
 }

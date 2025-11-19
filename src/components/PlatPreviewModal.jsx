@@ -48,9 +48,7 @@ const PlatPreviewModal = ({
       setGeneratingPreviews({});
       
       // Regenerate previews if we have items
-      if (previewItems && previewItems.length > 0) {
-        generateAllPreviews();
-      }
+      // Avoid duplicate generation here; first effect handles regeneration
     }
   }, [isOpen]);
 
@@ -75,6 +73,9 @@ const PlatPreviewModal = ({
   };
 
   const generatePreviewForItem = async (itemId) => {
+    if (generatingPreviews[itemId]) {
+      return;
+    }
     console.log(`🔍 Starting preview generation for item ${itemId}`);
     setGeneratingPreviews(prev => ({ ...prev, [itemId]: true }));
     

@@ -33,21 +33,35 @@ const PelaksanaActualModal = ({
   const [rows, setRows] = useState([]);
 
   useEffect(() => {
-    // Bangun baris dari pelaksana planning; prefill dari value actual jika ada
-    const byId = new Map((Array.isArray(value) ? value : []).map(r => [r.pelaksana_id, r]));
-    const computed = (Array.isArray(planningPelaksana) ? planningPelaksana : []).map(p => {
-      const id = p?.pelaksana_info?.id || p?.pelaksana?.id || p?.id || null;
-      const nama = p?.pelaksana_info?.nama_pelaksana || p?.pelaksana?.nama || p?.nama || p?.name || "-";
-      const prev = byId.get(id) || {};
-      return {
-        pelaksana_id: prev.pelaksana_id ?? id,
-        nama,
-        qty: prev.qty ?? 0,
-        berat: prev.berat ?? prev.weight ?? 0,
-        catatan: prev.catatan || (p?.catatan || ""),
-      };
-    });
-    setRows(computed);
+    // Jika ada data planning, bangun baris dari planning dan prefill dari actual
+    const actualArr = Array.isArray(value) ? value : [];
+    const planningArr = Array.isArray(planningPelaksana) ? planningPelaksana : [];
+    if (planningArr.length > 0) {
+      const byId = new Map(actualArr.map(r => [r.pelaksana_id, r]));
+      const computed = planningArr.map(p => {
+        const id = p?.pelaksana_info?.id || p?.pelaksana?.id || p?.id || null;
+        const nama = p?.pelaksana_info?.nama_pelaksana || p?.pelaksana?.nama || p?.nama || p?.name || "-";
+        const prev = byId.get(id) || {};
+        return {
+          pelaksana_id: prev.pelaksana_id ?? id,
+          nama,
+          qty: prev.qty ?? 0,
+          berat: prev.berat ?? prev.weight ?? 0,
+          catatan: prev.catatan || (p?.catatan || ""),
+        };
+      });
+      setRows(computed);
+      return;
+    }
+    // Fallback: tampilkan dari actual jika planning tidak tersedia
+    const computedFromActual = actualArr.map(r => ({
+      pelaksana_id: r.pelaksana_id ?? r.pelaksana?.id ?? null,
+      nama: r.pelaksana?.nama_pelaksana || r.pelaksana?.nama || r.nama || "-",
+      qty: r.qty ?? 0,
+      berat: r.berat ?? r.weight ?? 0,
+      catatan: r.catatan || "",
+    }));
+    setRows(computedFromActual);
   }, [value, planningPelaksana, open]);
 
   // Tidak ada tambah/hapus baris: actual hanya untuk pelaksana planning
@@ -84,39 +98,7 @@ const PelaksanaActualModal = ({
         </DialogHeader>
 
         <div className="flex flex-col gap-3">
-          {/* Planning summary */}
-          <Card>
-            <CardContent className="py-3">
-              <div className="text-sm font-medium text-gray-700 mb-2">Pelaksana (Planning)</div>
-              {Array.isArray(planningPelaksana) && planningPelaksana.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nama</TableHead>
-                      <TableHead className="text-center">Qty</TableHead>
-                      <TableHead className="text-center">Berat</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {planningPelaksana.map((p, idx) => (
-                      <TableRow key={idx}>
-                        <TableCell>{p?.pelaksana_info?.nama_pelaksana || "N/A"}</TableCell>
-                        <TableCell className="text-center">{p?.qty ?? 0}</TableCell>
-                        <TableCell className="text-center">{p?.weight ?? 0}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="text-xs text-gray-500">Tidak ada pelaksana di planning untuk item ini.</div>
-              )}
-            </CardContent>
-          </Card>
-
-  {/* Actual editor: qty & berat editable, pelaksana mengikuti planning */}
-  <div className="text-sm font-medium">
-    {readOnly ? 'Qty & Berat per Pelaksana (tampilan saja)' : 'Input Qty & Berat per Pelaksana (mengikuti WO Planning)'}
-  </div>
+          <div className="text-sm font-medium">Qty & Berat per Pelaksana</div>
   <Table>
     <TableHeader>
       <TableRow>

@@ -90,7 +90,8 @@ export default function WOActualPage() {
       });
       
       // Transform API data to match our UI structure
-      const transformedData = (result.data || []).map(woActual => ({
+      const rawList = Array.isArray(result?.data) ? result.data : (Array.isArray(result) ? result : []);
+      const transformedData = rawList.map(woActual => ({
         id: woActual.id,
         woNumber: woActual.nomor_wo || 'N/A',
         soNumber: woActual.nomor_so || 'N/A',
@@ -104,7 +105,12 @@ export default function WOActualPage() {
       
       // Since filtering is now handled by API, we can directly use the data
       setWorkOrders(transformedData);
-      setTotalItems(result.total || transformedData.length);
+      const total = result?.total 
+        ?? result?.pagination?.total 
+        ?? result?.meta?.total 
+        ?? result?.total_items 
+        ?? transformedData.length;
+      setTotalItems(Number(total) || transformedData.length);
       
     } catch (error) {
       console.error('❌ Error loading Work Orders:', error);
@@ -118,6 +124,11 @@ export default function WOActualPage() {
   useEffect(() => {
     loadWorkOrders();
   }, [loadWorkOrders]);
+
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, filterWoNumber, filterSoNumber, filterCustomer, filterWarehouse, dateActualStart, dateActualEnd, periodFilter, itemsPerPage]);
 
   // Handle navigation to add page
   const handleAddWOActual = () => {
