@@ -37,6 +37,9 @@ export async function convertBase64ToPreview(itemId, base64Image) {
         const result = await window.electronAPI.saveCanvasFile(dataURL, fileName);
         if (result.success && typeof window !== 'undefined') {
           window.canvasPreviewCacheBuster = Date.now();
+          try {
+            window.dispatchEvent(new CustomEvent('canvasPreviewSaved', { detail: { itemId } }));
+          } catch (_) {}
         }
       } catch (_) {}
     } else {
@@ -50,6 +53,9 @@ export async function convertBase64ToPreview(itemId, base64Image) {
         document.body.removeChild(link);
         if (typeof window !== 'undefined') {
           window.canvasPreviewCacheBuster = Date.now();
+          try {
+            window.dispatchEvent(new CustomEvent('canvasPreviewSaved', { detail: { itemId } }));
+          } catch (_) {}
         }
       } catch (_) {}
     }

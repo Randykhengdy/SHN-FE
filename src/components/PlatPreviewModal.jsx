@@ -21,6 +21,7 @@ const PlatPreviewModal = ({
   const [previewImages, setPreviewImages] = useState({});
   const [showCanvas, setShowCanvas] = useState(false);
   const [selectedCanvasItem, setSelectedCanvasItem] = useState(null);
+  const [loadedImages, setLoadedImages] = useState({});
 
   useEffect(() => {
     const handler = (e) => {
@@ -86,6 +87,7 @@ const PlatPreviewModal = ({
       console.log(`📁 Local preview file exists for item ${itemId}: ${exists}`);
       if (exists) {
         setPreviewImages(prev => ({ ...prev, [itemId]: getPreviewImageUrl(itemId) }));
+        setLoadedImages(prev => ({ ...prev, [itemId]: false }));
         console.log(`✅ Using existing local preview file for item ${itemId} (no API call)`);
         return;
       }
@@ -98,11 +100,13 @@ const PlatPreviewModal = ({
       
       if (previewPath) {
         setPreviewImages(prev => ({ ...prev, [itemId]: previewPath }));
+        setLoadedImages(prev => ({ ...prev, [itemId]: false }));
         console.log(`✅ Generated new preview from API for item ${itemId}`);
       }
       const refreshedUrl = await waitForPreview(itemId);
       if (refreshedUrl) {
         setPreviewImages(prev => ({ ...prev, [itemId]: refreshedUrl }));
+        setLoadedImages(prev => ({ ...prev, [itemId]: false }));
         console.log(`✅ Confirmed preview file exists, updated URL for item ${itemId}`);
       } else {
         console.log(`❌ Preview file still not detected after retries for item ${itemId}`);
@@ -130,14 +134,10 @@ const PlatPreviewModal = ({
 
   const refreshPreviewForItem = async (itemId) => {
     console.log(`🔄 Refreshing preview for item ${itemId}...`);
-    // Clear the existing preview for this item
-    setPreviewImages(prev => {
-      const newState = { ...prev };
-      delete newState[itemId];
-      return newState;
-    });
-    // Generate new preview
-    await generatePreviewForItem(itemId);
+    setGeneratingPreviews(prev => ({ ...prev, [itemId]: true }));
+    const url = await waitForPreview(itemId) || getPreviewImageUrl(itemId);
+    setPreviewImages(prev => ({ ...prev, [itemId]: url }));
+    setGeneratingPreviews(prev => ({ ...prev, [itemId]: false }));
   };
 
   if (!isOpen || !currentItemData) {
@@ -212,6 +212,7 @@ const PlatPreviewModal = ({
                                 const previewPath = await getCanvasPreviewByItemId(item.id);
                                 if (previewPath) {
                                   setPreviewImages(prev => ({ ...prev, [item.id]: previewPath }));
+                                  setLoadedImages(prev => ({ ...prev, [item.id]: false }));
                                   console.log(`✅ Generated new preview after image load failure for item ${item.id}`);
                                 }
                               } catch (error) {
@@ -224,6 +225,7 @@ const PlatPreviewModal = ({
                                 naturalHeight: e.target.naturalHeight,
                                 aspectRatio: e.target.naturalWidth / e.target.naturalHeight
                               });
+                              setLoadedImages(prev => ({ ...prev, [item.id]: true }));
                             }}
                           />
                         ) : null}
@@ -231,7 +233,7 @@ const PlatPreviewModal = ({
                         {/* Fallback placeholder */}
                         <div 
                           className="text-center absolute inset-0 flex items-center justify-center"
-                          style={{ display: previewImages[item.id] ? 'none' : 'flex' }}
+                          style={{ display: (previewImages[item.id] && loadedImages[item.id]) ? 'none' : 'flex' }}
                         >
                           <div className="text-center">
                             <Package className="w-8 h-8 text-gray-400 mx-auto mb-2" />
