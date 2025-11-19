@@ -3,6 +3,8 @@ import apiConfig from "../config/api";
 import { performTokenRefresh, logoutAndRedirect, checkAndRefreshToken } from "./tokenUtils";
 
 export async function request(path, options = {}) {
+  const MAX_REQUEST_RETRIES = 3;
+  const currentRetry = typeof options.__retryTimes === 'number' ? options.__retryTimes : 0;
   // Proactive token check before making request
   try {
     await checkAndRefreshToken();

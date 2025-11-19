@@ -126,7 +126,7 @@ const SplitBarangModal = ({
                     <div className="flex-1">
                         {/* Pilih Item Mutasi */}
                         <div className="flex">
-                            <div className="flex-1 m-lg !mt-0">
+                            <div className="flex-1 m-lg !mt-0 w-[60%]">
                                 <div className="col-span-2">
                                     <SearchSelect
                                         label="Item Barang"
@@ -150,7 +150,7 @@ const SplitBarangModal = ({
                             </div>
                         </div>
                         <div className="flex">
-                            <div className="flex-1 m-lg !mt-0 space-y-2">
+                            <div className="flex-1 m-lg !mt-0 space-y-2  w-[60%]">
                                 <Label className="block text-sm font-medium text-gray-700 mb-1">Quantity Split</Label>
                                 <div className="relative">
                                     <Input
