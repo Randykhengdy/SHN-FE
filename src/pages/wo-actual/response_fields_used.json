@@ -1,0 +1,82 @@
+{
+  "work_order_actual": {
+    "id": "number",
+    "work_order_planning_id": "number",
+    "tanggal_actual": "string",
+    "status": "string",
+    "catatan": "string|null",
+    "jam_mulai": "string|null",
+    "jam_selesai": "string|null",
+    "prioritas": "string"
+  },
+  "work_order_planning": {
+    "id": "number",
+    "nomor_wo": "string",
+    "tanggal_wo": "string",
+    "id_sales_order": "number",
+    "id_pelanggan": "number",
+    "id_gudang": "number",
+    "status": "string",
+    "pelanggan": {
+      "nama": "string",
+      "nama_pelanggan": "string"
+    },
+    "gudang": {
+      "nama": "string",
+      "nama_gudang": "string"
+    }
+  },
+  "work_order_actual_items[]": {
+    "id": "number",
+    "work_order_actual_id": "number",
+    "wo_plan_item_id": "number",
+    "qty_actual": "number",
+    "berat": "string|number",
+    "status": "string",
+    "qty_planning": "number",
+    "berat_planning": "string|number",
+    "work_order_planning_item": {
+      "id": "number",
+      "qty": "number",
+      "item_barang": {
+        "nama_item_barang": "string"
+      },
+      "jenis_barang": {
+        "nama": "string",
+        "nama_jenis_barang": "string"
+      },
+      "bentuk_barang": {
+        "nama": "string",
+        "nama_bentuk_barang": "string"
+      },
+      "grade_barang": {
+        "nama": "string",
+        "nama_grade_barang": "string"
+      },
+      "pelaksana[]": {
+        "pelaksana_info": {
+          "id": "number",
+          "nama_pelaksana": "string"
+        },
+        "qty": "number",
+        "weight": "number"
+      }
+    },
+    "has_many_pelaksana[]": {
+      "id": "number",
+      "pelaksana_id": "number",
+      "qty": "number",
+      "weight": "string|number",
+      "tanggal": "string",
+      "jam_mulai": "string",
+      "jam_selesai": "string",
+      "catatan": "string|null",
+      "pelaksana": {
+        "id": "number",
+        "kode": "string",
+        "nama_pelaksana": "string",
+        "level": "string|number"
+      }
+    }
+  }
+}

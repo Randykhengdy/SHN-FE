@@ -7,42 +7,11 @@ import { request } from './request';
  */
 export async function getCanvasPreviewByItemId(itemId) {
   try {
-    console.log(`🖼️ Fetching canvas image for item ID: ${itemId}`);
-    
-    // Hit the API to get canvas image (base64)
-    const response = await request(`/item-barang/${itemId}/canvas-image`, {
-      method: 'GET'
-    });
-    
-    console.log('Canvas image API response:', response);
-    console.log('Response type:', typeof response);
-    console.log('Response keys:', response ? Object.keys(response) : 'null');
-    
-    // Check if response has canvas image data
-    if (!response) {
-      console.log(`⚠️ No response received for item ID: ${itemId}`);
-      return null;
-    }
-    
-    if (!response.canvas_image) {
-      console.log(`⚠️ No canvas_image field in response for item ID: ${itemId}`);
-      console.log('Available fields:', Object.keys(response));
-      return null;
-    }
-    
-    console.log(`✅ Found canvas_image data for item ID: ${itemId}`);
-    console.log(`Canvas image data length: ${response.canvas_image.length}`);
-    
-    // Convert base64 to blob and create preview
+    const response = await request(`/item-barang/${itemId}/canvas-image`, { method: 'GET' });
+    if (!response || !response.canvas_image) return null;
     const previewImagePath = await convertBase64ToPreview(itemId, response.canvas_image);
-    
-    console.log(`Preview image path returned: ${previewImagePath}`);
     return previewImagePath;
-    
   } catch (error) {
-    console.error(`❌ Error fetching canvas image for item ID ${itemId}:`, error);
-    console.error('Error details:', error.message);
-    console.error('Error stack:', error.stack);
     return null;
   }
 }
@@ -55,92 +24,38 @@ export async function getCanvasPreviewByItemId(itemId) {
  */
 export async function convertBase64ToPreview(itemId, base64Image) {
   try {
-    console.log(`🔄 Converting base64 to preview for item ID: ${itemId}`);
-    console.log(`Base64 data length: ${base64Image.length}`);
-    console.log(`Base64 starts with: ${base64Image.substring(0, 50)}...`);
-    
-    // Convert base64 to blob
-    console.log(`🔄 Converting base64 to blob...`);
     const blob = await base64ToBlob(base64Image);
-    console.log(`✅ Blob created:`, {
-      size: blob.size,
-      type: blob.type
-    });
-    
-    // Save the file to the public canvas-previews folder using Electron API
     const fileName = `canvas-preview-ItemId-${itemId}.jpg`;
-    const filePath = `canvas-previews/${fileName}`;
-    
-    console.log(`🔄 Checking Electron API availability...`);
-    console.log(`window.electronAPI:`, !!window.electronAPI);
-    console.log(`window.electronAPI.saveCanvasFile:`, !!(window.electronAPI && window.electronAPI.saveCanvasFile));
-    console.log(`Available Electron API methods:`, window.electronAPI ? Object.keys(window.electronAPI) : 'none');
-    
-    // Try to save using Electron API if available (using saveCanvasFile like the canvas page)
     if (window.electronAPI && window.electronAPI.saveCanvasFile) {
       try {
-        console.log(`🔄 Converting blob to dataURL for Electron...`);
-        // Convert blob to dataURL for Electron (like the canvas page does)
         const reader = new FileReader();
         const dataURL = await new Promise((resolve, reject) => {
           reader.onload = () => resolve(reader.result);
           reader.onerror = reject;
           reader.readAsDataURL(blob);
         });
-        
-        console.log(`🔄 Calling Electron saveCanvasFile...`);
         const result = await window.electronAPI.saveCanvasFile(dataURL, fileName);
-        console.log(`Electron saveCanvasFile result:`, result);
-        
-        if (result.success) {
-          if (typeof window !== 'undefined') {
-            window.canvasPreviewCacheBuster = Date.now();
-          }
-          console.log(`✅ Saved preview file to public folder: ${fileName}`);
-        } else {
-          console.warn(`⚠️ Failed to save preview file: ${result.error}`);
+        if (result.success && typeof window !== 'undefined') {
+          window.canvasPreviewCacheBuster = Date.now();
         }
-      } catch (electronError) {
-        console.warn(`⚠️ Electron save failed: ${electronError.message}`);
-        console.error('Electron error details:', electronError);
-      }
+      } catch (_) {}
     } else {
-      console.log(`📁 Electron API not available, trying alternative save method...`);
-      
-      // Alternative method: Create a download link to save the file
       try {
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.download = fileName;
         link.style.display = 'none';
-        
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
-        console.log(`✅ Triggered download for preview file: ${fileName}`);
         if (typeof window !== 'undefined') {
           window.canvasPreviewCacheBuster = Date.now();
         }
-      } catch (downloadError) {
-        console.warn(`⚠️ Download method failed: ${downloadError.message}`);
-      }
+      } catch (_) {}
     }
-    
-    // Create object URL for immediate display
-    console.log(`🔄 Creating object URL for display...`);
     const previewUrl = URL.createObjectURL(blob);
-    console.log(`✅ Object URL created: ${previewUrl}`);
-    
-    console.log(`✅ Generated preview for item ID ${itemId}: ${filePath}`);
-    console.log(`📐 Preview maintains original image dimensions`);
-    
-    return previewUrl; // Return the blob URL for immediate use
-    
-  } catch (error) {
-    console.error('Error converting base64 to preview:', error);
-    console.error('Error details:', error.message);
-    console.error('Error stack:', error.stack);
+    return previewUrl;
+  } catch (_) {
     return null;
   }
 }
@@ -396,11 +311,9 @@ export async function previewImageExists(itemId) {
     const baseUrl = `/canvas-previews/canvas-preview-ItemId-${itemId}.jpg?cb=${buster}`;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 1500);
-    const response = await fetch(baseUrl, { method: 'GET', cache: 'no-store', signal: controller.signal });
+    const response = await fetch(baseUrl, { method: 'HEAD', cache: 'no-store', signal: controller.signal });
     clearTimeout(timeout);
-    if (!response.ok) return false;
-    const contentType = response.headers.get('content-type') || '';
-    return contentType.includes('image');
+    return response.ok;
   } catch (error) {
     return false;
   }
