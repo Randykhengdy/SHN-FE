@@ -425,7 +425,8 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
 };
 
 // Generate printable HTML for Work Order Actual (WO Actual)
-export const generateWOActualPrintContent = (woActualData) => {
+export const generateWOActualPrintContent = (woActualData, options = {}) => {
+  const includeImages = options.includeImages !== false;
   const formatDate = (dateString) => {
     if (!dateString) return '-';
     try {
@@ -483,7 +484,7 @@ export const generateWOActualPrintContent = (woActualData) => {
   })();
 
   // Render Before/After images per item (Planning vs Actual) using mapped arrays
-  const beforeAfterSectionHtml = (woActualData.items || []).length > 0
+  const beforeAfterSectionHtml = includeImages && (woActualData.items || []).length > 0
     ? (() => {
         const itemSections = (woActualData.items || []).map((it) => {
           const beforeImages = Array.isArray(it.beforeImages) ? it.beforeImages : [];
@@ -623,7 +624,8 @@ export const generateWOActualPrintContent = (woActualData) => {
 };
 
 // Generate printable HTML for Work Order Planning (WO Planning)
-export const generateWOPlanningPrintContent = (woPlanningData) => {
+export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => {
+  const includeImages = options.includeImages !== false;
   const formatDate = (dateString) => {
     if (!dateString) return '-';
     try {
@@ -651,7 +653,7 @@ export const generateWOPlanningPrintContent = (woPlanningData) => {
   `).join('') || '<tr><td colspan="8" style="text-align: center; padding: 12px;">Tidak ada item</td></tr>';
 
   // Render canvas images with robust item-based grouping and naming
-  const canvasImagesHtml = (woPlanningData.canvasImages || []).length > 0
+  const canvasImagesHtml = includeImages && (woPlanningData.canvasImages || []).length > 0
     ? (() => {
         // Build map from item IDs to index and display name
         const itemsArr = woPlanningData.items || [];

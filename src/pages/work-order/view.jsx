@@ -17,6 +17,8 @@ import PageLayout from "@/components/PageLayout";
 import PelaksanaViewModal from "@/components/modals/PelaksanaViewModal";
 import SaranViewModal from "@/components/modals/SaranViewModal";
 import { openPrintDialog, generateWOPlanningPrintContent } from "@/lib/printUtils";
+import CustomAlert from "@/components/modals/CustomAlert";
+import { Switch } from "@/components/ui/switch";
 
 export default function ViewWorkOrderPage() {
   const { id } = useParams();
@@ -26,6 +28,8 @@ export default function ViewWorkOrderPage() {
   
   // Loading states
   const [loading, setLoading] = useState(false);
+  const [printOptionsOpen, setPrintOptionsOpen] = useState(false);
+  const [includeImages, setIncludeImages] = useState(true);
   
   // Prevent multiple API calls
   const isLoadingRef = useRef(false);
@@ -90,20 +94,14 @@ export default function ViewWorkOrderPage() {
   };
 
   // Handle Print WO (Planning)
-  const handlePrint = async () => {
+  const doPrint = async () => {
     try {
       setLoading(true);
-
-      // Ambil gambar canvas (opsional)
       let canvasImages = [];
       try {
         const imagesResponse = await workOrderService.getWorkOrderImages(id);
         canvasImages = imagesResponse.data?.images || [];
-      } catch (error) {
-        console.warn('⚠️ Gagal mengambil gambar canvas, lanjut tanpa gambar.', error);
-      }
-
-      // Siapkan data WO Planning untuk cetak
+      } catch (_) {}
       const printData = {
         nomor_wo: workOrder?.nomor_wo || woNumber || 'N/A',
         tanggal_wo: workOrder?.tanggal_wo || woDate || 'N/A',
@@ -127,9 +125,7 @@ export default function ViewWorkOrderPage() {
         })),
         canvasImages
       };
-
-      // Buka dialog print dengan konten HTML
-      const html = generateWOPlanningPrintContent(printData);
+      const html = generateWOPlanningPrintContent(printData, { includeImages });
       openPrintDialog(html);
     } catch (error) {
       console.error('❌ Error saat membuka dialog cetak WO Planning:', error);
@@ -839,7 +835,7 @@ export default function ViewWorkOrderPage() {
             <Button 
               size="lg" 
               className="bg-blue-600 hover:bg-blue-700"
-              onClick={handlePrint}
+              onClick={() => setPrintOptionsOpen(true)}
               disabled={loading}
             >
               {loading ? 'Menyiapkan cetak...' : 'Cetak WO'}
@@ -862,6 +858,27 @@ export default function ViewWorkOrderPage() {
           onClose={closeSaranModal}
           saranData={selectedItemSaran}
           itemInfo={selectedItemInfo}
+        />
+        <CustomAlert
+          open={printOptionsOpen}
+          onOpenChange={setPrintOptionsOpen}
+          title="Opsi Cetak WO"
+          message={null}
+          type="info"
+          showCancel={true}
+          confirmText={loading ? 'Mencetak...' : 'Cetak'}
+          cancelText="Batal"
+          onConfirm={doPrint}
+          extraContent={(
+            <div className="w-full flex items-center justify-between gap-4 bg-gray-50 rounded-md px-3 py-2 border">
+              <span className="text-sm text-gray-800">Sertakan gambar untuk print</span>
+              <Switch
+                checked={includeImages}
+                onCheckedChange={setIncludeImages}
+                aria-label="Sertakan gambar untuk print"
+              />
+            </div>
+          )}
         />
       </PageLayout>
   );

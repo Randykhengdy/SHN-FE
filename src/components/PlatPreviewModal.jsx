@@ -84,11 +84,8 @@ const PlatPreviewModal = ({
       console.log(`🔍 Checking if preview file exists locally for item ${itemId}`);
       const exists = await previewImageExists(itemId);
       console.log(`📁 Local preview file exists for item ${itemId}: ${exists}`);
-      
       if (exists) {
-        // If local file exists, use it (no API call needed)
         setPreviewImages(prev => ({ ...prev, [itemId]: getPreviewImageUrl(itemId) }));
-        setGeneratingPreviews(prev => ({ ...prev, [itemId]: false }));
         console.log(`✅ Using existing local preview file for item ${itemId} (no API call)`);
         return;
       }
@@ -103,7 +100,6 @@ const PlatPreviewModal = ({
         setPreviewImages(prev => ({ ...prev, [itemId]: previewPath }));
         console.log(`✅ Generated new preview from API for item ${itemId}`);
       }
-
       const refreshedUrl = await waitForPreview(itemId);
       if (refreshedUrl) {
         setPreviewImages(prev => ({ ...prev, [itemId]: refreshedUrl }));
@@ -211,8 +207,6 @@ const PlatPreviewModal = ({
                               console.error('Preview image failed to load:', previewImages[item.id]);
                               e.target.style.display = 'none';
                               e.target.nextSibling.style.display = 'flex';
-                              
-                              // If image failed to load, try to generate a new preview
                               console.log(`🔄 Image failed to load for item ${item.id}, attempting to generate new preview...`);
                               try {
                                 const previewPath = await getCanvasPreviewByItemId(item.id);

@@ -31,10 +31,12 @@ import {
 } from '@/services/masterDataService';
 import { documentSequenceService } from '@/services/master-data/documentSequenceService';
 import CustomAlert from '@/components/modals/CustomAlert';
+import { Switch } from '@/components/ui/switch';
 
 export default function AddWorkOrderPage() {
   const navigate = useNavigate();
   const { showAlert, AlertComponent } = useAlert();
+  const SARAN_PER_PAGE = 6;
   
   // Work Order Planning State
   const [workOrderData, setWorkOrderData] = useState({
@@ -106,6 +108,7 @@ export default function AddWorkOrderPage() {
   const [loadingSalesOrder, setLoadingSalesOrder] = useState(false);
   const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
   const [confirmSaveMessage, setConfirmSaveMessage] = useState('');
+  const [includeImages, setIncludeImages] = useState(true);
 
   // UI State for pelaksana modal
   const [pelaksanaModalOpen, setPelaksanaModalOpen] = useState(false);
@@ -612,7 +615,7 @@ export default function AddWorkOrderPage() {
     
     try {
       // Hit same API as regular Pilih button
-      const response = await request('/work-order-planning/get-saran-plat-dasar', {
+      const response = await request(`/work-order-planning/get-saran-plat-dasar?per_page=${SARAN_PER_PAGE}&page=1`, {
         method: 'POST',
         body: JSON.stringify({
           jenis_barang_id: item.jenis_barang_id,
@@ -620,12 +623,14 @@ export default function AddWorkOrderPage() {
           grade_barang_id: item.grade_barang_id,
           tebal: parseFloat(item.tebal) || 0,
           panjang: parseFloat(item.panjang) || 0,
-          lebar: parseFloat(item.lebar) || 0
+          lebar: parseFloat(item.lebar) || 0,
+          per_page: SARAN_PER_PAGE,
+          page: 1
         })
       });
       
       console.log('Preview API response:', response.data);
-      setPreviewItems(response.data || []);
+      setPreviewItems((response.data || []).slice(0, SARAN_PER_PAGE));
     } catch (error) {
       console.error('Error loading preview items:', error);
       showAlert('Error', 'Gagal memuat data preview', 'error');
@@ -1091,7 +1096,7 @@ export default function AddWorkOrderPage() {
           }
         })()
       };
-      const html = generateWOPlanningPrintContent(printData);
+      const html = generateWOPlanningPrintContent(printData, { includeImages });
       openPrintDialog(html);
       navigate('/work-order');
     } catch (error) {
@@ -1559,14 +1564,16 @@ export default function AddWorkOrderPage() {
           >
             Batal
           </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={handleGenerateDummyJson}
-            disabled={loading}
-          >
-            Generate Dummy JSON
-          </Button>
+          {false && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleGenerateDummyJson}
+              disabled={loading}
+            >
+              Generate Dummy JSON
+            </Button>
+          )}
           <Button
             type="submit"
             disabled={loading}
@@ -1590,6 +1597,7 @@ export default function AddWorkOrderPage() {
           workOrderId={workOrderId}
           onSelectionChange={handlePlatDasarSelection}
           onClose={closePlatDasarModal}
+          perPage={SARAN_PER_PAGE}
         />
       )}
 
@@ -1868,6 +1876,16 @@ export default function AddWorkOrderPage() {
         confirmText={loading ? 'Menyimpan...' : 'Ya, Simpan'}
         cancelText="Tidak"
         onConfirm={proceedSave}
+        extraContent={(
+          <div className="w-full flex items-center justify-between gap-4 bg-gray-50 rounded-md px-3 py-2 border">
+            <span className="text-sm text-gray-800">Sertakan gambar untuk print</span>
+            <Switch
+              checked={includeImages}
+              onCheckedChange={setIncludeImages}
+              aria-label="Sertakan gambar untuk print"
+            />
+          </div>
+        )}
       />
       <AlertComponent />
     </PageLayout>

@@ -13,6 +13,8 @@ import PageLayout from '@/components/PageLayout';
 import { woActualService } from '@/services/woActualService';
 import { workOrderService } from '@/services/workOrderService';
 import { generateWOActualPrintContent, openPrintDialog } from '@/lib/printUtils';
+import CustomAlert from '@/components/modals/CustomAlert';
+import { Switch } from '@/components/ui/switch';
 import PelaksanaActualModal from '@/components/modals/PelaksanaActualModal';
 import { getPelaksanaOptions } from '@/services/masterDataService';
 import { Label } from '@/components/ui/label';
@@ -53,6 +55,9 @@ export default function AddWOActualPage() {
   // Loading State
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [printOptionsOpen, setPrintOptionsOpen] = useState(false);
+  const [includeImages, setIncludeImages] = useState(true);
+  const [pendingPrintData, setPendingPrintData] = useState(null);
 
   // Load WO Planning options
   const loadWOPlanningOptions = useCallback(async () => {
@@ -454,14 +459,9 @@ export default function AddWOActualPage() {
           parentImages: formData.foto_bukti ? [{ src: formData.foto_bukti }] : [],
         };
 
-        // Buka dialog print otomatis
-        const html = generateWOActualPrintContent(printData);
-        openPrintDialog(html);
-
-        showAlert('WO Actual berhasil disimpan', 'Membuka jendela print...', 'success');
-        setTimeout(() => {
-          navigate('/wo-actual');
-        }, 1500);
+        setPendingPrintData(printData);
+        setPrintOptionsOpen(true);
+        showAlert('WO Actual berhasil disimpan', 'Silakan pilih opsi cetak.', 'success');
       } else {
         throw new Error(response.message || 'Failed to save WO Actual');
       }
@@ -508,6 +508,33 @@ export default function AddWOActualPage() {
     <PageLayout>
       <div className="space-y-6">
         <AlertComponent />
+        <CustomAlert
+          open={printOptionsOpen}
+          onOpenChange={setPrintOptionsOpen}
+          title="Opsi Cetak WO Actual"
+          message={null}
+          type="info"
+          showCancel={true}
+          confirmText={saving ? 'Mencetak...' : 'Cetak'}
+          cancelText="Batal"
+          onConfirm={() => {
+            if (pendingPrintData) {
+              const html = generateWOActualPrintContent(pendingPrintData, { includeImages });
+              openPrintDialog(html);
+              setTimeout(() => navigate('/wo-actual'), 500);
+            }
+          }}
+          extraContent={(
+            <div className="w-full flex items-center justify-between gap-4 bg-gray-50 rounded-md px-3 py-2 border">
+              <span className="text-sm text-gray-800">Sertakan gambar untuk print</span>
+              <Switch
+                checked={includeImages}
+                onCheckedChange={setIncludeImages}
+                aria-label="Sertakan gambar untuk print"
+              />
+            </div>
+          )}
+        />
         
         {/* Header */}
         <div className="flex items-center justify-between">
