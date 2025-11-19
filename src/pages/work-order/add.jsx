@@ -30,6 +30,7 @@ import {
   getSalesOrderOptions
 } from '@/services/masterDataService';
 import { documentSequenceService } from '@/services/master-data/documentSequenceService';
+import CustomAlert from '@/components/modals/CustomAlert';
 
 export default function AddWorkOrderPage() {
   const navigate = useNavigate();
@@ -103,6 +104,8 @@ export default function AddWorkOrderPage() {
   const [loadingGradeBarang, setLoadingGradeBarang] = useState(false);
   const [loadingPelaksana, setLoadingPelaksana] = useState(false);
   const [loadingSalesOrder, setLoadingSalesOrder] = useState(false);
+  const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
+  const [confirmSaveMessage, setConfirmSaveMessage] = useState('');
 
   // UI State for pelaksana modal
   const [pelaksanaModalOpen, setPelaksanaModalOpen] = useState(false);
@@ -968,6 +971,142 @@ export default function AddWorkOrderPage() {
   };
 
   // Handle form submission
+  const proceedSave = async () => {
+    setLoading(true);
+    try {
+      const existingWoUniqueId = localStorage.getItem('WO_current_work_order_id');
+      const woUniqueId = existingWoUniqueId || `WO-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
+      const existingWoItemIds = totalQuantityData.map(item => item.WoItemID.toString());
+      const transformedData = {
+        wo_unique_id: woUniqueId,
+        tanggal_wo: workOrderData.tanggal_wo,
+        tanggal_target: workOrderData.tanggal_target,
+        id_sales_order: workOrderData.sales_order_id,
+        id_pelanggan: workOrderData.pelanggan_id,
+        id_gudang: workOrderData.gudang_id,
+        prioritas: workOrderData.prioritas,
+        status: workOrderData.status,
+        handover_method: workOrderData.handover_method,
+        catatan: workOrderData.catatan,
+        id_pelaksana: (() => {
+          const allPelaksanaIds = [];
+          workOrderItems.forEach(item => {
+            item.pelaksana.forEach(pelaksana => {
+              if (pelaksana.pelaksana_id && !allPelaksanaIds.includes(pelaksana.pelaksana_id)) {
+                allPelaksanaIds.push(pelaksana.pelaksana_id);
+              }
+            });
+          });
+          return allPelaksanaIds.length > 0 ? allPelaksanaIds : null;
+        })(),
+        prioritas: workOrderData.prioritas,
+        handover_method: workOrderData.handover_method,
+        catatan: workOrderData.catatan,
+        status: workOrderData.status,
+        items: workOrderItems.map((item, index) => ({
+          wo_item_unique_id: existingWoItemIds[index] || `WOI-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+          sales_order_item_id: item.sales_order_item_id,
+          qty: item.qty,
+          panjang: parseFloat(item.panjang) || 0,
+          lebar: parseFloat(item.lebar) || 0,
+          tebal: parseFloat(item.tebal) || 0,
+          jenis_barang_id: item.jenis_barang_id,
+          bentuk_barang_id: item.bentuk_barang_id,
+          grade_barang_id: item.grade_barang_id,
+          jenis_potongan: item.jenis_potongan || 'potongan',
+          berat: 0,
+          satuan: 'PCS',
+          diskon: 0,
+          catatan: item.catatan,
+          saran_plat_dasar: (() => {
+            const tq = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
+            const woItemData = tq.find(wo => wo.WoItemID === item.id);
+            if (!woItemData || !woItemData.WOQuantity) return [];
+            return woItemData.WOQuantity.map(woq => ({
+              item_barang_id: woq.ItemId,
+              quantity: woq.Quantity,
+              is_selected: true
+            }));
+          })(),
+          pelaksana: item.pelaksana.map(p => ({
+            pelaksana_id: p.pelaksana_id,
+            qty: p.qty,
+            weight: (typeof p.berat !== 'undefined') ? (parseFloat(p.berat) || 0) : (parseFloat(p.weight) || 0),
+            tanggal: workOrderData.tanggal_wo,
+            jam_mulai: '08:00',
+            jam_selesai: '17:00',
+            catatan: p.catatan
+          }))
+        }))
+      };
+      const response = await workOrderService.createWorkOrder(transformedData);
+      const createdId = response.data?.id || response.id;
+      const workOrderNumber = response.data?.nomor_wo || workOrderData.nomor_wo;
+      const workOrderItemsResponse = response.data?.items || [];
+      localStorage.setItem('WO_item_unique_ids', JSON.stringify(existingWoItemIds));
+      try {
+        await saveSaranPlatDasar(createdId, workOrderItemsResponse);
+      } catch (_) {}
+      const mapLabel = (list, value) => {
+        const found = list.find(opt => String(opt.value) === String(value));
+        return found ? (found.label || found.nama || found.text || String(value)) : String(value || 'N/A');
+      };
+      const printData = {
+        nomor_wo: workOrderNumber || workOrderData.nomor_wo,
+        tanggal_wo: workOrderData.tanggal_wo,
+        due_date: workOrderData.tanggal_target,
+        priority: workOrderData.prioritas,
+        status: workOrderData.status,
+        assigned_to: workOrderData.handover_method,
+        customer: (() => {
+          const cust = pelangganList.find(p => String(p.value) === String(workOrderData.pelanggan_id));
+          return cust ? { nama: cust.label } : { nama: 'N/A' };
+        })(),
+        warehouse: (() => {
+          const wh = gudangList.find(g => String(g.value) === String(workOrderData.gudang_id));
+          return wh ? { nama_gudang: wh.label } : { nama_gudang: 'N/A' };
+        })(),
+        items: workOrderItems.map(item => ({
+          jenisBarang: { nama_jenis_barang: mapLabel(jenisBarangList, item.jenis_barang_id), nama: mapLabel(jenisBarangList, item.jenis_barang_id) },
+          bentukBarang: { nama_bentuk_barang: mapLabel(bentukBarangList, item.bentuk_barang_id), nama_bentuk: mapLabel(bentukBarangList, item.bentuk_barang_id), nama: mapLabel(bentukBarangList, item.bentuk_barang_id) },
+          gradeBarang: { nama_grade_barang: mapLabel(gradeBarangList, item.grade_barang_id), nama_grade: mapLabel(gradeBarangList, item.grade_barang_id), nama: mapLabel(gradeBarangList, item.grade_barang_id) },
+          dimensi: `${item.panjang || 0}x${item.lebar || 0}x${item.tebal || 0}mm`,
+          qtyPlanning: item.qty || 0,
+          jenisPotongan: item.jenis_potongan || 'potongan',
+          keterangan: item.catatan || ''
+        })),
+        canvasImages: (() => {
+          try {
+            const used = JSON.parse(localStorage.getItem('WO_used_saran_plats') || '[]');
+            const images = [];
+            used.forEach(id => {
+              const fileName = `canvas-preview-ItemId-${id}.jpg`;
+              const src = `/canvas-previews/${fileName}`;
+              images.push({ item_id: parseInt(id), src });
+            });
+            return images;
+          } catch (e) {
+            return [];
+          }
+        })()
+      };
+      const html = generateWOPlanningPrintContent(printData);
+      openPrintDialog(html);
+      navigate('/work-order');
+    } catch (error) {
+      let errorMessage = 'Gagal membuat Work Order';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      showAlert('Error', errorMessage, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -1034,195 +1173,16 @@ export default function AddWorkOrderPage() {
       }
     }
 
-    // Konfirmasi sebelum save
-    const confirmSave = window.confirm(
-      `Konfirmasi Simpan Work Order\n\n` +
-      `Nomor WO: ${workOrderData.nomor_wo}\n` +
-      `Tanggal WO: ${workOrderData.tanggal_wo}\n` +
-      `Prioritas: ${workOrderData.prioritas}\n` +
-      `Metode Penyerahan: ${workOrderData.handover_method === 'pickup' ? 'Pickup' : 'Delivery'}\n` +
-      `Jumlah Item: ${workOrderItems.length}\n` +
-      `Total Pelaksana: ${workOrderItems.reduce((total, item) => total + item.pelaksana.length, 0)}\n\n` +
-      `Apakah Anda yakin ingin menyimpan Work Order ini?`
-    );
-
-    if (!confirmSave) {
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // Get existing unique IDs from localStorage
-      const existingWoUniqueId = localStorage.getItem('WO_current_work_order_id');
-      const woUniqueId = existingWoUniqueId || `WO-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-      
-      // Get existing woItemUniqueIds from WO_total_quantity (convert to string)
-      const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
-      const existingWoItemIds = totalQuantityData.map(item => item.WoItemID.toString());
-      
-      // Transform data to match API expected format
-      const transformedData = {
-        wo_unique_id: woUniqueId,
-        tanggal_wo: workOrderData.tanggal_wo,
-        tanggal_target: workOrderData.tanggal_target,
-        id_sales_order: workOrderData.sales_order_id,
-        id_pelanggan: workOrderData.pelanggan_id,
-        id_gudang: workOrderData.gudang_id,
-        prioritas: workOrderData.prioritas,
-        status: workOrderData.status,
-        handover_method: workOrderData.handover_method,
-        catatan: workOrderData.catatan,
-        // Add id_pelaksana field at the top level as required by API (array of all pelaksana IDs)
-        id_pelaksana: (() => {
-          const allPelaksanaIds = [];
-          workOrderItems.forEach(item => {
-            item.pelaksana.forEach(pelaksana => {
-              if (pelaksana.pelaksana_id && !allPelaksanaIds.includes(pelaksana.pelaksana_id)) {
-                allPelaksanaIds.push(pelaksana.pelaksana_id);
-              }
-            });
-          });
-          return allPelaksanaIds.length > 0 ? allPelaksanaIds : null;
-        })(),
-        prioritas: workOrderData.prioritas,
-        handover_method: workOrderData.handover_method,
-        catatan: workOrderData.catatan,
-        status: workOrderData.status,
-        items: workOrderItems.map((item, index) => ({
-          wo_item_unique_id: existingWoItemIds[index] || `WOI-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-          sales_order_item_id: item.sales_order_item_id, // Include sales order item ID
-          qty: item.qty,
-          panjang: parseFloat(item.panjang) || 0,
-          lebar: parseFloat(item.lebar) || 0,
-          tebal: parseFloat(item.tebal) || 0,
-          jenis_barang_id: item.jenis_barang_id,
-          bentuk_barang_id: item.bentuk_barang_id,
-          grade_barang_id: item.grade_barang_id,
-          jenis_potongan: item.jenis_potongan || 'potongan',
-          berat: 0, // Default weight, bisa diisi nanti
-          satuan: "PCS", // Default unit
-          diskon: 0, // Default discount
-          catatan: item.catatan,
-          // Saran plat dasar mapping dari WO_total_quantity localStorage
-          saran_plat_dasar: (() => {
-            const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
-            const woItemData = totalQuantityData.find(wo => wo.WoItemID === item.id);
-            if (!woItemData || !woItemData.WOQuantity) return [];
-            return woItemData.WOQuantity.map(woq => ({
-              item_barang_id: woq.ItemId,
-              quantity: woq.Quantity,
-              is_selected: true
-            }));
-          })(),
-          // Add required fields for pelaksana
-          pelaksana: item.pelaksana.map(p => ({
-            pelaksana_id: p.pelaksana_id,
-            qty: p.qty,
-            weight: (typeof p.berat !== 'undefined') ? (parseFloat(p.berat) || 0) : (parseFloat(p.weight) || 0),
-            tanggal: workOrderData.tanggal_wo, // Use WO date as default
-            jam_mulai: "08:00", // Default start time
-            jam_selesai: "17:00", // Default end time
-            catatan: p.catatan
-          }))
-        }))
-      };
-
-      console.log('Transformed data to send:', transformedData);
-      
-      const response = await workOrderService.createWorkOrder(transformedData);
-      
-      // Get the created work order ID from response
-      const workOrderId = response.data?.id || response.id;
-      const workOrderNumber = response.data?.nomor_wo || workOrderData.nomor_wo;
-      const workOrderItemsResponse = response.data?.items || [];
-      
-      // Store array of woItemUniqueIds for saran plat dasar
-      localStorage.setItem('WO_item_unique_ids', JSON.stringify(existingWoItemIds));
-      
-      console.log('WO Unique ID:', woUniqueId);
-      console.log('WO Item Unique IDs:', existingWoItemIds.length > 0 ? existingWoItemIds : transformedData.items.map(item => item.wo_item_unique_id));
-      
-      // Save saran plat dasar
-      try {
-        console.log('🚀 Calling saveSaranPlatDasar...');
-        await saveSaranPlatDasar(workOrderId, workOrderItemsResponse);
-        console.log('✅ saveSaranPlatDasar completed');
-      } catch (error) {
-        console.error('❌ Error saving saran plat dasar:', error);
-        // Don't throw error here, just log it
-      }
-      
-      // Clear the stored work order ID since work order is now saved
-      // localStorage.removeItem('WO_current_work_order_id');
-      
-      // Siapkan data cetak menggunakan data lokal yang baru saja dikirim (tanpa refetch)
-      const mapLabel = (list, value) => {
-        const found = list.find(opt => String(opt.value) === String(value));
-        return found ? (found.label || found.nama || found.text || String(value)) : String(value || 'N/A');
-      };
-
-      const printData = {
-        nomor_wo: workOrderNumber || workOrderData.nomor_wo,
-        tanggal_wo: workOrderData.tanggal_wo,
-        due_date: workOrderData.tanggal_target,
-        priority: workOrderData.prioritas,
-        status: workOrderData.status,
-        assigned_to: workOrderData.handover_method,
-        customer: (() => {
-          const cust = pelangganList.find(p => String(p.value) === String(workOrderData.pelanggan_id));
-          return cust ? { nama: cust.label } : { nama: 'N/A' };
-        })(),
-        warehouse: (() => {
-          const wh = gudangList.find(g => String(g.value) === String(workOrderData.gudang_id));
-          return wh ? { nama_gudang: wh.label } : { nama_gudang: 'N/A' };
-        })(),
-        items: workOrderItems.map(item => ({
-          nama_item: mapLabel(jenisBarangList, item.jenis_barang_id),
-          bentukBarang: { nama: mapLabel(bentukBarangList, item.bentuk_barang_id) },
-          gradeBarang: { nama: mapLabel(gradeBarangList, item.grade_barang_id) },
-          dimensi: `${item.panjang || 0}x${item.lebar || 0}x${item.tebal || 0}mm`,
-          qtyPlanning: item.qty || 0,
-          jenisPotongan: item.jenis_potongan || 'potongan',
-          keterangan: item.catatan || ''
-        })),
-        // Ambil gambar canvas dari folder public berdasarkan saran ItemId yang dipakai
-        canvasImages: (() => {
-          try {
-            const used = JSON.parse(localStorage.getItem('WO_used_saran_plats') || '[]');
-            const images = [];
-            used.forEach(id => {
-              const fileName = `canvas-preview-ItemId-${id}.jpg`;
-              const src = `/canvas-previews/${fileName}`;
-              images.push({ item_id: parseInt(id), src });
-            });
-            return images;
-          } catch (e) {
-            console.warn('Gagal menyiapkan canvas images untuk cetak:', e);
-            return [];
-          }
-        })()
-      };
-
-      const html = generateWOPlanningPrintContent(printData);
-      openPrintDialog(html);
-      // Setelah dialog cetak dibuka, tutup halaman Add dan kembali ke daftar WO
-      navigate('/work-order');
-    } catch (error) {
-      console.error('Error creating work order:', error);
-      
-      // Extract error message from API response
-      let errorMessage = 'Gagal membuat Work Order';
-      
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      showAlert('Error', errorMessage, 'error');
-    } finally {
-      setLoading(false);
-    }
+    const msg = [
+      `Nomor WO: ${workOrderData.nomor_wo}`,
+      `Tanggal WO: ${workOrderData.tanggal_wo}`,
+      `Prioritas: ${workOrderData.prioritas}`,
+      `Metode Penyerahan: ${workOrderData.handover_method === 'pickup' ? 'Pickup' : 'Delivery'}`,
+      `Jumlah Item: ${workOrderItems.length}`,
+      `Total Pelaksana: ${workOrderItems.reduce((total, item) => total + item.pelaksana.length, 0)}`
+    ].join('\n');
+    setConfirmSaveMessage(msg);
+    setConfirmSaveOpen(true);
   };
 
   return (
@@ -1898,6 +1858,17 @@ export default function AddWorkOrderPage() {
       />
       
       {/* Alert Component */}
+      <CustomAlert
+        open={confirmSaveOpen}
+        onOpenChange={setConfirmSaveOpen}
+        title="Konfirmasi Simpan Work Order"
+        message={`${confirmSaveMessage}\n\nApakah Anda yakin ingin menyimpan Work Order ini?`}
+        type="info"
+        showCancel={true}
+        confirmText={loading ? 'Menyimpan...' : 'Ya, Simpan'}
+        cancelText="Tidak"
+        onConfirm={proceedSave}
+      />
       <AlertComponent />
     </PageLayout>
   );

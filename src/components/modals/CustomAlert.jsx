@@ -79,7 +79,7 @@ const CustomAlert = ({
               {title}
             </AlertDialogTitle>
             {message && (
-              <AlertDialogDescription className="mt-2 text-gray-600">
+              <AlertDialogDescription className="mt-2 text-gray-600 whitespace-pre-line">
                 {message}
               </AlertDialogDescription>
             )}

@@ -442,7 +442,6 @@ export const generateWOActualPrintContent = (woActualData) => {
   const itemsHtml = (woActualData.items || []).map((item, idx) => `
     <tr>
       <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${idx + 1}</td>
-      <td style="border: 1px solid #ddd; padding: 6px;">${item.itemName || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.jenisBarang || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.bentukBarang || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.gradeBarang || '-'}</td>
@@ -453,7 +452,7 @@ export const generateWOActualPrintContent = (woActualData) => {
       <td style="border: 1px solid #ddd; padding: 6px;">${item.jenisPotongan || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${(item.pelaksanas || []).map(p => p.pelaksana?.nama_pelaksana || '-').join(', ')}</td>
     </tr>
-  `).join('') || '<tr><td colspan="11" style="text-align: center; padding: 12px;">Tidak ada item</td></tr>';
+  `).join('') || '<tr><td colspan="10" style="text-align: center; padding: 12px;">Tidak ada item</td></tr>';
 
   // Render Parent image section (WO Actual header photo) before Before/After
   const parentSectionHtml = (() => {
@@ -515,7 +514,7 @@ export const generateWOActualPrintContent = (woActualData) => {
 
           return `
             <div class="section" style="margin-top: 16px; page-break-inside: avoid;">
-              <div style="font-weight: bold; margin-bottom: 8px;">Item ${it.no || '-'} — ${it.itemName || '-'}</div>
+              <div style="font-weight: bold; margin-bottom: 8px;">Item ${it.no || '-'}</div>
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                 <div>
                   <div style="font-weight: bold; margin-bottom: 6px;">Before (WO Planning)</div>
@@ -594,7 +593,6 @@ export const generateWOActualPrintContent = (woActualData) => {
         <thead>
           <tr>
             <th>No</th>
-            <th>Nama Item</th>
             <th>Jenis</th>
             <th>Bentuk</th>
             <th>Grade</th>
@@ -642,7 +640,6 @@ export const generateWOPlanningPrintContent = (woPlanningData) => {
   const itemsHtml = (woPlanningData.items || []).map((item, idx) => `
     <tr>
       <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${idx + 1}</td>
-      <td style="border: 1px solid #ddd; padding: 6px;">${item.nama_item || item.jenisBarang?.nama_jenis_barang || item.jenisBarang?.nama || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.jenisBarang?.nama_jenis_barang || item.jenisBarang?.nama || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.bentukBarang?.nama_bentuk_barang || item.bentukBarang?.nama_bentuk || item.bentukBarang?.nama || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.gradeBarang?.nama_grade_barang || item.gradeBarang?.nama_grade || item.gradeBarang?.nama || '-'}</td>
@@ -651,7 +648,7 @@ export const generateWOPlanningPrintContent = (woPlanningData) => {
       <td style="border: 1px solid #ddd; padding: 6px;">${item.jenisPotongan || item.jenis_potongan || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.keterangan || item.catatan || '-'}</td>
     </tr>
-  `).join('') || '<tr><td colspan="9" style="text-align: center; padding: 12px;">Tidak ada item</td></tr>';
+  `).join('') || '<tr><td colspan="8" style="text-align: center; padding: 12px;">Tidak ada item</td></tr>';
 
   // Render canvas images with robust item-based grouping and naming
   const canvasImagesHtml = (woPlanningData.canvasImages || []).length > 0
@@ -804,7 +801,6 @@ export const generateWOPlanningPrintContent = (woPlanningData) => {
         <thead>
           <tr>
             <th>No</th>
-            <th>Nama Item</th>
             <th>Jenis</th>
             <th>Bentuk</th>
             <th>Grade</th>
