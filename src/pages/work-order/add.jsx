@@ -33,7 +33,7 @@ import { documentSequenceService } from '@/services/master-data/documentSequence
 
 export default function AddWorkOrderPage() {
   const navigate = useNavigate();
-  const { showAlert, AlertComponent } = useAlert();
+  const { showAlert, showConfirm, AlertComponent } = useAlert();
   
   // Work Order Planning State
   const [workOrderData, setWorkOrderData] = useState({
@@ -1028,21 +1028,32 @@ export default function AddWorkOrderPage() {
     }
 
     // Konfirmasi sebelum save
-    const confirmSave = window.confirm(
-      `Konfirmasi Simpan Work Order\n\n` +
+    const confirmationMessage = 
       `Nomor WO: ${workOrderData.nomor_wo}\n` +
       `Tanggal WO: ${workOrderData.tanggal_wo}\n` +
       `Prioritas: ${workOrderData.prioritas}\n` +
       `Metode Penyerahan: ${workOrderData.handover_method === 'pickup' ? 'Pickup' : 'Delivery'}\n` +
       `Jumlah Item: ${workOrderItems.length}\n` +
       `Total Pelaksana: ${workOrderItems.reduce((total, item) => total + item.pelaksana.length, 0)}\n\n` +
-      `Apakah Anda yakin ingin menyimpan Work Order ini?`
+      `Apakah Anda yakin ingin menyimpan Work Order ini?`;
+
+    showConfirm(
+      'Konfirmasi Simpan Work Order',
+      confirmationMessage,
+      () => {
+        // User confirmed, proceed with save
+        proceedWithSave();
+      },
+      () => {
+        // User cancelled, do nothing
+      },
+      'Simpan',
+      'Batal'
     );
+  };
 
-    if (!confirmSave) {
-      return;
-    }
-
+  // Separate function to handle the actual save process
+  const proceedWithSave = async () => {
     setLoading(true);
     try {
       // Get existing unique IDs from localStorage
