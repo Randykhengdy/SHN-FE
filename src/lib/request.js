@@ -43,10 +43,28 @@ export async function request(path, options = {}) {
           refreshSuccess = await performTokenRefresh();
           if (refreshSuccess) {
             if (process.env.NODE_ENV === 'development') {
-              console.log(`✅ Token refreshed on attempt ${attempt}, retrying request...`);
+              console.log(`✅ Token refreshed on attempt ${attempt}, retrying request once...`);
             }
-            // Retry request dengan token baru
-            return request(path, options);
+            // Setelah token berhasil di-refresh, lakukan satu kali ulang request tanpa recursion
+            const newHeaders = {
+              ...(isFormData ? {} : { "Content-Type": "application/json" }),
+              ...getAuthHeader(),
+              ...(options.headers || {}),
+            };
+            const retryResponse = await fetch(`${apiConfig.baseUrl}${path}`, {
+              ...options,
+              headers: newHeaders,
+            });
+            if (!retryResponse.ok) {
+              const retryErrorText = await retryResponse.text();
+              let retryMessage = null;
+              try {
+                const retryJson = JSON.parse(retryErrorText);
+                retryMessage = retryJson.message || retryJson.error || retryJson.msg || null;
+              } catch (_) {}
+              throw new Error(retryMessage || `API Error: ${retryResponse.status} ${retryResponse.statusText}`);
+            }
+            return retryResponse.json();
           }
         } catch (error) {
           if (process.env.NODE_ENV === 'development') {
