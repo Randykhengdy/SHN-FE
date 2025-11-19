@@ -644,8 +644,8 @@ export const generateWOPlanningPrintContent = (woPlanningData) => {
       <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${idx + 1}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.nama_item || item.jenisBarang?.nama_jenis_barang || item.jenisBarang?.nama || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.jenisBarang?.nama_jenis_barang || item.jenisBarang?.nama || '-'}</td>
-      <td style="border: 1px solid #ddd; padding: 6px;">${item.bentukBarang?.nama_bentuk || item.bentukBarang?.nama || '-'}</td>
-      <td style="border: 1px solid #ddd; padding: 6px;">${item.gradeBarang?.nama_grade || item.gradeBarang?.nama || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 6px;">${item.bentukBarang?.nama_bentuk_barang || item.bentukBarang?.nama_bentuk || item.bentukBarang?.nama || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 6px;">${item.gradeBarang?.nama_grade_barang || item.gradeBarang?.nama_grade || item.gradeBarang?.nama || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.bentukBarang?.dimensi || item.dimensi || `${item.panjang || 0}x${item.lebar || 0}x${item.ketebalan || 0}mm`}</td>
       <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">${item.qty ?? item.qtyPlanning ?? 0}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.jenisPotongan || item.jenis_potongan || '-'}</td>

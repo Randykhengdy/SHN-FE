@@ -742,8 +742,8 @@ export default function ViewWorkOrderPage() {
                         <TableRow key={item.id || index} className="hover:bg-gray-50">
                           <TableCell className="font-medium">{index + 1}</TableCell>
                           <TableCell>{item.jenisBarang?.nama_jenis_barang || item.jenisBarang?.nama || 'N/A'}</TableCell>
-                          <TableCell>{item.bentukBarang?.nama_bentuk || item.bentukBarang?.nama || 'N/A'}</TableCell>
-                          <TableCell>{item.gradeBarang?.nama_grade || item.gradeBarang?.nama || 'N/A'}</TableCell>
+                          <TableCell>{item.bentukBarang?.nama_bentuk_barang || item.bentukBarang?.nama_bentuk || item.bentukBarang?.nama || 'N/A'}</TableCell>
+                          <TableCell>{item.gradeBarang?.nama_grade_barang || item.gradeBarang?.nama_grade || item.gradeBarang?.nama || 'N/A'}</TableCell>
                           <TableCell>{dimensi}</TableCell>
                           <TableCell>{item.qty}</TableCell>
                           <TableCell>{luasPerItem.toFixed(2)} mm²</TableCell>
@@ -800,54 +800,31 @@ export default function ViewWorkOrderPage() {
           </CardContent>
         </Card>
 
-        {/* Summary */}
+        {/* Summary (right side only) */}
         <Card className="bg-white border-green-200">
           <CardHeader>
             <CardTitle>Ringkasan</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Subtotal:</span>
-                  <span className="font-semibold">{formatCurrency(subtotal)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Total Diskon:</span>
-                  <span className="font-semibold text-red-600">-{formatCurrency(totalDiscount)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">PPN (11%):</span>
-                  <span className="font-semibold">{formatCurrency(ppnAmount)}</span>
-                </div>
-                <div className="border-t pt-4">
-                  <div className="flex justify-between">
-                    <span className="text-lg font-semibold text-gray-800">Total:</span>
-                    <span className="text-lg font-bold text-green-600">{formatCurrency(grandTotal)}</span>
-                  </div>
-                </div>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Jumlah Item:</span>
+                <span className="font-semibold">{items.length}</span>
               </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Jumlah Item:</span>
-                  <span className="font-semibold">{items.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Status:</span>
-                  <span className="font-semibold text-blue-600">{status || 'Draft'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Dibuat pada:</span>
-                  <span className="font-semibold">{formatDate(workOrder.created_at)}</span>
-                </div>
-                {workOrder.updated_at && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Diupdate pada:</span>
-                    <span className="font-semibold">{formatDate(workOrder.updated_at)}</span>
-                  </div>
-                )}
+              <div className="flex justify-between">
+                <span className="text-gray-600">Status:</span>
+                <span className="font-semibold text-blue-600">{status || 'Draft'}</span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Dibuat pada:</span>
+                <span className="font-semibold">{formatDate(workOrder.created_at)}</span>
+              </div>
+              {workOrder.updated_at && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Diupdate pada:</span>
+                  <span className="font-semibold">{formatDate(workOrder.updated_at)}</span>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

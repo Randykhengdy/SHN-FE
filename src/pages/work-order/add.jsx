@@ -389,13 +389,12 @@ export default function AddWorkOrderPage() {
     try {
       console.log('Loading Sales Order detail for ID:', salesOrderId);
       
-      const [salesOrderHeaderResponse, salesOrderItemsResponse, woNumberResponse] = await Promise.all([
-        request(`/sales-order/header/${salesOrderId}`, { method: 'GET' }),
+      const [salesOrderItemsResponse, woNumberResponse] = await Promise.all([
         request(`/sales-order/sales-order-for-woplanning?sales_order_id=${salesOrderId}`, { method: 'GET' }),
         documentSequenceService.generateWONumber()
       ]);
       
-      console.log('Sales Order header response:', salesOrderHeaderResponse);
+      console.log('Sales Order for woplanning response:', salesOrderItemsResponse);
       console.log('Generated WO number:', woNumberResponse);
       try {
         localStorage.setItem('WO_current_work_order_id', woNumberResponse);
@@ -404,22 +403,30 @@ export default function AddWorkOrderPage() {
         console.warn('Failed to persist generated WO number to storage/state', e);
       }
       
-      let soData = salesOrderHeaderResponse.data || salesOrderHeaderResponse;
-      
-      // If response is an array, take the first item
-      if (Array.isArray(soData)) {
-        soData = soData[0];
-      }
+      // Try to derive SO header info from the woplanning response
+      let soData = salesOrderItemsResponse?.header
+        || salesOrderItemsResponse?.sales_order
+        || salesOrderItemsResponse?.salesOrder
+        || salesOrderItemsResponse?.data?.header
+        || null;
       
       if (!soData) {
-        throw new Error('Sales order data not found');
+        soData = { pelanggan_id: undefined, gudang_id: undefined, catatan: '', handover_method: 'pickup' };
       }
       
-      setSelectedSalesOrder(soData);
       
-      const itemsDataRaw = salesOrderItemsResponse?.data || salesOrderItemsResponse || [];
+      const itemsDataRaw = salesOrderItemsResponse?.items
+        || salesOrderItemsResponse?.data?.items
+        || salesOrderItemsResponse?.data
+        || salesOrderItemsResponse
+        || [];
       const itemsData = Array.isArray(itemsDataRaw) ? itemsDataRaw : (itemsDataRaw.data || []);
       console.log('Sales Order items (for WO planning):', itemsData);
+
+      setSelectedSalesOrder({
+        ...(soData || {}),
+        sales_order_items: Array.isArray(itemsData) ? itemsData : [],
+      });
       
       if (itemsData && itemsData.length > 0) {
         // Transform Sales Order items to Work Order items
@@ -437,9 +444,9 @@ export default function AddWorkOrderPage() {
             lebar: item.lebar || 0,
             tebal: item.tebal || 0,
             qty: item.sisa_qty || item.qty_so || 1,
-            jenis_barang_id: item.jenis_barang_id || item.jenis_barang?.id,
-            bentuk_barang_id: item.bentuk_barang_id || item.bentuk_barang?.id,
-            grade_barang_id: item.grade_barang_id || item.grade_barang?.id,
+            jenis_barang_id: (item.jenis_barang_id || item.jenis_barang?.id)?.toString?.() || '',
+            bentuk_barang_id: (item.bentuk_barang_id || item.bentuk_barang?.id)?.toString?.() || '',
+            grade_barang_id: (item.grade_barang_id || item.grade_barang?.id)?.toString?.() || '',
             jenis_potongan: item.jenis_potongan || null,
             catatan: item.catatan || item.note || item.notes || '',
             pelaksana: []
@@ -457,12 +464,12 @@ export default function AddWorkOrderPage() {
         // Auto-fill other fields from Sales Order and set generated WO number
         setWorkOrderData(prev => ({
           ...prev,
-          nomor_wo: woNumberResponse, // Use generated WO number from API
-          gudang_id: soData.gudang_id || soData.gudang?.id,
-          pelanggan_id: soData.pelanggan_id || soData.pelanggan?.id,
-          catatan: soData.catatan || '',
-          handover_method: soData.handover_method || 'pickup', // Set handover method from SO
-          tanggal_target: workOrderData.tanggal_wo // Set tanggal target sama dengan tanggal WO
+          nomor_wo: woNumberResponse,
+          gudang_id: (soData?.id_gudang ?? soData?.gudang_id ?? soData?.gudang?.id) || prev.gudang_id,
+          pelanggan_id: (soData?.id_pelanggan ?? soData?.pelanggan_id ?? soData?.pelanggan?.id) || prev.pelanggan_id,
+          catatan: soData?.catatan || prev.catatan || '',
+          handover_method: soData?.handover_method || prev.handover_method || 'pickup',
+          tanggal_target: workOrderData.tanggal_wo
         }));
         
         showAlert('Sukses', `${itemsData.length} item berhasil diambil dari Sales Order\nNomor WO: ${woNumberResponse}`, 'success');
@@ -486,11 +493,11 @@ export default function AddWorkOrderPage() {
         // Still set the generated WO number even if no items
         setWorkOrderData(prev => ({
           ...prev,
-          nomor_wo: woNumberResponse, // Use generated WO number from API
-          gudang_id: soData.gudang_id || soData.gudang?.id,
-          pelanggan_id: soData.pelanggan_id || soData.pelanggan?.id,
-          catatan: soData.catatan || '',
-          handover_method: soData.handover_method || 'pickup',
+          nomor_wo: woNumberResponse,
+          gudang_id: (soData?.id_gudang ?? soData?.gudang_id ?? soData?.gudang?.id) || prev.gudang_id,
+          pelanggan_id: (soData?.id_pelanggan ?? soData?.pelanggan_id ?? soData?.pelanggan?.id) || prev.pelanggan_id,
+          catatan: soData?.catatan || prev.catatan || '',
+          handover_method: soData?.handover_method || prev.handover_method || 'pickup',
           tanggal_target: workOrderData.tanggal_wo
         }));
       }

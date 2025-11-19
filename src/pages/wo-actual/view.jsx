@@ -385,7 +385,9 @@ export default function ViewWOActualPage() {
                   <Table className="w-full">
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Item</TableHead>
+                        <TableHead className="text-center">Jenis</TableHead>
+                        <TableHead className="text-center">Bentuk</TableHead>
+                        <TableHead className="text-center">Grade</TableHead>
                         <TableHead className="text-center">Qty Planning</TableHead>
                         <TableHead className="text-center">Berat Planning (kg)</TableHead>
                         <TableHead className="text-center">Qty Actual</TableHead>
@@ -398,8 +400,7 @@ export default function ViewWOActualPage() {
                     <TableBody>
                       {items.map((actualItem) => {
                         const planningItem = actualItem.work_order_planning_item || {};
-                        const itemBarang = planningItem.item_barang || planningItem.jenis_barang || {};
-                        const namaItem = itemBarang.nama_item_barang || itemBarang.nama || 'Item';
+                        const jenisNama = actualItem.jenis_barang_nama || planningItem.jenis_barang?.nama || planningItem.jenis_barang?.nama_jenis_barang;
                         const qtyPlanning = actualItem.qty_planning ?? planningItem.qty ?? 0;
                         const pelaksanaArr = Array.isArray(planningItem.pelaksana)
                           ? planningItem.pelaksana
@@ -412,6 +413,8 @@ export default function ViewWOActualPage() {
                         const beratActual = actualItem.berat ?? actualItem.berat_actual ?? 0;
                         const status = actualItem.status || woActual.status || 'PENDING';
                         const pelaksanas = actualItem.work_order_actual_pelaksanas || actualItem.has_many_pelaksana || [];
+                        const bentukNama = actualItem.bentuk_barang_nama || planningItem.bentuk_barang?.nama || planningItem.bentuk_barang?.nama_bentuk_barang;
+                        const gradeNama = actualItem.grade_barang_nama || planningItem.grade_barang?.nama || planningItem.grade_barang?.nama_grade_barang;
                         const openPelaksanaModal = () => {
                           setPelaksanaModalData(pelaksanas);
                           setPelaksanaPlanningData(pelaksanaArr);
@@ -419,14 +422,9 @@ export default function ViewWOActualPage() {
                         };
                         return (
                           <TableRow key={actualItem.id}>
-                            <TableCell>
-                              <div className="font-medium">{namaItem}</div>
-                              {planningItem.bentuk_barang || planningItem.grade_barang ? (
-                                <div className="text-sm text-gray-500">
-                                  {(planningItem.bentuk_barang?.nama || planningItem.bentuk_barang?.nama_bentuk_barang || 'Bentuk')} - {(planningItem.grade_barang?.nama || planningItem.grade_barang?.nama_grade_barang || 'Grade')}
-                                </div>
-                              ) : null}
-                            </TableCell>
+                            <TableCell className="text-center">{jenisNama || 'N/A'}</TableCell>
+                            <TableCell className="text-center">{bentukNama || 'N/A'}</TableCell>
+                            <TableCell className="text-center">{gradeNama || 'N/A'}</TableCell>
                             <TableCell className="text-center">{qtyPlanning}</TableCell>
                             <TableCell className="text-center">{Math.round(beratPlanning)}</TableCell>
                             <TableCell className="text-center">{qtyActual}</TableCell>
@@ -526,10 +524,10 @@ export default function ViewWOActualPage() {
                     id: actualItem.id,
                     woPlanItemId: actualItem.work_order_planning_item_id || actualItem.wo_plan_item_id || planningItem.id,
                     no: index + 1,
-                    itemName: itemBarang.nama_item_barang || itemBarang.nama || 'N/A',
-                    jenisBarang: itemBarang.jenis_barang?.nama_jenis_barang || itemBarang.jenis_barang?.nama || planningItem.jenis_barang?.nama || 'N/A',
-                    bentukBarang: itemBarang.bentuk_barang?.nama_bentuk_barang || itemBarang.bentuk_barang?.nama || planningItem.bentuk_barang?.nama || 'N/A',
-                    gradeBarang: itemBarang.grade_barang?.nama_grade_barang || itemBarang.grade_barang?.nama || planningItem.grade_barang?.nama || 'N/A',
+                    itemName: actualItem.item_barang_nama || itemBarang.nama_item_barang || itemBarang.nama || 'N/A',
+                    jenisBarang: actualItem.jenis_barang_nama || itemBarang.jenis_barang?.nama_jenis_barang || itemBarang.jenis_barang?.nama || planningItem.jenis_barang?.nama || 'N/A',
+                    bentukBarang: actualItem.bentuk_barang_nama || itemBarang.bentuk_barang?.nama_bentuk_barang || itemBarang.bentuk_barang?.nama || planningItem.bentuk_barang?.nama || 'N/A',
+                    gradeBarang: actualItem.grade_barang_nama || itemBarang.grade_barang?.nama_grade_barang || itemBarang.grade_barang?.nama || planningItem.grade_barang?.nama || 'N/A',
                     dimensi: `${planningItem.panjang || 0} x ${planningItem.lebar || 0} mm`,
                     qtyPlanning: planningItem.qty || actualItem.qty_planning || 0,
                     qtyActual: actualItem.qty_actual || 0,
