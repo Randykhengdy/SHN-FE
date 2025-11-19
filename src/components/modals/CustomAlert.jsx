@@ -19,7 +19,8 @@ const CustomAlert = ({
   onConfirm,
   confirmText = "OK",
   showCancel = false,
-  cancelText = "Batal"
+  cancelText = "Batal",
+  extraContent = null
 }) => {
   const getIcon = () => {
     switch (type) {
@@ -85,6 +86,7 @@ const CustomAlert = ({
             )}
           </div>
         </AlertDialogHeader>
+        {extraContent}
         
         <AlertDialogFooter className="flex gap-2">
           {showCancel && (

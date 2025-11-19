@@ -461,7 +461,6 @@ export default function AddWOActualPage() {
 
         setPendingPrintData(printData);
         setPrintOptionsOpen(true);
-        showAlert('WO Actual berhasil disimpan', 'Silakan pilih opsi cetak.', 'success');
       } else {
         throw new Error(response.message || 'Failed to save WO Actual');
       }

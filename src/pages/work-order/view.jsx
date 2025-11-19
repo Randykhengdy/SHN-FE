@@ -18,7 +18,7 @@ import PelaksanaViewModal from "@/components/modals/PelaksanaViewModal";
 import SaranViewModal from "@/components/modals/SaranViewModal";
 import { openPrintDialog, generateWOPlanningPrintContent } from "@/lib/printUtils";
 import CustomAlert from "@/components/modals/CustomAlert";
-import { Switch } from "@/components/ui/switch";
+// import { Switch } from "@/components/ui/switch";
 
 export default function ViewWorkOrderPage() {
   const { id } = useParams();
@@ -28,7 +28,7 @@ export default function ViewWorkOrderPage() {
   
   // Loading states
   const [loading, setLoading] = useState(false);
-  const [printOptionsOpen, setPrintOptionsOpen] = useState(false);
+  // const [printOptionsOpen, setPrintOptionsOpen] = useState(false);
   const [includeImages, setIncludeImages] = useState(true);
   
   // Prevent multiple API calls
@@ -835,7 +835,7 @@ export default function ViewWorkOrderPage() {
             <Button 
               size="lg" 
               className="bg-blue-600 hover:bg-blue-700"
-              onClick={() => setPrintOptionsOpen(true)}
+              onClick={doPrint}
               disabled={loading}
             >
               {loading ? 'Menyiapkan cetak...' : 'Cetak WO'}
@@ -858,27 +858,6 @@ export default function ViewWorkOrderPage() {
           onClose={closeSaranModal}
           saranData={selectedItemSaran}
           itemInfo={selectedItemInfo}
-        />
-        <CustomAlert
-          open={printOptionsOpen}
-          onOpenChange={setPrintOptionsOpen}
-          title="Opsi Cetak WO"
-          message={null}
-          type="info"
-          showCancel={true}
-          confirmText={loading ? 'Mencetak...' : 'Cetak'}
-          cancelText="Batal"
-          onConfirm={doPrint}
-          extraContent={(
-            <div className="w-full flex items-center justify-between gap-4 bg-gray-50 rounded-md px-3 py-2 border">
-              <span className="text-sm text-gray-800">Sertakan gambar untuk print</span>
-              <Switch
-                checked={includeImages}
-                onCheckedChange={setIncludeImages}
-                aria-label="Sertakan gambar untuk print"
-              />
-            </div>
-          )}
         />
       </PageLayout>
   );
