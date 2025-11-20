@@ -17,6 +17,8 @@ import PageLayout from "@/components/PageLayout";
 import PelaksanaViewModal from "@/components/modals/PelaksanaViewModal";
 import SaranViewModal from "@/components/modals/SaranViewModal";
 import { openPrintDialog, generateWOPlanningPrintContent } from "@/lib/printUtils";
+import CustomAlert from "@/components/modals/CustomAlert";
+// import { Switch } from "@/components/ui/switch";
 
 export default function ViewWorkOrderPage() {
   const { id } = useParams();
@@ -26,6 +28,8 @@ export default function ViewWorkOrderPage() {
   
   // Loading states
   const [loading, setLoading] = useState(false);
+  // const [printOptionsOpen, setPrintOptionsOpen] = useState(false);
+  const [includeImages, setIncludeImages] = useState(true);
   
   // Prevent multiple API calls
   const isLoadingRef = useRef(false);
@@ -90,20 +94,14 @@ export default function ViewWorkOrderPage() {
   };
 
   // Handle Print WO (Planning)
-  const handlePrint = async () => {
+  const doPrint = async () => {
     try {
       setLoading(true);
-
-      // Ambil gambar canvas (opsional)
       let canvasImages = [];
       try {
         const imagesResponse = await workOrderService.getWorkOrderImages(id);
         canvasImages = imagesResponse.data?.images || [];
-      } catch (error) {
-        console.warn('⚠️ Gagal mengambil gambar canvas, lanjut tanpa gambar.', error);
-      }
-
-      // Siapkan data WO Planning untuk cetak
+      } catch (_) {}
       const printData = {
         nomor_wo: workOrder?.nomor_wo || woNumber || 'N/A',
         tanggal_wo: workOrder?.tanggal_wo || woDate || 'N/A',
@@ -127,9 +125,7 @@ export default function ViewWorkOrderPage() {
         })),
         canvasImages
       };
-
-      // Buka dialog print dengan konten HTML
-      const html = generateWOPlanningPrintContent(printData);
+      const html = generateWOPlanningPrintContent(printData, { includeImages });
       openPrintDialog(html);
     } catch (error) {
       console.error('❌ Error saat membuka dialog cetak WO Planning:', error);
@@ -742,8 +738,8 @@ export default function ViewWorkOrderPage() {
                         <TableRow key={item.id || index} className="hover:bg-gray-50">
                           <TableCell className="font-medium">{index + 1}</TableCell>
                           <TableCell>{item.jenisBarang?.nama_jenis_barang || item.jenisBarang?.nama || 'N/A'}</TableCell>
-                          <TableCell>{item.bentukBarang?.nama_bentuk || item.bentukBarang?.nama || 'N/A'}</TableCell>
-                          <TableCell>{item.gradeBarang?.nama_grade || item.gradeBarang?.nama || 'N/A'}</TableCell>
+                          <TableCell>{item.bentukBarang?.nama_bentuk_barang || item.bentukBarang?.nama_bentuk || item.bentukBarang?.nama || 'N/A'}</TableCell>
+                          <TableCell>{item.gradeBarang?.nama_grade_barang || item.gradeBarang?.nama_grade || item.gradeBarang?.nama || 'N/A'}</TableCell>
                           <TableCell>{dimensi}</TableCell>
                           <TableCell>{item.qty}</TableCell>
                           <TableCell>{luasPerItem.toFixed(2)} mm²</TableCell>
@@ -800,54 +796,31 @@ export default function ViewWorkOrderPage() {
           </CardContent>
         </Card>
 
-        {/* Summary */}
+        {/* Summary (right side only) */}
         <Card className="bg-white border-green-200">
           <CardHeader>
             <CardTitle>Ringkasan</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Subtotal:</span>
-                  <span className="font-semibold">{formatCurrency(subtotal)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Total Diskon:</span>
-                  <span className="font-semibold text-red-600">-{formatCurrency(totalDiscount)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">PPN (11%):</span>
-                  <span className="font-semibold">{formatCurrency(ppnAmount)}</span>
-                </div>
-                <div className="border-t pt-4">
-                  <div className="flex justify-between">
-                    <span className="text-lg font-semibold text-gray-800">Total:</span>
-                    <span className="text-lg font-bold text-green-600">{formatCurrency(grandTotal)}</span>
-                  </div>
-                </div>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Jumlah Item:</span>
+                <span className="font-semibold">{items.length}</span>
               </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Jumlah Item:</span>
-                  <span className="font-semibold">{items.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Status:</span>
-                  <span className="font-semibold text-blue-600">{status || 'Draft'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Dibuat pada:</span>
-                  <span className="font-semibold">{formatDate(workOrder.created_at)}</span>
-                </div>
-                {workOrder.updated_at && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Diupdate pada:</span>
-                    <span className="font-semibold">{formatDate(workOrder.updated_at)}</span>
-                  </div>
-                )}
+              <div className="flex justify-between">
+                <span className="text-gray-600">Status:</span>
+                <span className="font-semibold text-blue-600">{status || 'Draft'}</span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Dibuat pada:</span>
+                <span className="font-semibold">{formatDate(workOrder.created_at)}</span>
+              </div>
+              {workOrder.updated_at && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Diupdate pada:</span>
+                  <span className="font-semibold">{formatDate(workOrder.updated_at)}</span>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -862,7 +835,7 @@ export default function ViewWorkOrderPage() {
             <Button 
               size="lg" 
               className="bg-blue-600 hover:bg-blue-700"
-              onClick={handlePrint}
+              onClick={doPrint}
               disabled={loading}
             >
               {loading ? 'Menyiapkan cetak...' : 'Cetak WO'}

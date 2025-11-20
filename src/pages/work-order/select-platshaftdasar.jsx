@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -17,7 +17,8 @@ export default function SelectPlatShaftDasar({
   workOrderItem,
   workOrderId, // Add workOrderId prop
   onSelectionChange,
-  onClose 
+  onClose,
+  perPage = 6
 }) {
   console.log('SelectPlatShaftDasar props:', {
     workOrderId: workOrderId,
@@ -37,6 +38,9 @@ export default function SelectPlatShaftDasar({
   const [usedSaranPlats, setUsedSaranPlats] = useState([]);
   const [usedSaranPlatIds, setUsedSaranPlatIds] = useState([]);
   const [availableSaranPlats, setAvailableSaranPlats] = useState([]);
+  const [retryCount, setRetryCount] = useState(0);
+  const [autoRefreshing, setAutoRefreshing] = useState(true);
+  const refreshTimerRef = useRef(null);
   
   // Canvas state
   const [showCanvas, setShowCanvas] = useState(false);
@@ -242,7 +246,7 @@ export default function SelectPlatShaftDasar({
   const loadSaranPlatDasar = async (usedIds = []) => {
     setLoading(true);
     try {
-      const response = await request('/work-order-planning/get-saran-plat-dasar', {
+      const response = await request(`/work-order-planning/get-saran-plat-dasar?per_page=${perPage}&page=1`, {
         method: 'POST',
         body: JSON.stringify({
           jenis_barang_id: jenisBarangId,
@@ -250,12 +254,14 @@ export default function SelectPlatShaftDasar({
           grade_barang_id: gradeBarangId,
           tebal: tebal,
           panjang: parseFloat(workOrderItem?.panjang || 0),
-          lebar: parseFloat(workOrderItem?.lebar || 0)
+          lebar: parseFloat(workOrderItem?.lebar || 0),
+          per_page: perPage,
+          page: 1
         })
       });
 
       if (response.success) {
-        const allSaranItems = response.data || [];
+        const allSaranItems = (response.data || []).slice(0, perPage);
         
         // Use the passed usedIds parameter
         const currentUsedIds = usedIds || [];
@@ -284,6 +290,7 @@ export default function SelectPlatShaftDasar({
         
         // Set used items (yang sudah digunakan)
         setUsedSaranPlats(usedItems);
+        setRetryCount(0);
       } else {
         showAlert('Error', 'Gagal memuat saran plat/shaft dasar', 'error');
       }
@@ -294,6 +301,22 @@ export default function SelectPlatShaftDasar({
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!autoRefreshing) return;
+    if (loading) return;
+    if (saranItems.length > 0) return;
+    if (!jenisBarangId || !bentukBarangId || !gradeBarangId || !tebal) return;
+    if (retryCount >= 4) return;
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    refreshTimerRef.current = setTimeout(() => {
+      setRetryCount((c) => c + 1);
+      loadSaranPlatDasar(usedSaranPlatIds);
+    }, Math.min(1200 * Math.pow(1.4, retryCount), 3000));
+    return () => {
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    };
+  }, [autoRefreshing, loading, saranItems.length, jenisBarangId, bentukBarangId, gradeBarangId, tebal, retryCount, usedSaranPlatIds]);
 
   const handleItemSelection = (item, checked) => {
     if (checked) {
@@ -513,10 +536,10 @@ export default function SelectPlatShaftDasar({
       <div className={`bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto transition-all duration-300 ${showCanvas ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <Package className="w-6 h-6" />
-              SARAN PLAT/SHAFT DASAR
-            </CardTitle>
+          <CardTitle className="flex items-center gap-2 text-xl">
+            <Package className="w-6 h-6" />
+            SARAN PLAT/SHAFT DASAR
+          </CardTitle>
           </CardHeader>
           
           <CardContent className="space-y-6">
@@ -650,10 +673,30 @@ export default function SelectPlatShaftDasar({
 
             {/* Available Saran Plats Table */}
             <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                <Package className="w-5 h-5 text-green-600" />
-                Saran Plat yang Tersedia
-              </h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                  <Package className="w-5 h-5 text-green-600" />
+                  Saran Plat yang Tersedia
+                </h3>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setRetryCount(0);
+                      loadSaranPlatDasar(usedSaranPlatIds);
+                    }}
+                    className="text-xs"
+                  >
+                    Refresh
+                  </Button>
+                  <Checkbox
+                    checked={autoRefreshing}
+                    onCheckedChange={(v) => setAutoRefreshing(Boolean(v))}
+                    className="ml-2"
+                  />
+                </div>
+              </div>
               <div className="border rounded-lg overflow-hidden">
                 <table className="w-full">
                   <thead className="bg-gray-50">

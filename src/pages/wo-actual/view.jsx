@@ -9,6 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Package, FileText, User } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import CustomAlert from '@/components/modals/CustomAlert';
 import PelaksanaActualModal from '@/components/modals/PelaksanaActualModal';
 import { useAlert } from '@/hooks/useAlert';
 import apiConfig from '@/config/api';
@@ -34,6 +36,8 @@ export default function ViewWOActualPage() {
   const [pelaksanaModalOpen, setPelaksanaModalOpen] = useState(false);
   const [pelaksanaModalData, setPelaksanaModalData] = useState([]);
   const [pelaksanaPlanningData, setPelaksanaPlanningData] = useState([]);
+  const [printOptionsOpen, setPrintOptionsOpen] = useState(false);
+  const [includeImages, setIncludeImages] = useState(true);
 
   // Helper: build storage URL from file path
   const buildStorageUrl = (path) => {
@@ -385,7 +389,9 @@ export default function ViewWOActualPage() {
                   <Table className="w-full">
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Item</TableHead>
+                        <TableHead className="text-center">Jenis</TableHead>
+                        <TableHead className="text-center">Bentuk</TableHead>
+                        <TableHead className="text-center">Grade</TableHead>
                         <TableHead className="text-center">Qty Planning</TableHead>
                         <TableHead className="text-center">Berat Planning (kg)</TableHead>
                         <TableHead className="text-center">Qty Actual</TableHead>
@@ -398,8 +404,7 @@ export default function ViewWOActualPage() {
                     <TableBody>
                       {items.map((actualItem) => {
                         const planningItem = actualItem.work_order_planning_item || {};
-                        const itemBarang = planningItem.item_barang || planningItem.jenis_barang || {};
-                        const namaItem = itemBarang.nama_item_barang || itemBarang.nama || 'Item';
+                        const jenisNama = actualItem.jenis_barang_nama || planningItem.jenis_barang?.nama || planningItem.jenis_barang?.nama_jenis_barang;
                         const qtyPlanning = actualItem.qty_planning ?? planningItem.qty ?? 0;
                         const pelaksanaArr = Array.isArray(planningItem.pelaksana)
                           ? planningItem.pelaksana
@@ -412,6 +417,8 @@ export default function ViewWOActualPage() {
                         const beratActual = actualItem.berat ?? actualItem.berat_actual ?? 0;
                         const status = actualItem.status || woActual.status || 'PENDING';
                         const pelaksanas = actualItem.work_order_actual_pelaksanas || actualItem.has_many_pelaksana || [];
+                        const bentukNama = actualItem.bentuk_barang_nama || planningItem.bentuk_barang?.nama || planningItem.bentuk_barang?.nama_bentuk_barang;
+                        const gradeNama = actualItem.grade_barang_nama || planningItem.grade_barang?.nama || planningItem.grade_barang?.nama_grade_barang;
                         const openPelaksanaModal = () => {
                           setPelaksanaModalData(pelaksanas);
                           setPelaksanaPlanningData(pelaksanaArr);
@@ -419,14 +426,9 @@ export default function ViewWOActualPage() {
                         };
                         return (
                           <TableRow key={actualItem.id}>
-                            <TableCell>
-                              <div className="font-medium">{namaItem}</div>
-                              {planningItem.bentuk_barang || planningItem.grade_barang ? (
-                                <div className="text-sm text-gray-500">
-                                  {(planningItem.bentuk_barang?.nama || planningItem.bentuk_barang?.nama_bentuk_barang || 'Bentuk')} - {(planningItem.grade_barang?.nama || planningItem.grade_barang?.nama_grade_barang || 'Grade')}
-                                </div>
-                              ) : null}
-                            </TableCell>
+                            <TableCell className="text-center">{jenisNama || 'N/A'}</TableCell>
+                            <TableCell className="text-center">{bentukNama || 'N/A'}</TableCell>
+                            <TableCell className="text-center">{gradeNama || 'N/A'}</TableCell>
                             <TableCell className="text-center">{qtyPlanning}</TableCell>
                             <TableCell className="text-center">{Math.round(beratPlanning)}</TableCell>
                             <TableCell className="text-center">{qtyActual}</TableCell>
@@ -515,102 +517,112 @@ export default function ViewWOActualPage() {
             size="lg"
             className="border-blue-600 text-blue-600 hover:bg-blue-50"
             variant="outline"
-            onClick={async () => {
-              try {
-                // Build items for print
-                const printItems = (items || []).map((actualItem, index) => {
-                  const planningItem = actualItem.work_order_planning_item || {};
-                  const itemBarang = planningItem.item_barang || {};
-                  const pelaksanas = actualItem.work_order_actual_pelaksanas || actualItem.has_many_pelaksana || [];
-                  return {
-                    id: actualItem.id,
-                    woPlanItemId: actualItem.work_order_planning_item_id || actualItem.wo_plan_item_id || planningItem.id,
-                    no: index + 1,
-                    itemName: itemBarang.nama_item_barang || itemBarang.nama || 'N/A',
-                    jenisBarang: itemBarang.jenis_barang?.nama_jenis_barang || itemBarang.jenis_barang?.nama || planningItem.jenis_barang?.nama || 'N/A',
-                    bentukBarang: itemBarang.bentuk_barang?.nama_bentuk_barang || itemBarang.bentuk_barang?.nama || planningItem.bentuk_barang?.nama || 'N/A',
-                    gradeBarang: itemBarang.grade_barang?.nama_grade_barang || itemBarang.grade_barang?.nama || planningItem.grade_barang?.nama || 'N/A',
-                    dimensi: `${planningItem.panjang || 0} x ${planningItem.lebar || 0} mm`,
-                    qtyPlanning: planningItem.qty || actualItem.qty_planning || 0,
-                    qtyActual: actualItem.qty_actual || 0,
-                    beratActual: (actualItem.berat ?? actualItem.berat_actual ?? 0),
-                    jenisPotongan: planningItem.jenis_potongan || 'N/A',
-                    pelaksanas
-                  };
-                });
-
-                // Fetch WO Planning images (for BEFORE) and filter per planning item id
-                let planningCanvasImages = [];
-                try {
-                  if (planning?.id) {
-                    const imagesResp = await workOrderService.getWorkOrderImages(planning.id);
-                    planningCanvasImages = imagesResp?.data?.images || imagesResp?.images || [];
-                  }
-                } catch (imgErr) {
-                  console.warn('Gagal mengambil gambar WO Planning untuk print:', imgErr);
-                }
-                // Build print items with BEFORE/AFTER images per item
-                const printItemsWithImages = await Promise.all(
-                  printItems.map(async (pi) => {
-                    // BEFORE: filter planning images by planning item id
-                    const beforeImages = (planningCanvasImages || []).filter((img) => {
-                      const candidateIds = [
-                        img.work_order_planning_item_id,
-                        img.wo_plan_item_id,
-                        img.wo_item_id,
-                        img.work_order_item_id,
-                        img.item_id
-                      ].filter(Boolean);
-                      return candidateIds.includes(pi.woPlanItemId);
-                    });
-
-                    // AFTER: fetch actual item image by item id (Blob stream -> object URL)
-                    let afterImages = [];
-                    try {
-                      const blob = await woActualService.getWOActualItemImageBlob(pi.id);
-                      const url = URL.createObjectURL(blob);
-                      if (url) {
-                        afterImages = [{ src: url, work_order_actual_item_id: pi.id }];
-                      }
-                    } catch (aImgErr) {
-                      console.warn(`Gagal mengambil gambar WO Actual item ${pi.id} untuk print:`, aImgErr);
-                    }
-
-                    return { ...pi, beforeImages, afterImages };
-                  })
-                );
-
-                const printData = {
-                  workOrderPlanning: planning,
-                  woActual,
-                  customer: planning?.pelanggan || planning?.customer || null,
-                  warehouse: planning?.gudang || planning?.warehouse || null,
-                  items: printItemsWithImages,
-                  planningCanvasImages,
-                  // Tambahkan foto parent (header) WO Actual sebelum Before/After
-                  parentImages: (() => {
-                    try {
-                      const parentSrc = resolveImageSrc(headerImageBase64 || woActual.foto_bukti);
-                      return parentSrc ? [{ src: parentSrc }] : [];
-                    } catch (_) {
-                      return [];
-                    }
-                  })()
-                };
-
-                const html = generateWOActualPrintContent(printData);
-                openPrintDialog(html);
-              } catch (e) {
-                console.error('Gagal membuka dialog print WO Actual (view):', e);
-                showAlert('Error', 'Gagal membuka dialog print WO Actual', 'error');
-              }
-            }}
+            onClick={() => setPrintOptionsOpen(true)}
           >
             Print
           </Button>
         </div>
       </div>
     </PageLayout>
+    <CustomAlert
+      open={printOptionsOpen}
+      onOpenChange={setPrintOptionsOpen}
+      title="Opsi Cetak WO Actual"
+      message={null}
+      type="info"
+      showCancel={true}
+      confirmText="Cetak"
+      cancelText="Batal"
+      onConfirm={async () => {
+        try {
+          const printItems = (items || []).map((actualItem, index) => {
+            const planningItem = actualItem.work_order_planning_item || {};
+            const itemBarang = planningItem.item_barang || {};
+            const pelaksanas = actualItem.work_order_actual_pelaksanas || actualItem.has_many_pelaksana || [];
+            return {
+              id: actualItem.id,
+              woPlanItemId: actualItem.work_order_planning_item_id || actualItem.wo_plan_item_id || planningItem.id,
+              no: index + 1,
+              itemName: actualItem.item_barang_nama || itemBarang.nama_item_barang || itemBarang.nama || 'N/A',
+              jenisBarang: actualItem.jenis_barang_nama || itemBarang.jenis_barang?.nama_jenis_barang || itemBarang.jenis_barang?.nama || planningItem.jenis_barang?.nama || 'N/A',
+              bentukBarang: actualItem.bentuk_barang_nama || itemBarang.bentuk_barang?.nama_bentuk_barang || itemBarang.bentuk_barang?.nama || planningItem.bentuk_barang?.nama || 'N/A',
+              gradeBarang: actualItem.grade_barang_nama || itemBarang.grade_barang?.nama_grade_barang || itemBarang.grade_barang?.nama || planningItem.grade_barang?.nama || 'N/A',
+              dimensi: `${planningItem.panjang || 0} x ${planningItem.lebar || 0} mm`,
+              qtyPlanning: planningItem.qty || actualItem.qty_planning || 0,
+              qtyActual: actualItem.qty_actual || 0,
+              beratActual: (actualItem.berat ?? actualItem.berat_actual ?? 0),
+              jenisPotongan: planningItem.jenis_potongan || 'N/A',
+              pelaksanas
+            };
+          });
+          let planningCanvasImages = [];
+          try {
+            if (planning?.id) {
+              const imagesResp = await workOrderService.getWorkOrderImages(planning.id);
+              planningCanvasImages = imagesResp?.data?.images || imagesResp?.images || [];
+            }
+          } catch (imgErr) {
+            console.warn('Gagal mengambil gambar WO Planning untuk print:', imgErr);
+          }
+          const printItemsWithImages = await Promise.all(
+            printItems.map(async (pi) => {
+              const beforeImages = (planningCanvasImages || []).filter((img) => {
+                const candidateIds = [
+                  img.work_order_planning_item_id,
+                  img.wo_plan_item_id,
+                  img.wo_item_id,
+                  img.work_order_item_id,
+                  img.item_id
+                ].filter(Boolean);
+                return candidateIds.includes(pi.woPlanItemId);
+              });
+              let afterImages = [];
+              try {
+                const blob = await woActualService.getWOActualItemImageBlob(pi.id);
+                const url = URL.createObjectURL(blob);
+                if (url) {
+                  afterImages = [{ src: url, work_order_actual_item_id: pi.id }];
+                }
+              } catch (aImgErr) {
+                console.warn(`Gagal mengambil gambar WO Actual item ${pi.id} untuk print:`, aImgErr);
+              }
+              return { ...pi, beforeImages, afterImages };
+            })
+          );
+          const printData = {
+            workOrderPlanning: planning,
+            woActual,
+            customer: planning?.pelanggan || planning?.customer || null,
+            warehouse: planning?.gudang || planning?.warehouse || null,
+            items: printItemsWithImages,
+            planningCanvasImages,
+            parentImages: (() => {
+              try {
+                const parentSrc = resolveImageSrc(headerImageBase64 || woActual.foto_bukti);
+                return parentSrc ? [{ src: parentSrc }] : [];
+              } catch (_) {
+                return [];
+              }
+            })()
+          };
+          const html = generateWOActualPrintContent(printData, { includeImages });
+          openPrintDialog(html);
+        } catch (e) {
+          console.error('Gagal membuka dialog print WO Actual (view):', e);
+          showAlert('Error', 'Gagal membuka dialog print WO Actual', 'error');
+        }
+      }}
+      extraContent={(
+        <div className="w-full flex items-center justify-between gap-4 bg-gray-50 rounded-md px-3 py-2 border">
+          <span className="text-sm text-gray-800">Sertakan gambar untuk print</span>
+          <Switch
+            checked={includeImages}
+            onCheckedChange={setIncludeImages}
+            aria-label="Sertakan gambar untuk print"
+          />
+        </div>
+      )}
+    />
     {previewOpen && (
       <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center" onClick={() => setPreviewOpen(false)}>
         <div className="bg-white rounded-lg shadow-xl max-w-4xl w-[90%] overflow-hidden" onClick={(e) => e.stopPropagation()}>

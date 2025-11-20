@@ -30,10 +30,13 @@ import {
   getSalesOrderOptions
 } from '@/services/masterDataService';
 import { documentSequenceService } from '@/services/master-data/documentSequenceService';
+import CustomAlert from '@/components/modals/CustomAlert';
+import { Switch } from '@/components/ui/switch';
 
 export default function AddWorkOrderPage() {
   const navigate = useNavigate();
   const { showAlert, showConfirm, AlertComponent } = useAlert();
+  const SARAN_PER_PAGE = 6;
   
   // Work Order Planning State
   const [workOrderData, setWorkOrderData] = useState({
@@ -103,6 +106,9 @@ export default function AddWorkOrderPage() {
   const [loadingGradeBarang, setLoadingGradeBarang] = useState(false);
   const [loadingPelaksana, setLoadingPelaksana] = useState(false);
   const [loadingSalesOrder, setLoadingSalesOrder] = useState(false);
+  const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
+  const [confirmSaveMessage, setConfirmSaveMessage] = useState('');
+  const [includeImages, setIncludeImages] = useState(true);
 
   // UI State for pelaksana modal
   const [pelaksanaModalOpen, setPelaksanaModalOpen] = useState(false);
@@ -389,13 +395,12 @@ export default function AddWorkOrderPage() {
     try {
       console.log('Loading Sales Order detail for ID:', salesOrderId);
       
-      const [salesOrderHeaderResponse, salesOrderItemsResponse, woNumberResponse] = await Promise.all([
-        request(`/sales-order/header/${salesOrderId}`, { method: 'GET' }),
+      const [salesOrderItemsResponse, woNumberResponse] = await Promise.all([
         request(`/sales-order/sales-order-for-woplanning?sales_order_id=${salesOrderId}`, { method: 'GET' }),
         documentSequenceService.generateWONumber()
       ]);
       
-      console.log('Sales Order header response:', salesOrderHeaderResponse);
+      console.log('Sales Order for woplanning response:', salesOrderItemsResponse);
       console.log('Generated WO number:', woNumberResponse);
       try {
         localStorage.setItem('WO_current_work_order_id', woNumberResponse);
@@ -404,22 +409,30 @@ export default function AddWorkOrderPage() {
         console.warn('Failed to persist generated WO number to storage/state', e);
       }
       
-      let soData = salesOrderHeaderResponse.data || salesOrderHeaderResponse;
-      
-      // If response is an array, take the first item
-      if (Array.isArray(soData)) {
-        soData = soData[0];
-      }
+      // Try to derive SO header info from the woplanning response
+      let soData = salesOrderItemsResponse?.header
+        || salesOrderItemsResponse?.sales_order
+        || salesOrderItemsResponse?.salesOrder
+        || salesOrderItemsResponse?.data?.header
+        || null;
       
       if (!soData) {
-        throw new Error('Sales order data not found');
+        soData = { pelanggan_id: undefined, gudang_id: undefined, catatan: '', handover_method: 'pickup' };
       }
       
-      setSelectedSalesOrder(soData);
       
-      const itemsDataRaw = salesOrderItemsResponse?.data || salesOrderItemsResponse || [];
+      const itemsDataRaw = salesOrderItemsResponse?.items
+        || salesOrderItemsResponse?.data?.items
+        || salesOrderItemsResponse?.data
+        || salesOrderItemsResponse
+        || [];
       const itemsData = Array.isArray(itemsDataRaw) ? itemsDataRaw : (itemsDataRaw.data || []);
       console.log('Sales Order items (for WO planning):', itemsData);
+
+      setSelectedSalesOrder({
+        ...(soData || {}),
+        sales_order_items: Array.isArray(itemsData) ? itemsData : [],
+      });
       
       if (itemsData && itemsData.length > 0) {
         // Transform Sales Order items to Work Order items
@@ -437,9 +450,9 @@ export default function AddWorkOrderPage() {
             lebar: item.lebar || 0,
             tebal: item.tebal || 0,
             qty: item.sisa_qty || item.qty_so || 1,
-            jenis_barang_id: item.jenis_barang_id || item.jenis_barang?.id,
-            bentuk_barang_id: item.bentuk_barang_id || item.bentuk_barang?.id,
-            grade_barang_id: item.grade_barang_id || item.grade_barang?.id,
+            jenis_barang_id: (item.jenis_barang_id || item.jenis_barang?.id)?.toString?.() || '',
+            bentuk_barang_id: (item.bentuk_barang_id || item.bentuk_barang?.id)?.toString?.() || '',
+            grade_barang_id: (item.grade_barang_id || item.grade_barang?.id)?.toString?.() || '',
             jenis_potongan: item.jenis_potongan || null,
             catatan: item.catatan || item.note || item.notes || '',
             pelaksana: []
@@ -457,12 +470,12 @@ export default function AddWorkOrderPage() {
         // Auto-fill other fields from Sales Order and set generated WO number
         setWorkOrderData(prev => ({
           ...prev,
-          nomor_wo: woNumberResponse, // Use generated WO number from API
-          gudang_id: soData.gudang_id || soData.gudang?.id,
-          pelanggan_id: soData.pelanggan_id || soData.pelanggan?.id,
-          catatan: soData.catatan || '',
-          handover_method: soData.handover_method || 'pickup', // Set handover method from SO
-          tanggal_target: workOrderData.tanggal_wo // Set tanggal target sama dengan tanggal WO
+          nomor_wo: woNumberResponse,
+          gudang_id: (soData?.id_gudang ?? soData?.gudang_id ?? soData?.gudang?.id) || prev.gudang_id,
+          pelanggan_id: (soData?.id_pelanggan ?? soData?.pelanggan_id ?? soData?.pelanggan?.id) || prev.pelanggan_id,
+          catatan: soData?.catatan || prev.catatan || '',
+          handover_method: soData?.handover_method || prev.handover_method || 'pickup',
+          tanggal_target: workOrderData.tanggal_wo
         }));
         
         showAlert('Sukses', `${itemsData.length} item berhasil diambil dari Sales Order\nNomor WO: ${woNumberResponse}`, 'success');
@@ -486,11 +499,11 @@ export default function AddWorkOrderPage() {
         // Still set the generated WO number even if no items
         setWorkOrderData(prev => ({
           ...prev,
-          nomor_wo: woNumberResponse, // Use generated WO number from API
-          gudang_id: soData.gudang_id || soData.gudang?.id,
-          pelanggan_id: soData.pelanggan_id || soData.pelanggan?.id,
-          catatan: soData.catatan || '',
-          handover_method: soData.handover_method || 'pickup',
+          nomor_wo: woNumberResponse,
+          gudang_id: (soData?.id_gudang ?? soData?.gudang_id ?? soData?.gudang?.id) || prev.gudang_id,
+          pelanggan_id: (soData?.id_pelanggan ?? soData?.pelanggan_id ?? soData?.pelanggan?.id) || prev.pelanggan_id,
+          catatan: soData?.catatan || prev.catatan || '',
+          handover_method: soData?.handover_method || prev.handover_method || 'pickup',
           tanggal_target: workOrderData.tanggal_wo
         }));
       }
@@ -602,7 +615,7 @@ export default function AddWorkOrderPage() {
     
     try {
       // Hit same API as regular Pilih button
-      const response = await request('/work-order-planning/get-saran-plat-dasar', {
+      const response = await request(`/work-order-planning/get-saran-plat-dasar?per_page=${SARAN_PER_PAGE}&page=1`, {
         method: 'POST',
         body: JSON.stringify({
           jenis_barang_id: item.jenis_barang_id,
@@ -610,12 +623,14 @@ export default function AddWorkOrderPage() {
           grade_barang_id: item.grade_barang_id,
           tebal: parseFloat(item.tebal) || 0,
           panjang: parseFloat(item.panjang) || 0,
-          lebar: parseFloat(item.lebar) || 0
+          lebar: parseFloat(item.lebar) || 0,
+          per_page: SARAN_PER_PAGE,
+          page: 1
         })
       });
       
       console.log('Preview API response:', response.data);
-      setPreviewItems(response.data || []);
+      setPreviewItems((response.data || []).slice(0, SARAN_PER_PAGE));
     } catch (error) {
       console.error('Error loading preview items:', error);
       showAlert('Error', 'Gagal memuat data preview', 'error');
@@ -961,6 +976,142 @@ export default function AddWorkOrderPage() {
   };
 
   // Handle form submission
+  const proceedSave = async () => {
+    setLoading(true);
+    try {
+      const existingWoUniqueId = localStorage.getItem('WO_current_work_order_id');
+      const woUniqueId = existingWoUniqueId || `WO-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
+      const existingWoItemIds = totalQuantityData.map(item => item.WoItemID.toString());
+      const transformedData = {
+        wo_unique_id: woUniqueId,
+        tanggal_wo: workOrderData.tanggal_wo,
+        tanggal_target: workOrderData.tanggal_target,
+        id_sales_order: workOrderData.sales_order_id,
+        id_pelanggan: workOrderData.pelanggan_id,
+        id_gudang: workOrderData.gudang_id,
+        prioritas: workOrderData.prioritas,
+        status: workOrderData.status,
+        handover_method: workOrderData.handover_method,
+        catatan: workOrderData.catatan,
+        id_pelaksana: (() => {
+          const allPelaksanaIds = [];
+          workOrderItems.forEach(item => {
+            item.pelaksana.forEach(pelaksana => {
+              if (pelaksana.pelaksana_id && !allPelaksanaIds.includes(pelaksana.pelaksana_id)) {
+                allPelaksanaIds.push(pelaksana.pelaksana_id);
+              }
+            });
+          });
+          return allPelaksanaIds.length > 0 ? allPelaksanaIds : null;
+        })(),
+        prioritas: workOrderData.prioritas,
+        handover_method: workOrderData.handover_method,
+        catatan: workOrderData.catatan,
+        status: workOrderData.status,
+        items: workOrderItems.map((item, index) => ({
+          wo_item_unique_id: existingWoItemIds[index] || `WOI-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+          sales_order_item_id: item.sales_order_item_id,
+          qty: item.qty,
+          panjang: parseFloat(item.panjang) || 0,
+          lebar: parseFloat(item.lebar) || 0,
+          tebal: parseFloat(item.tebal) || 0,
+          jenis_barang_id: item.jenis_barang_id,
+          bentuk_barang_id: item.bentuk_barang_id,
+          grade_barang_id: item.grade_barang_id,
+          jenis_potongan: item.jenis_potongan || 'potongan',
+          berat: 0,
+          satuan: 'PCS',
+          diskon: 0,
+          catatan: item.catatan,
+          saran_plat_dasar: (() => {
+            const tq = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
+            const woItemData = tq.find(wo => wo.WoItemID === item.id);
+            if (!woItemData || !woItemData.WOQuantity) return [];
+            return woItemData.WOQuantity.map(woq => ({
+              item_barang_id: woq.ItemId,
+              quantity: woq.Quantity,
+              is_selected: true
+            }));
+          })(),
+          pelaksana: item.pelaksana.map(p => ({
+            pelaksana_id: p.pelaksana_id,
+            qty: p.qty,
+            weight: (typeof p.berat !== 'undefined') ? (parseFloat(p.berat) || 0) : (parseFloat(p.weight) || 0),
+            tanggal: workOrderData.tanggal_wo,
+            jam_mulai: '08:00',
+            jam_selesai: '17:00',
+            catatan: p.catatan
+          }))
+        }))
+      };
+      const response = await workOrderService.createWorkOrder(transformedData);
+      const createdId = response.data?.id || response.id;
+      const workOrderNumber = response.data?.nomor_wo || workOrderData.nomor_wo;
+      const workOrderItemsResponse = response.data?.items || [];
+      localStorage.setItem('WO_item_unique_ids', JSON.stringify(existingWoItemIds));
+      try {
+        await saveSaranPlatDasar(createdId, workOrderItemsResponse);
+      } catch (_) {}
+      const mapLabel = (list, value) => {
+        const found = list.find(opt => String(opt.value) === String(value));
+        return found ? (found.label || found.nama || found.text || String(value)) : String(value || 'N/A');
+      };
+      const printData = {
+        nomor_wo: workOrderNumber || workOrderData.nomor_wo,
+        tanggal_wo: workOrderData.tanggal_wo,
+        due_date: workOrderData.tanggal_target,
+        priority: workOrderData.prioritas,
+        status: workOrderData.status,
+        assigned_to: workOrderData.handover_method,
+        customer: (() => {
+          const cust = pelangganList.find(p => String(p.value) === String(workOrderData.pelanggan_id));
+          return cust ? { nama: cust.label } : { nama: 'N/A' };
+        })(),
+        warehouse: (() => {
+          const wh = gudangList.find(g => String(g.value) === String(workOrderData.gudang_id));
+          return wh ? { nama_gudang: wh.label } : { nama_gudang: 'N/A' };
+        })(),
+        items: workOrderItems.map(item => ({
+          jenisBarang: { nama_jenis_barang: mapLabel(jenisBarangList, item.jenis_barang_id), nama: mapLabel(jenisBarangList, item.jenis_barang_id) },
+          bentukBarang: { nama_bentuk_barang: mapLabel(bentukBarangList, item.bentuk_barang_id), nama_bentuk: mapLabel(bentukBarangList, item.bentuk_barang_id), nama: mapLabel(bentukBarangList, item.bentuk_barang_id) },
+          gradeBarang: { nama_grade_barang: mapLabel(gradeBarangList, item.grade_barang_id), nama_grade: mapLabel(gradeBarangList, item.grade_barang_id), nama: mapLabel(gradeBarangList, item.grade_barang_id) },
+          dimensi: `${item.panjang || 0}x${item.lebar || 0}x${item.tebal || 0}mm`,
+          qtyPlanning: item.qty || 0,
+          jenisPotongan: item.jenis_potongan || 'potongan',
+          keterangan: item.catatan || ''
+        })),
+        canvasImages: (() => {
+          try {
+            const used = JSON.parse(localStorage.getItem('WO_used_saran_plats') || '[]');
+            const images = [];
+            used.forEach(id => {
+              const fileName = `canvas-preview-ItemId-${id}.jpg`;
+              const src = `/canvas-previews/${fileName}`;
+              images.push({ item_id: parseInt(id), src });
+            });
+            return images;
+          } catch (e) {
+            return [];
+          }
+        })()
+      };
+      const html = generateWOPlanningPrintContent(printData, { includeImages });
+      openPrintDialog(html);
+      navigate('/work-order');
+    } catch (error) {
+      let errorMessage = 'Gagal membuat Work Order';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      showAlert('Error', errorMessage, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -1027,206 +1178,16 @@ export default function AddWorkOrderPage() {
       }
     }
 
-    // Konfirmasi sebelum save
-    const confirmationMessage = 
-      `Nomor WO: ${workOrderData.nomor_wo}\n` +
-      `Tanggal WO: ${workOrderData.tanggal_wo}\n` +
-      `Prioritas: ${workOrderData.prioritas}\n` +
-      `Metode Penyerahan: ${workOrderData.handover_method === 'pickup' ? 'Pickup' : 'Delivery'}\n` +
-      `Jumlah Item: ${workOrderItems.length}\n` +
-      `Total Pelaksana: ${workOrderItems.reduce((total, item) => total + item.pelaksana.length, 0)}\n\n` +
-      `Apakah Anda yakin ingin menyimpan Work Order ini?`;
-
-    showConfirm(
-      'Konfirmasi Simpan Work Order',
-      confirmationMessage,
-      () => {
-        // User confirmed, proceed with save
-        proceedWithSave();
-      },
-      () => {
-        // User cancelled, do nothing
-      },
-      'Simpan',
-      'Batal'
-    );
-  };
-
-  // Separate function to handle the actual save process
-  const proceedWithSave = async () => {
-    setLoading(true);
-    try {
-      // Get existing unique IDs from localStorage
-      const existingWoUniqueId = localStorage.getItem('WO_current_work_order_id');
-      const woUniqueId = existingWoUniqueId || `WO-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-      
-      // Get existing woItemUniqueIds from WO_total_quantity (convert to string)
-      const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
-      const existingWoItemIds = totalQuantityData.map(item => item.WoItemID.toString());
-      
-      // Transform data to match API expected format
-      const transformedData = {
-        wo_unique_id: woUniqueId,
-        tanggal_wo: workOrderData.tanggal_wo,
-        tanggal_target: workOrderData.tanggal_target,
-        id_sales_order: workOrderData.sales_order_id,
-        id_pelanggan: workOrderData.pelanggan_id,
-        id_gudang: workOrderData.gudang_id,
-        prioritas: workOrderData.prioritas,
-        status: workOrderData.status,
-        handover_method: workOrderData.handover_method,
-        catatan: workOrderData.catatan,
-        // Add id_pelaksana field at the top level as required by API (array of all pelaksana IDs)
-        id_pelaksana: (() => {
-          const allPelaksanaIds = [];
-          workOrderItems.forEach(item => {
-            item.pelaksana.forEach(pelaksana => {
-              if (pelaksana.pelaksana_id && !allPelaksanaIds.includes(pelaksana.pelaksana_id)) {
-                allPelaksanaIds.push(pelaksana.pelaksana_id);
-              }
-            });
-          });
-          return allPelaksanaIds.length > 0 ? allPelaksanaIds : null;
-        })(),
-        prioritas: workOrderData.prioritas,
-        handover_method: workOrderData.handover_method,
-        catatan: workOrderData.catatan,
-        status: workOrderData.status,
-        items: workOrderItems.map((item, index) => ({
-          wo_item_unique_id: existingWoItemIds[index] || `WOI-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-          sales_order_item_id: item.sales_order_item_id, // Include sales order item ID
-          qty: item.qty,
-          panjang: parseFloat(item.panjang) || 0,
-          lebar: parseFloat(item.lebar) || 0,
-          tebal: parseFloat(item.tebal) || 0,
-          jenis_barang_id: item.jenis_barang_id,
-          bentuk_barang_id: item.bentuk_barang_id,
-          grade_barang_id: item.grade_barang_id,
-          jenis_potongan: item.jenis_potongan || 'potongan',
-          berat: 0, // Default weight, bisa diisi nanti
-          satuan: "PCS", // Default unit
-          diskon: 0, // Default discount
-          catatan: item.catatan,
-          // Saran plat dasar mapping dari WO_total_quantity localStorage
-          saran_plat_dasar: (() => {
-            const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
-            const woItemData = totalQuantityData.find(wo => wo.WoItemID === item.id);
-            if (!woItemData || !woItemData.WOQuantity) return [];
-            return woItemData.WOQuantity.map(woq => ({
-              item_barang_id: woq.ItemId,
-              quantity: woq.Quantity,
-              is_selected: true
-            }));
-          })(),
-          // Add required fields for pelaksana
-          pelaksana: item.pelaksana.map(p => ({
-            pelaksana_id: p.pelaksana_id,
-            qty: p.qty,
-            weight: (typeof p.berat !== 'undefined') ? (parseFloat(p.berat) || 0) : (parseFloat(p.weight) || 0),
-            tanggal: workOrderData.tanggal_wo, // Use WO date as default
-            jam_mulai: "08:00", // Default start time
-            jam_selesai: "17:00", // Default end time
-            catatan: p.catatan
-          }))
-        }))
-      };
-
-      console.log('Transformed data to send:', transformedData);
-      
-      const response = await workOrderService.createWorkOrder(transformedData);
-      
-      // Get the created work order ID from response
-      const workOrderId = response.data?.id || response.id;
-      const workOrderNumber = response.data?.nomor_wo || workOrderData.nomor_wo;
-      const workOrderItemsResponse = response.data?.items || [];
-      
-      // Store array of woItemUniqueIds for saran plat dasar
-      localStorage.setItem('WO_item_unique_ids', JSON.stringify(existingWoItemIds));
-      
-      console.log('WO Unique ID:', woUniqueId);
-      console.log('WO Item Unique IDs:', existingWoItemIds.length > 0 ? existingWoItemIds : transformedData.items.map(item => item.wo_item_unique_id));
-      
-      // Save saran plat dasar
-      try {
-        console.log('🚀 Calling saveSaranPlatDasar...');
-        await saveSaranPlatDasar(workOrderId, workOrderItemsResponse);
-        console.log('✅ saveSaranPlatDasar completed');
-      } catch (error) {
-        console.error('❌ Error saving saran plat dasar:', error);
-        // Don't throw error here, just log it
-      }
-      
-      // Clear the stored work order ID since work order is now saved
-      // localStorage.removeItem('WO_current_work_order_id');
-      
-      // Siapkan data cetak menggunakan data lokal yang baru saja dikirim (tanpa refetch)
-      const mapLabel = (list, value) => {
-        const found = list.find(opt => String(opt.value) === String(value));
-        return found ? (found.label || found.nama || found.text || String(value)) : String(value || 'N/A');
-      };
-
-      const printData = {
-        nomor_wo: workOrderNumber || workOrderData.nomor_wo,
-        tanggal_wo: workOrderData.tanggal_wo,
-        due_date: workOrderData.tanggal_target,
-        priority: workOrderData.prioritas,
-        status: workOrderData.status,
-        assigned_to: workOrderData.handover_method,
-        customer: (() => {
-          const cust = pelangganList.find(p => String(p.value) === String(workOrderData.pelanggan_id));
-          return cust ? { nama: cust.label } : { nama: 'N/A' };
-        })(),
-        warehouse: (() => {
-          const wh = gudangList.find(g => String(g.value) === String(workOrderData.gudang_id));
-          return wh ? { nama_gudang: wh.label } : { nama_gudang: 'N/A' };
-        })(),
-        items: workOrderItems.map(item => ({
-          nama_item: mapLabel(jenisBarangList, item.jenis_barang_id),
-          bentukBarang: { nama: mapLabel(bentukBarangList, item.bentuk_barang_id) },
-          gradeBarang: { nama: mapLabel(gradeBarangList, item.grade_barang_id) },
-          dimensi: `${item.panjang || 0}x${item.lebar || 0}x${item.tebal || 0}mm`,
-          qtyPlanning: item.qty || 0,
-          jenisPotongan: item.jenis_potongan || 'potongan',
-          keterangan: item.catatan || ''
-        })),
-        // Ambil gambar canvas dari folder public berdasarkan saran ItemId yang dipakai
-        canvasImages: (() => {
-          try {
-            const used = JSON.parse(localStorage.getItem('WO_used_saran_plats') || '[]');
-            const images = [];
-            used.forEach(id => {
-              const fileName = `canvas-preview-ItemId-${id}.jpg`;
-              const src = `/canvas-previews/${fileName}`;
-              images.push({ item_id: parseInt(id), src });
-            });
-            return images;
-          } catch (e) {
-            console.warn('Gagal menyiapkan canvas images untuk cetak:', e);
-            return [];
-          }
-        })()
-      };
-
-      const html = generateWOPlanningPrintContent(printData);
-      openPrintDialog(html);
-      // Setelah dialog cetak dibuka, tutup halaman Add dan kembali ke daftar WO
-      navigate('/work-order');
-    } catch (error) {
-      console.error('Error creating work order:', error);
-      
-      // Extract error message from API response
-      let errorMessage = 'Gagal membuat Work Order';
-      
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      showAlert('Error', errorMessage, 'error');
-    } finally {
-      setLoading(false);
-    }
+    const msg = [
+      `Nomor WO: ${workOrderData.nomor_wo}`,
+      `Tanggal WO: ${workOrderData.tanggal_wo}`,
+      `Prioritas: ${workOrderData.prioritas}`,
+      `Metode Penyerahan: ${workOrderData.handover_method === 'pickup' ? 'Pickup' : 'Delivery'}`,
+      `Jumlah Item: ${workOrderItems.length}`,
+      `Total Pelaksana: ${workOrderItems.reduce((total, item) => total + item.pelaksana.length, 0)}`
+    ].join('\n');
+    setConfirmSaveMessage(msg);
+    setConfirmSaveOpen(true);
   };
 
   return (
@@ -1603,14 +1564,16 @@ export default function AddWorkOrderPage() {
           >
             Batal
           </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={handleGenerateDummyJson}
-            disabled={loading}
-          >
-            Generate Dummy JSON
-          </Button>
+          {false && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleGenerateDummyJson}
+              disabled={loading}
+            >
+              Generate Dummy JSON
+            </Button>
+          )}
           <Button
             type="submit"
             disabled={loading}
@@ -1634,6 +1597,7 @@ export default function AddWorkOrderPage() {
           workOrderId={workOrderId}
           onSelectionChange={handlePlatDasarSelection}
           onClose={closePlatDasarModal}
+          perPage={SARAN_PER_PAGE}
         />
       )}
 
@@ -1902,6 +1866,27 @@ export default function AddWorkOrderPage() {
       />
       
       {/* Alert Component */}
+      <CustomAlert
+        open={confirmSaveOpen}
+        onOpenChange={setConfirmSaveOpen}
+        title="Konfirmasi Simpan Work Order"
+        message={`${confirmSaveMessage}\n\nApakah Anda yakin ingin menyimpan Work Order ini?`}
+        type="info"
+        showCancel={true}
+        confirmText={loading ? 'Menyimpan...' : 'Ya, Simpan'}
+        cancelText="Tidak"
+        onConfirm={proceedSave}
+        extraContent={(
+          <div className="w-full flex items-center justify-between gap-4 bg-gray-50 rounded-md px-3 py-2 border">
+            <span className="text-sm text-gray-800">Sertakan gambar untuk print</span>
+            <Switch
+              checked={includeImages}
+              onCheckedChange={setIncludeImages}
+              aria-label="Sertakan gambar untuk print"
+            />
+          </div>
+        )}
+      />
       <AlertComponent />
     </PageLayout>
   );
