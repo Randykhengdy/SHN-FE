@@ -19,10 +19,8 @@ import { checkAndRefreshToken } from '@/lib/tokenUtils';
 
 const statusOptions = [
   { value: "all", label: "Semua Status" },
-  { value: "Pending", label: "Pending" },
   { value: "On Progress", label: "On Progress" },
-  { value: "Completed", label: "Completed" },
-  { value: "Cancelled", label: "Cancelled" }
+  { value: "Selesai", label: "Selesai" }
 ];
 
 const periodOptions = [
@@ -510,10 +508,11 @@ export default function WorkOrderPage() {
     switch (status) {
       case 'On Progress':
         return 'bg-orange-100 text-orange-800';
+      case 'Selesai':
+      case 'Completed': // Handle both for backward compatibility
+        return 'bg-green-100 text-green-800';
       case 'Pending':
         return 'bg-yellow-100 text-yellow-800';
-      case 'Completed':
-        return 'bg-green-100 text-green-800';
       case 'Cancelled':
         return 'bg-red-100 text-red-800';
       default:
