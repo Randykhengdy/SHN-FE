@@ -1344,6 +1344,163 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   }, [animationFrameId, draggedBoxId, isDragging]);
 
   // Double-click handler for rotating boxes
+  const rotateBoxById = useCallback((boxId) => {
+    const target = boxes && boxes.length > 0 ? boxes.find(b => b.id === boxId) : null;
+    if (!target) return;
+    if (target.isDisabled) {
+      showAlert('Info', 'This box is disabled and cannot be rotated', 'info');
+      return;
+    }
+    const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
+    const boxWoItemId = target.woItemId;
+    if (boxWoItemId && currentWoItemId && currentWoItemId !== boxWoItemId) {
+      showAlert('Info', `This box belongs to a different Work Order item (ID: ${boxWoItemId}). You cannot rotate it.`, 'info');
+      return;
+    }
+    setBoxes(prevBoxes => {
+      return prevBoxes.map(box => {
+        if (box.id !== boxId) return box;
+        const newBox = { ...box, isRotated: !box.isRotated };
+        const rotatedWidth = newBox.isRotated ? box.height : box.width;
+        const rotatedHeight = newBox.isRotated ? box.width : box.height;
+        const inside = (x, y, w, h) => (
+          x >= baseContainer.x && y >= baseContainer.y &&
+          x + w <= baseContainer.x + baseContainer.width &&
+          y + h <= baseContainer.y + baseContainer.height
+        );
+        const collide = (x, y, w, h) => {
+          return prevBoxes.some(otherBox => {
+            if (otherBox.id === boxId) return false;
+            const ow = otherBox.isRotated ? otherBox.height : otherBox.width;
+            const oh = otherBox.isRotated ? otherBox.width : otherBox.height;
+            return !(x >= otherBox.x + ow || x + w <= otherBox.x || y >= otherBox.y + oh || y + h <= otherBox.y);
+          });
+        };
+        const cluster = prevBoxes.filter(b => (b.id !== boxId) && (b.woItemId === currentWoItemId || b.woItemId === parseInt(currentWoItemId)));
+        const centroid = cluster.length > 0 ? {
+          x: Math.round(cluster.reduce((s, b) => s + (b.x + (b.isRotated ? b.height : b.width) / 2), 0) / cluster.length),
+          y: Math.round(cluster.reduce((s, b) => s + (b.y + (b.isRotated ? b.width : b.height) / 2), 0) / cluster.length)
+        } : { x: baseContainer.x, y: baseContainer.y };
+        if (box.x + rotatedWidth > baseContainer.width || box.y + rotatedHeight > baseContainer.height) {
+          const order = ['below', 'right', 'left', 'above'];
+          let chosen = null;
+          for (const side of order) {
+            for (const b of cluster) {
+              const bw = b.isRotated ? b.height : b.width;
+              const bh = b.isRotated ? b.width : b.height;
+              if (side === 'below') {
+                const y = b.y + bh;
+                for (let x = b.x; x <= b.x + bw - rotatedWidth; x += 1) {
+                  if (!inside(x, y, rotatedWidth, rotatedHeight) || collide(x, y, rotatedWidth, rotatedHeight)) continue;
+                  const d = Math.abs((x + rotatedWidth / 2) - centroid.x) + Math.abs((y + rotatedHeight / 2) - centroid.y);
+                  if (!chosen || d < chosen.dist) chosen = { x, y, dist: d, side };
+                }
+              } else if (side === 'right') {
+                const x = b.x + bw;
+                for (let y = b.y; y <= b.y + bh - rotatedHeight; y += 1) {
+                  if (!inside(x, y, rotatedWidth, rotatedHeight) || collide(x, y, rotatedWidth, rotatedHeight)) continue;
+                  const d = Math.abs((x + rotatedWidth / 2) - centroid.x) + Math.abs((y + rotatedHeight / 2) - centroid.y);
+                  if (!chosen || d < chosen.dist) chosen = { x, y, dist: d, side };
+                }
+              } else if (side === 'left') {
+                const x = b.x - rotatedWidth;
+                for (let y = b.y; y <= b.y + bh - rotatedHeight; y += 1) {
+                  if (!inside(x, y, rotatedWidth, rotatedHeight) || collide(x, y, rotatedWidth, rotatedHeight)) continue;
+                  const d = Math.abs((x + rotatedWidth / 2) - centroid.x) + Math.abs((y + rotatedHeight / 2) - centroid.y);
+                  if (!chosen || d < chosen.dist) chosen = { x, y, dist: d, side };
+                }
+              } else if (side === 'above') {
+                const y = b.y - rotatedHeight;
+                for (let x = b.x; x <= b.x + bw - rotatedWidth; x += 1) {
+                  if (!inside(x, y, rotatedWidth, rotatedHeight) || collide(x, y, rotatedWidth, rotatedHeight)) continue;
+                  const d = Math.abs((x + rotatedWidth / 2) - centroid.x) + Math.abs((y + rotatedHeight / 2) - centroid.y);
+                  if (!chosen || d < chosen.dist) chosen = { x, y, dist: d, side };
+                }
+              }
+            }
+            if (chosen && chosen.side === 'below') break;
+          }
+          if (!chosen) {
+            for (let y = baseContainer.y; y <= baseContainer.y + baseContainer.height - rotatedHeight && !chosen; y++) {
+              for (let x = baseContainer.x; x <= baseContainer.x + baseContainer.width - rotatedWidth && !chosen; x++) {
+                if (inside(x, y, rotatedWidth, rotatedHeight) && !collide(x, y, rotatedWidth, rotatedHeight)) {
+                  chosen = { x, y, dist: 0, side: 'scan' };
+                }
+              }
+            }
+          }
+          if (chosen) {
+            showAlert('Info', 'Rotated and auto-placed to available space', 'info');
+            return { ...newBox, x: chosen.x, y: chosen.y };
+          }
+          showAlert('Warning', `Rotated box (${rotatedWidth}×${rotatedHeight}) would exceed container bounds!`, 'warning');
+          return box;
+        }
+        const hasCollision = prevBoxes.some(otherBox => {
+          if (otherBox.id === boxId) return false;
+          const otherBoxWidth = otherBox.isRotated ? otherBox.height : otherBox.width;
+          const otherBoxHeight = otherBox.isRotated ? otherBox.width : otherBox.height;
+          return !(box.x >= otherBox.x + otherBoxWidth || box.x + rotatedWidth <= otherBox.x || box.y >= otherBox.y + otherBoxHeight || box.y + rotatedHeight <= otherBox.y);
+        });
+        if (hasCollision) {
+          const order = ['below', 'right', 'left', 'above'];
+          let chosen = null;
+          for (const side of order) {
+            for (const b of cluster) {
+              const bw = b.isRotated ? b.height : b.width;
+              const bh = b.isRotated ? b.width : b.height;
+              if (side === 'below') {
+                const y = b.y + bh;
+                for (let x = b.x; x <= b.x + bw - rotatedWidth; x += 1) {
+                  if (!inside(x, y, rotatedWidth, rotatedHeight) || collide(x, y, rotatedWidth, rotatedHeight)) continue;
+                  const d = Math.abs((x + rotatedWidth / 2) - centroid.x) + Math.abs((y + rotatedHeight / 2) - centroid.y);
+                  if (!chosen || d < chosen.dist) chosen = { x, y, dist: d, side };
+                }
+              } else if (side === 'right') {
+                const x = b.x + bw;
+                for (let y = b.y; y <= b.y + bh - rotatedHeight; y += 1) {
+                  if (!inside(x, y, rotatedWidth, rotatedHeight) || collide(x, y, rotatedWidth, rotatedHeight)) continue;
+                  const d = Math.abs((x + rotatedWidth / 2) - centroid.x) + Math.abs((y + rotatedHeight / 2) - centroid.y);
+                  if (!chosen || d < chosen.dist) chosen = { x, y, dist: d, side };
+                }
+              } else if (side === 'left') {
+                const x = b.x - rotatedWidth;
+                for (let y = b.y; y <= b.y + bh - rotatedHeight; y += 1) {
+                  if (!inside(x, y, rotatedWidth, rotatedHeight) || collide(x, y, rotatedWidth, rotatedHeight)) continue;
+                  const d = Math.abs((x + rotatedWidth / 2) - centroid.x) + Math.abs((y + rotatedHeight / 2) - centroid.y);
+                  if (!chosen || d < chosen.dist) chosen = { x, y, dist: d, side };
+                }
+              } else if (side === 'above') {
+                const y = b.y - rotatedHeight;
+                for (let x = b.x; x <= b.x + bw - rotatedWidth; x += 1) {
+                  if (!inside(x, y, rotatedWidth, rotatedHeight) || collide(x, y, rotatedWidth, rotatedHeight)) continue;
+                  const d = Math.abs((x + rotatedWidth / 2) - centroid.x) + Math.abs((y + rotatedHeight / 2) - centroid.y);
+                  if (!chosen || d < chosen.dist) chosen = { x, y, dist: d, side };
+                }
+              }
+            }
+            if (chosen && chosen.side === 'below') break;
+          }
+          if (!chosen) {
+            for (let y = baseContainer.y; y <= baseContainer.y + baseContainer.height - rotatedHeight && !chosen; y++) {
+              for (let x = baseContainer.x; x <= baseContainer.x + baseContainer.width - rotatedWidth && !chosen; x++) {
+                if (inside(x, y, rotatedWidth, rotatedHeight) && !collide(x, y, rotatedWidth, rotatedHeight)) {
+                  chosen = { x, y, dist: 0, side: 'scan' };
+                }
+              }
+            }
+          }
+          if (chosen) {
+            showAlert('Info', 'Rotated and auto-placed to available space', 'info');
+            return { ...newBox, x: chosen.x, y: chosen.y };
+          }
+          showAlert('Warning', 'Rotated box would collide and no alternative position found!', 'warning');
+          return box;
+        }
+        return newBox;
+      });
+    });
+  }, [boxes, showAlert, workOrderData, baseContainer]);
   const handleDoubleClick = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -1353,88 +1510,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       return isMouseOverBox(mousePos, box);
     }) : null;
     
-    if (clickedBox) {
-      // Check if box is disabled
-      if (clickedBox.isDisabled) {
-        showAlert('Info', 'This box is disabled and cannot be rotated', 'info');
-        return;
-      }
-      
-      // Check if box belongs to the same WO item
-      const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
-      const boxWoItemId = clickedBox.woItemId;
-      
-      if (boxWoItemId && currentWoItemId && currentWoItemId !== boxWoItemId) {
-        showAlert('Info', `This box belongs to a different Work Order item (ID: ${boxWoItemId}). You cannot rotate it.`, 'info');
-        return;
-      }
-      
-      // Rotate the box (inline logic)
-      setBoxes(prevBoxes => {
-        return prevBoxes.map(box => {
-          if (box.id === clickedBox.id) {
-            const newBox = {
-              ...box,
-              isRotated: !box.isRotated
-            };
-            
-            // Check if rotated box fits in container
-            const rotatedWidth = newBox.isRotated ? box.height : box.width;
-            const rotatedHeight = newBox.isRotated ? box.width : box.height;
-            
-            console.log('Rotation bounds check:', {
-              boxId: box.id,
-              currentPos: { x: box.x, y: box.y },
-              currentSize: { width: box.width, height: box.height },
-              rotatedSize: { width: rotatedWidth, height: rotatedHeight },
-              containerSize: { width: baseContainer.width, height: baseContainer.height },
-              wouldExceedX: box.x + rotatedWidth > baseContainer.width,
-              wouldExceedY: box.y + rotatedHeight > baseContainer.height,
-              finalX: box.x + rotatedWidth,
-              finalY: box.y + rotatedHeight
-            });
-            
-            if (box.x + rotatedWidth > baseContainer.width || box.y + rotatedHeight > baseContainer.height) {
-              console.log('❌ Rotation blocked: Would exceed container bounds');
-              showAlert('Warning', `Rotated box (${rotatedWidth}×${rotatedHeight}) would exceed container bounds!`, 'warning');
-              return box; // Don't rotate if it doesn't fit
-            }
-            
-            // Check for collisions with other boxes
-            const hasCollision = prevBoxes.some(otherBox => {
-              if (otherBox.id === clickedBox.id) return false;
-              
-              const otherBoxWidth = otherBox.isRotated ? otherBox.height : otherBox.width;
-              const otherBoxHeight = otherBox.isRotated ? otherBox.width : otherBox.height;
-              
-              const collision = !(box.x >= otherBox.x + otherBoxWidth || 
-                                box.x + rotatedWidth <= otherBox.x || 
-                                box.y >= otherBox.y + otherBoxHeight || 
-                                box.y + rotatedHeight <= otherBox.y);
-              
-              if (collision) {
-                console.log('Collision detected with box:', {
-                  currentBox: { id: box.id, x: box.x, y: box.y, rotatedSize: { width: rotatedWidth, height: rotatedHeight } },
-                  otherBox: { id: otherBox.id, x: otherBox.x, y: otherBox.y, size: { width: otherBoxWidth, height: otherBoxHeight } }
-                });
-              }
-              
-              return collision;
-            });
-            
-            if (hasCollision) {
-              console.log('❌ Rotation blocked: Would collide with another box');
-              showAlert('Warning', 'Rotated box would collide with another box!', 'warning');
-              return box; // Don't rotate if there's a collision
-            }
-            
-            console.log(`✅ Box ${clickedBox.id} rotated successfully: ${box.width}×${box.height} → ${rotatedWidth}×${rotatedHeight}`);
-            return newBox;
-          }
-          return box;
-        });
-      });
-    }
+    if (clickedBox) rotateBoxById(clickedBox.id);
   }, [boxes, getMousePos, isMouseOverBox, showAlert, workOrderData, baseContainer]);
 
   // Mouse wheel zoom
@@ -1533,235 +1609,140 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     
     setBoxes(prevBoxes => {
       const newId = prevBoxes && prevBoxes.length > 0 ? Math.max(...prevBoxes.map(b => b.id)) + 1 : 1;
-      const singleColor = '#10b981'; // Use same color as other boxes
-    
-      // Create a grid to track occupied positions
-      const grid = Array(baseContainer.height).fill().map(() => 
-        Array(baseContainer.width).fill(false)
+      const currentWoItemIdLocal = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
+      const clusterBoxes = prevBoxes ? prevBoxes.filter(box => box.woItemId === currentWoItemIdLocal || box.woItemId === parseInt(currentWoItemIdLocal)) : [];
+      const centroid = clusterBoxes.length > 0 ? {
+        x: Math.round(clusterBoxes.reduce((s, b) => s + (b.x + (b.isRotated ? b.height : b.width) / 2), 0) / clusterBoxes.length),
+        y: Math.round(clusterBoxes.reduce((s, b) => s + (b.y + (b.isRotated ? b.width : b.height) / 2), 0) / clusterBoxes.length)
+      } : { x: baseContainer.x, y: baseContainer.y };
+
+      const inside = (x, y, w, h) => (
+        x >= baseContainer.x && y >= baseContainer.y &&
+        x + w <= baseContainer.x + baseContainer.width &&
+        y + h <= baseContainer.y + baseContainer.height
       );
-      
-      // Mark existing boxes as occupied (handle rotation)
-      if (prevBoxes && prevBoxes.length > 0) {
-        prevBoxes.forEach(box => {
-          // Get actual dimensions considering rotation
-          const boxWidth = box.isRotated ? box.height : box.width;
-          const boxHeight = box.isRotated ? box.width : box.height;
-          
-          for (let y = box.y; y < box.y + boxHeight; y++) {
-            for (let x = box.x; x < box.x + boxWidth; x++) {
-              if (x >= 0 && x < baseContainer.width && y >= 0 && y < baseContainer.height) {
-                grid[y][x] = true;
-              }
-            }
-          }
-        });
-      }
-      
-      // Find first available position (top to bottom, then left to right)
-      let placed = false;
-      let newBox = null;
-      
-      // First try perfect grid alignment (left to right, then top to bottom)
-      for (let x = baseContainer.x; x <= baseContainer.x + baseContainer.width - newBoxSize.width && !placed; x += newBoxSize.width) {
-        for (let y = baseContainer.y; y <= baseContainer.y + baseContainer.height - newBoxSize.height && !placed; y += newBoxSize.height) {
-          // Check if this position is completely available
-          let canPlace = true;
-          for (let checkY = y; checkY < y + newBoxSize.height && canPlace; checkY++) {
-            for (let checkX = x; checkX < x + newBoxSize.width && canPlace; checkX++) {
-              if (checkX >= baseContainer.width || checkY >= baseContainer.height || grid[checkY][checkX]) {
-                canPlace = false;
-              }
-            }
-          }
-          
-          if (canPlace) {
-            const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
-            const workOrderId = workOrderData?.workOrderId || 'unknown';
-            const saranId = workOrderData?.selectedItem?.id || 'unknown';
-            // const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
-            
-            newBox = {
-              id: newId,
-              x: x,
-              y: y,
-              width: newBoxSize.width,
-              height: newBoxSize.height,
-              color: '#10b981', // Always green for new boxes
-              isDisabled: false, // Default: new boxes are enabled
-              isRotated: false, // Default to not rotated
-              woItemId: woItemId,
-              workOrderId: workOrderId,
-              saranId: saranId,
-              isSave: false, // Will be true when saving
-              // workItemUniqueId: workItemUniqueId
-            };
-            console.log('Created new box with isSave and workItemUniqueId:', {
-              boxId: newId,
-              woItemId: woItemId,
-              isSave: false,
-              // workItemUniqueId: workItemUniqueId,
-              workOrderItem: workOrderData?.workOrderItem,
-              itemId: workOrderData?.itemId,
-              workOrderData: workOrderData
-            });
-            placed = true;
-          }
+
+      const collide = (x, y, w, h) => {
+        if (!prevBoxes || prevBoxes.length === 0) return false;
+        for (const box of prevBoxes) {
+          const bw = box.isRotated ? box.height : box.width;
+          const bh = box.isRotated ? box.width : box.height;
+          if (!(x >= box.x + bw || x + w <= box.x || y >= box.y + bh || y + h <= box.y)) return true;
         }
-      }
-      
-      // If perfect grid alignment failed, try flexible placement (left to right, then top to bottom)
-      if (!placed) {
-        for (let x = baseContainer.x; x <= baseContainer.x + baseContainer.width - newBoxSize.width && !placed; x += 1) {
-          for (let y = baseContainer.y; y <= baseContainer.y + baseContainer.height - newBoxSize.height && !placed; y += 1) {
-            // Check if this position is completely available
-            let canPlace = true;
-            for (let checkY = y; checkY < y + newBoxSize.height && canPlace; checkY++) {
-              for (let checkX = x; checkX < x + newBoxSize.width && canPlace; checkX++) {
-                if (checkX >= baseContainer.width || checkY >= baseContainer.height || grid[checkY][checkX]) {
-                  canPlace = false;
-                }
+        return false;
+      };
+
+      const sidePriority = { below: 0, right: 1, left: 2, above: 3 };
+      const collect = (rot = false) => {
+        const w = rot ? newBoxSize.height : newBoxSize.width;
+        const h = rot ? newBoxSize.width : newBoxSize.height;
+        const cands = [];
+        if (clusterBoxes.length === 0) {
+          const x0 = baseContainer.x;
+          const y0 = baseContainer.y;
+          if (inside(x0, y0, w, h) && !collide(x0, y0, w, h)) {
+            cands.push({ x: x0, y: y0, rotated: rot, side: 'below', dist: Math.abs(x0 + w / 2 - centroid.x) + Math.abs(y0 + h / 2 - centroid.y) });
+          }
+          return cands;
+        }
+        const order = ['below', 'right', 'left', 'above'];
+        for (const side of order) {
+          for (const b of clusterBoxes) {
+            const bw = b.isRotated ? b.height : b.width;
+            const bh = b.isRotated ? b.width : b.height;
+            if (side === 'below') {
+              const y = b.y + bh;
+              for (let x = b.x; x <= b.x + bw - w; x += 1) {
+                if (!inside(x, y, w, h) || collide(x, y, w, h)) continue;
+                const d = Math.abs((x + w / 2) - centroid.x) + Math.abs((y + h / 2) - centroid.y);
+                cands.push({ x, y, rotated: rot, side, dist: d });
               }
-            }
-            
-            if (canPlace) {
-              const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
-              const workOrderId = workOrderData?.workOrderId || 'unknown';
-              const saranId = workOrderData?.selectedItem?.id || 'unknown';
-              
-              newBox = {
-                id: newId,
-                x: x,
-                y: y,
-                width: newBoxSize.width,
-                height: newBoxSize.height,
-                color: '#10b981',
-                isDisabled: false,
-                isRotated: false, // Default to not rotated
-                woItemId: woItemId,
-                workOrderId: workOrderId,
-                saranId: saranId,
-                isSave: false
-              };
-              placed = true;
+            } else if (side === 'right') {
+              const x = b.x + bw;
+              for (let y = b.y; y <= b.y + bh - h; y += 1) {
+                if (!inside(x, y, w, h) || collide(x, y, w, h)) continue;
+                const d = Math.abs((x + w / 2) - centroid.x) + Math.abs((y + h / 2) - centroid.y);
+                cands.push({ x, y, rotated: rot, side, dist: d });
+              }
+            } else if (side === 'left') {
+              const x = b.x - w;
+              for (let y = b.y; y <= b.y + bh - h; y += 1) {
+                if (!inside(x, y, w, h) || collide(x, y, w, h)) continue;
+                const d = Math.abs((x + w / 2) - centroid.x) + Math.abs((y + h / 2) - centroid.y);
+                cands.push({ x, y, rotated: rot, side, dist: d });
+              }
+            } else if (side === 'above') {
+              const y = b.y - h;
+              for (let x = b.x; x <= b.x + bw - w; x += 1) {
+                if (!inside(x, y, w, h) || collide(x, y, w, h)) continue;
+                const d = Math.abs((x + w / 2) - centroid.x) + Math.abs((y + h / 2) - centroid.y);
+                cands.push({ x, y, rotated: rot, side, dist: d });
+              }
             }
           }
         }
-      }
-      
-      // If still not placed, try with rotation (horizontal orientation)
-      if (!placed) {
-        console.log('Trying to place box with rotation (horizontal orientation)...');
-        const rotatedWidth = newBoxSize.height; // 100
-        const rotatedHeight = newBoxSize.width; // 50
-        
-        // Check if rotated box can fit in container
-        if (rotatedWidth <= baseContainer.width && rotatedHeight <= baseContainer.height) {
-          // Try perfect grid alignment with rotation
-          for (let x = baseContainer.x; x <= baseContainer.x + baseContainer.width - rotatedWidth && !placed; x += rotatedWidth) {
-            for (let y = baseContainer.y; y <= baseContainer.y + baseContainer.height - rotatedHeight && !placed; y += rotatedHeight) {
-              // Check if this position is completely available
-              let canPlace = true;
-              for (let checkY = y; checkY < y + rotatedHeight && canPlace; checkY++) {
-                for (let checkX = x; checkX < x + rotatedWidth && canPlace; checkX++) {
-                  if (checkX >= baseContainer.width || checkY >= baseContainer.height || grid[checkY][checkX]) {
-                    canPlace = false;
-                  }
-                }
-              }
-              
-              if (canPlace) {
-                const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
-                const workOrderId = workOrderData?.workOrderId || 'unknown';
-                const saranId = workOrderData?.selectedItem?.id || 'unknown';
-                
-                newBox = {
-                  id: newId,
-                  x: x,
-                  y: y,
-                  width: newBoxSize.width, // Keep original width/height for consistency
-                  height: newBoxSize.height,
-                  color: '#10b981',
-                  isDisabled: false,
-                  isRotated: true, // Mark as rotated
-                  woItemId: woItemId,
-                  workOrderId: workOrderId,
-                  saranId: saranId,
-                  isSave: false
-                };
-                console.log(`✅ Placed box ${newId} with rotation at (${x}, ${y}) - dimensions: ${rotatedWidth}×${rotatedHeight}`);
-                placed = true;
-              }
+        return cands;
+      };
+
+      let candidates = collect(false);
+      if (candidates.length === 0) candidates = collect(true);
+      if (candidates.length === 0) {
+        // Fallback: row-major scan (y-first) non-rotated
+        const w = newBoxSize.width;
+        const h = newBoxSize.height;
+        for (let y = baseContainer.y; y <= baseContainer.y + baseContainer.height - h; y++) {
+          for (let x = baseContainer.x; x <= baseContainer.x + baseContainer.width - w; x++) {
+            if (inside(x, y, w, h) && !collide(x, y, w, h)) {
+              candidates = [{ x, y, rotated: false, side: 'below', dist: 0 }];
+              break;
             }
           }
-          
-          // If perfect grid alignment with rotation failed, try flexible placement with rotation
-          if (!placed) {
-            for (let x = baseContainer.x; x <= baseContainer.x + baseContainer.width - rotatedWidth && !placed; x += 1) {
-              for (let y = baseContainer.y; y <= baseContainer.y + baseContainer.height - rotatedHeight && !placed; y += 1) {
-                // Check if this position is completely available
-                let canPlace = true;
-                for (let checkY = y; checkY < y + rotatedHeight && canPlace; checkY++) {
-                  for (let checkX = x; checkX < x + rotatedWidth && canPlace; checkX++) {
-                    if (checkX >= baseContainer.width || checkY >= baseContainer.height || grid[checkY][checkX]) {
-                      canPlace = false;
-                    }
-                  }
-                }
-                
-                if (canPlace) {
-                  const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
-                  const workOrderId = workOrderData?.workOrderId || 'unknown';
-                  const saranId = workOrderData?.selectedItem?.id || 'unknown';
-                  // const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
-                  
-                  newBox = {
-                    id: newId,
-                    x: x,
-                    y: y,
-                    width: newBoxSize.width, // Keep original width/height for consistency
-                    height: newBoxSize.height,
-                    color: '#10b981',
-                    isDisabled: false,
-                    isRotated: true, // Mark as rotated
-                    woItemId: woItemId,
-                    workOrderId: workOrderId,
-                    saranId: saranId,
-                    isSave: false,
-                    // workItemUniqueId: workItemUniqueId
-                  };
-                  console.log(`✅ Placed box ${newId} with rotation at (${x}, ${y}) - dimensions: ${rotatedWidth}×${rotatedHeight}`);
-                  placed = true;
-                }
+          if (candidates.length > 0) break;
+        }
+        // Fallback: row-major scan rotated
+        if (candidates.length === 0) {
+          const rw = newBoxSize.height;
+          const rh = newBoxSize.width;
+          for (let y = baseContainer.y; y <= baseContainer.y + baseContainer.height - rh; y++) {
+            for (let x = baseContainer.x; x <= baseContainer.x + baseContainer.width - rw; x++) {
+              if (inside(x, y, rw, rh) && !collide(x, y, rw, rh)) {
+                candidates = [{ x, y, rotated: true, side: 'below', dist: 0 }];
+                break;
               }
             }
+            if (candidates.length > 0) break;
           }
-        } else {
-          console.log('❌ Rotated box cannot fit in container:', {
-            rotatedWidth,
-            rotatedHeight,
-            containerWidth: baseContainer.width,
-            containerHeight: baseContainer.height
-          });
+        }
+        if (candidates.length === 0) {
+          showAlert('Error', 'No space available for new box!', 'error');
+          return prevBoxes;
         }
       }
-      
-      if (!placed) {
-        showAlert('Error', 'No space available for new box!', 'error');
-        return prevBoxes; // Return unchanged state
-      }
-      
-      // Calculate remaining quantity correctly (only for current WO item)
-      const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
-      const currentWoItemBoxes = prevBoxes ? prevBoxes.filter(box => 
-        box.woItemId === currentWoItemId || box.woItemId === parseInt(currentWoItemId)
-      ) : [];
-      const targetQuantity = parseInt(workOrderData?.itemQty) || 0;
-      const totalBoxes = currentWoItemBoxes.length + 1;
-      
-      // Update WO_total_quantity in localStorage
-      const saranItemId = workOrderData?.selectedItem?.id || 'unknown';
-      updateWOQuantity(currentWoItemId, saranItemId, totalBoxes);
-      
+      candidates.sort((a, b) => {
+        const sp = sidePriority[a.side] - sidePriority[b.side];
+        return sp !== 0 ? sp : a.dist - b.dist;
+      });
+      const chosen = candidates[0];
+
+      const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
+      const workOrderId = workOrderData?.workOrderId || 'unknown';
+      const saranId = workOrderData?.selectedItem?.id || 'unknown';
+      const newBox = {
+        id: newId,
+        x: chosen.x,
+        y: chosen.y,
+        width: newBoxSize.width,
+        height: newBoxSize.height,
+        color: '#10b981',
+        isDisabled: false,
+        isRotated: !!chosen.rotated,
+        woItemId,
+        workOrderId,
+        saranId,
+        isSave: false
+      };
+      const totalBoxes = clusterBoxes.length + 1;
+      updateWOQuantity(currentWoItemIdLocal, saranId, totalBoxes);
       showAlert('Success', `Box ${newId} (${newBoxSize.width}×${newBoxSize.height}) added!`, 'success');
       return [...prevBoxes, newBox];
     });
@@ -2308,27 +2289,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     // Use single color for all boxes
     const singleColor = '#10b981'; // Green color for all boxes
     
-    // Calculate how many boxes can fit in the container
-    const maxBoxesPerRow = Math.floor(baseContainer.width / newBoxSize.width);
-    const maxBoxesPerCol = Math.floor(baseContainer.height / newBoxSize.height);
-    const maxBoxesInContainer = maxBoxesPerRow * maxBoxesPerCol;
-    
-    // Check if we have enough space
-    const availableSpace = maxBoxesInContainer - (boxes ? boxes.length : 0);
-    const boxesToAdd = Math.min(boxesToFill, availableSpace);
-
-    console.log('Fill All Boxes - Space Calculation:', {
-      maxBoxesInContainer: maxBoxesInContainer,
-      currentBoxes: boxes ? boxes.length : 0,
-      availableSpace: availableSpace,
-      boxesToFill: boxesToFill,
-      boxesToAdd: boxesToAdd
-    });
-
-    if (boxesToAdd <= 0) {
-      showAlert('Error', 'No space available for new boxes!', 'error');
-      return;
-    }
+    // Loop strictly by Quantity Remaining; placement will stop when no slot available
+    const boxesToAdd = boxesToFill;
 
     // Generate boxes with perfect grid layout (no gaps)
     const newBoxes = [];
@@ -2358,244 +2320,110 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     
     // Place new boxes with collision detection and position finding (optimized for speed)
     const placeBoxesWithDelay = async () => {
-      console.log(`Starting to place ${boxesToAdd} boxes...`);
-      
+      const working = boxes ? [...boxes] : [];
+      const sidePriority = { below: 0, right: 1, left: 2, above: 3 };
+      const inside = (x, y, w, h) => (
+        x >= baseContainer.x && y >= baseContainer.y &&
+        x + w <= baseContainer.x + baseContainer.width &&
+        y + h <= baseContainer.y + baseContainer.height
+      );
+      const collide = (x, y, w, h) => {
+        if (!working || working.length === 0) return false;
+        for (const box of working) {
+          const bw = box.isRotated ? box.height : box.width;
+          const bh = box.isRotated ? box.width : box.height;
+          if (!(x >= box.x + bw || x + w <= box.x || y >= box.y + bh || y + h <= box.y)) return true;
+        }
+        return false;
+      };
       for (let i = 0; i < boxesToAdd; i++) {
-        const boxId = newId + i;
-        let placed = false;
-        
-        // Try to find a position for this box (left to right, then top to bottom)
-        // First try perfect grid alignment
-        for (let x = baseContainer.x; x <= baseContainer.x + baseContainer.width - newBoxSize.width && !placed; x += newBoxSize.width) {
-          for (let y = baseContainer.y; y <= baseContainer.y + baseContainer.height - newBoxSize.height && !placed; y += newBoxSize.height) {
-            // Quick check first - if any corner is occupied, skip this position
-            if (grid[y][x] || grid[y + newBoxSize.height - 1][x] || 
-                grid[y][x + newBoxSize.width - 1] || grid[y + newBoxSize.height - 1][x + newBoxSize.width - 1]) {
-              continue; // Skip this position immediately
-            }
-            
-            // Check if this position is completely available (only if corners are free)
-            let canPlace = true;
-            for (let checkY = y; checkY < y + newBoxSize.height && canPlace; checkY++) {
-              for (let checkX = x; checkX < x + newBoxSize.width && canPlace; checkX++) {
-                if (checkX >= baseContainer.width || checkY >= baseContainer.height || grid[checkY][checkX]) {
-                  canPlace = false;
+        const cluster = working.filter(b => b.woItemId === currentWoItemId || b.woItemId === parseInt(currentWoItemId));
+        const centroid = cluster.length > 0 ? {
+          x: Math.round(cluster.reduce((s, b) => s + (b.x + (b.isRotated ? b.height : b.width) / 2), 0) / cluster.length),
+          y: Math.round(cluster.reduce((s, b) => s + (b.y + (b.isRotated ? b.width : b.height) / 2), 0) / cluster.length)
+        } : { x: baseContainer.x, y: baseContainer.y };
+        const collect = (rot) => {
+          const w = rot ? newBoxSize.height : newBoxSize.width;
+          const h = rot ? newBoxSize.width : newBoxSize.height;
+          const cands = [];
+          if (cluster.length === 0) {
+            const x0 = baseContainer.x;
+            const y0 = baseContainer.y;
+            if (inside(x0, y0, w, h) && !collide(x0, y0, w, h)) cands.push({ x: x0, y: y0, rotated: rot, side: 'below', dist: 0 });
+            return cands;
+          }
+          const order = ['below', 'right', 'left', 'above'];
+          for (const side of order) {
+            for (const b of cluster) {
+              const bw = b.isRotated ? b.height : b.width;
+              const bh = b.isRotated ? b.width : b.height;
+              if (side === 'below') {
+                const y = b.y + bh;
+                for (let x = b.x; x <= b.x + bw - w; x += 1) {
+                  if (!inside(x, y, w, h) || collide(x, y, w, h)) continue;
+                  const d = Math.abs((x + w / 2) - centroid.x) + Math.abs((y + h / 2) - centroid.y);
+                  cands.push({ x, y, rotated: rot, side, dist: d });
+                }
+              } else if (side === 'right') {
+                const x = b.x + bw;
+                for (let y = b.y; y <= b.y + bh - h; y += 1) {
+                  if (!inside(x, y, w, h) || collide(x, y, w, h)) continue;
+                  const d = Math.abs((x + w / 2) - centroid.x) + Math.abs((y + h / 2) - centroid.y);
+                  cands.push({ x, y, rotated: rot, side, dist: d });
+                }
+              } else if (side === 'left') {
+                const x = b.x - w;
+                for (let y = b.y; y <= b.y + bh - h; y += 1) {
+                  if (!inside(x, y, w, h) || collide(x, y, w, h)) continue;
+                  const d = Math.abs((x + w / 2) - centroid.x) + Math.abs((y + h / 2) - centroid.y);
+                  cands.push({ x, y, rotated: rot, side, dist: d });
+                }
+              } else if (side === 'above') {
+                const y = b.y - h;
+                for (let x = b.x; x <= b.x + bw - w; x += 1) {
+                  if (!inside(x, y, w, h) || collide(x, y, w, h)) continue;
+                  const d = Math.abs((x + w / 2) - centroid.x) + Math.abs((y + h / 2) - centroid.y);
+                  cands.push({ x, y, rotated: rot, side, dist: d });
                 }
               }
             }
-            
-            if (canPlace) {
-              // Mark this position as occupied
-              for (let markY = y; markY < y + newBoxSize.height; markY++) {
-                for (let markX = x; markX < x + newBoxSize.width; markX++) {
-                  if (markX >= 0 && markX < baseContainer.width && markY >= 0 && markY < baseContainer.height) {
-                    grid[markY][markX] = true;
-                  }
-                }
+            if (cands.length > 0) break;
+          }
+          return cands;
+        };
+        let candidates = collect(false);
+        if (candidates.length === 0) candidates = collect(true);
+        if (candidates.length === 0) {
+          const w = newBoxSize.width;
+          const h = newBoxSize.height;
+          for (let y = baseContainer.y; y <= baseContainer.y + baseContainer.height - h; y++) {
+            for (let x = baseContainer.x; x <= baseContainer.x + baseContainer.width - w; x++) {
+              if (inside(x, y, w, h) && !collide(x, y, w, h)) { candidates = [{ x, y, rotated: false, side: 'below', dist: 0 }]; break; }
+            }
+            if (candidates.length > 0) break;
+          }
+          if (candidates.length === 0) {
+            const rw = newBoxSize.height;
+            const rh = newBoxSize.width;
+            for (let y = baseContainer.y; y <= baseContainer.y + baseContainer.height - rh; y++) {
+              for (let x = baseContainer.x; x <= baseContainer.x + baseContainer.width - rw; x++) {
+                if (inside(x, y, rw, rh) && !collide(x, y, rw, rh)) { candidates = [{ x, y, rotated: true, side: 'below', dist: 0 }]; break; }
               }
-              
-              const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
-              // const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
-              const workOrderId = workOrderData?.workOrderId || 'unknown';
-              const saranId = workOrderData?.selectedItem?.id || 'unknown';
-              
-              newBoxes.push({
-                id: boxId,
-                x: x,
-                y: y,
-                width: newBoxSize.width,
-                height: newBoxSize.height,
-                color: '#10b981', // Always green for new boxes
-                isDisabled: false,
-                isRotated: false, // Default to not rotated
-                woItemId: woItemId,
-                workOrderId: workOrderId,
-                saranId: saranId,
-                isSave: false, // Will be true when saving
-                // workItemUniqueId: workItemUniqueId // Set workItemUniqueId to storage
-              });
-              
-              placed = true; // Mark as placed and break out of loops
+              if (candidates.length > 0) break;
             }
           }
         }
-        
-        // If perfect grid alignment failed, try flexible placement (left to right, then top to bottom)
-        if (!placed) {
-          for (let x = baseContainer.x; x <= baseContainer.x + baseContainer.width - newBoxSize.width && !placed; x += 1) {
-            for (let y = baseContainer.y; y <= baseContainer.y + baseContainer.height - newBoxSize.height && !placed; y += 1) {
-              // Check if this position is completely available
-              let canPlace = true;
-              for (let checkY = y; checkY < y + newBoxSize.height && canPlace; checkY++) {
-                for (let checkX = x; checkX < x + newBoxSize.width && canPlace; checkX++) {
-                  if (checkX >= baseContainer.width || checkY >= baseContainer.height || grid[checkY][checkX]) {
-                    canPlace = false;
-                  }
-                }
-              }
-              
-              if (canPlace) {
-                // Mark this position as occupied
-                for (let markY = y; markY < y + newBoxSize.height; markY++) {
-                  for (let markX = x; markX < x + newBoxSize.width; markX++) {
-                    if (markX >= 0 && markX < baseContainer.width && markY >= 0 && markY < baseContainer.height) {
-                      grid[markY][markX] = true;
-                    }
-                  }
-                }
-                
-                const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
-                // const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
-                const workOrderId = workOrderData?.workOrderId || 'unknown';
-                const saranId = workOrderData?.selectedItem?.id || 'unknown';
-                
-                newBoxes.push({
-                  id: boxId,
-                  x: x,
-                  y: y,
-                  width: newBoxSize.width,
-                  height: newBoxSize.height,
-                  color: '#10b981',
-                  isDisabled: false,
-                  woItemId: woItemId,
-                  workOrderId: workOrderId,
-                  saranId: saranId,
-                  isSave: false,
-                  // workItemUniqueId: workItemUniqueId
-                });
-                placed = true;
-              }
-            }
-          }
-        }
-        
-        // If still not placed, try with rotation (horizontal orientation)
-        if (!placed) {
-          console.log(`Trying to place box ${boxId} with rotation (horizontal orientation)...`);
-          const rotatedWidth = newBoxSize.height; // 100
-          const rotatedHeight = newBoxSize.width; // 50
-          
-          // Check if rotated box can fit in container
-          if (rotatedWidth <= baseContainer.width && rotatedHeight <= baseContainer.height) {
-            // Try perfect grid alignment with rotation
-            for (let x = baseContainer.x; x <= baseContainer.x + baseContainer.width - rotatedWidth && !placed; x += rotatedWidth) {
-              for (let y = baseContainer.y; y <= baseContainer.y + baseContainer.height - rotatedHeight && !placed; y += rotatedHeight) {
-                // Check if this position is completely available
-                let canPlace = true;
-                for (let checkY = y; checkY < y + rotatedHeight && canPlace; checkY++) {
-                  for (let checkX = x; checkX < x + rotatedWidth && canPlace; checkX++) {
-                    if (checkX >= baseContainer.width || checkY >= baseContainer.height || grid[checkY][checkX]) {
-                      canPlace = false;
-                    }
-                  }
-                }
-                
-                if (canPlace) {
-                  // Mark this position as occupied
-                  for (let markY = y; markY < y + rotatedHeight; markY++) {
-                    for (let markX = x; markX < x + rotatedWidth; markX++) {
-                      if (markX >= 0 && markX < baseContainer.width && markY >= 0 && markY < baseContainer.height) {
-                        grid[markY][markX] = true;
-                      }
-                    }
-                  }
-                  
-                  const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
-                  // const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
-                  const workOrderId = workOrderData?.workOrderId || 'unknown';
-                  const saranId = workOrderData?.selectedItem?.id || 'unknown';
-                  
-                  newBoxes.push({
-                    id: boxId,
-                    x: x,
-                    y: y,
-                    width: newBoxSize.width, // Keep original width/height for consistency
-                    height: newBoxSize.height,
-                    color: '#10b981',
-                    isDisabled: false,
-                    isRotated: true, // Mark as rotated
-                    woItemId: woItemId,
-                    workOrderId: workOrderId,
-                    saranId: saranId,
-                    isSave: false,
-                    // workItemUniqueId: workItemUniqueId
-                  });
-                  console.log(`✅ Placed box ${boxId} with rotation at (${x}, ${y}) - dimensions: ${rotatedWidth}×${rotatedHeight}`);
-                  placed = true;
-                }
-              }
-            }
-            
-            // If perfect grid alignment with rotation failed, try flexible placement with rotation
-            if (!placed) {
-              for (let x = baseContainer.x; x <= baseContainer.x + baseContainer.width - rotatedWidth && !placed; x += 1) {
-                for (let y = baseContainer.y; y <= baseContainer.y + baseContainer.height - rotatedHeight && !placed; y += 1) {
-                  // Check if this position is completely available
-                  let canPlace = true;
-                  for (let checkY = y; checkY < y + rotatedHeight && canPlace; checkY++) {
-                    for (let checkX = x; checkX < x + rotatedWidth && canPlace; checkX++) {
-                      if (checkX >= baseContainer.width || checkY >= baseContainer.height || grid[checkY][checkX]) {
-                        canPlace = false;
-                      }
-                    }
-                  }
-                  
-                  if (canPlace) {
-                    // Mark this position as occupied
-                    for (let markY = y; markY < y + rotatedHeight; markY++) {
-                      for (let markX = x; markX < x + rotatedWidth; markX++) {
-                        if (markX >= 0 && markX < baseContainer.width && markY >= 0 && markY < baseContainer.height) {
-                          grid[markY][markX] = true;
-                        }
-                      }
-                    }
-                    
-                    const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
-                    // const workItemUniqueId = localStorage.getItem('WO_current_work_order_item_id') || workOrderData?.workOrderId || 'unknown';
-                    const workOrderId = workOrderData?.workOrderId || 'unknown';
-                    const saranId = workOrderData?.selectedItem?.id || 'unknown';
-                    
-                    newBoxes.push({
-                      id: boxId,
-                      x: x,
-                      y: y,
-                      width: newBoxSize.width, // Keep original width/height for consistency
-                      height: newBoxSize.height,
-                      color: '#10b981',
-                      isDisabled: false,
-                      isRotated: true, // Mark as rotated
-                      woItemId: woItemId,
-                      workOrderId: workOrderId,
-                      saranId: saranId,
-                      isSave: false,
-                      // workItemUniqueId: workItemUniqueId
-                    });
-                    console.log(`✅ Placed box ${boxId} with rotation at (${x}, ${y}) - dimensions: ${rotatedWidth}×${rotatedHeight}`);
-                    placed = true;
-                  }
-                }
-              }
-            }
-          } else {
-            console.log(`❌ Rotated box ${boxId} cannot fit in container:`, {
-              rotatedWidth,
-              rotatedHeight,
-              containerWidth: baseContainer.width,
-              containerHeight: baseContainer.height
-            });
-          }
-        }
-        
-        // If couldn't place this box, log it
-        if (!placed) {
-          console.warn(`Could not place box ${boxId} - no available space`);
-        }
-        
-        // Add small delay every 20 boxes to prevent UI freezing (minimal delay)
-        if ((i + 1) % 20 === 0) {
-          console.log(`Placed ${i + 1}/${boxesToAdd} boxes...`);
-          await new Promise(resolve => setTimeout(resolve, 2)); // 2ms delay (minimal)
-        }
+        if (candidates.length === 0) break;
+        candidates.sort((a, b) => {
+          const sp = sidePriority[a.side] - sidePriority[b.side];
+          return sp !== 0 ? sp : a.dist - b.dist;
+        });
+        const pos = candidates[0];
+        const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
+        const workOrderId = workOrderData?.workOrderId || 'unknown';
+        const saranId = workOrderData?.selectedItem?.id || 'unknown';
+        newBoxes.push({ id: newId++, x: pos.x, y: pos.y, width: newBoxSize.width, height: newBoxSize.height, color: '#10b981', isDisabled: false, isRotated: pos.rotated, woItemId, workOrderId, saranId, isSave: false });
+        working.push({ id: newId - 1, x: pos.x, y: pos.y, width: newBoxSize.width, height: newBoxSize.height, color: '#10b981', isDisabled: false, isRotated: pos.rotated, woItemId, workOrderId, saranId, isSave: false });
       }
       
       // Update boxes after all are placed
@@ -4230,67 +4058,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                           onClick={() => {
                             if (selectedBoxIds.size === 1) {
                               const boxId = Array.from(selectedBoxIds)[0];
-                              const clickedBox = boxes.find(box => box.id === boxId);
-                              
-                              if (clickedBox) {
-                                // Check if box is disabled
-                                if (clickedBox.isDisabled) {
-                                  showAlert('Info', 'This box is disabled and cannot be rotated', 'info');
-                                  return;
-                                }
-                                
-                                // Check if box belongs to the same WO item
-                                const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
-                                const boxWoItemId = clickedBox.woItemId;
-                                
-                                if (boxWoItemId && currentWoItemId && currentWoItemId !== boxWoItemId) {
-                                  showAlert('Info', `This box belongs to a different Work Order item (ID: ${boxWoItemId}). You cannot rotate it.`, 'info');
-                                  return;
-                                }
-                                
-                                // Rotate the box (inline logic)
-                                setBoxes(prevBoxes => {
-                                  return prevBoxes.map(box => {
-                                    if (box.id === boxId) {
-                                      const newBox = {
-                                        ...box,
-                                        isRotated: !box.isRotated
-                                      };
-                                      
-                                      // Check if rotated box fits in container
-                                      const rotatedWidth = newBox.isRotated ? box.height : box.width;
-                                      const rotatedHeight = newBox.isRotated ? box.width : box.height;
-                                      
-                                      if (box.x + rotatedWidth > baseContainer.width || box.y + rotatedHeight > baseContainer.height) {
-                                        showAlert('Warning', `Rotated box (${rotatedWidth}×${rotatedHeight}) would exceed container bounds!`, 'warning');
-                                        return box; // Don't rotate if it doesn't fit
-                                      }
-                                      
-                                      // Check for collisions with other boxes
-                                      const hasCollision = prevBoxes.some(otherBox => {
-                                        if (otherBox.id === boxId) return false;
-                                        
-                                        const otherBoxWidth = otherBox.isRotated ? otherBox.height : otherBox.width;
-                                        const otherBoxHeight = otherBox.isRotated ? otherBox.width : otherBox.height;
-                                        
-                                        return !(box.x >= otherBox.x + otherBoxWidth || 
-                                                box.x + rotatedWidth <= otherBox.x || 
-                                                box.y >= otherBox.y + otherBoxHeight || 
-                                                box.y + rotatedHeight <= otherBox.y);
-                                      });
-                                      
-                                      if (hasCollision) {
-                                        showAlert('Warning', 'Rotated box would collide with another box!', 'warning');
-                                        return box; // Don't rotate if there's a collision
-                                      }
-                                      
-                                      console.log(`Box ${boxId} rotated: ${box.width}×${box.height} → ${rotatedWidth}×${rotatedHeight}`);
-                                      return newBox;
-                                    }
-                                    return box;
-                                  });
-                                });
-                              }
+                              rotateBoxById(boxId);
                             } else {
                               showAlert('Info', 'Please select exactly one box to rotate', 'info');
                             }
