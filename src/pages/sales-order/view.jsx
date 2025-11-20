@@ -631,8 +631,8 @@ export default function ViewSalesOrderPage() {
                   <span className="font-semibold text-blue-600">Draft</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Dibuat pada:</span>
-                  <span className="font-semibold">{formatDate(salesOrder.created_at)}</span>
+                  <span className="text-gray-600">Tanggal SO:</span>
+                  <span className="font-semibold">{formatDate(salesOrder.tanggal_so)}</span>
                 </div>
                 {salesOrder.updated_at && (
                   <div className="flex justify-between">
