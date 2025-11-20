@@ -13,13 +13,35 @@ export const workOrderService = {
     if (params.per_page) queryParams.append('per_page', params.per_page);
     if (params.search) queryParams.append('search', params.search);
     if (params.status) queryParams.append('status', params.status);
-    if (params.gudang_id) queryParams.append('gudang_id', params.gudang_id);
-    if (params.pelanggan_id) queryParams.append('pelanggan_id', params.pelanggan_id);
-    if (params.wo_number) queryParams.append('wo_number', params.wo_number);
-    if (params.so_number) queryParams.append('so_number', params.so_number);
-    if (params.customer) queryParams.append('customer', params.customer);
-    if (params.warehouse) queryParams.append('warehouse', params.warehouse);
-    if (params.period) queryParams.append('period', params.period);
+    if (params.exclude_status) queryParams.append('exclude_status', params.exclude_status);
+    
+    // Filter by nomor_wo (new parameter name)
+    if (params.nomor_wo) queryParams.append('nomor_wo', params.nomor_wo);
+    
+    // Filter by nomor_so (new parameter name)
+    if (params.nomor_so) queryParams.append('nomor_so', params.nomor_so);
+    
+    // Filter by pelanggan/customer (supports both nama_customer and pelanggan)
+    if (params.nama_customer) queryParams.append('nama_customer', params.nama_customer);
+    if (params.pelanggan) queryParams.append('pelanggan', params.pelanggan);
+    
+    // Filter by gudang (supports both ID and nama)
+    if (params.gudang) queryParams.append('gudang', params.gudang);
+    
+    // Filter by tanggal WO (new parameter names)
+    if (params.tanggal_wo_from) queryParams.append('tanggal_wo_from', params.tanggal_wo_from);
+    if (params.tanggal_wo_to) queryParams.append('tanggal_wo_to', params.tanggal_wo_to);
+    
+    // Filter by jumlah item
+    if (params.jumlah_item !== undefined) queryParams.append('jumlah_item', params.jumlah_item);
+    if (params.jumlah_item_min !== undefined) queryParams.append('jumlah_item_min', params.jumlah_item_min);
+    if (params.jumlah_item_max !== undefined) queryParams.append('jumlah_item_max', params.jumlah_item_max);
+    
+    // Filter by created_at date range
+    if (params.date_start) queryParams.append('date_start', params.date_start);
+    if (params.date_end) queryParams.append('date_end', params.date_end);
+    
+    // Sorting
     if (params.sort_by) queryParams.append('sort_by', params.sort_by);
     if (params.sort_order) queryParams.append('sort_order', params.sort_order);
     

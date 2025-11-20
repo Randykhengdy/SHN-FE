@@ -58,6 +58,13 @@ export default function WorkOrderPage() {
   const [filterCustomer, setFilterCustomer] = useState('');
   const [filterWarehouse, setFilterWarehouse] = useState('');
   
+  // Debounced filter states (for text inputs)
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [debouncedFilterWoNumber, setDebouncedFilterWoNumber] = useState('');
+  const [debouncedFilterSoNumber, setDebouncedFilterSoNumber] = useState('');
+  const [debouncedFilterCustomer, setDebouncedFilterCustomer] = useState('');
+  const [debouncedFilterWarehouse, setDebouncedFilterWarehouse] = useState('');
+  
   // Sort states
   const [sortBy, setSortBy] = useState('none');
   const [sortOrder, setSortOrder] = useState('asc');
@@ -78,24 +85,81 @@ export default function WorkOrderPage() {
   // Delete request modal state
   const [showDeleteRequestModal, setShowDeleteRequestModal] = useState(false);
 
+  // Helper for period → tanggal_wo range
+  const pad = (n) => String(n).padStart(2, '0');
+  const formatDateLocal = (date) => `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
+  const getPeriodRange = (period) => {
+    const now = new Date();
+    let start = null;
+    let end = null;
+    switch (period) {
+      case 'today':
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case 'week': {
+        const day = now.getDay();
+        const diffToMonday = (day + 6) % 7;
+        start = new Date(now);
+        start.setDate(now.getDate() - diffToMonday);
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        break;
+      }
+      case 'month':
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        break;
+      case 'quarter': {
+        const qStartMonth = Math.floor(now.getMonth() / 3) * 3;
+        start = new Date(now.getFullYear(), qStartMonth, 1);
+        end = new Date(now.getFullYear(), qStartMonth + 3, 0);
+        break;
+      }
+      case 'year':
+        start = new Date(now.getFullYear(), 0, 1);
+        end = new Date(now.getFullYear(), 11, 31);
+        break;
+      default:
+        return null;
+    }
+    return {
+      tanggal_wo_start: formatDateLocal(start),
+      tanggal_wo_end: formatDateLocal(end),
+    };
+  };
+
   // Load work orders from API
   const loadWorkOrders = useCallback(async () => {
     try {
       setLoading(true);
       
-      // Prepare API parameters
+      // Convert period filter to date range if needed
+      let tanggalWoFrom = woDateStart || undefined;
+      let tanggalWoTo = woDateEnd || undefined;
+      
+      // If period filter is set and no explicit dates, convert period to date range
+      if (periodFilter !== 'all' && !woDateStart && !woDateEnd) {
+        const range = getPeriodRange(periodFilter);
+        if (range) {
+          tanggalWoFrom = range.tanggal_wo_start;
+          tanggalWoTo = range.tanggal_wo_end;
+        }
+      }
+      
+      // Prepare API parameters (using new backend parameter names)
+      // Use debounced values for text inputs to avoid hitting API on every keystroke
       const params = {
         page: currentPage,
         per_page: itemsPerPage,
-        search: searchTerm || undefined,
+        search: debouncedSearchTerm || undefined,
         status: statusFilter !== 'all' ? statusFilter : undefined,
-        period: periodFilter !== 'all' ? periodFilter : undefined,
-        tanggal_wo_start: woDateStart || undefined,
-        tanggal_wo_end: woDateEnd || undefined,
-        wo_number: filterWoNumber || undefined,
-        so_number: filterSoNumber || undefined,
-        customer: filterCustomer || undefined,
-        warehouse: filterWarehouse || undefined,
+        nomor_wo: debouncedFilterWoNumber || undefined,
+        nomor_so: debouncedFilterSoNumber || undefined,
+        nama_customer: debouncedFilterCustomer || undefined, // Backend accepts nama_customer or pelanggan
+        gudang: debouncedFilterWarehouse || undefined,
+        tanggal_wo_from: tanggalWoFrom,
+        tanggal_wo_to: tanggalWoTo,
         sort_by: sortBy && sortBy !== 'none' ? sortBy : undefined,
         sort_order: sortOrder || undefined
       };
@@ -131,7 +195,7 @@ export default function WorkOrderPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, itemsPerPage, searchTerm, statusFilter, periodFilter, woDateStart, woDateEnd, filterWoNumber, filterSoNumber, filterCustomer, filterWarehouse, sortBy, sortOrder]);
+  }, [currentPage, itemsPerPage, debouncedSearchTerm, statusFilter, periodFilter, woDateStart, woDateEnd, debouncedFilterWoNumber, debouncedFilterSoNumber, debouncedFilterCustomer, debouncedFilterWarehouse, sortBy, sortOrder]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -165,6 +229,42 @@ export default function WorkOrderPage() {
 
     clearCanvasPreviews();
   }, []); // Empty dependency array - only run once on mount
+
+  // Debounce text input filters (500ms delay)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedFilterWoNumber(filterWoNumber);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [filterWoNumber]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedFilterSoNumber(filterSoNumber);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [filterSoNumber]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedFilterCustomer(filterCustomer);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [filterCustomer]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedFilterWarehouse(filterWarehouse);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [filterWarehouse]);
 
   useEffect(() => {
     loadWorkOrders();
@@ -281,50 +381,6 @@ export default function WorkOrderPage() {
     setSearchTerm('');
   };
 
-  // Helper for period → tanggal_wo range
-  const pad = (n) => String(n).padStart(2, '0');
-  const formatDateLocal = (date) => `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
-  const getPeriodRange = (period) => {
-    const now = new Date();
-    let start = null;
-    let end = null;
-    switch (period) {
-      case 'today':
-        start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        break;
-      case 'week': {
-        const day = now.getDay();
-        const diffToMonday = (day + 6) % 7;
-        start = new Date(now);
-        start.setDate(now.getDate() - diffToMonday);
-        end = new Date(start);
-        end.setDate(start.getDate() + 6);
-        break;
-      }
-      case 'month':
-        start = new Date(now.getFullYear(), now.getMonth(), 1);
-        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        break;
-      case 'quarter': {
-        const qStartMonth = Math.floor(now.getMonth() / 3) * 3;
-        start = new Date(now.getFullYear(), qStartMonth, 1);
-        end = new Date(now.getFullYear(), qStartMonth + 3, 0);
-        break;
-      }
-      case 'year':
-        start = new Date(now.getFullYear(), 0, 1);
-        end = new Date(now.getFullYear(), 11, 31);
-        break;
-      default:
-        return null;
-    }
-    return {
-      tanggal_wo_start: formatDateLocal(start),
-      tanggal_wo_end: formatDateLocal(end),
-    };
-  };
-
   // Build workbook for planning report JSON
   const buildWorkbookFromPlanning = (json) => {
     const rows = Array.isArray(json?.data) ? json.data : [];
@@ -372,23 +428,24 @@ export default function WorkOrderPage() {
       setIsExporting(true);
       await checkAndRefreshToken();
       // Export langsung dari endpoint list dengan filter yang sama (tanpa pagination)
+      // Use current filter values (not debounced) for export
       const listParams = new URLSearchParams();
       if (searchTerm) listParams.append('search', searchTerm);
       if (statusFilter && statusFilter !== 'all') listParams.append('status', statusFilter);
-      if (filterWoNumber) listParams.append('wo_number', filterWoNumber);
-      if (filterSoNumber) listParams.append('so_number', filterSoNumber);
-      if (filterCustomer) listParams.append('customer', filterCustomer);
-      if (filterWarehouse) listParams.append('warehouse', filterWarehouse);
+      if (filterWoNumber) listParams.append('nomor_wo', filterWoNumber);
+      if (filterSoNumber) listParams.append('nomor_so', filterSoNumber);
+      if (filterCustomer) listParams.append('nama_customer', filterCustomer);
+      if (filterWarehouse) listParams.append('gudang', filterWarehouse);
       if (sortBy && sortBy !== 'none') listParams.append('sort_by', sortBy);
       if (sortOrder) listParams.append('sort_order', sortOrder);
-      // Tanggal mengikuti filter tabel (planning memakai tanggal_wo_*)
-      if (woDateStart) listParams.append('tanggal_wo_start', woDateStart);
-      if (woDateEnd) listParams.append('tanggal_wo_end', woDateEnd);
+      // Tanggal mengikuti filter tabel (planning memakai tanggal_wo_from/tanggal_wo_to)
+      if (woDateStart) listParams.append('tanggal_wo_from', woDateStart);
+      if (woDateEnd) listParams.append('tanggal_wo_to', woDateEnd);
       if (!woDateStart && !woDateEnd && periodFilter && periodFilter !== 'all') {
         const range = getPeriodRange(periodFilter);
         if (range) {
-          listParams.append('tanggal_wo_start', range.tanggal_wo_start);
-          listParams.append('tanggal_wo_end', range.tanggal_wo_end);
+          listParams.append('tanggal_wo_from', range.tanggal_wo_start);
+          listParams.append('tanggal_wo_to', range.tanggal_wo_end);
         }
       }
       // Ambil semua data sesuai filter
