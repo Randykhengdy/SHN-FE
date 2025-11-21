@@ -1,6 +1,8 @@
 {
   "main": "electron/main.cjs",
   "name": "SHNReactApp",
+  "description": "SHN React Application",
+  "author": "SHN",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -14,10 +16,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "dist": "npm run build && electron-builder",
-    "dist:win": "npm run build && electron-builder --win",
-    "dist:mac": "npm run build && electron-builder --mac",
-    "dist:linux": "npm run build && electron-builder --linux"
+    "dist": "npm run build && node scripts/fix-dependencies.js && electron-builder",
+    "dist:win": "npm run build && node scripts/fix-dependencies.js && electron-builder --win",
+    "dist:mac": "npm run build && node scripts/fix-dependencies.js && electron-builder --mac",
+    "dist:linux": "npm run build && node scripts/fix-dependencies.js && electron-builder --linux"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.11",
@@ -84,7 +86,8 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
-      "package.json"
+      "package.json",
+      "!node_modules/**/*"
     ],
     "extraResources": [
       {
@@ -118,6 +121,10 @@
     "npmRebuild": false,
     "buildDependenciesFromSource": false,
     "forceCodeSigning": false,
-    "asar": true
+    "asar": true,
+    "nodeGypRebuild": false,
+    "disableSanityCheckAsar": true,
+    "beforeBuild": "./scripts/fix-dependencies.js",
+    "onNodeModuleFile": "./scripts/filter-node-modules.js"
   }
 }
