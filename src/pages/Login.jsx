@@ -5,7 +5,8 @@ import wallpaper from "@/assets/loginwallpaper.jpg";
 import LoginBackground from "@/components/LoginBackground";
 import LoginForm from "@/components/LoginForm";
 import LoginFooter from "@/components/LoginFooter";
-import { setToken, setTokenType, setIsLoggedIn, setRefreshToken, setUser } from "@/lib/tokenStorage";
+import { setIsLoggedIn } from "@/lib/tokenStorage";
+import { authService } from "@/services/authService";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -41,39 +42,11 @@ export default function Login() {
     setLoading(true);
   
     try {
-      const response = await fetch("http://shn.divineproject.my.id/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username, password }),
-      });
-  
-      const result = await response.json();
-  
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || "Login gagal");
+      const result = await authService.login({ username, password });
+      if (!result || !result.success) {
+        throw new Error(result?.message || "Login gagal");
       }
-  
-      // Simpan token menggunakan sistem storage baru
-      setToken(result.token);
-      setTokenType(result.token_type); // biasanya "Bearer"
       setIsLoggedIn("true");
-      
-      // Simpan refresh token jika ada
-      if (result.refresh_token) {
-        setRefreshToken(result.refresh_token);
-        console.log("✅ Refresh token saved");
-      }
-      
-      // Simpan user info jika ada
-      if (result.user) {
-        setUser(result.user);
-        console.log("✅ User data saved:", result.user);
-      } else {
-        console.log("⚠️ No user data in response");
-      }
-  
       navigate("/dashboard");
     } catch (err) {
       setError(err.message || "Terjadi kesalahan saat login");

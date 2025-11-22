@@ -1,6 +1,6 @@
 // Konfigurasi URL API berdasarkan environment
-const DEV_API_URL = "http://shn.divineproject.my.id/api";
-const PROD_API_URL = "http://shn.divineproject.my.id/api";
+const DEV_API_URL = "localhost:8000";
+const PROD_API_URL = "localhost:8000";
 
 // Gunakan environment variable dari Vite jika tersedia
 const API_URL = import.meta.env.VITE_API_URL || 
@@ -9,7 +9,7 @@ const API_URL = import.meta.env.VITE_API_URL ||
 export default {
   baseUrl: API_URL,
   endpoints: {
-    login: "/login",
+    login: "/auth/login",
     register: "/register",
     refresh: "/auth/refresh",
     logout: "/auth/logout",
@@ -19,7 +19,7 @@ export default {
 };
 
 export const API_ENDPOINTS = {
-  login: "/login",
+  login: "/auth/login",
   register: "/register",
   refresh: "/auth/refresh",
   logout: "/auth/logout",
