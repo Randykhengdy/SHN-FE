@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,46 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AuthErrorAlert from "@/components/AuthErrorAlert";
 
+/**
+ * MasterFormModal – konfigurasi field dapat menerima opsi lanjutan untuk konten dan perilaku custom
+ *
+ * Field properties yang didukung (opsional):
+ * - type: "select" | "text" | dll
+ * - options: Array<{ value, label }>
+ * - optionsService: { getAll: () => Promise<{ data: any[] }> }
+ * - optionsLoader(form): Promise<any[] | { data: any[] }>
+ *   Memuat opsi berdasar state form saat ini (cascading dropdown)
+ * - optionLabel: string
+ *   Nama properti label pada item opsi ketika tidak menggunakan { value, label }
+ * - showIf(form): boolean
+ *   Mengontrol visibilitas field berdasar state form
+ * - onChangeForm(nextForm, value): object
+ *   Mutasi state form ketika nilai field berubah (mis. reset parent saat tipe berubah)
+ * - dropdownExtra({ form, options, onSelect }): ReactNode
+ *   Render konten tambahan di panel dropdown (catatan, tombol cepat, dsb.)
+ *
+ * Contoh (Gudang):
+ * {
+ *   name: "tipe_gudang", type: "select", options: [
+ *     { value: "gudang", label: "Gudang" },
+ *     { value: "rak", label: "Rak" },
+ *     { value: "bin", label: "Bin" },
+ *   ],
+ *   onChangeForm: (form, val) => ({ ...form, gudang_id: val === 'gudang' ? '' : form.gudang_id, rak_id: val !== 'bin' ? '' : form.rak_id })
+ * }
+ * {
+ *   name: "gudang_id", type: "select", optionLabel: "nama_gudang",
+ *   showIf: (f) => f.tipe_gudang === 'rak',
+ *   optionsLoader: async () => gudangService.getAll({ tipe: 'gudang' }),
+ *   dropdownExtra: ({ options }) => (<div className="text-xs text-gray-500">Pilih gudang induk{options.length ? '' : ', tidak ada gudang'}.</div>)
+ * }
+ * {
+ *   name: "rak_id", type: "select", optionLabel: "nama_rak",
+ *   showIf: (f) => f.tipe_gudang === 'bin',
+ *   optionsLoader: async () => gudangService.getAll({ tipe: 'rak' })
+ * }
+ */
+
 export default function MasterFormModal({
   isOpen,
   onClose,
@@ -22,18 +62,48 @@ export default function MasterFormModal({
   saveLoading = false,
   error = null,
   onSaveSuccess = null,
+  size = undefined,
 }) {
   const [form, setForm] = useState({});
   const [options, setOptions] = useState({});
   const [searchTerms, setSearchTerms] = useState({});
   const [openDropdowns, setOpenDropdowns] = useState({});
   const [authError, setAuthError] = useState(false);
+  const sizeClass = !size
+    ? 'sm:max-w-4xl lg:max-w-6xl'
+    : size === 's'
+      ? 'max-w-md'
+      : size === 'm'
+        ? 'max-w-2xl'
+        : size === 'l'
+          ? 'max-w-4xl'
+          : 'max-w-[90vw]';
+  const heightClass = size === 'xl' ? 'min-h-[75vh]' : '';
 
   useEffect(() => {
     const loadOptions = async () => {
       const newOptions = {};
       for (const field of fields) {
         if (field.type === "select") {
+          if (editData && field.disabledOnEdit) {
+            continue;
+          }
+          if (field.optionsLoader) {
+            const visible = !field.showIf || (typeof field.showIf === 'function' ? !!field.showIf(form) : true);
+            if (!visible) {
+              continue;
+            }
+            try {
+              const res = await field.optionsLoader(form);
+              newOptions[field.name] = (res?.data) || res || [];
+            } catch (error) {
+              console.error(`❌ Error loading options via loader for ${field.name}:`, error);
+              if (error.message?.includes('Token tidak valid') || error.message?.includes('401') || error.message?.includes('Session expired')) {
+                setAuthError(true);
+              }
+              newOptions[field.name] = [];
+            }
+          } else 
           if (field.optionsService) {
             // Load options from service
             try {
@@ -63,61 +133,82 @@ export default function MasterFormModal({
     if (isOpen) {
       loadOptions();
     }
-  }, [fields, isOpen]);
+  }, [fields, isOpen, form]);
+
 
   useEffect(() => {
+    if (!isOpen || !editData) return;
     const initialForm = {};
     fields.forEach((field) => {
-      // Skip fields that should be hidden on edit
-      if (editData && field.hideOnEdit) {
-        return;
-      }
-      
-      if (editData) {
-        // For select fields, handle role mapping
-        if (field.type === "select") {
-          if (field.name === "role") {
-            // Handle role field - user data has roles array with id and name
-            if (editData.roles && editData.roles.length > 0) {
-              // Use the first role from the roles array
-              initialForm[field.name] = String(editData.roles[0].id);
-            } else if (editData[field.name]) {
-                          // Fallback to direct role field if roles array doesn't exist
-            const roleOption = options[field.name]?.find(
-              option => option[field.optionLabel || "name"] === editData[field.name]
-            );
-              initialForm[field.name] = roleOption ? String(roleOption.id) : "";
-            } else {
-              initialForm[field.name] = "";
-            }
+      if (field.hideOnEdit) return;
+      if (typeof field.mapFromEdit === 'function') {
+        try {
+          const mapped = field.mapFromEdit(editData);
+          initialForm[field.name] = mapped !== undefined && mapped !== null ? String(mapped) : "";
+        } catch (_) {
+          initialForm[field.name] = String(editData[field.name] || "");
+        }
+      } else if (field.type === "select") {
+        if (field.name === "role") {
+          if (editData.roles && editData.roles.length > 0) {
+            initialForm[field.name] = String(editData.roles[0].id);
           } else {
-            // For other select fields, handle both static and service options
-            const option = options[field.name]?.find(opt => {
-              if (opt.value !== undefined) {
-                return String(opt.value) === String(editData[field.name]);
-              } else {
-                return String(opt.id) === String(editData[field.name]);
-              }
-            });
-            initialForm[field.name] = option ? String(option.id || option.value) : String(editData[field.name] || "");
+            initialForm[field.name] = String(editData[field.name] || "");
           }
         } else {
-          initialForm[field.name] = editData[field.name] || "";
+          initialForm[field.name] = String(editData[field.name] || "");
         }
       } else {
-        initialForm[field.name] = "";
+        initialForm[field.name] = editData[field.name] || "";
       }
     });
     setForm(initialForm);
-  }, [editData, fields, options]); // Add options dependency
+  }, [isOpen, editData, fields]);
+
+  useEffect(() => {
+    if (!isOpen || !editData) return;
+    const prefetch = async () => {
+      for (const field of fields) {
+        if (field.type === 'select' && typeof field.prefetchById === 'function') {
+          const selectedId = form[field.name];
+          if (!selectedId) continue;
+          try {
+            const res = await field.prefetchById(selectedId);
+            const item = res?.data || res;
+            if (item) {
+              setOptions(prev => {
+                const current = prev[field.name] || [];
+                const exists = current.some((opt) => String(opt.id || opt.value) === String(selectedId));
+                return {
+                  ...prev,
+                  [field.name]: exists ? current : [item, ...current]
+                };
+              });
+            }
+          } catch (_) {}
+        }
+      }
+    };
+    prefetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, editData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSelectChange = (name, value) => {
-    setForm((prev) => ({ ...prev, [name]: value }));
+  const handleSelectChange = (name, value, field) => {
+    setForm((prev) => {
+      const next = { ...prev, [name]: value };
+      if (field && typeof field.onChangeForm === 'function') {
+        try {
+          const mutated = field.onChangeForm(next, value);
+          if (mutated && typeof mutated === 'object') return mutated;
+        } catch (_) {}
+      }
+      return next;
+    });
   };
 
   const handleSubmit = (e) => {
@@ -160,7 +251,7 @@ export default function MasterFormModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-4xl lg:max-w-6xl max-h-[90vh] overflow-y-auto w-[95vw]">
+      <DialogContent className={`sm:max-w-none ${sizeClass} ${heightClass} max-h-[90vh] overflow-visible ${size === 'xl' ? 'w-[95vw]' : ''}` }>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
@@ -203,6 +294,14 @@ export default function MasterFormModal({
               if (editData && field.hideOnEdit) {
                 return null;
               }
+              if (field.showIf && typeof field.showIf === 'function') {
+                try {
+                  const visible = field.showIf(form);
+                  if (!visible) return null;
+                } catch (_) {
+                  return null;
+                }
+              }
               
               return (
               <div key={field.name} className={`space-y-2 ${field.colSpan === 2 ? 'md:col-span-2' : ''}`}>
@@ -212,16 +311,26 @@ export default function MasterFormModal({
 
               {field.type === "select" ? (
                 <div className="relative dropdown-container">
+                  {editData && field.disabledOnEdit ? (
+                    <div className={`flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm ${'border-gray-300 bg-gray-50'} cursor-default`}>
+                      <span>{(field.editLabel && typeof field.editLabel === 'function') ? field.editLabel(editData, form) : (String(editData[field.name] || ''))}</span>
+                      <svg className="h-4 w-4 opacity-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  ) : (
                   <button
                     type="button"
-                    className={`flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer hover:bg-gray-50 ${
+                    className={`flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                       openDropdowns[field.name] 
                         ? 'border-blue-500 bg-blue-50' 
                         : 'border-gray-300 bg-white'
-                    }`}
+                    } ${editData && field.disabledOnEdit ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-gray-50'}`}
+                    disabled={!!(editData && field.disabledOnEdit)}
                     onClick={() => {
                       console.log("🔥 Button clicked for field:", field.name);
                       // Close other dropdowns and toggle current one
+                      if (editData && field.disabledOnEdit) return;
                       setOpenDropdowns(prev => {
                         console.log("📋 Previous dropdowns state:", prev);
                         const newState = { [field.name]: !prev[field.name] };
@@ -254,6 +363,7 @@ export default function MasterFormModal({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
+                  )}
                   
                   {openDropdowns[field.name] && (
                     <div className="absolute z-50 mt-1 w-full rounded-md border bg-white shadow-lg">
@@ -286,7 +396,7 @@ export default function MasterFormModal({
                                   form[field.name] === String(option.id || option.value) ? 'bg-blue-50 text-blue-600' : ''
                                 }`}
                                 onClick={() => {
-                                  handleSelectChange(field.name, String(option.id || option.value));
+                                  handleSelectChange(field.name, String(option.id || option.value), field);
                                   setOpenDropdowns(prev => ({ ...prev, [field.name]: false }));
                                   setSearchTerms(prev => ({ ...prev, [field.name]: "" }));
                                 }}
@@ -294,21 +404,21 @@ export default function MasterFormModal({
                                 {option.label || option[field.optionLabel || "name"] || "N/A"}
                               </div>
                             ))
-                        ) : (
-                          <div className="px-3 py-2 text-sm text-gray-500">
-                            {options[field.name] === undefined ? (
-                              <div className="text-center">
-                                <div className="text-red-500 mb-1">⚠️ Gagal memuat data</div>
-                                <div className="text-xs text-gray-400">
-                                  Silakan refresh halaman atau login ulang
-                                </div>
-                              </div>
-                            ) : (
-                              "Tidak ada data tersedia"
-                            )}
-                          </div>
-                        )}
+                        ) : null}
                       </div>
+                      {field.dropdownExtra && (
+                        <div className="border-t px-3 py-2">
+                          {field.dropdownExtra({
+                            form,
+                            options: options[field.name] || [],
+                            onSelect: (option) => {
+                              handleSelectChange(field.name, String(option.id || option.value), field);
+                              setOpenDropdowns(prev => ({ ...prev, [field.name]: false }));
+                              setSearchTerms(prev => ({ ...prev, [field.name]: "" }));
+                            }
+                          })}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

@@ -15,6 +15,10 @@ export default function MasterDataLayout({
   service,
   customEditComponent,
   customActions,
+  validate,
+  preprocess,
+  filterConfig,
+  modalSize,
 }) {
   const { showConfirm, AlertComponent } = useAlert();
   const [data, setData] = useState([]);
@@ -30,6 +34,7 @@ export default function MasterDataLayout({
   const [totalItems, setTotalItems] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [filterValue, setFilterValue] = useState(filterConfig?.defaultValue || "semua");
 
   // Debounce search term
   useEffect(() => {
@@ -43,18 +48,22 @@ export default function MasterDataLayout({
   const fetchData = React.useCallback(async () => {
     setLoading(true);
     try {
+      const filters = {};
+      if (filterConfig && filterValue && String(filterValue).toLowerCase() !== 'semua') {
+        const cap = String(filterValue).charAt(0).toUpperCase() + String(filterValue).slice(1).toLowerCase();
+        filters[filterConfig.param || 'tipe_gudang'] = cap;
+      }
       const response = showTrashed 
         ? await service.getTrashedPaginated(currentPage, itemsPerPage, debouncedSearchTerm, sortState.col, sortState.dir)
-        : await service.getPaginated(currentPage, itemsPerPage, debouncedSearchTerm, sortState.col, sortState.dir);
-      
-      setData(response.data || []);
-      setTotalItems(
-        response.pagination?.total || 
-        response.meta?.total || 
-        response.total || 
-        response.data?.length || 
-        0
-      );
+        : await service.getPaginated(currentPage, itemsPerPage, debouncedSearchTerm, sortState.col, sortState.dir, filters);
+      const rawRows = response.data || [];
+      const capFilter = (filterConfig && filterValue && String(filterValue).toLowerCase() !== 'semua')
+        ? String(filterValue).charAt(0).toUpperCase() + String(filterValue).slice(1).toLowerCase()
+        : null;
+      const rows = capFilter ? rawRows.filter(r => String(r.tipe_gudang || '').trim() === capFilter) : rawRows;
+      setData(rows);
+      const serverTotal = response.pagination?.total || response.meta?.total || response.total || response.data?.length || 0;
+      setTotalItems(capFilter ? rows.length : serverTotal);
       
       if (response.pagination?.last_page) {
         setLastPageFromAPI(response.pagination.last_page);
@@ -65,7 +74,7 @@ export default function MasterDataLayout({
       console.error("Fetch error:", error.message);
     }
     setLoading(false);
-  }, [showTrashed, currentPage, itemsPerPage, debouncedSearchTerm, sortState.col, sortState.dir, service]);
+  }, [showTrashed, currentPage, itemsPerPage, debouncedSearchTerm, sortState.col, sortState.dir, service, filterValue]);
 
   useEffect(() => {
     fetchData();
@@ -85,7 +94,7 @@ export default function MasterDataLayout({
     setSaveLoading(true);
     setError(null);
     try {
-      const processedFormData = { ...formData };
+      let processedFormData = { ...formData };
       
       // Filter out hidden fields when editing
       if (editData) {
@@ -103,9 +112,23 @@ export default function MasterDataLayout({
       }
 
       if (editData) {
+        if (typeof preprocess === 'function') {
+          processedFormData = preprocess(processedFormData) || processedFormData;
+        }
         await service.update(editData.id, processedFormData);
         console.log("✅ Data berhasil diupdate:", processedFormData);
       } else {
+        if (typeof validate === 'function') {
+          const msg = validate(processedFormData);
+          if (msg) {
+            setError(msg);
+            setSaveLoading(false);
+            return;
+          }
+        }
+        if (typeof preprocess === 'function') {
+          processedFormData = preprocess(processedFormData) || processedFormData;
+        }
         await service.create(processedFormData);
         console.log("✅ Data berhasil ditambahkan:", processedFormData);
       }
@@ -243,6 +266,32 @@ export default function MasterDataLayout({
                     }}
                     className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 flex-1 min-w-[240px]"
                   />
+                  {filterConfig && (
+                    <div className="relative group">
+                      <select
+                        value={filterValue}
+                        onChange={(e) => {
+                          setFilterValue(e.target.value);
+                          setCurrentPage(1);
+                        }}
+                        className="border border-gray-300 rounded-md px-3 py-2 text-sm font-medium bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 cursor-pointer appearance-none pr-8 group-hover:border-blue-400 group-hover:shadow-sm"
+                      >
+                        {(filterConfig.options || [
+                          { value: 'semua', label: 'Semua' },
+                          { value: 'gudang', label: 'Gudang' },
+                          { value: 'rak', label: 'Rak' },
+                          { value: 'bin', label: 'Bin' },
+                        ]).map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                      <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-gray-500 group-hover:text-blue-500 transition-colors duration-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 ml-2">
                     <Switch
                       id="showTrashed"
@@ -378,20 +427,23 @@ export default function MasterDataLayout({
                           <td className="px-4 py-3 text-center">
                             <div className="flex gap-2 justify-center opacity-90 group-hover:opacity-100 transition-opacity duration-200">
                               {/* Custom Actions - Always show when not in trashed mode */}
-                              {!showTrashed && customActions && customActions.map((action, index) => (
-                                <Button
-                                  key={index}
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => action.onClick(item)}
-                                  className={action.className || "bg-blue-500 hover:bg-blue-600 text-white border-blue-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-blue-300 focus:ring-offset-1"}
-                                >
-                                  <span className="flex items-center gap-1">
-                                    {action.icon}
-                                    {action.label}
-                                  </span>
-                                </Button>
-                              ))}
+                              {!showTrashed && customActions && customActions.map((action, index) => {
+                                if (typeof action.visible === 'function' && !action.visible(item)) return null;
+                                return (
+                                  <Button
+                                    key={index}
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => action.onClick(item)}
+                                    className={action.className || "bg-blue-500 hover:bg-blue-600 text-white border-blue-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-blue-300 focus:ring-offset-1"}
+                                  >
+                                    <span className="flex items-center gap-1">
+                                      {action.icon}
+                                      {action.label}
+                                    </span>
+                                  </Button>
+                                );
+                              })}
                               
                               {!showTrashed ? (
                                 <>
@@ -617,6 +669,7 @@ export default function MasterDataLayout({
           title={editData ? `Edit ${title}` : `Tambah ${title}`}
           saveLoading={saveLoading}
           error={error}
+          size={modalSize}
         />
       )}
       

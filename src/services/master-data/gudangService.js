@@ -1,11 +1,12 @@
 import { request } from "../../lib/request";
 
 export const gudangService = {
-  async getAll() {
-    return request("/gudang", { method: "GET" });
+  async getAll(params = {}) {
+    const qs = Object.keys(params).length ? `?${new URLSearchParams(params).toString()}` : "";
+    return request(`/gudang${qs}`, { method: "GET" });
   },
 
-  async getPaginated(page = 1, perPage = 10, search = "", sortBy = "", sortDir = "asc") {
+  async getPaginated(page = 1, perPage = 10, search = "", sortBy = "", sortDir = "asc", filters = {}) {
     const params = new URLSearchParams({
       search: search || "",
       page: page.toString(),
@@ -16,6 +17,12 @@ export const gudangService = {
       params.append('sort', `${sortBy},${sortDir}`);
     }
     
+    Object.entries(filters || {}).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && String(v).trim() !== "") {
+        params.append(k, v);
+        if (k === 'tipe_gudang') params.append('tipe', v);
+      }
+    });
     return request(`/gudang?${params}`, { method: "GET" });
   },
 
