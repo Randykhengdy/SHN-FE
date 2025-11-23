@@ -122,6 +122,7 @@ export default function GudangPage() {
             </svg>
           ),
           visible: (item) => String(item.tipe_gudang || "") === "Gudang",
+          className: "bg-blue-500 hover:bg-blue-600 text-white border-blue-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-blue-300 focus:ring-offset-1",
           onClick: async (item) => {
             try {
               setChildTitle(`Rak di ${item.nama_gudang || item.nama}`);
@@ -142,6 +143,7 @@ export default function GudangPage() {
             </svg>
           ),
           visible: (item) => String(item.tipe_gudang || "") === "Rak",
+          className: "bg-indigo-500 hover:bg-indigo-600 text-white border-indigo-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-indigo-300 focus:ring-offset-1",
           onClick: async (item) => {
             try {
               const parent = item.parent_id ? await gudangService.getById(item.parent_id) : null;

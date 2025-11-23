@@ -18,7 +18,7 @@ import PelaksanaViewModal from "@/components/modals/PelaksanaViewModal";
 import SaranViewModal from "@/components/modals/SaranViewModal";
 import { openPrintDialog, generateWOPlanningPrintContent } from "@/lib/printUtils";
 import CustomAlert from "@/components/modals/CustomAlert";
-// import { Switch } from "@/components/ui/switch";
+import { Switch } from "@/components/ui/switch";
 
 export default function ViewWorkOrderPage() {
   const { id } = useParams();
@@ -28,7 +28,7 @@ export default function ViewWorkOrderPage() {
   
   // Loading states
   const [loading, setLoading] = useState(false);
-  // const [printOptionsOpen, setPrintOptionsOpen] = useState(false);
+  const [printOptionsOpen, setPrintOptionsOpen] = useState(false);
   const [includeImages, setIncludeImages] = useState(true);
   
   // Prevent multiple API calls
@@ -460,6 +460,7 @@ export default function ViewWorkOrderPage() {
   }
 
   return (
+    <>
     <PageLayout title="Detail Work Order" subtitle="PRODUKSI">
       <div className="flex items-center gap-4 mb-6">
         <Button 
@@ -834,11 +835,12 @@ export default function ViewWorkOrderPage() {
           <RoleGuard roles={['admin', 'manager', 'supervisor']}>
             <Button 
               size="lg" 
-              className="bg-blue-600 hover:bg-blue-700"
-              onClick={doPrint}
+              className="border-blue-600 text-blue-600 hover:bg-blue-50"
+              variant="outline"
+              onClick={() => setPrintOptionsOpen(true)}
               disabled={loading}
             >
-              {loading ? 'Menyiapkan cetak...' : 'Cetak WO'}
+              {loading ? 'Menyiapkan cetak...' : 'Print'}
             </Button>
           </RoleGuard>
         </div>
@@ -860,5 +862,27 @@ export default function ViewWorkOrderPage() {
           itemInfo={selectedItemInfo}
         />
       </PageLayout>
+    <CustomAlert
+      open={printOptionsOpen}
+      onOpenChange={setPrintOptionsOpen}
+      title="Opsi Cetak WO Planning"
+      message={null}
+      type="info"
+      showCancel={true}
+      confirmText="Cetak"
+      cancelText="Batal"
+      onConfirm={doPrint}
+      extraContent={(
+        <div className="w-full flex items-center justify-between gap-4 bg-gray-50 rounded-md px-3 py-2 border">
+          <span className="text-sm text-gray-800">Sertakan gambar untuk print</span>
+          <Switch
+            checked={includeImages}
+            onCheckedChange={setIncludeImages}
+            aria-label="Sertakan gambar untuk print"
+          />
+        </div>
+      )}
+    />
+    </>
   );
 }
