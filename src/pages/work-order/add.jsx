@@ -256,44 +256,38 @@ export default function AddWorkOrderPage() {
 
   // Helper functions to get display values
   const getJenisBarangName = (jenisBarangId) => {
-    // First try to get from selected sales order items
+    if (!jenisBarangId) return 'Belum dipilih';
     if (selectedSalesOrder && selectedSalesOrder.sales_order_items) {
-      const soItem = selectedSalesOrder.sales_order_items.find(item => item.jenis_barang_id === jenisBarangId);
-      if (soItem && soItem.jenis_barang) {
-        return soItem.jenis_barang.nama_jenis;
-      }
+      const soItem = selectedSalesOrder.sales_order_items.find(item => String(item.jenis_barang_id) === String(jenisBarangId));
+      const jb = soItem?.jenis_barang;
+      const name = jb?.nama_jenis_barang || jb?.nama_jenis || jb?.nama;
+      if (name) return name;
     }
-    
-    // Fallback to master data list
-    const jenis = jenisBarangList.find(item => item.value === jenisBarangId);
+    const jenis = jenisBarangList.find(item => String(item.value) === String(jenisBarangId));
     return jenis ? jenis.label : 'Belum dipilih';
   };
 
   const getBentukBarangName = (bentukBarangId) => {
-    // First try to get from selected sales order items
+    if (!bentukBarangId) return 'Belum dipilih';
     if (selectedSalesOrder && selectedSalesOrder.sales_order_items) {
-      const soItem = selectedSalesOrder.sales_order_items.find(item => item.bentuk_barang_id === bentukBarangId);
-      if (soItem && soItem.bentuk_barang) {
-        return soItem.bentuk_barang.nama_bentuk;
-      }
+      const soItem = selectedSalesOrder.sales_order_items.find(item => String(item.bentuk_barang_id) === String(bentukBarangId));
+      const bb = soItem?.bentuk_barang;
+      const name = bb?.nama_bentuk_barang || bb?.nama_bentuk || bb?.nama;
+      if (name) return name;
     }
-    
-    // Fallback to master data list
-    const bentuk = bentukBarangList.find(item => item.value === bentukBarangId);
+    const bentuk = bentukBarangList.find(item => String(item.value) === String(bentukBarangId));
     return bentuk ? bentuk.label : 'Belum dipilih';
   };
 
   const getGradeBarangName = (gradeBarangId) => {
-    // First try to get from selected sales order items
+    if (!gradeBarangId) return 'Belum dipilih';
     if (selectedSalesOrder && selectedSalesOrder.sales_order_items) {
-      const soItem = selectedSalesOrder.sales_order_items.find(item => item.grade_barang_id === gradeBarangId);
-      if (soItem && soItem.grade_barang) {
-        return soItem.grade_barang.nama;
-      }
+      const soItem = selectedSalesOrder.sales_order_items.find(item => String(item.grade_barang_id) === String(gradeBarangId));
+      const gb = soItem?.grade_barang;
+      const name = gb?.nama_grade_barang || gb?.nama_grade || gb?.nama;
+      if (name) return name;
     }
-    
-    // Fallback to master data list
-    const grade = gradeBarangList.find(item => item.value === gradeBarangId);
+    const grade = gradeBarangList.find(item => String(item.value) === String(gradeBarangId));
     return grade ? grade.label : 'Belum dipilih';
   };
 
@@ -421,12 +415,25 @@ export default function AddWorkOrderPage() {
       }
       
       
-      const itemsDataRaw = salesOrderItemsResponse?.items
-        || salesOrderItemsResponse?.data?.items
-        || salesOrderItemsResponse?.data
-        || salesOrderItemsResponse
-        || [];
-      const itemsData = Array.isArray(itemsDataRaw) ? itemsDataRaw : (itemsDataRaw.data || []);
+      const extractItems = (resp) => {
+        if (!resp) return [];
+        const candidates = [
+          resp.items,
+          resp.detail_items,
+          resp.sales_order_items,
+          resp.item_details,
+          resp.data?.items,
+          resp.data?.detail_items,
+          resp.data?.sales_order_items,
+          resp.data?.item_details,
+          Array.isArray(resp.data) ? resp.data : undefined
+        ].filter(Boolean);
+        for (const c of candidates) {
+          if (Array.isArray(c)) return c;
+        }
+        return Array.isArray(resp) ? resp : [];
+      };
+      const itemsData = extractItems(salesOrderItemsResponse);
       console.log('Sales Order items (for WO planning):', itemsData);
 
       setSelectedSalesOrder({
@@ -444,17 +451,17 @@ export default function AddWorkOrderPage() {
           
           return {
             id: timestamp,
-            workOrderUniqueId: workOrderUniqueId, // Add workOrderUniqueId to each WO item
-            sales_order_item_id: item.id,
-            panjang: item.panjang || 0,
-            lebar: item.lebar || 0,
-            tebal: item.tebal || 0,
-            qty: item.sisa_qty || item.qty_so || 1,
-            jenis_barang_id: (item.jenis_barang_id || item.jenis_barang?.id)?.toString?.() || '',
-            bentuk_barang_id: (item.bentuk_barang_id || item.bentuk_barang?.id)?.toString?.() || '',
-            grade_barang_id: (item.grade_barang_id || item.grade_barang?.id)?.toString?.() || '',
-            jenis_potongan: item.jenis_potongan || null,
-            catatan: item.catatan || item.note || item.notes || '',
+            workOrderUniqueId: workOrderUniqueId,
+            sales_order_item_id: item.id || item.sales_order_item_id,
+            panjang: (item.panjang ?? item.length ?? item.p ?? 0),
+            lebar: (item.lebar ?? item.width ?? item.l ?? 0),
+            tebal: (item.tebal ?? item.ketebalan ?? item.thickness ?? 0),
+            qty: (item.sisa_qty ?? item.remaining_qty ?? item.available_qty ?? item.qty ?? item.qty_so ?? 1),
+            jenis_barang_id: (item.jenis_barang_id || item.jenis_barang?.id || item.item_jenis_id)?.toString?.() || '',
+            bentuk_barang_id: (item.bentuk_barang_id || item.bentuk_barang?.id || item.item_bentuk_id)?.toString?.() || '',
+            grade_barang_id: (item.grade_barang_id || item.grade_barang?.id || item.item_grade_id)?.toString?.() || '',
+            jenis_potongan: (item.jenis_potongan ?? item.potongan_jenis ?? item.jenisPotongan ?? null),
+            catatan: (item.catatan ?? item.note ?? item.notes ?? ''),
             pelaksana: []
           };
         });
@@ -471,39 +478,26 @@ export default function AddWorkOrderPage() {
         setWorkOrderData(prev => ({
           ...prev,
           nomor_wo: woNumberResponse,
-          gudang_id: (soData?.id_gudang ?? soData?.gudang_id ?? soData?.gudang?.id) || prev.gudang_id,
-          pelanggan_id: (soData?.id_pelanggan ?? soData?.pelanggan_id ?? soData?.pelanggan?.id) || prev.pelanggan_id,
-          catatan: soData?.catatan || prev.catatan || '',
-          handover_method: soData?.handover_method || prev.handover_method || 'pickup',
+          gudang_id: (soData?.id_gudang ?? soData?.gudang_id ?? soData?.warehouse_id ?? soData?.gudang?.id) || prev.gudang_id,
+          pelanggan_id: (soData?.id_pelanggan ?? soData?.pelanggan_id ?? soData?.customer_id ?? soData?.pelanggan?.id) || prev.pelanggan_id,
+          catatan: (soData?.catatan ?? prev.catatan ?? ''),
+          handover_method: (soData?.handover_method ?? prev.handover_method ?? 'pickup'),
           tanggal_target: workOrderData.tanggal_wo
         }));
         
         showAlert('Sukses', `${itemsData.length} item berhasil diambil dari Sales Order\nNomor WO: ${woNumberResponse}`, 'success');
       } else {
-        showAlert('Info', 'Sales Order tidak memiliki item', 'info');
-        // Reset to default item if no items found
-        setWorkOrderItems([{
-          id: Date.now(),
-          sales_order_item_id: null, // No sales order item ID for manual items
-          panjang: '',
-          lebar: '',
-          tebal: '',
-          qty: 1,
-          jenis_barang_id: '',
-          bentuk_barang_id: '',
-          grade_barang_id: '',
-          catatan: '',
-          pelaksana: []
-        }]);
-        
-        // Still set the generated WO number even if no items
+        showAlert('Info', 'Sales Order tidak memiliki item. Silakan pilih Sales Order lain.', 'info');
+        // Tidak menambahkan item default, biarkan kosong
+        setWorkOrderItems([]);
+        // Tetap set nomor WO dan header
         setWorkOrderData(prev => ({
           ...prev,
           nomor_wo: woNumberResponse,
-          gudang_id: (soData?.id_gudang ?? soData?.gudang_id ?? soData?.gudang?.id) || prev.gudang_id,
-          pelanggan_id: (soData?.id_pelanggan ?? soData?.pelanggan_id ?? soData?.pelanggan?.id) || prev.pelanggan_id,
-          catatan: soData?.catatan || prev.catatan || '',
-          handover_method: soData?.handover_method || prev.handover_method || 'pickup',
+          gudang_id: (soData?.id_gudang ?? soData?.gudang_id ?? soData?.warehouse_id ?? soData?.gudang?.id) || prev.gudang_id,
+          pelanggan_id: (soData?.id_pelanggan ?? soData?.pelanggan_id ?? soData?.customer_id ?? soData?.pelanggan?.id) || prev.pelanggan_id,
+          catatan: (soData?.catatan ?? prev.catatan ?? ''),
+          handover_method: (soData?.handover_method ?? prev.handover_method ?? 'pickup'),
           tanggal_target: workOrderData.tanggal_wo
         }));
       }
@@ -1227,7 +1221,9 @@ export default function AddWorkOrderPage() {
                     if (selectedSO) {
                       setWorkOrderData({
                         ...workOrderData, 
-                        sales_order_id: parseInt(value)
+                        sales_order_id: parseInt(value),
+                        gudang_id: selectedSO.gudang_id ? parseInt(selectedSO.gudang_id) : workOrderData.gudang_id,
+                        pelanggan_id: selectedSO.pelanggan_id ? parseInt(selectedSO.pelanggan_id) : workOrderData.pelanggan_id
                       });
                       
                       // Load Sales Order detail and populate items automatically
@@ -1281,29 +1277,29 @@ export default function AddWorkOrderPage() {
               </div>
               
               <div>
-                <SearchSelect
-                  label="Gudang *"
-                  options={gudangList}
-                  value={workOrderData.gudang_id ? workOrderData.gudang_id.toString() : ''} 
-                  onValueChange={(value) => {
-                    setWorkOrderData({...workOrderData, gudang_id: parseInt(value)});
-                  }}
-                  placeholder="Pilih gudang"
-                  loading={loadingGudang}
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Gudang *</label>
+                <div className="flex h-10 items-center justify-between rounded-md border px-3 py-2 bg-gray-50 text-gray-600 cursor-default">
+                  <span>{(() => { 
+                    const soOpt = salesOrderList.find(so => String(so.value) === String(workOrderData.sales_order_id));
+                    const fromSO = (selectedSalesOrder?.gudang?.nama_gudang) || soOpt?.gudang_nama;
+                    if (fromSO) return fromSO;
+                    const gOpt = gudangList.find(g => String(g.value) === String(workOrderData.gudang_id));
+                    return gOpt ? gOpt.label : 'Belum dipilih'; 
+                  })()}</span>
+                </div>
               </div>
               
               <div>
-                <SearchSelect
-                  label="Pelanggan *"
-                  options={pelangganList}
-                  value={workOrderData.pelanggan_id ? workOrderData.pelanggan_id.toString() : ''} 
-                  onValueChange={(value) => {
-                    setWorkOrderData({...workOrderData, pelanggan_id: parseInt(value)});
-                  }}
-                  placeholder="Pilih pelanggan"
-                  loading={loadingPelanggan}
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Pelanggan *</label>
+                <div className="flex h-10 items-center justify-between rounded-md border px-3 py-2 bg-gray-50 text-gray-600 cursor-default">
+                  <span>{(() => { 
+                    const soOpt = salesOrderList.find(so => String(so.value) === String(workOrderData.sales_order_id));
+                    const fromSO = (selectedSalesOrder?.pelanggan?.nama_pelanggan) || soOpt?.pelanggan_nama;
+                    if (fromSO) return fromSO;
+                    const pOpt = pelangganList.find(p => String(p.value) === String(workOrderData.pelanggan_id));
+                    return pOpt ? pOpt.label : 'Belum dipilih'; 
+                  })()}</span>
+                </div>
               </div>
               
               <div>
@@ -1326,17 +1322,9 @@ export default function AddWorkOrderPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Metode Penyerahan
                 </label>
-                <select
-                  value={workOrderData.handover_method}
-                  disabled
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-600 cursor-not-allowed"
-                >
-                  <option value="pickup">Pickup</option>
-                  <option value="delivery">Delivery</option>
-                </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  Metode penyerahan otomatis diambil dari Sales Order yang dipilih
-                </p>
+                <div className="flex h-10 items-center justify-between rounded-md border px-3 py-2 bg-gray-50 text-gray-600 cursor-default">
+                  <span>{workOrderData.handover_method === 'delivery' ? 'Delivery' : 'Pickup'}</span>
+                </div>
               </div>
               
               <div className="md:col-span-2">
@@ -1389,8 +1377,8 @@ export default function AddWorkOrderPage() {
                 <TableBody>
                   {workOrderItems.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan="11" className="px-4 py-8 text-center text-gray-500">
-                        Belum ada item. Klik "Tambah Item" untuk menambahkan item pertama.
+                      <TableCell colSpan="12" className="px-4 py-8 text-center text-gray-500">
+                        Sales Order tidak memiliki item. Silakan pilih Sales Order lain.
                       </TableCell>
                     </TableRow>
                   ) : (

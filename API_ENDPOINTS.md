@@ -192,6 +192,18 @@
 
     ## Master Data - Gudang
     - `GET /api/gudang` - List all gudang
+      - **Query Params:**
+        - `search`: Pencarian pada `kode`, `nama_gudang`, `tipe_gudang`, `telepon_hp`, `kapasitas`
+        - `per_page`: Jumlah item per halaman (default dari sistem)
+        - `sort_by`: Kolom sort (default `id`), `order`: `asc|desc`
+        - `sort`: Multiple sort, format `kolom,asc;kolom2,desc`
+        - `tipe_gudang`: Filter persis berdasarkan tipe gudang
+        - `tipe`: Alias untuk `tipe_gudang`
+        - `parent_id`: Filter satu-level child berdasarkan parent tertentu; gunakan `parent_id=null` untuk hanya root
+      - **Contoh:**
+        - `GET /api/gudang?tipe_gudang=Rak&parent_id=1`
+        - `GET /api/gudang?tipe=rak&per_page=20&sort_by=nama_gudang&order=asc`
+        - `GET /api/gudang?parent_id=null` (hanya gudang root)
       - **Response:** `{ "data": [{ "id": "int", "kode": "string", "nama_gudang": "string", "tipe_gudang": "string", "parent_id": "int|null", "telepon_hp": "string", "kapasitas": "float|null" }] }`
     - `GET /api/gudang/tipe` - Get tipe gudang
     - `GET /api/gudang/hierarchy` - Get gudang hierarchy
@@ -355,14 +367,18 @@
 
     ### Sales Order for WO Planning
 
-    - `GET /api/sales-order/sales-order-for-woplanning` - Ambil item SO dengan sisa qty untuk WO Planning
-      - **Description:** Mengembalikan item Sales Order beserta `sisa_qty` berdasarkan alokasi sebelumnya.
+    - `GET /api/sales-order/sales-order-for-woplanning` - Ambil satu Sales Order (header) dengan item tersisa untuk WO Planning
+      - **Description:** Mengembalikan satu objek Sales Order berdasarkan `sales_order_id` dengan `sales_order_items` yang sudah dihitung `qty_ref` dan `sisa_qty`. Item dengan `sisa_qty <= 0` disembunyikan secara default.
       - **Query Parameters:**
         - `sales_order_id` (required)
-      - **Catatan Perhitungan:** `sisa_qty = qty_so - SUM(qty) dari trx_work_order_planning_item`
-      - **Response Fields:** `id`, `sales_order_id`, `panjang`, `lebar`, `tebal`, `qty_so`, `qty_ref`, `sisa_qty`, `jenis_barang`, `bentuk_barang`, `grade_barang`, `harga`, `satuan`, `jenis_potongan`, `diskon`, `catatan`
+        - `include_zero` (optional, boolean): jika `true`, item dengan `sisa_qty <= 0` tetap ditampilkan
+      - **Catatan Perhitungan:** `sisa_qty = qty_so - SUM(qty) dari trx_work_order_planning_item` (mengabaikan `deleted_at`).
+      - **Response:**
+        - Header SO sesuai format `GET /api/sales-order/{id}` ditambah `sales_order_items`.
+        - Struktur item: `id`, `sales_order_id`, `panjang`, `lebar`, `tebal`, `qty_so`, `qty_ref`, `sisa_qty`, `jenis_barang`, `bentuk_barang`, `grade_barang`, `harga`, `satuan`, `jenis_potongan`, `diskon`, `catatan`.
       - **Examples:**
         - `GET /api/sales-order/sales-order-for-woplanning?sales_order_id=12`
+        - `GET /api/sales-order/sales-order-for-woplanning?sales_order_id=12&include_zero=true`
 
     ### Sales Order Header Endpoints (Header Only)
     - `GET /api/sales-order/header` - List all sales order (header attributes only, without item details)
@@ -1169,7 +1185,7 @@
 
   #### 2. Get Work Order Actual by ID
   - **GET** `/api/work-order-actual/{id}`
-    - **Description**: Mendapatkan detail work order actual berdasarkan ID dengan relasi lengkap. Setiap item menyertakan nama deskriptif: `item_barang_nama`, `jenis_barang_nama`, `bentuk_barang_nama`, `grade_barang_nama`. Sumber utama dari `plat_dasar` bila tersedia; jika tidak, menggunakan fallback dari relasi `jenis_barang`, `bentuk_barang`, dan `grade_barang` pada item actual. Objek relasi nested untuk `jenis_barang`, `bentuk_barang`, `grade_barang` di item actual tidak dikembalikan untuk menghindari duplikasi.
+    - **Description**: Mendapatkan detail work order actual berdasarkan ID dengan relasi lengkap. Setiap item menyertakan nama deskriptif: `item_barang_nama`, `jenis_barang_nama`, `bentuk_barang_nama`, `grade_barang_nama` (diambil dari plat dasar terkait).
     - **Request Example**:
     ```
     GET /api/work-order-actual/1
@@ -1196,52 +1212,58 @@
         },
         "work_order_actual_items": [
           {
-            "id": 106,
-            "work_order_actual_id": 47,
-            "wo_plan_item_id": 40,
-            "panjang_actual": "1000.00",
-            "lebar_actual": "500.00",
-            "tebal_actual": "10.00",
-            "qty_actual": 3,
-            "jenis_barang_id": 8,
-            "bentuk_barang_id": 9,
-            "grade_barang_id": 12,
-            "plat_dasar_id": null,
-            "foto_bukti": "work-order-actual/47/items/106/foto_bukti.jpg",
-            "berat": "0.00",
-            "qty_planning": 1,
-            "berat_planning": "0.00",
-            "item_barang_nama": "Aluminium Plat 6061",
+            "id": 1,
+            "work_order_planning_item_id": 1,
+            "qty_actual": 10,
+            "berat": 25.5,
+            "foto_bukti": "work-order-actual/1/items/1/foto_bukti.jpg",
+            "qty_planning": 10,
+            "berat_planning": 30.0,
+            "item_barang_nama": "Plat Aluminium 5mm",
             "jenis_barang_nama": "Aluminium",
-            "bentuk_barang_nama": "Plat",
-            "grade_barang_nama": "6061",
+            "bentuk_barang_nama": "Sheet",
+            "grade_barang_nama": "Grade A",
+            "created_at": "2024-01-01T10:00:00.000000Z",
+            "updated_at": "2024-01-01T10:00:00.000000Z",
             "work_order_planning_item": {
-              "id": 40,
-              "panjang": "1000.00",
-              "lebar": "500.00",
-              "tebal": "10.00",
-              "berat": "0.00",
-              "qty": 1,
-              "satuan": "PCS",
+              "id": 1,
+              "qty": 10,
+              "panjang": 100.00,
+              "lebar": 50.00,
+              "tebal": 2.00,
               "jenis_potongan": "utuh",
-              "plat_dasar": null
+              "item_barang": {
+                "id": 1,
+                "nama_item_barang": "Aluminium Sheet",
+                "jenis_barang": {
+                  "id": 1,
+                  "nama_jenis_barang": "Aluminium"
+                },
+                "bentuk_barang": {
+                  "id": 1,
+                  "nama_bentuk_barang": "Sheet"
+                },
+                "grade_barang": {
+                  "id": 1,
+                  "nama_grade_barang": "Grade A"
+                }
+              }
             },
-            "has_many_pelaksana": [
+            "work_order_actual_pelaksanas": [
               {
-                "id": 113,
-                "wo_actual_item_id": 106,
-                "pelaksana_id": 1,
-                "qty": 3,
-                "weight": "0.00",
-                "tanggal": "2025-11-19T00:00:00.000000Z",
+                "id": 1,
+                "qty": 5,
+                "weight": 12.5,
+                "tanggal": "2024-01-01",
                 "jam_mulai": "08:00:00",
-                "jam_selesai": "17:00:00",
-                "catatan": null,
+                "jam_selesai": "12:00:00",
+                "catatan": "Shift pagi",
+                "created_at": "2024-01-01T10:00:00.000000Z",
+                "updated_at": "2024-01-01T10:00:00.000000Z",
                 "pelaksana": {
                   "id": 1,
-                  "kode": "PLK001",
-                  "nama_pelaksana": "Agus",
-                  "level": "1"
+                  "nama_pelaksana": "John Doe",
+                  "email": "john@example.com"
                 }
               }
             ]
