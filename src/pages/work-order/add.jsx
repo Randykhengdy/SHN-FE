@@ -1230,7 +1230,7 @@ export default function AddWorkOrderPage() {
                       // WO number will be generated automatically in loadSalesOrderDetail
                       loadSalesOrderDetail(parseInt(value));
                     } else {
-                      setWorkOrderData({...workOrderData, sales_order_id: parseInt(value)});
+                       setWorkOrderData({...workOrderData, sales_order_id: parseInt(value)});
                     }
                   }}
                   placeholder="Pilih Sales Order"
