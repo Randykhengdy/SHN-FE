@@ -81,6 +81,12 @@ export default function MasterFormModal({
   const heightClass = size === 'xl' ? 'min-h-[75vh]' : '';
 
   useEffect(() => {
+    if (isOpen && !editData) {
+      setForm({});
+      setOptions({});
+      setSearchTerms({});
+      setOpenDropdowns({});
+    }
     const loadOptions = async () => {
       const newOptions = {};
       for (const field of fields) {

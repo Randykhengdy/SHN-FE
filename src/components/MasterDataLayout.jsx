@@ -19,6 +19,7 @@ export default function MasterDataLayout({
   preprocess,
   filterConfig,
   modalSize,
+  selection,
 }) {
   const { showConfirm, AlertComponent } = useAlert();
   const [data, setData] = useState([]);
@@ -334,6 +335,14 @@ export default function MasterDataLayout({
                 <table className="w-full border-separate border-spacing-0 rounded-lg overflow-hidden">
                   <thead className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur-sm">
                     <tr className="border-b border-gray-200 shadow-sm">
+                      {selection ? (
+                        <th 
+                          className={`px-4 py-3 text-sm font-semibold cursor-default text-center min-w-[64px]`}
+                          style={{ width: '4rem', minWidth: '4rem' }}
+                        >
+                          {selection.headerLabel || 'Pilih'}
+                        </th>
+                      ) : null}
                       {columns.map((col) => (
                         <th 
                           key={col.key} 
@@ -354,8 +363,8 @@ export default function MasterDataLayout({
                           </div>
                         </th>
                       ))}
-                      <th className="px-4 py-3 text-sm font-semibold text-center min-w-[120px] hover:text-blue-600 transition-colors duration-200">
-                        <span className="inline-flex items-center gap-1 justify-center">
+                      <th className="px-4 py-3 text-sm font-semibold text-left min-w-[120px] hover:text-blue-600 transition-colors duration-200">
+                        <span className="inline-flex items-center gap-1 justify-start">
                           Aksi
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
@@ -368,6 +377,11 @@ export default function MasterDataLayout({
                     {loading ? (
                       Array(5).fill(0).map((_, index) => (
                         <tr key={`skeleton-${index}`} className={`animate-pulse border-b border-gray-100 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
+                          {selection ? (
+                            <td className="px-4 py-4 whitespace-nowrap text-center">
+                              <div className="h-4 w-4 bg-gray-200 rounded"></div>
+                            </td>
+                          ) : null}
                           {Array(columns.length).fill(0).map((_, colIndex) => (
                             <td key={`skeleton-cell-${index}-${colIndex}`} className="px-4 py-4 whitespace-nowrap">
                               <div 
@@ -389,7 +403,7 @@ export default function MasterDataLayout({
                       ))
                     ) : data.length === 0 ? (
                       <tr>
-                        <td colSpan={columns.length + 1} className="px-6 py-16 text-center">
+                        <td colSpan={(columns.length + 1) + (selection ? 1 : 0)} className="px-6 py-16 text-center">
                           <div className="flex flex-col items-center justify-center space-y-3">
                             <div className="bg-gray-100 p-3 rounded-full">
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -411,6 +425,22 @@ export default function MasterDataLayout({
                             key={item.id} 
                             className={`border-b border-gray-100 last:border-b-0 hover:bg-blue-50/70 hover:border-l-4 hover:border-l-blue-500 transition-all duration-200 group ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
                           >
+                          {(() => {
+                            if (!selection) return null;
+                            const visible = typeof selection.visible === 'function' ? selection.visible(item) : true;
+                            if (!visible) return <td className="px-4 py-3"></td>;
+                            const checked = typeof selection.isSelected === 'function' ? !!selection.isSelected(item) : false;
+                            return (
+                              <td className="px-4 py-3 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() => selection.onToggle && selection.onToggle(item)}
+                                  className="h-4 w-4 cursor-pointer accent-blue-600"
+                                />
+                              </td>
+                            );
+                          })()}
                           {columns.map((col) => (
                             <td 
                               key={col.key} 
@@ -424,11 +454,13 @@ export default function MasterDataLayout({
                               {getValue(item, col.key)}
                             </td>
                           ))}
-                          <td className="px-4 py-3 text-center">
-                            <div className="flex gap-2 justify-center opacity-90 group-hover:opacity-100 transition-opacity duration-200">
+                          <td className="px-4 py-3 text-left">
+                            <div className="flex gap-2 justify-start opacity-90 group-hover:opacity-100 transition-opacity duration-200">
                               {/* Custom Actions - Always show when not in trashed mode */}
                               {!showTrashed && customActions && customActions.map((action, index) => {
                                 if (typeof action.visible === 'function' && !action.visible(item)) return null;
+                                const computedIcon = typeof action.icon === 'function' ? action.icon(item) : action.icon;
+                                const computedLabel = typeof action.label === 'function' ? action.label(item) : action.label;
                                 return (
                                   <Button
                                     key={index}
@@ -438,8 +470,8 @@ export default function MasterDataLayout({
                                     className={action.className || "bg-blue-500 hover:bg-blue-600 text-white border-blue-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-blue-300 focus:ring-offset-1"}
                                   >
                                     <span className="flex items-center gap-1">
-                                      {action.icon}
-                                      {action.label}
+                                      {computedIcon}
+                                      {computedLabel}
                                     </span>
                                   </Button>
                                 );
@@ -519,6 +551,15 @@ export default function MasterDataLayout({
                       <span className="text-sm font-medium text-gray-700 bg-gray-50 px-3 py-1.5 rounded-md border border-gray-200">
                         Menampilkan <span className="font-semibold text-blue-600">{paginationInfo.start}-{paginationInfo.end}</span> dari <span className="font-semibold text-blue-600">{paginationInfo.total}</span> data{paginationInfo.showTrashed ? ' yang dihapus' : ''}
                       </span>
+                      {(() => {
+                        if (!selection) return null;
+                        const selectedCount = Number(selection.selectedCount || 0);
+                        return (
+                          <span className="text-sm font-medium text-blue-700 bg-blue-50 px-3 py-1.5 rounded-md border border-blue-200">
+                            Dipilih: <span className="font-semibold">{selectedCount}</span>
+                          </span>
+                        );
+                      })()}
                       <div className="relative group">
                         <select
                           value={itemsPerPage}
@@ -543,6 +584,18 @@ export default function MasterDataLayout({
                     
                     {/* Pagination buttons - always show if there's data */}
                     <div className="flex items-center space-x-2">
+                      {(() => {
+                        if (!selection || !(selection.batchAction && Number(selection.selectedCount || 0) > 0)) return null;
+                        return (
+                          <Button
+                            variant="outline"
+                            onClick={() => selection.batchAction()}
+                            className="border-blue-300 text-blue-700 hover:bg-blue-50 hover:text-blue-800 transition-all duration-200 hover:shadow-sm"
+                          >
+                            Cetak QR Batch
+                          </Button>
+                        );
+                      })()}
                       <button
                         onClick={() => setCurrentPage(currentPage - 1)}
                         disabled={currentPage === 1}

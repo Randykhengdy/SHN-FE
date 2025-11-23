@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import MasterDataLayout from "@/components/MasterDataLayout";
 import { gudangService } from "@/services/master-data";
+import { getGudang, getGudangById } from "@/services/masterDataService";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ export default function GudangPage() {
   const [childTitle, setChildTitle] = useState("");
   const [childRows, setChildRows] = useState([]);
   const [childLoading, setChildLoading] = useState(false);
+  const [selectedRaks, setSelectedRaks] = useState([]);
 
   const openChildren = async (item) => {
     const tipe = String(item.tipe_gudang || "");
@@ -23,16 +25,6 @@ export default function GudangPage() {
       } finally {
         setChildLoading(false);
       }
-    } else if (tipe === "Rak") {
-      setChildTitle(`Bin di ${item.nama_gudang || item.nama_rak || item.nama}`);
-      setChildOpen(true);
-      setChildLoading(true);
-      try {
-        const res = await gudangService.getAll({ tipe_gudang: "Bin", parent_id: item.id });
-        setChildRows(res?.data || res || []);
-      } finally {
-        setChildLoading(false);
-      }
     }
   };
 
@@ -42,6 +34,25 @@ export default function GudangPage() {
       title="Gudang"
       subtitle="Master Data"
       service={gudangService}
+      selection={{
+        visible: (item) => String(item.tipe_gudang || "") === "Rak",
+        isSelected: (item) => !!selectedRaks.find(r => r.id === item.id),
+        onToggle: (item) => {
+          setSelectedRaks(prev => {
+            const exists = prev.find(r => r.id === item.id);
+            if (exists) return prev.filter(r => r.id !== item.id);
+            return [...prev, item];
+          });
+        },
+        headerLabel: "Pilih",
+        selectedCount: selectedRaks.length,
+        batchAction: async () => {
+          try {
+            const { openRackQRPDFBatch } = await import("@/lib/pdfUtils");
+            await openRackQRPDFBatch(selectedRaks);
+          } catch (_) {}
+        }
+      }}
       filterConfig={{
         param: 'tipe_gudang',
         defaultValue: 'semua',
@@ -49,7 +60,6 @@ export default function GudangPage() {
           { value: 'semua', label: 'Semua' },
           { value: 'gudang', label: 'Gudang' },
           { value: 'rak', label: 'Rak' },
-          { value: 'bin', label: 'Bin' },
         ]
       }}
       validate={(form) => {
@@ -68,10 +78,6 @@ export default function GudangPage() {
           form.parent_id = form.gudang_id || '';
           delete form.gudang_id;
           delete form.rak_id;
-        } else if (tipeLower === 'bin') {
-          form.parent_id = form.rak_id || '';
-          delete form.rak_id;
-          delete form.gudang_id;
         } else if (tipeLower === 'gudang') {
           form.parent_id = '';
           delete form.gudang_id;
@@ -86,32 +92,26 @@ export default function GudangPage() {
         { name: "tipe_gudang", label: "Tipe Gudang", type: "select", required: true, disabledOnEdit: true, options: [
           { value: "gudang", label: "Gudang" },
           { value: "rak", label: "Rak" },
-          { value: "bin", label: "Bin" },
         ], mapFromEdit: (edit) => (edit?.tipe_gudang ? String(edit.tipe_gudang).toLowerCase() : ""), editLabel: (edit) => (edit?.tipe_gudang || ''), onChangeForm: (form, val) => {
           const next = { ...form };
-          if (val === 'gudang') { next.gudang_id = ''; next.rak_id = ''; }
-          else if (val === 'rak') { next.rak_id = ''; }
+          if (val === 'gudang') { next.gudang_id = ''; }
           return next;
         } },
         { name: "gudang_id", label: "Gudang", type: "select", optionLabel: "nama_gudang", required: true, mapFromEdit: (edit) => {
           const tipe = edit?.tipe_gudang ? String(edit.tipe_gudang).toLowerCase() : '';
           return tipe === 'rak' ? (edit?.parent_id || '') : '';
-        }, prefetchById: (id) => gudangService.getById(id), optionsLoader: async () => gudangService.getAll({ tipe_gudang: "Gudang" }), showIf: (f) => f.tipe_gudang === "rak", dropdownExtra: ({ options }) => (
-          <div className="text-xs text-gray-500">Pilih gudang induk untuk rak ini{options.length === 0 ? ", tidak ada gudang tersedia" : ""}.</div>
-        ) },
-        { name: "rak_id", label: "Rak", type: "select", optionLabel: "nama_gudang", required: true, mapFromEdit: (edit) => {
-          const tipe = edit?.tipe_gudang ? String(edit.tipe_gudang).toLowerCase() : '';
-          return tipe === 'bin' ? (edit?.parent_id || '') : '';
-        }, prefetchById: (id) => gudangService.getById(id), optionsLoader: async () => gudangService.getAll({ tipe_gudang: "Rak" }), showIf: (f) => f.tipe_gudang === "bin", dropdownExtra: ({ options }) => (
-          <div className="text-xs text-gray-500">Pilih rak induk untuk bin ini{options.length === 0 ? ", tidak ada rak tersedia" : ""}.</div>
-        ) },
+        }, prefetchById: (id) => getGudangById(id), optionsLoader: async (_form, p) => {
+          const res = await getGudang({ tipe_gudang: "Gudang", page: (p?.page || 1), per_page: (p?.perPage || 100), search: (p?.search || "") });
+          return res.data || [];
+        }, showIf: (f) => f.tipe_gudang === "rak" },
+        
       ]}
       columns={[
-        { key: "id", label: "ID", align: "center", width: "5rem", maxWidth: "5rem" },
-        { key: "kode", label: "Kode", align: "center", width: "8rem", maxWidth: "8rem" },
+        { key: "id", label: "ID", align: "center", headerAlign: "center", width: "5rem", maxWidth: "5rem" },
+        { key: "kode", label: "Kode", align: "center", headerAlign: "center", width: "8rem", maxWidth: "8rem" },
         { key: "nama_gudang", label: "Nama Gudang", align: "left", minWidth: "15rem", maxWidth: "20rem" },
-        { key: "tipe_gudang", label: "Tipe", align: "center", width: "8rem", maxWidth: "8rem" },
-        { key: "telepon_hp", label: "Telepon/HP", align: "center", width: "12rem", maxWidth: "12rem" },
+        { key: "tipe_gudang", label: "Tipe", align: "center", headerAlign: "center", width: "8rem", maxWidth: "8rem" },
+        { key: "telepon_hp", label: "Telepon/HP", align: "center", headerAlign: "center", width: "12rem", maxWidth: "12rem" },
       ]}
       customActions={[
         {
@@ -121,8 +121,34 @@ export default function GudangPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" />
             </svg>
           ),
-          visible: (item) => String(item.tipe_gudang || "") !== "Bin",
-          onClick: openChildren,
+          visible: (item) => String(item.tipe_gudang || "") === "Gudang",
+          onClick: async (item) => {
+            try {
+              setChildTitle(`Rak di ${item.nama_gudang || item.nama}`);
+              setChildOpen(true);
+              setChildLoading(true);
+              const res = await gudangService.getAll({ tipe_gudang: "Rak", parent_id: item.id });
+              setChildRows(res?.data || res || []);
+            } finally {
+              setChildLoading(false);
+            }
+          }
+        },
+        {
+          label: "QR Rak",
+          icon: (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 4h3v3h-3v-3zM14 14h7v7h-7v-7z" />
+            </svg>
+          ),
+          visible: (item) => String(item.tipe_gudang || "") === "Rak",
+          onClick: async (item) => {
+            try {
+              const parent = item.parent_id ? await gudangService.getById(item.parent_id) : null;
+              const { openRackQRPDFPreview } = await import("@/lib/pdfUtils");
+              await openRackQRPDFPreview(item, parent?.data || parent);
+            } catch (_) {}
+          }
         }
       ]}
     />

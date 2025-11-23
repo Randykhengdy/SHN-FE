@@ -1,5 +1,6 @@
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import { gudangService } from "@/services/master-data";
 
 export async function generatePDF(canvasElementId = "canvas") {
   const canvas = document.getElementById(canvasElementId);
@@ -664,6 +665,182 @@ export const openItemQRPDFPreview = async (item) => {
     setTimeout(() => {
       try { win.focus(); win.print(); } catch (_) {}
     }, 600);
+    return true;
+  }
+  const blob = pdf.output("blob");
+  const pdfUrl = URL.createObjectURL(blob);
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  document.body.appendChild(iframe);
+  iframe.onload = () => {
+    try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } finally {
+      setTimeout(() => { URL.revokeObjectURL(pdfUrl); document.body.removeChild(iframe); }, 500);
+    }
+  };
+  iframe.src = pdfUrl;
+  return true;
+};
+
+export const openRackQRPDFPreview = async (rakItem, parentGudang) => {
+  const pdf = new jsPDF("p", "mm", "a5");
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const margin = 10; // mm
+  const qrSize = 110; // mm
+  const qrX = (pageW - qrSize) / 2;
+  const qrY = margin + 4;
+
+  const payload = encodeURIComponent(
+    JSON.stringify({
+      kode_rak: rakItem.kode || rakItem.kode_barang || "",
+      kode_gudang: parentGudang?.kode || parentGudang?.kode_barang || "",
+      id: rakItem.id,
+      parent_id: rakItem.parent_id,
+    })
+  );
+  const sizePx = 800;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${sizePx}x${sizePx}&data=${payload}`;
+  let dataUrl = qrUrl;
+  try {
+    const resp = await fetch(qrUrl, { mode: "cors" });
+    const blob = await resp.blob();
+    dataUrl = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.readAsDataURL(blob);
+    });
+  } catch (_) {}
+
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(20);
+  pdf.text("QR Rak", pageW / 2, margin - 4, { align: "center" });
+  pdf.addImage(dataUrl, "PNG", qrX, qrY, qrSize, qrSize, undefined, "FAST");
+
+  let y = qrY + qrSize + 10;
+  pdf.setDrawColor(180);
+  pdf.line(margin, y, pageW - margin, y);
+  y += 6;
+
+  const addKV = (k, v) => {
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(14);
+    pdf.text(`${k}:`, margin, y);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(14);
+    pdf.text(String(v || "-"), margin + 44, y);
+    y += 9;
+  };
+
+  addKV("Kode Gudang", parentGudang?.kode || parentGudang?.kode_barang);
+  addKV("Kode Rak", rakItem.kode || rakItem.kode_barang);
+
+  pdf.setDrawColor(180);
+  pdf.line(margin, y, pageW - margin, y);
+  pdf.setFontSize(11);
+  pdf.setTextColor(120);
+  pdf.text("SURYA LOGAM JAYA - Warehouse Management System", pageW / 2, pageH - margin, { align: "center" });
+
+  const blobUrl = pdf.output("bloburl");
+  const win = window.open(blobUrl, "_blank");
+  if (win) {
+    setTimeout(() => { try { win.focus(); win.print(); } catch (_) {} }, 600);
+    return true;
+  }
+  const blob = pdf.output("blob");
+  const pdfUrl = URL.createObjectURL(blob);
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  document.body.appendChild(iframe);
+  iframe.onload = () => {
+    try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } finally {
+      setTimeout(() => { URL.revokeObjectURL(pdfUrl); document.body.removeChild(iframe); }, 500);
+    }
+  };
+  iframe.src = pdfUrl;
+  return true;
+};
+
+export const openRackQRPDFBatch = async (rakItems) => {
+  const pdf = new jsPDF("p", "mm", "a5");
+  for (let idx = 0; idx < rakItems.length; idx++) {
+    const rakItem = rakItems[idx];
+    if (idx > 0) pdf.addPage("a5", "p");
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const margin = 10;
+    const qrSize = 110;
+    const qrX = (pageW - qrSize) / 2;
+    const qrY = margin + 4;
+
+    let parentGudang = null;
+    try {
+      if (rakItem.parent_id) {
+        const resp = await gudangService.getById(rakItem.parent_id);
+        parentGudang = resp?.data || resp;
+      }
+    } catch (_) {}
+
+    const payload = encodeURIComponent(JSON.stringify({
+      kode_rak: rakItem.kode || rakItem.kode_barang || "",
+      kode_gudang: parentGudang?.kode || parentGudang?.kode_barang || "",
+      id: rakItem.id,
+      parent_id: rakItem.parent_id,
+    }));
+    const sizePx = 800;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${sizePx}x${sizePx}&data=${payload}`;
+    let dataUrl = qrUrl;
+    try {
+      const resp = await fetch(qrUrl, { mode: "cors" });
+      const blob = await resp.blob();
+      dataUrl = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+    } catch (_) {}
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(20);
+    pdf.text("QR Rak", pageW / 2, margin, { align: "center" });
+    pdf.addImage(dataUrl, "PNG", qrX, qrY, qrSize, qrSize, undefined, "FAST");
+
+    let y = qrY + qrSize + 10;
+    pdf.setDrawColor(180);
+    pdf.line(margin, y, pageW - margin, y);
+    y += 10;
+
+    pdf.setFontSize(14);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Kode Gudang:", margin, y);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(String(parentGudang?.kode || parentGudang?.kode_barang || "-"), margin + 44, y);
+    y += 9;
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Kode Rak:", margin, y);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(String(rakItem.kode || rakItem.kode_barang || "-"), margin + 44, y);
+
+    pdf.setDrawColor(180);
+    pdf.line(margin, y + 3, pageW - margin, y + 3);
+    pdf.setFontSize(11);
+    pdf.setTextColor(120);
+    pdf.text("SURYA LOGAM JAYA - Warehouse Management System", pageW / 2, pageH - margin, { align: "center" });
+  }
+
+  const blobUrl = pdf.output("bloburl");
+  const win = window.open(blobUrl, "_blank");
+  if (win) {
+    setTimeout(() => { try { win.focus(); win.print(); } catch (_) {} }, 600);
     return true;
   }
   const blob = pdf.output("blob");

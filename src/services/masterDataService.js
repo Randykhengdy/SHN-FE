@@ -352,12 +352,12 @@ export const getGudang = async (params = {}) => {
   if (params.search) queryParams.append('search', params.search);
   if (params.tipe_gudang) queryParams.append('tipe_gudang', params.tipe_gudang);
   
-  const url = `/api/gudang?${queryParams.toString()}`;
-  return request.get(url);
+  const url = `/gudang?${queryParams.toString()}`;
+  return request(url, { method: 'GET' });
 };
 
 export const getGudangById = async (id) => {
-  return request.get(`/api/gudang/${id}`);
+  return request(`/gudang/${id}`, { method: 'GET' });
 };
 
 export const createGudang = async (gudangData) => {
