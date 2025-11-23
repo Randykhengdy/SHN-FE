@@ -14,6 +14,20 @@ export default function ItemBarangPage() {
       title="Item Barang"
       subtitle="Master Data"
       service={itemBarangService}
+      customActions={[
+        {
+          label: "QR Code",
+          icon: (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 4h3v3h-3v-3zM14 14h7v7h-7v-7z" />
+            </svg>
+          ),
+          onClick: async (item) => {
+            const { openItemQRPDFPreview } = await import("@/lib/pdfUtils");
+            await openItemQRPDFPreview(item);
+          }
+        }
+      ]}
       fields={[
         { name: "panjang", label: "Panjang", type: "number", step: 0.01, required: true },
         { name: "lebar", label: "Lebar", type: "number", step: 0.01, required: true },

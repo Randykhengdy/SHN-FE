@@ -1066,3 +1066,62 @@ export const openPrintDialog = (printContent) => {
     printWindow.close();
   }, 500);
 };
+
+export const generateItemQRPrintContent = async (item) => {
+  const payload = encodeURIComponent(
+    JSON.stringify({
+      id: item.id,
+      kode: item.kode_barang || item.kode || '',
+      nama: item.nama_item_barang || item.nama_item || '',
+      bentuk: item.bentuk_barang?.nama_bentuk || item.bentuk || '',
+      grade: item.grade_barang?.nama || item.grade || '',
+      printed_at: new Date().toISOString(),
+    })
+  );
+  const sizePx = 900;
+  const url = `https://api.qrserver.com/v1/create-qr-code/?size=${sizePx}x${sizePx}&data=${payload}`;
+  let dataUrl = url;
+  try {
+    const resp = await fetch(url, { mode: 'cors' });
+    const blob = await resp.blob();
+    dataUrl = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.readAsDataURL(blob);
+    });
+  } catch (_) {}
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8" />
+      <title>Sticker QR</title>
+      <style>
+        @page { size: 100mm 100mm; margin: 0; }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; width: 100mm; height: 100mm; }
+        body { font-family: Arial, sans-serif; color: #000; display: block; }
+        .wrap { width: 100mm; height: 100mm; padding: 6mm 6mm 4mm 6mm; display: flex; flex-direction: column; gap: 2mm; }
+        .qr { width: 50mm; height: 50mm; margin: 0 auto; border: 0.5pt solid #ddd; display: flex; align-items: center; justify-content: center; background: #fff; }
+        .qr img { width: 100%; height: 100%; object-fit: contain; }
+        .info { font-size: 8pt; line-height: 1.25; margin: 0 2mm; }
+        .row { display: flex; gap: 2mm; }
+        .label { font-weight: bold; }
+        .value { flex: 1; word-break: break-word; }
+        .footer { margin-top: auto; text-align: center; font-size: 7pt; color: #777; }
+      </style>
+    </head>
+    <body>
+      <div class="wrap">
+        <div class="qr"><img src="${dataUrl}" alt="QR"/></div>
+        <div class="info">
+          ${item.kode_barang || item.kode ? `<div class="row"><div class="label">Kode</div><div class="value">${item.kode_barang || item.kode}</div></div>` : ''}
+          ${item.nama_item_barang || item.nama_item ? `<div class="row"><div class="label">Nama</div><div class="value">${item.nama_item_barang || item.nama_item}</div></div>` : ''}
+        </div>
+        <div class="footer">SURYA LOGAM JAYA - Warehouse Management System</div>
+      </div>
+    </body>
+    </html>
+  `;
+};

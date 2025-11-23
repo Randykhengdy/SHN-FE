@@ -583,3 +583,104 @@ export const generateWorkOrderPDF = async (workOrderData) => {
     throw error;
   }
 };
+// Generate Item QR PDF (10x10 cm) and open preview
+export const openItemQRPDFPreview = async (item) => {
+  const pageSizeMM = 100;
+  const qrBoxMM = 50;
+  const marginMM = 6;
+  const qrX = (pageSizeMM - qrBoxMM) / 2;
+  const qrY = marginMM;
+
+  const payload = encodeURIComponent(
+    JSON.stringify({
+      id: item.id,
+      kode: item.kode_barang || item.kode || "",
+      nama: item.nama_item_barang || item.nama_item || "",
+    })
+  );
+  const sizePx = 600;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${sizePx}x${sizePx}&data=${payload}`;
+
+  let dataUrl = qrUrl;
+  try {
+    const resp = await fetch(qrUrl, { mode: "cors" });
+    const blob = await resp.blob();
+    dataUrl = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.readAsDataURL(blob);
+    });
+  } catch (_) {}
+
+  const pdf = new jsPDF("p", "mm", [pageSizeMM, pageSizeMM]);
+  pdf.addImage(dataUrl, "PNG", qrX, qrY, qrBoxMM, qrBoxMM, undefined, "FAST");
+
+  let y = qrY + qrBoxMM + 5;
+  pdf.setDrawColor(180);
+  pdf.line(marginMM, y, pageSizeMM - marginMM, y);
+  y += 5;
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(8);
+  pdf.text("Kode Barang:", marginMM, y);
+  pdf.setFont("helvetica", "normal");
+  pdf.text(String(item.kode_barang || item.kode || "-"), marginMM + 28, y);
+  y += 5;
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Nama Item:", marginMM, y);
+  pdf.setFont("helvetica", "normal");
+  pdf.text(String(item.nama_item_barang || item.nama_item || "-"), marginMM + 28, y);
+  y += 5;
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Jenis:", marginMM, y);
+  pdf.setFont("helvetica", "normal");
+  pdf.text(String((item.jenis_barang && item.jenis_barang.nama_jenis) || item.jenis || "-"), marginMM + 28, y);
+  y += 5;
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Bentuk:", marginMM, y);
+  pdf.setFont("helvetica", "normal");
+  pdf.text(String((item.bentuk_barang && item.bentuk_barang.nama_bentuk) || item.bentuk || "-"), marginMM + 28, y);
+  y += 5;
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Grade:", marginMM, y);
+  pdf.setFont("helvetica", "normal");
+  pdf.text(String((item.grade_barang && item.grade_barang.nama) || item.grade || "-"), marginMM + 28, y);
+  y += 4;
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Date Printed:", marginMM, y);
+  pdf.setFont("helvetica", "normal");
+  const d = new Date();
+  const dateStr = `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+  pdf.text(dateStr, marginMM + 28, y);
+  y += 5;
+  pdf.setDrawColor(180);
+  pdf.line(marginMM, y, pageSizeMM - marginMM, y);
+  pdf.setFontSize(7);
+  pdf.setTextColor(120);
+  pdf.text("SURYA LOGAM JAYA - Warehouse Management System", pageSizeMM / 2, pageSizeMM - 5, { align: "center" });
+
+  const blobUrl = pdf.output("bloburl");
+  const win = window.open(blobUrl, "_blank");
+  if (win) {
+    setTimeout(() => {
+      try { win.focus(); win.print(); } catch (_) {}
+    }, 600);
+    return true;
+  }
+  const blob = pdf.output("blob");
+  const pdfUrl = URL.createObjectURL(blob);
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  document.body.appendChild(iframe);
+  iframe.onload = () => {
+    try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } finally {
+      setTimeout(() => { URL.revokeObjectURL(pdfUrl); document.body.removeChild(iframe); }, 500);
+    }
+  };
+  iframe.src = pdfUrl;
+  return true;
+};
