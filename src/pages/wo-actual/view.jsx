@@ -103,6 +103,7 @@ export default function ViewWOActualPage() {
     loadData();
   }, [id]);
 
+
   // Load images for WO Actual header and items
   useEffect(() => {
     const loadImages = async () => {
@@ -404,7 +405,7 @@ export default function ViewWOActualPage() {
                     <TableBody>
                       {items.map((actualItem) => {
                         const planningItem = actualItem.work_order_planning_item || {};
-                        const jenisNama = actualItem.jenis_barang_nama || planningItem.jenis_barang?.nama || planningItem.jenis_barang?.nama_jenis_barang;
+                        const jenisNama = actualItem.jenis_barang?.nama_jenis || actualItem.jenis_barang_nama || planningItem.jenis_barang?.nama_jenis_barang || planningItem.jenis_barang?.nama;
                         const qtyPlanning = actualItem.qty_planning ?? planningItem.qty ?? 0;
                         const pelaksanaArr = Array.isArray(planningItem.pelaksana)
                           ? planningItem.pelaksana
@@ -417,8 +418,8 @@ export default function ViewWOActualPage() {
                         const beratActual = actualItem.berat ?? actualItem.berat_actual ?? 0;
                         const status = actualItem.status || woActual.status || 'PENDING';
                         const pelaksanas = actualItem.work_order_actual_pelaksanas || actualItem.has_many_pelaksana || [];
-                        const bentukNama = actualItem.bentuk_barang_nama || planningItem.bentuk_barang?.nama || planningItem.bentuk_barang?.nama_bentuk_barang;
-                        const gradeNama = actualItem.grade_barang_nama || planningItem.grade_barang?.nama || planningItem.grade_barang?.nama_grade_barang;
+                        const bentukNama = actualItem.bentuk_barang?.nama_bentuk || actualItem.bentuk_barang_nama || planningItem.bentuk_barang?.nama_bentuk_barang || planningItem.bentuk_barang?.nama;
+                        const gradeNama = actualItem.grade_barang?.nama || actualItem.grade_barang_nama || planningItem.grade_barang?.nama_grade_barang || planningItem.grade_barang?.nama;
                         const openPelaksanaModal = () => {
                           setPelaksanaModalData(pelaksanas);
                           setPelaksanaPlanningData(pelaksanaArr);
@@ -535,26 +536,38 @@ export default function ViewWOActualPage() {
       cancelText="Batal"
       onConfirm={async () => {
         try {
-          const printItems = (items || []).map((actualItem, index) => {
-            const planningItem = actualItem.work_order_planning_item || {};
-            const itemBarang = planningItem.item_barang || {};
-            const pelaksanas = actualItem.work_order_actual_pelaksanas || actualItem.has_many_pelaksana || [];
-            return {
-              id: actualItem.id,
-              woPlanItemId: actualItem.work_order_planning_item_id || actualItem.wo_plan_item_id || planningItem.id,
-              no: index + 1,
-              itemName: actualItem.item_barang_nama || itemBarang.nama_item_barang || itemBarang.nama || 'N/A',
-              jenisBarang: actualItem.jenis_barang_nama || itemBarang.jenis_barang?.nama_jenis_barang || itemBarang.jenis_barang?.nama || planningItem.jenis_barang?.nama || 'N/A',
-              bentukBarang: actualItem.bentuk_barang_nama || itemBarang.bentuk_barang?.nama_bentuk_barang || itemBarang.bentuk_barang?.nama || planningItem.bentuk_barang?.nama || 'N/A',
-              gradeBarang: actualItem.grade_barang_nama || itemBarang.grade_barang?.nama_grade_barang || itemBarang.grade_barang?.nama || planningItem.grade_barang?.nama || 'N/A',
-              dimensi: `${planningItem.panjang || 0} x ${planningItem.lebar || 0} mm`,
-              qtyPlanning: planningItem.qty || actualItem.qty_planning || 0,
-              qtyActual: actualItem.qty_actual || 0,
-              beratActual: (actualItem.berat ?? actualItem.berat_actual ?? 0),
-              jenisPotongan: planningItem.jenis_potongan || 'N/A',
-              pelaksanas
-            };
-          });
+            const printItems = (items || []).map((actualItem, index) => {
+              const planningItem = actualItem.work_order_planning_item || {};
+              const itemBarang = planningItem.item_barang || {};
+              const pelaksanas = actualItem.work_order_actual_pelaksanas || actualItem.has_many_pelaksana || [];
+              return {
+                id: actualItem.id,
+                woPlanItemId: actualItem.work_order_planning_item_id || actualItem.wo_plan_item_id || planningItem.id,
+                no: index + 1,
+                itemName: actualItem.item_barang_nama || itemBarang.nama_item_barang || itemBarang.nama || 'N/A',
+                jenisBarang: actualItem.jenis_barang?.nama_jenis
+                  || actualItem.jenis_barang_nama
+                  || planningItem.jenis_barang?.nama_jenis_barang
+                  || planningItem.jenis_barang?.nama
+                  || 'N/A',
+                bentukBarang: actualItem.bentuk_barang?.nama_bentuk
+                  || actualItem.bentuk_barang_nama
+                  || planningItem.bentuk_barang?.nama_bentuk_barang
+                  || planningItem.bentuk_barang?.nama
+                  || 'N/A',
+                gradeBarang: actualItem.grade_barang?.nama
+                  || actualItem.grade_barang_nama
+                  || planningItem.grade_barang?.nama_grade_barang
+                  || planningItem.grade_barang?.nama
+                  || 'N/A',
+                dimensi: `${planningItem.panjang || 0} x ${planningItem.lebar || 0} mm`,
+                qtyPlanning: planningItem.qty || actualItem.qty_planning || 0,
+                qtyActual: actualItem.qty_actual || 0,
+                beratActual: (actualItem.berat ?? actualItem.berat_actual ?? 0),
+                jenisPotongan: planningItem.jenis_potongan || 'N/A',
+                pelaksanas
+              };
+            });
           let planningCanvasImages = [];
           try {
             if (planning?.id) {

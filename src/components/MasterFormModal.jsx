@@ -82,11 +82,14 @@ export default function MasterFormModal({
 
   useEffect(() => {
     if (isOpen && !editData) {
-      setForm({});
+      setForm(prev => (prev && Object.keys(prev).length === 0 ? prev : {}));
       setOptions({});
       setSearchTerms({});
       setOpenDropdowns({});
     }
+  }, [isOpen, editData]);
+
+  useEffect(() => {
     const loadOptions = async () => {
       const newOptions = {};
       for (const field of fields) {
@@ -109,33 +112,26 @@ export default function MasterFormModal({
               }
               newOptions[field.name] = [];
             }
-          } else 
-          if (field.optionsService) {
-            // Load options from service
+          } else if (field.optionsService) {
             try {
               const res = await field.optionsService.getAll();
               newOptions[field.name] = res.data || [];
               console.log(`✅ Loaded ${newOptions[field.name].length} options for ${field.name}`);
             } catch (error) {
               console.error(`❌ Error loading options for ${field.name}:`, error);
-              
-              // Check if it's an authentication error
               if (error.message.includes('Token tidak valid') || error.message.includes('401') || error.message.includes('Session expired')) {
                 console.error('🔐 Authentication error - user needs to login again');
                 setAuthError(true);
               }
-              
               newOptions[field.name] = [];
             }
           } else if (field.options) {
-            // Use static options array
             newOptions[field.name] = field.options;
           }
         }
       }
       setOptions(newOptions);
     };
-    
     if (isOpen) {
       loadOptions();
     }

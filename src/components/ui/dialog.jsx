@@ -7,9 +7,15 @@ import { XIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 function Dialog({
+  onOpenChange,
   ...props
 }) {
-  return <DialogPrimitive.Root data-slot="dialog" {...props} />;
+  const handleOpenChange = React.useCallback((value) => {
+    if (!value && typeof onOpenChange === 'function') {
+      onOpenChange(false)
+    }
+  }, [onOpenChange])
+  return <DialogPrimitive.Root data-slot="dialog" onOpenChange={handleOpenChange} {...props} />;
 }
 
 function DialogTrigger({

@@ -1185,7 +1185,7 @@
 
   #### 2. Get Work Order Actual by ID
   - **GET** `/api/work-order-actual/{id}`
-    - **Description**: Mendapatkan detail work order actual berdasarkan ID dengan relasi lengkap. Setiap item menyertakan nama deskriptif: `item_barang_nama`, `jenis_barang_nama`, `bentuk_barang_nama`, `grade_barang_nama` (diambil dari plat dasar terkait).
+    - **Description**: Mendapatkan detail work order actual berdasarkan ID dengan relasi lengkap apa adanya (tanpa field nama flat tambahan). Relasi yang dimuat: `workOrderPlanning`, `workOrderActualItems.workOrderPlanningItem.platDasar.jenisBarang`, `...bentukBarang`, `...gradeBarang`, dan `workOrderActualItems.hasManyPelaksana.pelaksana`.
     - **Request Example**:
     ```
     GET /api/work-order-actual/1
@@ -1217,12 +1217,7 @@
             "qty_actual": 10,
             "berat": 25.5,
             "foto_bukti": "work-order-actual/1/items/1/foto_bukti.jpg",
-            "qty_planning": 10,
-            "berat_planning": 30.0,
-            "item_barang_nama": "Plat Aluminium 5mm",
-            "jenis_barang_nama": "Aluminium",
-            "bentuk_barang_nama": "Sheet",
-            "grade_barang_nama": "Grade A",
+            
             "created_at": "2024-01-01T10:00:00.000000Z",
             "updated_at": "2024-01-01T10:00:00.000000Z",
             "work_order_planning_item": {
