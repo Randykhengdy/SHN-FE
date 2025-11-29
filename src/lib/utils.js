@@ -1,6 +1,6 @@
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge"
-import { getToken } from "./tokenStorage";
+import { getToken, getUser } from "./tokenStorage";
 import { decodeJWT } from "./jwtUtils";
 
 export function cn(...inputs) {
@@ -17,9 +17,11 @@ export const isAdmin = () => {
     if (!token) return false;
     
     const payload = decodeJWT(token);
-    if (!payload || !payload.roles) return false;
+    const user = getUser();
+    const roles = (payload && payload.roles) || (user && (user.roles || (user.role_name ? [user.role_name] : null)));
+    if (!roles) return false;
     
-    return payload.roles.some(role => 
+    return roles.some(role => 
       role.toLowerCase().includes('admin') || 
       role.toLowerCase().includes('super') ||
       role.toLowerCase().includes('owner')
@@ -41,11 +43,13 @@ export const hasRole = (requiredRoles) => {
     if (!token) return false;
     
     const payload = decodeJWT(token);
-    if (!payload || !payload.roles) return false;
+    const user = getUser();
+    const roles = (payload && payload.roles) || (user && (user.roles || (user.role_name ? [user.role_name] : null)));
+    if (!roles) return false;
     
     const rolesToCheck = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles];
     
-    return payload.roles.some(role => 
+    return roles.some(role => 
       rolesToCheck.some(requiredRole => 
         role.toLowerCase().includes(requiredRole.toLowerCase())
       )
@@ -66,11 +70,29 @@ export const getCurrentUserRole = () => {
     if (!token) return null;
     
     const payload = decodeJWT(token);
-    if (!payload) return null;
-    
-    return payload.roles || null;
+    const user = getUser();
+    if (!payload && !user) return null;
+    const roles = (payload && payload.roles) || (user && (user.roles || (user.role_name ? [user.role_name] : null)));
+    return roles || null;
   } catch (error) {
     console.error('Error getting user role:', error);
+    return null;
+  }
+};
+
+/**
+ * Get current user's role ID from JWT or stored user
+ * @returns {number|null}
+ */
+export const getCurrentRoleId = () => {
+  try {
+    const token = getToken();
+    const payload = token ? decodeJWT(token) : null;
+    const user = getUser();
+    const rid = (user && user.role_id) || (payload && payload.role_id) || null;
+    return typeof rid === 'string' ? Number(rid) : rid;
+  } catch (error) {
+    console.error('Error getting role id:', error);
     return null;
   }
 };

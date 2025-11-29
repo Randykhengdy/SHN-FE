@@ -2,8 +2,8 @@
 
     ## Authentication
     - `POST /api/auth/login` - Login user
-      - **Request:** `{ "email": "string", "password": "string" }`
-      - **Response:** `{ "access_token": "string", "refresh_token": "string", "user": {...} }`
+      - **Request:** `{ "username": "string", "password": "string" }`
+      - **Response:** `{ "success": true, "message": "Login berhasil", "token": "string", "refresh_token": "string", "token_type": "Bearer", "role_id": "int|null", "role_name": "string|null", "role_code": "string|null" }`
     - `POST /api/auth/refresh` - Refresh token
       - **Request:** `{ "refresh_token": "string" }`
     - `POST /api/auth/logout` - Logout user
@@ -37,21 +37,23 @@
     - `GET /api/permissions/{id}` - Get permission by ID
 
     ## Role Menu Permission Management
-    - `GET /api/role-menu-permission` - List all role-menu-permission mappings
-      - **Response:** `{ "data": [{ "id": "int", "role_id": "int", "menu_id": "int", "permission_id": "int", "role": {...}, "menu": {...}, "permission": {...} }] }`
-    - `POST /api/role-menu-permission` - Create new role-menu-permission mapping
-      - **Request:** `{ "role_id": "int", "menu_id": "int", "permission_id": "int" }`
-    - `GET /api/role-menu-permission/{id}` - Get role-menu-permission mapping by ID
-    - `PUT /api/role-menu-permission/{id}` - Update role-menu-permission mapping
-      - **Request:** `{ "role_id": "int", "menu_id": "int", "permission_id": "int" }`
-    - `PATCH /api/role-menu-permission/{id}` - Update role-menu-permission mapping
-    - `DELETE /api/role-menu-permission/{id}` - Delete role-menu-permission mapping
-    - `GET /api/role-menu-permission/by-role/{roleId}` - Get role-menu-permission mappings by role ID
-    - `GET /api/role-menu-permission/by-menu/{menuId}` - Get role-menu-permission mappings by menu ID
-    - `POST /api/role-menu-permission/bulk` - Bulk create role-menu-permission mappings
-      - **Request:** `{ "role_id": "int", "mappings": [{ "menu_id": "int", "permission_id": "int" }] }`
-    - `DELETE /api/role-menu-permission/by-role/{roleId}` - Delete all mappings for a specific role
-    - `DELETE /api/role-menu-permission/by-menu/{menuId}` - Delete all mappings for a specific menu
+    - `GET /api/role-menu-permission` - List role→menu-permission mappings
+      - **Response:** items memuat `role`, serta `menuPermission.menu` dan `menuPermission.permission`
+    - `GET /api/role-menu-permission/{id}` - Detail mapping
+    - `GET /api/role-menu-permission/grouped/by-role/{roleId}` - Role permissions bertingkat per menu untuk authorization
+      - **Response:** `{ "role": { "id": "int", "name": "string" }, "menus": [{ "menu_id": "int", "menu_code": "string", "menu_name": "string", "permissions": [{ "permission_id": "int", "nama_permission": "string" }] }] }`
+    - `POST /api/role-menu-permission` - Buat mapping
+      - **Request (pilih salah satu cara):**
+        - `{ "role_id": "int", "menu_menu_permission_id": "int" }`
+        - `{ "role_id": "int", "menu_id": "int", "permission_id": "int" }` (otomatis dibuat menjadi pivot `menu_menu_permission`)
+    - `PUT|PATCH /api/role-menu-permission/{id}` - Update mapping (format request sama seperti POST)
+    - `DELETE /api/role-menu-permission/{id}` - Hapus mapping
+    - `POST /api/role-menu-permission/bulk` - Bulk create
+      - **Request:** `{ "role_id": "int", "mappings": [{ "menu_menu_permission_id": "int" }] }` atau `{ "role_id": "int", "mappings": [{ "menu_id": "int", "permission_id": "int" }] }`
+    - `DELETE /api/role-menu-permission/by-role/{roleId}` - Hapus semua mapping untuk role
+    - `DELETE /api/role-menu-permission/by-menu/{menuId}` - Hapus semua mapping untuk menu tertentu
+    - `POST /api/role-menu-permission/replace/by-role/{roleId}` - Ganti seluruh mapping untuk role (hapus semua, lalu tambah set baru)
+      - **Request:** `{ "mappings": [{ "menu_menu_permission_id": "int" }] }` atau `{ "mappings": [{ "menu_id": "int", "permission_id": "int" }] }`
 
     ## Menu Management
     - `GET /api/menu` - List all menus
@@ -67,8 +69,14 @@
     - `DELETE /api/menu/{id}/force` - Force delete menu
     - `GET /api/menu/with-trashed/all` - Get all menus including deleted
     - `GET /api/menu/with-trashed/trashed` - Get only deleted menus
-    - `GET /api/menu-with-permissions` - Get all menus with available permissions for role mapping
+    - `GET /api/menu-with-permissions` - Get all menus with available permissions (untuk mapping)
       - **Response:** `{ "success": true, "message": "string", "data": [{ "id": "int", "kode": "string", "nama_menu": "string", "available_permissions": [{ "id": "int", "nama_permission": "string" }] }] }`
+    - `GET /api/menu-menu-permission` - List pivot menu↔permission
+      - **Response:** items memuat `menu` dan `permission`
+    - `GET /api/menu-menu-permission/{id}` - Detail pivot menu↔permission
+    - `GET /api/menu-menu-permission/grouped` - List menu beserta permission yang dimilikinya
+      - **Query (opsional):** `menu_id`, `menu_code`
+      - **Response:** `[{ "menu_id": "int", "menu_code": "string", "menu_name": "string", "permissions": [{ "permission_id": "int", "nama_permission": "string" }] }]`
 
     ## Master Data - Jenis Barang
     - `GET /api/jenis-barang` - List all jenis barang
@@ -1185,7 +1193,7 @@
 
   #### 2. Get Work Order Actual by ID
   - **GET** `/api/work-order-actual/{id}`
-    - **Description**: Mendapatkan detail work order actual berdasarkan ID dengan relasi lengkap apa adanya (tanpa field nama flat tambahan). Relasi yang dimuat: `workOrderPlanning`, `workOrderActualItems.workOrderPlanningItem.platDasar.jenisBarang`, `...bentukBarang`, `...gradeBarang`, dan `workOrderActualItems.hasManyPelaksana.pelaksana`.
+    - **Description**: Mendapatkan detail work order actual berdasarkan ID dengan relasi lengkap apa adanya (tanpa field nama flat tambahan). Relasi yang dimuat: `workOrderPlanning`, `workOrderActualItems.jenisBarang`, `workOrderActualItems.bentukBarang`, `workOrderActualItems.gradeBarang`, `workOrderActualItems.workOrderPlanningItem.platDasar.jenisBarang`, `...bentukBarang`, `...gradeBarang`, dan `workOrderActualItems.hasManyPelaksana.pelaksana`.
     - **Request Example**:
     ```
     GET /api/work-order-actual/1
@@ -1217,7 +1225,12 @@
             "qty_actual": 10,
             "berat": 25.5,
             "foto_bukti": "work-order-actual/1/items/1/foto_bukti.jpg",
-            
+            "jenis_barang_id": 8,
+            "bentuk_barang_id": 9,
+            "grade_barang_id": 12,
+            "jenis_barang": { "id": 8, "kode": "ALU", "nama_jenis": "Aluminium" },
+            "bentuk_barang": { "id": 9, "kode": "PLT", "nama_bentuk": "Plat", "dimensi": "2D" },
+            "grade_barang": { "id": 12, "kode": "61", "nama": "6061" },
             "created_at": "2024-01-01T10:00:00.000000Z",
             "updated_at": "2024-01-01T10:00:00.000000Z",
             "work_order_planning_item": {

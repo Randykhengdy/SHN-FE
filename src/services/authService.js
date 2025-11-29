@@ -11,6 +11,8 @@ import {
   clearAllTokens,
   getRefreshToken
 } from "@/lib/tokenStorage";
+import { roleService } from "@/services/master-data";
+import { setRolePermissionsData } from "@/lib/tokenStorage";
 
 export const authService = {
   async login(credentials) {
@@ -29,7 +31,29 @@ export const authService = {
       setRefreshToken(result.refresh_token);
       setIsLoggedIn("true");
       if (result.user) {
-        setUser(result.user);
+        const enhancedUser = {
+          ...result.user,
+          role_id: result.role_id ?? result.user.role_id,
+          role_name: result.role_name ?? result.user.role_name,
+        };
+        setUser(enhancedUser);
+        try {
+          try {
+            const grouped = await roleService.getRoleMenuPermissionsData(enhancedUser.role_id);
+            setRolePermissionsData(grouped);
+          } catch (_) {}
+        } catch (_) {}
+      } else {
+        // store minimal user info with role if provided
+        if (result.role_id || result.role_name) {
+          setUser({ role_id: result.role_id, role_name: result.role_name });
+          try {
+            try {
+              const grouped = await roleService.getRoleMenuPermissionsData(result.role_id);
+              setRolePermissionsData(grouped);
+            } catch (_) {}
+          } catch (_) {}
+        }
       }
     }
     

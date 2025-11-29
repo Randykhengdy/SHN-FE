@@ -6,6 +6,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { useAlert } from "@/hooks/useAlert";
 import "@/lib/tokenDebug"; // Import debug utilities
 import "@/lib/debugUtils"; // Import debug utilities
+import { AppProvider } from "@/context/AppContext";
 
 function App() {
   // Gunakan hook untuk menangani navigasi dari Electron
@@ -44,18 +45,20 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <div className="h-screen w-screen overflow-hidden">
-        {/* Token Interceptor - Check token expiration */}
-        <TokenInterceptor />
-        
-        {/* Global Alert Component */}
-        <AlertComponent />
-        
-        {/* Main content - Full width without sidebar */}
-        <main className="w-full h-full overflow-auto">
-          <AppRouter />
-        </main>
-      </div>
+      <AppProvider>
+        <div className="h-screen w-screen overflow-hidden">
+          {/* Token Interceptor - Check token expiration */}
+          <TokenInterceptor />
+          
+          {/* Global Alert Component */}
+          <AlertComponent />
+          
+          {/* Main content - Full width without sidebar */}
+          <main className="w-full h-full overflow-auto">
+            <AppRouter />
+          </main>
+        </div>
+      </AppProvider>
     </ErrorBoundary>
   );
 }

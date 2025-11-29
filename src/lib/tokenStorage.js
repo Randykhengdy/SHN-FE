@@ -1,4 +1,5 @@
 // Token Storage Utility - Multiple storage methods for better persistence
+import CryptoJS from 'crypto-js';
 
 // Storage methods priority
 const STORAGE_METHODS = {
@@ -39,9 +40,43 @@ class TokenStorage {
   constructor() {
     this.storageMethod = getBestStorage();
     this.prefix = 'shn_app_';
+    this.encPrefix = '__aes__:';
+    this.encryptedKeys = new Set(['role_permissions_data']);
     
     if (process.env.NODE_ENV === 'development') {
       console.log(`🔧 Using storage method: ${this.storageMethod}`);
+    }
+  }
+
+  // Get encryption key from env
+  getEncryptionKey() {
+    const key = (import.meta && import.meta.env && import.meta.env.VITE_STORAGE_ENCRYPTION_KEY) || '';
+    return key && typeof key === 'string' ? key : '722862dd-2e80-42aa-adaa-80c0aee7eaea';
+  }
+
+  // Encrypt string value
+  encryptValue(value) {
+    try {
+      const key = this.getEncryptionKey();
+      const cipher = CryptoJS.AES.encrypt(String(value), key).toString();
+      return `${this.encPrefix}${cipher}`;
+    } catch (e) {
+      return String(value);
+    }
+  }
+
+  // Decrypt string value (if encrypted)
+  decryptValue(value) {
+    try {
+      if (typeof value !== 'string') return value;
+      if (!value.startsWith(this.encPrefix)) return value;
+      const cipher = value.slice(this.encPrefix.length);
+      const key = this.getEncryptionKey();
+      const bytes = CryptoJS.AES.decrypt(cipher, key);
+      const plain = bytes.toString(CryptoJS.enc.Utf8);
+      return plain || '';
+    } catch (e) {
+      return value;
     }
   }
 
@@ -50,15 +85,16 @@ class TokenStorage {
     const fullKey = `${this.prefix}${key}`;
     
     try {
+      const toStore = this.encryptedKeys.has(key) ? this.encryptValue(value) : value;
       switch (this.storageMethod) {
         case STORAGE_METHODS.LOCAL_STORAGE:
-          localStorage.setItem(fullKey, value);
+          localStorage.setItem(fullKey, toStore);
           break;
         case STORAGE_METHODS.SESSION_STORAGE:
-          sessionStorage.setItem(fullKey, value);
+          sessionStorage.setItem(fullKey, toStore);
           break;
         case STORAGE_METHODS.MEMORY:
-          memoryStorage.set(fullKey, value);
+          memoryStorage.set(fullKey, toStore);
           break;
       }
       
@@ -77,19 +113,36 @@ class TokenStorage {
     const fullKey = `${this.prefix}${key}`;
     
     try {
+      let stored;
       switch (this.storageMethod) {
         case STORAGE_METHODS.LOCAL_STORAGE:
-          return localStorage.getItem(fullKey);
+          stored = localStorage.getItem(fullKey);
+          break;
         case STORAGE_METHODS.SESSION_STORAGE:
-          return sessionStorage.getItem(fullKey);
+          stored = sessionStorage.getItem(fullKey);
+          break;
         case STORAGE_METHODS.MEMORY:
-          return memoryStorage.get(fullKey);
+          stored = memoryStorage.get(fullKey);
+          break;
       }
+      return this.encryptedKeys.has(key) ? this.decryptValue(stored) : stored;
     } catch (error) {
       console.error(`❌ Failed to retrieve ${key}:`, error);
       // Fallback to memory
-      return memoryStorage.get(fullKey);
+      const stored = memoryStorage.get(fullKey);
+      return this.encryptedKeys.has(key) ? this.decryptValue(stored) : stored;
     }
+  }
+
+  // Migrate old role_permissions from base64/plain to AES
+  migrateRolePermissions() {
+    try {
+      const fullKey = `${this.prefix}role_permissions`;
+      const raw = localStorage.getItem(fullKey);
+      if (raw) {
+        try { localStorage.removeItem(fullKey); } catch (_) {}
+      }
+    } catch (_) {}
   }
 
   // Remove item
@@ -189,6 +242,8 @@ const tokenStorage = new TokenStorage();
 
 // Migrate old data on initialization
 tokenStorage.migrateFromOldStorage();
+// Migrate role_permissions to AES if needed
+tokenStorage.migrateRolePermissions();
 
 export default tokenStorage;
 
@@ -213,11 +268,59 @@ export const getUser = () => {
   const user = tokenStorage.getItem('user');
   return user ? JSON.parse(user) : null;
 };
-export const setUser = (user) => tokenStorage.setItem('user', JSON.stringify(user));
+export const setUser = (user) => {
+  tokenStorage.setItem('user', JSON.stringify(user));
+  try {
+    window.dispatchEvent(new CustomEvent('user_updated', { detail: user }));
+  } catch (_) {}
+};
 export const removeUser = () => tokenStorage.removeItem('user');
 
 export const clearAllTokens = () => tokenStorage.clear();
 export const getStorageInfo = () => tokenStorage.getStorageInfo();
+
+// Role permissions mapping storage
+export const removeRolePermissions = () => tokenStorage.removeItem('role_permissions');
+
+export const getRolePermissionsData = () => {
+  try {
+    const v = tokenStorage.getItem('role_permissions_data');
+    return v ? JSON.parse(v) : null;
+  } catch (e) {
+    return null;
+  }
+};
+export const setRolePermissionsData = (data) => {
+  try {
+    tokenStorage.setItem('role_permissions_data', JSON.stringify(data || null));
+  } catch (e) {
+    tokenStorage.setItem('role_permissions_data', 'null');
+  }
+  try {
+    window.dispatchEvent(new CustomEvent('role_permissions_data_updated', { detail: data || null }));
+  } catch (_) {}
+};
+export const removeRolePermissionsData = () => tokenStorage.removeItem('role_permissions_data');
+
+export const getDecryptedStorageItem = (key) => tokenStorage.getItem(key);
+export const getRawStorageItem = (key) => {
+  try {
+    const fullKey = `shn_app_${key}`;
+    return localStorage.getItem(fullKey);
+  } catch (e) {
+    return null;
+  }
+};
+
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  try {
+    window.__decryptStorage = (key) => tokenStorage.getItem(key);
+    window.__getRawStorage = (key) => {
+      const fullKey = `shn_app_${key}`;
+      return localStorage.getItem(fullKey);
+    };
+  } catch (_) {}
+}
 
 // Get all data from storage
 export const getAllData = () => {

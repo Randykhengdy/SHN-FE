@@ -10,12 +10,15 @@ import CustomAlert from "@/components/modals/CustomAlert";
 
 export default function RolePermissionEditor({ role, onSave, onCancel }) {
   const [roleName, setRoleName] = useState("");
+  const [roleCode, setRoleCode] = useState("");
   const [menus, setMenus] = useState([]);
   const [rolePermissions, setRolePermissions] = useState([]);
+  const [availableCombos, setAvailableCombos] = useState(new Set());
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertConfig, setAlertConfig] = useState({ title: "", message: "", type: "warning" });
+  const [successMessage, setSuccessMessage] = useState("");
 
   // Available permissions
   const permissions = [
@@ -37,23 +40,42 @@ export default function RolePermissionEditor({ role, onSave, onCancel }) {
     } else {
       setRoleName("");
     }
+    if (role?.role_code) {
+      setRoleCode(String(role.role_code));
+    } else {
+      setRoleCode("");
+    }
     loadData();
   }, [role?.id, role?.name]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      // Load menus with permissions
-      const menuResponse = await roleService.getMenuWithPermissions();
-      const menuData = menuResponse.data || menuResponse || [];
-      setMenus(menuData);
+      // Load menu-permission mappings (limit 1000) and derive menus + available combos
+      const mappings = await roleService.getMenuPermissionMappings(1000);
+      const menuMap = new Map();
+      const combos = new Set();
+      (Array.isArray(mappings) ? mappings : []).forEach((row) => {
+        const m = row.menu || {};
+        const p = row.permission || {};
+        const menuId = Number(row.menu_id || m.id);
+        const permId = Number(row.permission_id || p.id);
+        if (menuId) {
+          if (!menuMap.has(menuId)) {
+            menuMap.set(menuId, { id: menuId, nama_menu: m.nama_menu || m.nama || m.name || `Menu ${menuId}` });
+          }
+          if (permId) {
+            combos.add(`${menuId}-${permId}`);
+          }
+        }
+      });
+      setMenus(Array.from(menuMap.values()));
+      setAvailableCombos(combos);
 
-      // Load existing role permissions
+      // Load existing role permissions (already normalized to {menu_id, permission_id})
       if (role?.id) {
-        const permissionResponse = await roleService.getRoleMenuPermissions(role.id);
-        // Extract mappings from the nested response structure
-        const mappings = permissionResponse.data?.mappings || permissionResponse.mappings || [];
-        setRolePermissions(Array.isArray(mappings) ? mappings : []);
+        const existing = await roleService.getRoleMenuPermissions(role.id);
+        setRolePermissions(Array.isArray(existing) ? existing : []);
       } else {
         setRolePermissions([]);
       }
@@ -63,6 +85,7 @@ export default function RolePermissionEditor({ role, onSave, onCancel }) {
       // Set empty arrays on error
       setMenus([]);
       setRolePermissions([]);
+      setAvailableCombos(new Set());
     } finally {
       setLoading(false);
     }
@@ -73,11 +96,13 @@ export default function RolePermissionEditor({ role, onSave, onCancel }) {
       return false;
     }
     return rolePermissions.some(
-      (rp) => rp.menu_id === menuId && rp.permission_id === permissionId
+      (rp) => Number(rp.menu_id) === Number(menuId) && Number(rp.permission_id) === Number(permissionId)
     );
   };
 
   const handlePermissionChange = (menuId, permissionId, checked) => {
+    const available = availableCombos.has(`${menuId}-${permissionId}`);
+    if (!available) return;
     if (checked) {
       // Add permission
       setRolePermissions(prev => {
@@ -114,7 +139,12 @@ export default function RolePermissionEditor({ role, onSave, onCancel }) {
         updatedRole = { ...role, name: roleName };
       } else {
         // Create new role
-        const response = await roleService.create(roleData);
+        if (!roleCode.trim()) {
+          showAlert("Error", "Kode role harus diisi", "error");
+          setSaving(false);
+          return;
+        }
+        const response = await roleService.create({ ...roleData, role_code: roleCode });
         updatedRole = response.data;
       }
 
@@ -123,7 +153,7 @@ export default function RolePermissionEditor({ role, onSave, onCancel }) {
         await roleService.updateRoleMenuPermissions(updatedRole.id, rolePermissions);
       }
 
-      showAlert("Success", "Role berhasil disimpan", "success");
+      setSuccessMessage("Role berhasil disimpan");
       onSave(updatedRole);
     } catch (error) {
       console.error("Error saving role:", error);
@@ -146,6 +176,9 @@ export default function RolePermissionEditor({ role, onSave, onCancel }) {
 
   return (
     <>
+      <div className="mb-4 pb-3 border-b">
+        <h2 className="text-xl font-semibold">{role?.id ? "Edit Role" : "Tambah Role"}</h2>
+      </div>
       <CustomAlert
         open={alertOpen}
         onOpenChange={setAlertOpen}
@@ -155,29 +188,33 @@ export default function RolePermissionEditor({ role, onSave, onCancel }) {
       />
       
       <div className="space-y-6">
+        <div className="space-y-2">
+          <Label htmlFor="roleCode" className="text-sm font-medium text-gray-700 mb-1">Kode Role *</Label>
+          <Input
+            id="roleCode"
+            value={roleCode}
+            onChange={(e) => setRoleCode(e.target.value)}
+            placeholder="Masukkan kode role"
+            className="w-full"
+            disabled={!!role?.id}
+          />
+        </div>
+        {successMessage && (
+          <div className="p-3 rounded-md border border-green-200 bg-green-50 text-green-700 text-sm">
+            {successMessage}
+          </div>
+        )}
         {/* Role Name Input - Outside Card */}
         <div className="space-y-2">
-          <Label htmlFor="roleName" className="text-lg font-semibold">Nama Role</Label>
+          <Label htmlFor="roleName" className="text-sm font-medium text-gray-700 mb-1">Nama Role *</Label>
           <Input
             id="roleName"
             value={roleName}
             onChange={(e) => setRoleName(e.target.value)}
             placeholder="Masukkan nama role"
-            className="text-lg"
+            className="w-full"
           />
         </div>
-
-        {/* Role Name Section */}
-        <Card>
-        <CardHeader>
-          <CardTitle>Detail Access {roleName || "Role"}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-gray-600">
-            Atur permission untuk role ini pada menu-menu di bawah
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Permissions Table */}
       <Card>
@@ -210,16 +247,18 @@ export default function RolePermissionEditor({ role, onSave, onCancel }) {
                        <TableCell className="font-medium">
                          {menu.nama_menu || menu.name || 'Unknown Menu'}
                        </TableCell>
-                       {permissions.map((permission) => (
-                         <TableCell key={permission.id} className="text-center">
-                           <Checkbox
-                             checked={isPermissionChecked(menu.id, permission.id)}
-                             onCheckedChange={(checked) => 
-                               handlePermissionChange(menu.id, permission.id, checked)
-                             }
-                           />
-                         </TableCell>
-                       ))}
+                      {permissions.map((permission) => (
+                        <TableCell key={permission.id} className="text-center">
+                          {availableCombos.has(`${menu.id}-${permission.id}`) ? (
+                            <Checkbox
+                              checked={isPermissionChecked(menu.id, permission.id)}
+                              onCheckedChange={(checked) => 
+                                handlePermissionChange(menu.id, permission.id, checked)
+                              }
+                            />
+                          ) : null}
+                        </TableCell>
+                      ))}
                      </TableRow>
                    ))
                  )}

@@ -1,4 +1,5 @@
 import { request } from "../../lib/request";
+import { getCurrentRoleId } from "../../lib/utils";
 
 export const roleService = {
   async getAll() {
@@ -114,28 +115,113 @@ export const roleService = {
 
   // Menu and Permission related methods
   async getMenuWithPermissions() {
-    return request("/menu-with-permissions", { method: "GET" });
+    const resp = await request("/menu-menu-permission?include=menu,permission", { method: "GET" });
+    const rows = resp?.data || resp || [];
+    const menuMap = new Map();
+    rows.forEach((row) => {
+      const m = row.menu || row.menus || {};
+      const id = Number(m.id || row.menu_id || row.id);
+      if (!id) return;
+      if (!menuMap.has(id)) {
+        menuMap.set(id, {
+          id,
+          nama_menu: m.nama_menu || m.nama || m.name || row.menu_name || `Menu ${id}`,
+        });
+      }
+    });
+    return Array.from(menuMap.values());
+  },
+
+  async getMenuPermissionMappings(perPage = 1000) {
+    const resp = await request(`/menu-menu-permission?include=menu,permission&per_page=${perPage}`, { method: "GET" });
+    return resp?.data || resp || [];
   },
 
   async getRoleMenuPermissions(roleId) {
-    return request(`/role-menu-permission/by-role/${roleId}`, { method: "GET" });
+    const resp = await request(`/role-menu-permission/grouped/by-role/${roleId}`, { method: "GET" });
+    const data = resp?.data || {};
+    const menus = Array.isArray(data.menus) ? data.menus : [];
+    const out = [];
+    menus.forEach((menu) => {
+      const mId = Number(menu.menu_id ?? menu.menu?.id);
+      const perms = Array.isArray(menu.permissions) ? menu.permissions : [];
+      perms.forEach((perm) => {
+        const pId = Number(perm.permission_id ?? perm.id ?? perm);
+        if (mId && pId) {
+          out.push({ menu_id: mId, permission_id: pId });
+        }
+      });
+    });
+    return out;
   },
 
-  async updateRoleMenuPermissions(roleId, mappings) {
-    // First delete all existing mappings for this role
-    await request(`/role-menu-permission/by-role/${roleId}`, { method: "DELETE" });
-    
-    // Then create new mappings
-    if (mappings.length > 0) {
-      return request("/role-menu-permission/bulk", {
-        method: "POST",
-        body: JSON.stringify({
-          role_id: roleId,
-          mappings: mappings
-        }),
-      });
-    }
-    
-    return { success: true, message: "Permissions updated successfully" };
+  async getRoleMenuPermissionsData(roleId) {
+    const resp = await request(`/role-menu-permission/grouped/by-role/${roleId}`, { method: "GET" });
+    return resp?.data || resp || null;
+  },
+
+  async getCurrentRoleMenuPermissions() {
+    const roleId = getCurrentRoleId();
+    if (!roleId) return [];
+    return this.getRoleMenuPermissions(roleId);
+  },
+
+  async createRoleMenuPermission(payload) {
+    // payload: { role_id, menu_menu_permission_id } OR { role_id, menu_id, permission_id }
+    return request(`/role-menu-permission`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async updateRoleMenuPermission(id, payload) {
+    return request(`/role-menu-permission/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async deleteRoleMenuPermission(id) {
+    return request(`/role-menu-permission/${id}`, { method: "DELETE" });
+  },
+
+  async updateRoleMenuPermissions(roleId, desiredMappings) {
+    // desiredMappings: Array<{ menu_id, permission_id }>
+    const current = await this.getRoleMenuPermissions(roleId);
+    const currentKeyToId = new Map();
+    const currentSet = new Set();
+    (current || []).forEach((row) => {
+      const key = `${Number(row.menu_id)}-${Number(row.permission_id)}`;
+      currentSet.add(key);
+      if (row.id) currentKeyToId.set(key, row.id);
+    });
+
+    const desiredSet = new Set();
+    (desiredMappings || []).forEach((m) => {
+      desiredSet.add(`${Number(m.menu_id)}-${Number(m.permission_id)}`);
+    });
+
+    const toAdd = [];
+    desiredSet.forEach((key) => {
+      if (!currentSet.has(key)) {
+        const [menuId, permId] = key.split("-").map(Number);
+        toAdd.push({ role_id: roleId, menu_id: menuId, permission_id: permId });
+      }
+    });
+
+    const toRemoveIds = [];
+    currentSet.forEach((key) => {
+      if (!desiredSet.has(key)) {
+        const id = currentKeyToId.get(key);
+        if (id) toRemoveIds.push(id);
+      }
+    });
+
+    // Execute add and remove concurrently
+    const addPromises = toAdd.map((payload) => this.createRoleMenuPermission(payload).catch(() => null));
+    const removePromises = toRemoveIds.map((id) => this.deleteRoleMenuPermission(id).catch(() => null));
+    await Promise.all([...addPromises, ...removePromises]);
+
+    return { success: true };
   }
 };
