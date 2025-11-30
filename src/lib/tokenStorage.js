@@ -299,6 +299,11 @@ export const setRolePermissionsData = (data) => {
   try {
     window.dispatchEvent(new CustomEvent('role_permissions_data_updated', { detail: data || null }));
   } catch (_) {}
+  try {
+    if (window.electronAPI && typeof window.electronAPI.setRolePermissionsData === 'function') {
+      window.electronAPI.setRolePermissionsData(data || null);
+    }
+  } catch (_) {}
 };
 export const removeRolePermissionsData = () => tokenStorage.removeItem('role_permissions_data');
 

@@ -13,6 +13,7 @@ import { woActualService } from '@/services/woActualService';
 import apiConfig, { API_ENDPOINTS } from '@/config/api';
 import { getAuthHeader } from '@/api/GetAuthHeader';
 import { checkAndRefreshToken } from '@/lib/tokenUtils';
+import { useAppContext } from '@/context/AppContext';
 
 const statusOptions = [
   { value: "all", label: "Semua Status" },
@@ -49,6 +50,9 @@ const formatDate = (dateString) => {
 export default function WOActualPage() {
   const navigate = useNavigate();
   const { showAlert, AlertComponent } = useAlert();
+  const { hasPermission } = useAppContext();
+  const canRead = hasPermission && hasPermission('WORK_ORDER_ACTUAL', 'Read');
+  const canCreate = hasPermission && hasPermission('WORK_ORDER_ACTUAL', 'Create');
   
   // State
   const [workOrders, setWorkOrders] = useState([]);
@@ -306,6 +310,19 @@ export default function WOActualPage() {
     }
   };
 
+  if (!canRead) {
+    return (
+      <PageLayout title="Work Order Actual" category="TRANSAKSI">
+        <div className="p-6">
+          <Card>
+            <CardContent className="p-6 text-center text-gray-600">Anda tidak memiliki akses Read untuk Work Order Actual</CardContent>
+          </Card>
+          <AlertComponent />
+        </div>
+      </PageLayout>
+    );
+  }
+
   return (
     <PageLayout title="Work Order Actual" category="TRANSAKSI">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
@@ -313,10 +330,12 @@ export default function WOActualPage() {
           <h2 className="text-lg font-semibold text-gray-800">Daftar Work Order Actual</h2>
         </div>
         <div className="flex gap-2">
+          {canCreate ? (
           <Button onClick={handleAddWOActual} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             Tambah WO Actual
           </Button>
+          ) : null}
         </div>
       </div>
 

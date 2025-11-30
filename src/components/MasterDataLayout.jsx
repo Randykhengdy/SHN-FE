@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { RefreshCw, ChevronUp, ChevronDown } from "lucide-react";
 import RolePermissionEditor from "./RolePermissionEditor";
 import { useAlert } from "@/hooks/useAlert";
+import { useAppContext } from "@/context/AppContext";
 
 export default function MasterDataLayout({
   title,
@@ -20,8 +21,10 @@ export default function MasterDataLayout({
   filterConfig,
   modalSize,
   selection,
+  menuCode = 'MASTER_DATA',
 }) {
   const { showConfirm, AlertComponent } = useAlert();
+  const { hasPermission } = useAppContext();
   const [data, setData] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editData, setEditData] = useState(null);
@@ -36,6 +39,9 @@ export default function MasterDataLayout({
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [filterValue, setFilterValue] = useState(filterConfig?.defaultValue || "semua");
+  const canCreate = hasPermission && hasPermission(menuCode, 'Create');
+  const canUpdate = hasPermission && hasPermission(menuCode, 'Update');
+  const canDelete = hasPermission && hasPermission(menuCode, 'Delete');
 
   // Debounce search term
   useEffect(() => {
@@ -313,18 +319,20 @@ export default function MasterDataLayout({
                       <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
                       Refresh
                     </Button>
-                  <Button
-                     onClick={handleAdd}
-                     className="bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200 group relative overflow-hidden"
-                   >
-                     <span className="absolute inset-0 w-full h-full transition-all duration-300 ease-out transform translate-x-0 -skew-x-12 bg-white opacity-0 group-hover:opacity-20 group-hover:-translate-x-full"></span>
-                     <span className="flex items-center gap-1">
-                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                       </svg>
-                       {title}
-                     </span>
-                   </Button>
+                  {canCreate ? (
+                    <Button
+                      onClick={handleAdd}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200 group relative overflow-hidden"
+                    >
+                      <span className="absolute inset-0 w-full h-full transition-all duration-300 ease-out transform translate-x-0 -skew-x-12 bg-white opacity-0 group-hover:opacity-20 group-hover:-translate-x-full"></span>
+                      <span className="flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        {title}
+                      </span>
+                    </Button>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -479,61 +487,69 @@ export default function MasterDataLayout({
                               
                               {!showTrashed ? (
                                 <>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleEdit(item)}
-                                    className="bg-yellow-400 hover:bg-yellow-500 text-white border-yellow-400 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-yellow-300 focus:ring-offset-1"
-                                  >
-                                    <span className="flex items-center gap-1">
-                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                      </svg>
-                                      Edit
-                                    </span>
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleDelete(item.id)}
-                                    className="bg-red-500 hover:bg-red-600 text-white border-red-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-red-300 focus:ring-offset-1"
-                                  >
-                                    <span className="flex items-center gap-1">
-                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                      </svg>
-                                      Hapus
-                                    </span>
-                                  </Button>
+                                  {canUpdate ? (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleEdit(item)}
+                                      className="bg-yellow-400 hover:bg-yellow-500 text-white border-yellow-400 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-yellow-300 focus:ring-offset-1"
+                                    >
+                                      <span className="flex items-center gap-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                        Edit
+                                      </span>
+                                    </Button>
+                                  ) : null}
+                                  {canDelete ? (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleDelete(item.id)}
+                                      className="bg-red-500 hover:bg-red-600 text-white border-red-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-red-300 focus:ring-offset-1"
+                                    >
+                                      <span className="flex items-center gap-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                        Hapus
+                                      </span>
+                                    </Button>
+                                  ) : null}
                                 </>
                               ) : (
                                 <>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleRestore(item.id)}
-                                    className="bg-green-500 hover:bg-green-600 text-white border-green-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-green-300 focus:ring-offset-1"
-                                  >
-                                    <span className="flex items-center gap-1">
-                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                      </svg>
-                                      Pulihkan
-                                    </span>
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleForceDelete(item.id)}
-                                    className="bg-red-500 hover:bg-red-600 text-white border-red-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-red-300 focus:ring-offset-1"
-                                  >
-                                    <span className="flex items-center gap-1">
-                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                      </svg>
-                                      Hapus Permanen
-                                    </span>
-                                  </Button>
+                                  {canDelete ? (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleRestore(item.id)}
+                                      className="bg-green-500 hover:bg-green-600 text-white border-green-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-green-300 focus:ring-offset-1"
+                                    >
+                                      <span className="flex items-center gap-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                        Pulihkan
+                                      </span>
+                                    </Button>
+                                  ) : null}
+                                  {canDelete ? (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleForceDelete(item.id)}
+                                      className="bg-red-500 hover:bg-red-600 text-white border-red-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-red-300 focus:ring-offset-1"
+                                    >
+                                      <span className="flex items-center gap-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                        Hapus Permanen
+                                      </span>
+                                    </Button>
+                                  ) : null}
                                 </>
                               )}
                             </div>

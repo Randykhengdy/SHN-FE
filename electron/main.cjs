@@ -5,6 +5,23 @@ const fs = require('fs');
 // Keep a global reference of the window object
 // If you don't, the window will be closed automatically when the JavaScript object is garbage collected
 let mainWindow = null;
+let rolePermissionsDataCache = null;
+
+function hasAnyPermission(menuCode, permissionNames = []) {
+  const data = rolePermissionsDataCache;
+  if (!data || !Array.isArray(data.menus)) return false;
+  const m = String(menuCode || '').toLowerCase();
+  const menu = data.menus.find(x => String(x.menu_code || '').toLowerCase() === m);
+  if (!menu || !Array.isArray(menu.permissions)) return false;
+  const names = (permissionNames || []).map(v => String(v).toLowerCase());
+  if (!names.length) return menu.permissions.length > 0;
+  return menu.permissions.some(r => names.includes(String(r.nama_permission || '').toLowerCase()));
+}
+
+function canShow(menuCode) {
+  if (!rolePermissionsDataCache) return true;
+  return hasAnyPermission(menuCode);
+}
 
 function createWindow() {
   // Create the browser window
@@ -162,8 +179,7 @@ function createWindow() {
     }
   });
 
-  // Build native menu, but trigger React navigation
-  const template = [
+  const buildMenuTemplate = () => [
     {
       label: 'File',
       submenu: [
@@ -185,49 +201,53 @@ function createWindow() {
         }
       ]
     },
-    {
-      label: 'Masterdata',
-      submenu: [
-        { label: 'Jenis Barang', accelerator: 'CmdOrCtrl+1', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/jenis-barang') },
-        { label: 'Bentuk Barang', accelerator: 'CmdOrCtrl+2', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/bentuk-barang') },
-        { label: 'Grade Barang', accelerator: 'CmdOrCtrl+3', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/grade-barang') },
-        { label: 'Item Barang', accelerator: 'CmdOrCtrl+4', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/item-barang') },
-        { label: 'Jenis Mutasi Stock', accelerator: 'CmdOrCtrl+5', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/jenis-mutasi-stock') },
-        { type: 'separator' },
-        { label: 'Suppliers', accelerator: 'CmdOrCtrl+6', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/supplier') },
-        { label: 'Pelanggan', accelerator: 'CmdOrCtrl+7', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/pelanggan') },
-        { label: 'Gudang', accelerator: 'CmdOrCtrl+8', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/gudang') },
-        { label: 'Pelaksana', accelerator: 'CmdOrCtrl+9', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/pelaksana') },
-        { label: 'Jenis Transaksi Kas', accelerator: 'CmdOrCtrl+0', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/jenis-transaksi-kas') },
-        { label: 'Role', accelerator: 'CmdOrCtrl+Shift+R', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/role') },
-      ]
-    },
-          {
+    ...(canShow('MASTER_DATA') ? [
+      {
+        label: 'Masterdata',
+        submenu: [
+          { label: 'Jenis Barang', accelerator: 'CmdOrCtrl+1', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/jenis-barang') },
+          { label: 'Bentuk Barang', accelerator: 'CmdOrCtrl+2', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/bentuk-barang') },
+          { label: 'Grade Barang', accelerator: 'CmdOrCtrl+3', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/grade-barang') },
+          { label: 'Item Barang', accelerator: 'CmdOrCtrl+4', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/item-barang') },
+          { label: 'Jenis Mutasi Stock', accelerator: 'CmdOrCtrl+5', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/jenis-mutasi-stock') },
+          { type: 'separator' },
+          { label: 'Suppliers', accelerator: 'CmdOrCtrl+6', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/supplier') },
+          { label: 'Pelanggan', accelerator: 'CmdOrCtrl+7', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/pelanggan') },
+          { label: 'Gudang', accelerator: 'CmdOrCtrl+8', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/gudang') },
+          { label: 'Pelaksana', accelerator: 'CmdOrCtrl+9', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/pelaksana') },
+          { label: 'Jenis Transaksi Kas', accelerator: 'CmdOrCtrl+0', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/jenis-transaksi-kas') },
+        ]
+      }
+    ] : []),
+    ...(canShow('USER_MANAGEMENT') ? [
+      {
         label: 'User Management',
         submenu: [
           { label: 'Users', accelerator: 'CmdOrCtrl+U', click: () => mainWindow.webContents.send('navigate-to', '/users') },
+          { label: 'Role', accelerator: 'CmdOrCtrl+Shift+R', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/role') },
         ]
-      },
-          {
+      }
+    ] : []),
+    {
       label: 'Transaksi',
-        submenu: [
-          { label: 'Purchase Order', accelerator: 'CmdOrCtrl+P', click: () => mainWindow.webContents.send('navigate-to', '/purchase-order') },
-          { label: 'Sales Order', accelerator: 'CmdOrCtrl+S', click: () => mainWindow.webContents.send('navigate-to', '/sales-order') },
-          { label: 'Work Order', accelerator: 'CmdOrCtrl+W', click: () => mainWindow.webContents.send('navigate-to', '/work-order') },
-          { label: 'WO Actual', accelerator: 'CmdOrCtrl+Shift+W', click: () => mainWindow.webContents.send('navigate-to', '/wo-actual') },
-          { label: 'Surat Jalan Invoicing', accelerator: 'CmdOrCtrl+F', click: () => mainWindow.webContents.send('navigate-to', '/finance-invoice-pod') },
-          { label: 'Pembayaran', click: () => mainWindow.webContents.send('navigate-to', '/pembayaran') },
-          { label: 'Financial Report', click: () => mainWindow.webContents.send('navigate-to', '/financial-report') },
-          { type: 'separator' },
-          { label: 'Mutasi Stock', accelerator: 'CmdOrCtrl+M', click: () => mainWindow.webContents.send('navigate-to', '/mutasi-stock') },
-          { label: 'Item Barang Request', accelerator: 'CmdOrCtrl+I', click: () => mainWindow.webContents.send('navigate-to', '/item-barang-request') },
-          { label: 'Approval', accelerator: 'CmdOrCtrl+Shift+A', click: () => mainWindow.webContents.send('navigate-to', '/approval') },
-          { type: 'separator' },
-          { label: 'Konversi Barang', accelerator: 'CmdOrCtrl+K', click: () => mainWindow.webContents.send('navigate-to', '/konversi-barang')},
-          { label: 'Split Barang', accelerator: 'CmdOrCtrl+Shift+S', click: () => mainWindow.webContents.send('navigate-to', '/split-barang')},
-          { label: 'Merge Barang', accelerator: 'CmdOrCtrl+Shift+M', click: () => mainWindow.webContents.send('navigate-to', '/merge-barang')}
-        ]
-      },
+      submenu: [
+        ...(canShow('PURCHASE_ORDER') ? [{ label: 'Purchase Order', accelerator: 'CmdOrCtrl+P', click: () => mainWindow.webContents.send('navigate-to', '/purchase-order') }] : []),
+        ...(canShow('SALES_ORDER') ? [{ label: 'Sales Order', accelerator: 'CmdOrCtrl+S', click: () => mainWindow.webContents.send('navigate-to', '/sales-order') }] : []),
+        ...(canShow('WORK_ORDER_PLANNING') ? [{ label: 'Work Order', accelerator: 'CmdOrCtrl+W', click: () => mainWindow.webContents.send('navigate-to', '/work-order') }] : []),
+        ...(canShow('WORK_ORDER_ACTUAL') ? [{ label: 'WO Actual', accelerator: 'CmdOrCtrl+Shift+W', click: () => mainWindow.webContents.send('navigate-to', '/wo-actual') }] : []),
+        { label: 'Surat Jalan Invoicing', accelerator: 'CmdOrCtrl+F', click: () => mainWindow.webContents.send('navigate-to', '/finance-invoice-pod') },
+        { label: 'Pembayaran', click: () => mainWindow.webContents.send('navigate-to', '/pembayaran') },
+        { label: 'Financial Report', click: () => mainWindow.webContents.send('navigate-to', '/financial-report') },
+        { type: 'separator' },
+        { label: 'Mutasi Stock', accelerator: 'CmdOrCtrl+M', click: () => mainWindow.webContents.send('navigate-to', '/mutasi-stock') },
+        { label: 'Item Barang Request', accelerator: 'CmdOrCtrl+I', click: () => mainWindow.webContents.send('navigate-to', '/item-barang-request') },
+        { label: 'Approval', accelerator: 'CmdOrCtrl+Shift+A', click: () => mainWindow.webContents.send('navigate-to', '/approval') },
+        { type: 'separator' },
+        { label: 'Konversi Barang', accelerator: 'CmdOrCtrl+K', click: () => mainWindow.webContents.send('navigate-to', '/konversi-barang')},
+        { label: 'Split Barang', accelerator: 'CmdOrCtrl+Shift+S', click: () => mainWindow.webContents.send('navigate-to', '/split-barang')},
+        { label: 'Merge Barang', accelerator: 'CmdOrCtrl+Shift+M', click: () => mainWindow.webContents.send('navigate-to', '/merge-barang')}
+      ]
+    },
     {
       label: 'Help',
       submenu: [
@@ -256,11 +276,11 @@ function createWindow() {
     }
   ];
 
-  const menu = Menu.buildFromTemplate(template);
+  const menu = Menu.buildFromTemplate(buildMenuTemplate());
   console.log('Menu created:', menu);
   ipcMain.on('show-menu', () => {
     if (mainWindow) {
-      Menu.setApplicationMenu(menu);
+      Menu.setApplicationMenu(Menu.buildFromTemplate(buildMenuTemplate()));
       console.log('Menu shown');
     }
   });
@@ -271,8 +291,16 @@ function createWindow() {
     }
   });
   // Set menu for all environments
-  Menu.setApplicationMenu(menu);
+  Menu.setApplicationMenu(Menu.buildFromTemplate(buildMenuTemplate()));
   console.log('Menu set for all environments');
+
+  // Listen for role permissions data from renderer
+  ipcMain.on('role-permissions-data', (_event, data) => {
+    rolePermissionsDataCache = data;
+    try {
+      Menu.setApplicationMenu(Menu.buildFromTemplate(buildMenuTemplate()));
+    } catch (e) {}
+  });
 
   // Emitted when the window is closed
   mainWindow.on('closed', () => {

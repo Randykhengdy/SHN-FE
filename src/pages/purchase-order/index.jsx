@@ -15,6 +15,7 @@ import { useAlert } from "@/hooks/useAlert";
 import { isAdmin } from "@/lib/utils";
 import CustomAlert from "@/components/modals/CustomAlert";
 import PageLayout from "@/components/PageLayout";
+import { useAppContext } from "@/context/AppContext";
 
 const statusOptions = [
   { value: "all", label: "Semua Status" },
@@ -35,6 +36,9 @@ const periodOptions = [
 export default function PurchaseOrderPage() {
   const navigate = useNavigate();
   const { showAlert, AlertComponent } = useAlert();
+  const { hasPermission } = useAppContext();
+  const canRead = hasPermission && hasPermission('PURCHASE_ORDER', 'Read');
+  const canCreate = hasPermission && hasPermission('PURCHASE_ORDER', 'Create');
   
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -357,16 +361,31 @@ export default function PurchaseOrderPage() {
   const startItem = (currentPage - 1) * itemsPerPage + 1;
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
+  if (!canRead) {
+    return (
+      <PageLayout title="Purchase Order (PO)" category="TRANSAKSI">
+        <div className="p-6">
+          <Card>
+            <CardContent className="p-6 text-center text-gray-600">Anda tidak memiliki akses Read untuk Purchase Order</CardContent>
+          </Card>
+          <AlertComponent />
+        </div>
+      </PageLayout>
+    );
+  }
+
   return (
     <PageLayout title="Purchase Order (PO)" category="TRANSAKSI">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div className="bg-white rounded-lg px-4 py-2 border border-gray-200">
           <h2 className="text-lg font-semibold text-gray-800">Daftar Purchase Order</h2>
         </div>
+        {canCreate ? (
         <Button onClick={handleAddNew} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-2" />
           Tambah Purchase Order
         </Button>
+        ) : null}
       </div>
 
         {/* Filter and Search */}
