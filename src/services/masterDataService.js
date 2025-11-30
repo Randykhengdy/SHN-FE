@@ -98,9 +98,11 @@ const checkMemoryUsage = () => {
 export const getGudangOptions = async () => {
   checkMemoryUsage();
   return await safeApiCall(async () => {
-    const response = await gudangService.getAll();
-    console.log('Raw gudang data:', response.data); // Debug log
-    return response.data.map(item => ({
+    // Ambil hanya gudang dengan tipe 'gudang'
+    const response = await getGudang({ tipe_gudang: 'gudang', per_page: 1000 });
+    const rows = Array.isArray(response?.data) ? response.data : (Array.isArray(response) ? response : []);
+    console.log('Raw gudang data (filtered tipe=gudang):', rows);
+    return rows.map(item => ({
       value: item.id?.toString(),
       label: item.nama_gudang || item.nama || 'Unknown',
       searchKey: item.nama_gudang || item.nama || 'Unknown'
@@ -551,5 +553,31 @@ export const getItemBarangUtuhOptions = async () => {
       label: item.kode_barang + ' - ' + item.nama_item_barang || 'Unknown',
       searchKey: item.kode_barang || item.nama_item_barang || 'Unknown'
     }));
+  }, 'ItemBarangService');
+};
+
+// Fetch Item Barang options (non-bulk) filtered by jenis potongan and quantity
+export const getItemBarangOptionsPotongan = async (opts = {}) => {
+  checkMemoryUsage();
+  const { jenis_potongan, gudang_id = '', gudang_tujuan_id = '' } = opts || {};
+  return await safeApiCall(async () => {
+    const params = new URLSearchParams();
+    // Use jenis_potongan filter per API spec
+    params.append('jenis_potongan', jenis_potongan || 'potongan');
+    // Use strict quantity filter = 1 as requested
+    params.append('quantity', '1');
+    // Append gudang filters only if provided
+    if (gudang_id) params.append('gudang_id', String(gudang_id));
+    if (gudang_tujuan_id) params.append('gudang_tujuan_id', String(gudang_tujuan_id));
+    const response = await request(`/item-barang?${params.toString()}`, { method: 'GET' });
+    return (response?.data || [])
+      .map(item => ({
+        value: item.id?.toString(),
+        label: item.kode_barang + ' - ' + item.nama_item_barang || 'Unknown',
+        searchKey: item.kode_barang || item.nama_item_barang || 'Unknown',
+        quantity: Number(item.quantity || 0),
+        gudang_id: item.gudang?.id ?? item.gudang_id ?? null,
+        gudang_nama: item.gudang?.nama_gudang ?? null
+      }));
   }, 'ItemBarangService');
 };

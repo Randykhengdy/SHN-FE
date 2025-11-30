@@ -21,13 +21,7 @@ const statusOptions = [
     { value: "rejected", label: "Rejected" },
 ];
 
-const urgencyOptions = [
-    { value: "all", label: "Semua Urgency" },
-    { value: "low", label: "Low" },
-    { value: "medium", label: "Medium" },
-    { value: "high", label: "High" },
-    { value: "urgent", label: "Urgent" },
-];
+// Urgency dihapus sesuai API terbaru
 
 export default function ItemBarangRequestPage() {
     const navigate = useNavigate();
@@ -38,7 +32,7 @@ export default function ItemBarangRequestPage() {
 
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
-    const [urgencyFilter, setUrgencyFilter] = useState("all");
+    const [urgencyFilter, setUrgencyFilter] = useState(undefined);
     const [loading, setLoading] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -50,7 +44,6 @@ export default function ItemBarangRequestPage() {
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [gudangOptions, setGudangOptions] = useState([]);
-    const [destGudangMap, setDestGudangMap] = useState({});
 
     useEffect(() => {
         const loadGudang = async () => {
@@ -70,14 +63,16 @@ export default function ItemBarangRequestPage() {
                 per_page: itemsPerPage,
                 search: searchTerm,
                 status: statusFilter !== "all" ? statusFilter : undefined,
-                urgency_level: urgencyFilter !== "all" ? urgencyFilter : undefined,
+                // urgency dihapus
             };
 
             const response = await itemBarangRequestService.getAll(params);
             
             if (response.success) {
-                setRequests(response.data.data || []);
-                setTotalItems(response.data.total || 0);
+                const rows = Array.isArray(response.data) ? response.data : (Array.isArray(response?.data?.data) ? response.data.data : []);
+                setRequests(rows);
+                const total = response?.pagination?.total ?? (Array.isArray(rows) ? rows.length : 0);
+                setTotalItems(total);
             } else {
                 showAlertRef.current && showAlertRef.current("error", "Gagal memuat data request");
             }
@@ -101,7 +96,7 @@ export default function ItemBarangRequestPage() {
     const handleReset = () => {
         setSearchTerm("");
         setStatusFilter("all");
-        setUrgencyFilter("all");
+        setUrgencyFilter(undefined);
         setCurrentPage(1);
     };
 
@@ -130,9 +125,7 @@ export default function ItemBarangRequestPage() {
 
     const handleApprove = async (request) => {
         try {
-            const targetGudangId = destGudangMap[request.id] ? parseInt(destGudangMap[request.id]) : null;
-            const payload = targetGudangId ? { approval_notes: "Approved with warehouse switch", gudang_tujuan_id: targetGudangId } : { approval_notes: "Approved" };
-            const response = await itemBarangRequestService.approve(request.id, payload);
+            const response = await itemBarangRequestService.approve(request.id, { approval_notes: "Approved" });
             
             if (response.success) {
                 showAlertRef.current && showAlertRef.current("success", "Request berhasil disetujui");
@@ -173,17 +166,7 @@ export default function ItemBarangRequestPage() {
         return <Badge variant={config.variant}>{config.label}</Badge>;
     };
 
-    const getUrgencyBadge = (urgency) => {
-        const urgencyConfig = {
-            low: { variant: "secondary", label: "Low" },
-            medium: { variant: "outline", label: "Medium" },
-            high: { variant: "default", label: "High" },
-            urgent: { variant: "destructive", label: "Urgent" },
-        };
-
-        const config = urgencyConfig[urgency] || { variant: "secondary", label: urgency };
-        return <Badge variant={config.variant}>{config.label}</Badge>;
-    };
+    // Urgency badge dihapus
 
     const totalPages = Math.ceil(totalItems / itemsPerPage);
 
@@ -223,18 +206,7 @@ export default function ItemBarangRequestPage() {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <Select value={urgencyFilter} onValueChange={setUrgencyFilter}>
-                                <SelectTrigger className="w-[180px]">
-                                    <SelectValue placeholder="Filter Urgency" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {urgencyOptions.map((option) => (
-                                        <SelectItem key={option.value} value={option.value}>
-                                            {option.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            {/* Urgency filter dihapus */}
                             {/* Controls moved to bottom-right */}
                         </div>
 
@@ -256,7 +228,7 @@ export default function ItemBarangRequestPage() {
                                         <TableHead>No. Dokumen</TableHead>
                                         <TableHead>Item Barang</TableHead>
                                         <TableHead>Quantity</TableHead>
-                                        <TableHead>Urgency</TableHead>
+                                        {/* Urgency column dihapus */}
                                         <TableHead>Status</TableHead>
                                         <TableHead>Requestor</TableHead>
                                         <TableHead>Tanggal Request</TableHead>
@@ -280,15 +252,20 @@ export default function ItemBarangRequestPage() {
                                         requests.map((request) => (
                                             <TableRow key={request.id}>
                                                 <TableCell className="font-medium">
-                                                    {request.document_number}
+                                                    {request.nomor_request || request.document_number || "-"}
                                                 </TableCell>
-                                                <TableCell>{request.item_barang?.nama || "-"}</TableCell>
-                                                <TableCell>{request.quantity}</TableCell>
-                                                <TableCell>{getUrgencyBadge(request.urgency_level)}</TableCell>
-                                                <TableCell>{getStatusBadge(request.status)}</TableCell>
-                                                <TableCell>{request.user?.name || "-"}</TableCell>
                                                 <TableCell>
-                                                    {new Date(request.created_at).toLocaleDateString("id-ID")}
+                                                    <div className="flex flex-col">
+                                                        <span className="font-medium">{request.nama_item_barang || request.item_barang?.nama || "-"}</span>
+                                                        <span className="text-xs text-gray-500">{request.kode_barang || request.item_barang?.kode || "-"}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>{request.quantity}</TableCell>
+                                                {/* Urgency value dihapus */}
+                                                <TableCell>{getStatusBadge(request.status)}</TableCell>
+                                                <TableCell>{request.requested_by?.name || request.user?.name || "-"}</TableCell>
+                                                <TableCell>
+                                                    {request.requested_at ? new Date(request.requested_at).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" }) : "-"}
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex gap-2">
@@ -299,63 +276,6 @@ export default function ItemBarangRequestPage() {
                                                         >
                                                             <Eye className="h-4 w-4" />
                                                         </Button>
-                                                        
-                                                        {request.status === "pending" && request.can_edit && (
-                                                            <Button
-                                                                size="sm"
-                                                                onClick={() => navigate(`/item-barang-request/edit/${request.id}`)}
-                                                                className="bg-blue-600 hover:bg-blue-700 text-white"
-                                                            >
-                                                                <Edit className="h-4 w-4" />
-                                                            </Button>
-                                                        )}
-
-                                {request.status === "pending" && isAdmin() && (
-                                    <>
-                                                                <Button
-                                                                    size="sm"
-                                                                    onClick={() => handleApprove(request)}
-                                                                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                                                                >
-                                                                    <Check className="h-4 w-4" />
-                                                                </Button>
-                                                                <Button
-                                                                    size="sm"
-                                                                    onClick={() => handleReject(request)}
-                                                                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                                                                >
-                                                                    <X className="h-4 w-4" />
-                                                                </Button>
-                                        <Select
-                                            value={destGudangMap[request.id]?.toString() || ""}
-                                            onValueChange={(val) => setDestGudangMap(prev => ({ ...prev, [request.id]: val }))}
-                                        >
-                                            <SelectTrigger className="w-[180px]">
-                                                <SelectValue placeholder="Gudang Tujuan" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {gudangOptions.map(opt => (
-                                                    <SelectItem key={opt.value} value={opt.value.toString()}>
-                                                        {opt.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </>
-                                )}
-
-                                                        {request.can_delete && (
-                                                        <Button
-                                                            size="sm"
-                                                            onClick={() => {
-                                                                setSelectedRequest(request);
-                                                                setShowDeleteModal(true);
-                                                            }}
-                                                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                        )}
                                                     </div>
                                                 </TableCell>
                                             </TableRow>

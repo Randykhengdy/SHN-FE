@@ -5,15 +5,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Eye, Check, X, Clock } from "lucide-react";
-import { salesOrderService } from "@/services/salesOrderService";
+import { useNavigate } from "react-router-dom";
+import CustomAlert from "@/components/modals/CustomAlert";
+import { itemBarangRequestService } from "@/services/itemBarangRequestService";
 import { useAlert } from "@/hooks/useAlert";
 import RejectionModal from "@/components/modals/RejectionModal";
 import SalesOrderLayout from "@/components/SalesOrderLayout";
 
 export default function ApprovalPage() {
+  const navigate = useNavigate();
   const { showAlert, AlertComponent } = useAlert();
-  const [activeTab, setActiveTab] = useState("sales-order");
-  const [salesOrderRequests, setSalesOrderRequests] = useState([]);
+  const [activeTab, setActiveTab] = useState("item-barang-request");
+  const [itemRequests, setItemRequests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [approvingId, setApprovingId] = useState(null); // Track which request is being approved
   const [rejectingId, setRejectingId] = useState(null); // Track which request is being rejected
@@ -21,68 +24,66 @@ export default function ApprovalPage() {
   // Rejection modal state
   const [showRejectionModal, setShowRejectionModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [approveNotes, setApproveNotes] = useState("");
   
 
 
   useEffect(() => {
-    if (activeTab === "sales-order") {
-      loadSalesOrderRequests();
+    if (activeTab === "item-barang-request") {
+      loadItemRequests();
     }
   }, [activeTab]);
 
-  const loadSalesOrderRequests = async (showErrorAlert = true) => {
+  const loadItemRequests = async (showErrorAlert = true) => {
     try {
       setLoading(true);
-      const response = await salesOrderService.getPendingDeleteRequests();
-      
-      console.log('📋 Sales Order delete requests:', response);
-      
-             // Transform API data to match our UI structure
-       const transformedData = (response.data || []).map(request => ({
-         id: request.id,
-         so_id: request.id, // Sales order ID
-         no_so: request.nomor_so,
-         pelanggan: request.pelanggan?.nama_pelanggan || 'N/A',
-         requested_by: request.delete_requested_by?.name || 'Unknown',
-         requested_at: request.delete_requested_at,
-         reason: request.delete_reason,
-         status: 'pending' // Since this endpoint only returns pending requests
-       }));
-      
-      setSalesOrderRequests(transformedData);
+      const response = await itemBarangRequestService.getPendingRequests({ per_page: 100 });
+      const body = response?.data;
+      const rows = Array.isArray(body) ? body : (Array.isArray(body?.data) ? body.data : []);
+      const transformed = rows.map(r => ({
+        id: r.id,
+        nomor_request: r.nomor_request,
+        item: `${r.nama_item_barang || r.item_barang?.nama || '-'}`,
+        kode_item: r.kode_barang || r.item_barang?.kode || null,
+        quantity: r.quantity,
+        requested_by: r.requested_by?.name || 'Unknown',
+        requested_at: r.requested_at,
+        keterangan: r.keterangan || '',
+        status: r.status || 'pending',
+        gudang_asal: r.asal_gudang?.nama_gudang || r.gudang_asal?.nama_gudang || r.gudang?.nama_gudang || null,
+        gudang_tujuan: r.tujuan_gudang?.nama_gudang || r.gudang_tujuan?.nama_gudang || null
+      }));
+      setItemRequests(transformed);
     } catch (error) {
       console.error('❌ Error loading delete requests:', error);
       if (showErrorAlert) {
-        showAlert("Error", "Gagal memuat data permintaan hapus", "error");
+        showAlert("Error", "Gagal memuat data request item barang", "error");
       }
-      setSalesOrderRequests([]);
+      setItemRequests([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleApprove = async (requestId) => {
-    // Prevent multiple clicks
-    if (approvingId === requestId) {
-      console.log('⏭️ Already processing approval for request:', requestId);
-      return;
-    }
-    
+  const handleApprove = (request) => {
+    setSelectedRequest(request);
+    setShowApproveModal(true);
+  };
+
+  const handleApproveConfirm = async () => {
     try {
-      setApprovingId(requestId);
-      
-      const response = await salesOrderService.approveDelete(requestId);
-      
-      console.log('✅ Request approved:', response);
-      
-      // Show success message and reload data after alert closes
-      showAlert("Sukses", "Permintaan hapus disetujui!", "success", () => {
-        loadSalesOrderRequests(false);
+      setApprovingId(selectedRequest?.id || null);
+      const response = await itemBarangRequestService.approve(selectedRequest.id, { approval_notes: approveNotes || "" });
+      console.log('✅ Item request approved:', response);
+      setShowApproveModal(false);
+      setApproveNotes("");
+      showAlert("Sukses", "Request item barang disetujui!", "success", () => {
+        loadItemRequests(false);
       });
-      
     } catch (error) {
       console.error('❌ Error approving request:', error);
-      showAlert("Error", "Gagal menyetujui permintaan", "error");
+      showAlert("Error", "Gagal menyetujui request", "error");
     } finally {
       setApprovingId(null);
     }
@@ -101,22 +102,20 @@ export default function ApprovalPage() {
     
     try {
       setRejectingId(selectedRequest.id);
-      
-      const response = await salesOrderService.rejectDelete(selectedRequest.id, reason);
-      
-      console.log('❌ Request rejected:', response);
+      const response = await itemBarangRequestService.reject(selectedRequest.id, { approval_notes: reason || "" });
+      console.log('❌ Item request rejected:', response);
       
       // Close modal first
       setShowRejectionModal(false);
       
       // Show success message and reload data after alert closes
-      showAlert("Sukses", "Permintaan hapus ditolak!", "success", () => {
-        loadSalesOrderRequests(false);
+      showAlert("Sukses", "Request item barang ditolak!", "success", () => {
+        loadItemRequests(false);
       });
       
     } catch (error) {
       console.error('❌ Error rejecting request:', error);
-      showAlert("Error", "Gagal menolak permintaan", "error");
+      showAlert("Error", "Gagal menolak request", "error");
     } finally {
       setRejectingId(null);
     }
@@ -155,16 +154,14 @@ export default function ApprovalPage() {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="sales-order">Sales Order</TabsTrigger>
-              <TabsTrigger value="purchase-order" disabled>Purchase Order</TabsTrigger>
-              <TabsTrigger value="other" disabled>Lainnya</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-1">
+              <TabsTrigger value="item-barang-request">Item Barang Request</TabsTrigger>
             </TabsList>
             
-            <TabsContent value="sales-order" className="mt-6">
+            <TabsContent value="item-barang-request" className="mt-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Permintaan Hapus Sales Order</CardTitle>
+                  <CardTitle className="text-lg">Permintaan Item Barang Request</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {loading ? (
@@ -172,33 +169,44 @@ export default function ApprovalPage() {
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                       <span className="ml-2">Loading data...</span>
                     </div>
-                  ) : salesOrderRequests.length === 0 ? (
+                  ) : itemRequests.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
-                      Tidak ada permintaan hapus Sales Order
+                      Tidak ada request item barang
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-gray-50">
-                            <TableHead className="font-semibold">No SO</TableHead>
-                            <TableHead className="font-semibold">Pelanggan</TableHead>
+                            <TableHead className="font-semibold">No Request</TableHead>
+                            <TableHead className="font-semibold">Item</TableHead>
+                            <TableHead className="font-semibold">Quantity</TableHead>
+                            <TableHead className="font-semibold">Gudang Asal</TableHead>
+                            <TableHead className="font-semibold">Gudang Tujuan</TableHead>
                             <TableHead className="font-semibold">Diminta Oleh</TableHead>
                             <TableHead className="font-semibold">Tanggal Request</TableHead>
-                            <TableHead className="font-semibold">Alasan</TableHead>
+                            <TableHead className="font-semibold">Keterangan</TableHead>
                             <TableHead className="font-semibold">Status</TableHead>
                             <TableHead className="font-semibold text-center">Aksi</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {salesOrderRequests.map((request) => (
+                          {itemRequests.map((request) => (
                             <TableRow key={request.id} className="hover:bg-gray-50">
-                              <TableCell className="font-medium">{request.no_so}</TableCell>
-                              <TableCell>{request.pelanggan}</TableCell>
+                              <TableCell className="font-medium">{request.nomor_request}</TableCell>
+                              <TableCell>
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{request.item}</span>
+                                  <span className="text-xs text-gray-500">{request.kode_item || '-'}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>{request.quantity}</TableCell>
+                              <TableCell>{request.gudang_asal || '-'}</TableCell>
+                              <TableCell>{request.gudang_tujuan || '-'}</TableCell>
                               <TableCell>{request.requested_by}</TableCell>
                               <TableCell>{formatDate(request.requested_at)}</TableCell>
-                              <TableCell className="max-w-xs truncate" title={request.reason}>
-                                {request.reason}
+                              <TableCell className="max-w-xs truncate" title={request.keterangan}>
+                                {request.keterangan}
                               </TableCell>
                               <TableCell>{getStatusBadge(request.status)}</TableCell>
                               <TableCell>
@@ -206,39 +214,37 @@ export default function ApprovalPage() {
                                   <Button 
                                     size="sm" 
                                     variant="outline" 
-                                    onClick={() => window.open(`/sales-order/view/${request.so_id}`, '_blank')}
-                                    title="Lihat Sales Order"
+                                    onClick={() => navigate(`/item-barang-request/view/${request.id}`, { state: { fromApproval: true } })}
+                                    title="Lihat Request"
                                   >
                                     <Eye className="w-4 h-4" />
                                   </Button>
                                   {request.status === 'pending' && (
                                     <>
-                                                                             <Button 
-                                         size="sm" 
-                                         className="bg-green-600 hover:bg-green-700" 
-                                         onClick={() => handleApprove(request.id)}
-                                         disabled={approvingId === request.id}
-                                         title="Setujui"
-                                       >
-                                         {approvingId === request.id ? (
-                                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                         ) : (
-                                           <Check className="w-4 h-4" />
-                                         )}
-                                       </Button>
-                                                                             <Button 
-                                         size="sm" 
-                                         variant="destructive" 
-                                         onClick={() => handleReject(request)}
-                                         disabled={rejectingId === request.id}
-                                         title="Tolak"
-                                       >
-                                         {rejectingId === request.id ? (
-                                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                         ) : (
-                                           <X className="w-4 h-4" />
-                                         )}
-                                       </Button>
+                                      <Button 
+                                        size="sm" 
+                                        className="bg-green-600 hover:bg-green-700" 
+                                        onClick={() => handleApprove(request)}
+                                        title="Setujui"
+                                      >
+                                        {approvingId === request.id ? (
+                                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                        ) : (
+                                          <Check className="w-4 h-4" />
+                                        )}
+                                      </Button>
+                                      <Button 
+                                        size="sm" 
+                                        variant="destructive" 
+                                        onClick={() => handleReject(request)}
+                                        title="Tolak"
+                                      >
+                                        {rejectingId === request.id ? (
+                                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                        ) : (
+                                          <X className="w-4 h-4" />
+                                        )}
+                                      </Button>
                                     </>
                                   )}
                                 </div>
@@ -249,26 +255,6 @@ export default function ApprovalPage() {
                       </Table>
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="purchase-order" className="mt-6">
-              <Card>
-                <CardContent className="py-8">
-                  <div className="text-center text-gray-500">
-                    Menu approval Purchase Order akan segera hadir
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="other" className="mt-6">
-              <Card>
-                <CardContent className="py-8">
-                  <div className="text-center text-gray-500">
-                    Menu approval lainnya akan segera hadir
-                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -283,6 +269,29 @@ export default function ApprovalPage() {
         salesOrder={selectedRequest}
         onConfirm={handleRejectConfirm}
         onCancel={() => setShowRejectionModal(false)}
+      />
+      {/* Approve Modal */}
+      <CustomAlert
+        open={showApproveModal}
+        onOpenChange={setShowApproveModal}
+        onConfirm={handleApproveConfirm}
+        title="Konfirmasi Approve"
+        message="Masukkan catatan approval (opsional)"
+        confirmText="Approve"
+        showCancel={true}
+        cancelText="Batal"
+        type="info"
+        extraContent={(
+          <div className="mt-3">
+            <textarea
+              className="w-full border rounded-md p-2 text-sm"
+              placeholder="Catatan approval"
+              value={approveNotes}
+              onChange={(e) => setApproveNotes(e.target.value)}
+              rows={3}
+            />
+          </div>
+        )}
       />
       
       {/* Alert Modal Component */}
