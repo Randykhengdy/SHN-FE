@@ -12,6 +12,7 @@ import { ArrowLeft, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { itemBarangRequestService } from "@/services/itemBarangRequestService";
+import { generateItemRequestPrintContent, openPrintDialog } from "@/lib/printUtils";
 import { getItemBarangOptionsPotongan, getGudangOptions } from "@/services/masterDataService";
 import { useAppContext } from "@/context/AppContext";
 
@@ -120,6 +121,21 @@ export default function AddItemBarangRequestPage() {
 
             if (response.success) {
                 showAlert("success", "Item barang request berhasil dibuat");
+                try {
+                    const printData = {
+                        nomor_request: response?.data?.nomor_request || '-',
+                        requested_at: response?.data?.requested_at || new Date().toISOString(),
+                        requested_by: { name: response?.data?.requested_by?.name || '-' },
+                        asal_gudang: { nama_gudang: selectedItemInfo.gudang_nama || '-' },
+                        tujuan_gudang: { nama_gudang: (gudangOptions.find(g => g.value === formData.gudang_tujuan_id)?.label) || '-' },
+                        nama_item_barang: (itemBarangOptions.find(o => String(o.value) === String(formData.item_barang_id))?.label?.split(' | ')[0]) || '-',
+                        kode_barang: (itemBarangOptions.find(o => String(o.value) === String(formData.item_barang_id))?.label?.split(' | ')[1]) || '-',
+                        quantity: submitData.quantity,
+                        keterangan: submitData.notes,
+                    };
+                    const html = generateItemRequestPrintContent(printData);
+                    openPrintDialog(html);
+                } catch (_) {}
                 navigate("/item-barang-request");
             } else {
                 showAlert("error", response.message || "Gagal membuat request");
@@ -258,23 +274,25 @@ export default function AddItemBarangRequestPage() {
 
                             <Separator className="my-6" />
                             {/* Action Buttons */}
-                            <div className="flex gap-4 pt-6">
-                                <Button
-                                    type="submit"
-                                    disabled={submitting}
-                                    className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white"
-                                >
-                                    <Save className="h-4 w-4 mr-2" />
-                                    {submitting ? "Menyimpan..." : "Simpan Request"}
-                                </Button>
-                                <Button
-                                    type="button"
-                                    onClick={handleCancel}
-                                    disabled={submitting}
-                                    className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white"
-                                >
-                                    Batal
-                                </Button>
+                            <div className="px-1 pb-1">
+                                <div className="flex justify-end gap-3">
+                                    <Button
+                                        type="button"
+                                        onClick={handleCancel}
+                                        disabled={submitting}
+                                        className="bg-white text-gray-800 border border-gray-300 hover:bg-gray-100"
+                                    >
+                                        Batal
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        disabled={submitting}
+                                        className="bg-black hover:bg-gray-900 text-white"
+                                    >
+                                        <Save className="h-4 w-4 mr-2" />
+                                        {submitting ? "Menyimpan..." : "Simpan Request"}
+                                    </Button>
+                                </div>
                             </div>
                         </form>
                     </CardContent>

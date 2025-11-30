@@ -1067,6 +1067,70 @@ export const openPrintDialog = (printContent) => {
   }, 500);
 };
 
+export const generateItemRequestPrintContent = (req) => {
+  const safe = (v) => (v ?? "-");
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8" />
+      <title>BUKTI KONVERSI - ${safe(req.nomor_request)}</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { display: flex; align-items: flex-start; margin-bottom: 24px; position: relative; min-height: 80px; }
+        .logo { width: 70px; height: auto; margin-right: 16px; object-fit: contain; }
+        .header-content { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; top: 0; }
+        .company-name { font-size: 20px; font-weight: bold; }
+        .document-title { font-size: 16px; font-weight: bold; margin-top: 6px; }
+        .info { margin-top: 16px; }
+        .row { display: flex; gap: 8px; margin: 4px 0; }
+        .label { min-width: 160px; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 8px; text-align: left; }
+        td { border: 1px solid #ddd; padding: 8px; }
+        .footer { margin-top: 24px; text-align: center; font-size: 12px; color: #666; }
+        @media print { body { margin: 0; } }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <img src="/src/assets/logo.png" alt="PT. SHN Logo" class="logo" />
+        <div class="header-content">
+          <div class="company-name">PT. SURYA HARSA NAGARA</div>
+          <div class="document-title">BUKTI KONVERSI</div>
+        </div>
+      </div>
+      <div class="info">
+        <div class="row"><div class="label">Nomor Request</div><div>${safe(req.nomor_request)}</div></div>
+        <div class="row"><div class="label">Tanggal Request</div><div>${req.requested_at ? new Date(req.requested_at).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</div></div>
+        <div class="row"><div class="label">Requestor</div><div>${safe(req.requested_by?.name || req.requestor)}</div></div>
+        <div class="row"><div class="label">Gudang Asal</div><div>${safe(req.asal_gudang?.nama_gudang || req.gudang_asal_nama)}</div></div>
+        <div class="row"><div class="label">Gudang Tujuan</div><div>${safe(req.tujuan_gudang?.nama_gudang || req.gudang_tujuan_nama)}</div></div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Nama Item Barang</th>
+            <th>Kode Item Barang</th>
+            <th>Quantity</th>
+            <th>Keterangan</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>${safe(req.nama_item_barang)}</td>
+            <td>${safe(req.kode_barang)}</td>
+            <td>${safe(req.quantity)}</td>
+            <td>${safe(req.keterangan)}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="footer">Dokumen ini dicetak pada: ${new Date().toLocaleString('id-ID')}</div>
+    </body>
+    </html>
+  `;
+};
+
 export const generateItemQRPrintContent = async (item) => {
   const payload = encodeURIComponent(
     JSON.stringify({
