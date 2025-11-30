@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useAlert } from "@/hooks/useAlert";
 import { ArrowLeft, Edit, Printer } from "lucide-react";
+import { generateItemRequestPrintContent, openPrintDialog } from "@/lib/printUtils";
+import { useAppContext } from "@/context/AppContext";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { itemBarangRequestService } from "@/services/itemBarangRequestService";
@@ -53,7 +55,20 @@ export default function ViewItemBarangRequestPage() {
     // Approve/Reject hanya dari menu Approval — tidak ada action di view
 
     const handlePrint = () => {
-        window.print();
+        if (!request) return;
+        const printData = {
+            nomor_request: request.nomor_request || request.document_number,
+            requested_at: request.requested_at || request.created_at,
+            requested_by: request.requested_by || request.user,
+            asal_gudang: request.asal_gudang,
+            tujuan_gudang: request.tujuan_gudang,
+            nama_item_barang: request.nama_item_barang || request.item_barang?.nama_item_barang || request.item_barang?.nama || '-',
+            kode_barang: request.kode_barang || request.item_barang?.kode_barang || request.item_barang?.kode || '-',
+            quantity: request.quantity,
+            keterangan: request.keterangan,
+        };
+        const html = generateItemRequestPrintContent(printData);
+        openPrintDialog(html);
     };
 
     const getStatusBadge = (status) => {
@@ -114,42 +129,19 @@ export default function ViewItemBarangRequestPage() {
 
     return (
         <PageLayout title="Detail Item Barang Request">
-            <div className="space-y-6">
+            <div className="space-y-6 max-w-6xl mx-auto">
                 <Card>
                     <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => navigate(location?.state?.fromApproval ? "/approval" : "/item-barang-request")}
-                                >
-                                    <ArrowLeft className="h-4 w-4 mr-2" />
-                                    Kembali
-                                </Button>
-                                <CardTitle>Detail Request #{request.nomor_request || request.document_number}</CardTitle>
-                            </div>
-                            <div className="flex gap-2">
-                                <Button
-                                    size="sm"
-                                    onClick={handlePrint}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                                >
-                                    <Printer className="h-4 w-4 mr-2" />
-                                    Print
-                                </Button>
-                                
-                                {request.status === "pending" && request.can_edit && (
-                                    <Button
-                                        size="sm"
-                                        onClick={() => navigate(`/item-barang-request/edit/${request.id}`)}
-                                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                                    >
-                                        <Edit className="h-4 w-4 mr-2" />
-                                        Edit
-                                    </Button>
-                                )}
-                            </div>
+                        <div className="flex items-center gap-4">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => navigate(location?.state?.fromApproval ? "/approval" : "/item-barang-request")}
+                            >
+                                <ArrowLeft className="h-4 w-4 mr-2" />
+                                Kembali
+                            </Button>
+                            <CardTitle>Detail Request #{request.nomor_request || request.document_number}</CardTitle>
                         </div>
                     </CardHeader>
                     <CardContent className="space-y-6">
@@ -197,21 +189,23 @@ export default function ViewItemBarangRequestPage() {
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-gray-600">Kode Item:</span>
-                                        <span>{request.kode_barang || request.item_barang?.kode || "-"}</span>
+                                        <span>{request.kode_barang || request.item_barang?.kode_barang || request.item_barang?.kode || "-"}</span>
                                     </div>
                                 </div>
                                 <div className="space-y-3">
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Quantity:</span>
-                                        <span className="font-medium">{request.quantity}</span>
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Quantity:</span>
+                                            <span className="font-medium">{request.quantity}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Gudang Tujuan:</span>
+                                            <span className="font-medium">{request.tujuan_gudang?.nama_gudang || "-"}</span>
+                                        </div>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-gray-600">Gudang Asal:</span>
                                         <span className="font-medium">{request.asal_gudang?.nama_gudang || "-"}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Gudang Tujuan:</span>
-                                        <span className="font-medium">{request.tujuan_gudang?.nama_gudang || "-"}</span>
                                     </div>
                                 </div>
                             </div>
@@ -229,22 +223,69 @@ export default function ViewItemBarangRequestPage() {
                             </>
                         )}
 
-                        {/* Approved At Info */}
+                        {/* Approval Info */}
                         {request.status === "approved" && (
                             <>
                                 <Separator />
                                 <div>
                                     <h3 className="font-semibold mb-4">Approved</h3>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Disetujui pada:</span>
-                                        <span className="font-medium">
-                                            {request.approved_at ? new Date(request.approved_at).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" }) : "-"}
-                                        </span>
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Disetujui oleh:</span>
+                                            <span className="font-medium">{request.approved_by?.name || "-"}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Disetujui pada:</span>
+                                            <span className="font-medium">
+                                                {request.approved_at ? new Date(request.approved_at).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" }) : "-"}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {request.status === "rejected" && (
+                            <>
+                                <Separator />
+                                <div>
+                                    <h3 className="font-semibold mb-4">Rejected</h3>
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Ditolak oleh:</span>
+                                            <span className="font-medium">{request.rejected_by?.name || "-"}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Ditolak pada:</span>
+                                            <span className="font-medium">
+                                                {request.rejected_at ? new Date(request.rejected_at).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" }) : "-"}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             </>
                         )}
                     </CardContent>
+                    <div className="px-6 pb-6">
+                        <div className="flex gap-3 justify-center items-center">
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => navigate(location?.state?.fromApproval ? "/approval" : "/item-barang-request")}
+                                className="bg-white text-gray-800 border border-gray-300 hover:bg-gray-100"
+                            >
+                                Kembali ke List
+                            </Button>
+                            <Button
+                                size="sm"
+                                onClick={handlePrint}
+                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                            >
+                                <Printer className="h-4 w-4 mr-2" />
+                                Cetak
+                            </Button>
+                        </div>
+                    </div>
                 </Card>
             </div>
 
@@ -254,4 +295,3 @@ export default function ViewItemBarangRequestPage() {
         </PageLayout>
     );
 }
-import { useAppContext } from "@/context/AppContext";
