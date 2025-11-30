@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getUserInfo } from "@/lib/jwtUtils";
-import { clearAllTokens } from "@/lib/tokenStorage";
+import { clearAllTokens, setRolePermissionsData } from "@/lib/tokenStorage";
+import { roleService } from "@/services/master-data";
+import { getCurrentRoleId } from "@/lib/utils";
 import logo from "@/assets/logo.png";
 
 export default function Header() {
@@ -9,6 +11,7 @@ export default function Header() {
   const location = useLocation();
   const [userInfo, setUserInfo] = useState(null);
   const [showMasterdataMenu, setShowMasterdataMenu] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     // Get user info dari JWT token
@@ -24,6 +27,23 @@ export default function Header() {
     
     // Always use navigate untuk konsistensi routing
     navigate("/", { replace: true });
+  };
+
+  const handleRefreshPermissions = async () => {
+    try {
+      setRefreshing(true);
+      const roleId = getCurrentRoleId();
+      if (!roleId) {
+        setRefreshing(false);
+        return;
+      }
+      const data = await roleService.getRoleMenuPermissionsData(roleId);
+      setRolePermissionsData(data);
+    } catch (e) {
+      // silent
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   // Format roles untuk display
@@ -74,6 +94,15 @@ export default function Header() {
             
             {/* Divider */}
             <div className="w-px h-6 bg-gray-300"></div>
+            
+            {/* Refresh Role & Logout */}
+            <button
+              onClick={handleRefreshPermissions}
+              className="bg-blue-500 text-white border-none rounded-md px-4 py-2 font-semibold cursor-pointer hover:bg-blue-600 transition-colors text-sm"
+              disabled={refreshing}
+            >
+              {refreshing ? 'Refreshing...' : 'Refresh Role'}
+            </button>
             
             {/* Logout Button */}
             <button

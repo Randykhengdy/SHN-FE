@@ -36,24 +36,31 @@
       - **Response:** `{ "data": [{ "id": "int", "nama_permission": "string" }] }`
     - `GET /api/permissions/{id}` - Get permission by ID
 
-    ## Role Menu Permission Management
-    - `GET /api/role-menu-permission` - List role→menu-permission mappings
-      - **Response:** items memuat `role`, serta `menuPermission.menu` dan `menuPermission.permission`
-    - `GET /api/role-menu-permission/{id}` - Detail mapping
-    - `GET /api/role-menu-permission/grouped/by-role/{roleId}` - Role permissions bertingkat per menu untuk authorization
-      - **Response:** `{ "role": { "id": "int", "name": "string" }, "menus": [{ "menu_id": "int", "menu_code": "string", "menu_name": "string", "permissions": [{ "permission_id": "int", "nama_permission": "string" }] }] }`
-    - `POST /api/role-menu-permission` - Buat mapping
-      - **Request (pilih salah satu cara):**
-        - `{ "role_id": "int", "menu_menu_permission_id": "int" }`
-        - `{ "role_id": "int", "menu_id": "int", "permission_id": "int" }` (otomatis dibuat menjadi pivot `menu_menu_permission`)
-    - `PUT|PATCH /api/role-menu-permission/{id}` - Update mapping (format request sama seperti POST)
-    - `DELETE /api/role-menu-permission/{id}` - Hapus mapping
-    - `POST /api/role-menu-permission/bulk` - Bulk create
-      - **Request:** `{ "role_id": "int", "mappings": [{ "menu_menu_permission_id": "int" }] }` atau `{ "role_id": "int", "mappings": [{ "menu_id": "int", "permission_id": "int" }] }`
-    - `DELETE /api/role-menu-permission/by-role/{roleId}` - Hapus semua mapping untuk role
-    - `DELETE /api/role-menu-permission/by-menu/{menuId}` - Hapus semua mapping untuk menu tertentu
-    - `POST /api/role-menu-permission/replace/by-role/{roleId}` - Ganti seluruh mapping untuk role (hapus semua, lalu tambah set baru)
-      - **Request:** `{ "mappings": [{ "menu_menu_permission_id": "int" }] }` atau `{ "mappings": [{ "menu_id": "int", "permission_id": "int" }] }`
+    ## Role Management (Add/Edit + Mapping)
+    - `POST /api/role` - Buat role (nama + mapping)
+      - **Request:**
+        ```json
+        {
+          "name": "Operator",
+          "description": "",
+          "mappings": [
+            { "menu_id": 4, "permission_id": 1 },
+            { "menu_id": 4, "permission_id": 2 }
+          ]
+        }
+        ```
+    - `PUT|PATCH /api/role/{id}` - Update role (nama/desc + sinkronisasi mapping)
+      - **Request:**
+        ```json
+        {
+          "name": "Operator",
+          "description": "",
+          "mappings": [
+            { "menu_id": 4, "permission_id": 1 },
+            { "menu_menu_permission_id": 10 }
+          ]
+        }
+        ```
 
     ## Menu Management
     - `GET /api/menu` - List all menus
@@ -74,9 +81,6 @@
     - `GET /api/menu-menu-permission` - List pivot menu↔permission
       - **Response:** items memuat `menu` dan `permission`
     - `GET /api/menu-menu-permission/{id}` - Detail pivot menu↔permission
-    - `GET /api/menu-menu-permission/grouped` - List menu beserta permission yang dimilikinya
-      - **Query (opsional):** `menu_id`, `menu_code`
-      - **Response:** `[{ "menu_id": "int", "menu_code": "string", "menu_name": "string", "permissions": [{ "permission_id": "int", "nama_permission": "string" }] }]`
 
     ## Master Data - Jenis Barang
     - `GET /api/jenis-barang` - List all jenis barang

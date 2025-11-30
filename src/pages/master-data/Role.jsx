@@ -8,6 +8,7 @@ export default function RolePage() {
       title="Role"
       subtitle="Master Data"
       service={roleService}
+      menuCode="USER_MANAGEMENT"
       fields={[
         { name: "name", label: "Nama Role", maxLength: 32 },
       ]}

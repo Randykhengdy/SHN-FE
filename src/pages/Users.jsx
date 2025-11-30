@@ -9,6 +9,7 @@ export default function UsersPage() {
       title="Users"
       subtitle="User Management"
       service={userService}
+      menuCode="USER_MANAGEMENT"
       fields={[
         { name: "name", label: "Nama", maxLength: 100 },
         { name: "username", label: "Username", maxLength: 100 },

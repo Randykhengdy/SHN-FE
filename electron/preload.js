@@ -9,5 +9,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   hideMenu: () => ipcRenderer.send('hide-menu'),
   saveCanvasFile: (dataUrl, filename) => ipcRenderer.invoke('save-canvas-file', { dataUrl, filename }),
   clearCanvasPreviews: () => ipcRenderer.invoke('clear-canvas-previews'),
-  onShowAlert: (callback) => ipcRenderer.on('show-alert', (event, data) => callback(data))
+  onShowAlert: (callback) => ipcRenderer.on('show-alert', (event, data) => callback(data)),
+  setRolePermissionsData: (data) => ipcRenderer.send('role-permissions-data', data)
 });

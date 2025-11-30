@@ -16,6 +16,7 @@ import { workOrderService } from '@/services/workOrderService';
 import apiConfig, { API_ENDPOINTS } from '@/config/api';
 import { getAuthHeader } from '@/api/GetAuthHeader';
 import { checkAndRefreshToken } from '@/lib/tokenUtils';
+import { useAppContext } from '@/context/AppContext';
 
 const statusOptions = [
   { value: "all", label: "Semua Status" },
@@ -35,6 +36,9 @@ const periodOptions = [
 export default function WorkOrderPage() {
   const navigate = useNavigate();
   const { showAlert, AlertComponent } = useAlert();
+  const { hasPermission } = useAppContext();
+  const canRead = hasPermission && hasPermission('WORK_ORDER_PLANNING', 'Read');
+  const canCreate = hasPermission && hasPermission('WORK_ORDER_PLANNING', 'Create');
   
   // Create a stable reference for showAlert
   const showAlertRef = useRef(showAlert);
@@ -577,6 +581,19 @@ export default function WorkOrderPage() {
     }
   };
 
+  if (!canRead) {
+    return (
+      <PageLayout title="Work Order (Planning)" category="TRANSAKSI">
+        <div className="p-6">
+          <Card>
+            <CardContent className="p-6 text-center text-gray-600">Anda tidak memiliki akses Read untuk Work Order Planning</CardContent>
+          </Card>
+          <AlertComponent />
+        </div>
+      </PageLayout>
+    );
+  }
+
   return (
     <PageLayout title="Work Order (Planning)" category="TRANSAKSI">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
@@ -602,10 +619,12 @@ export default function WorkOrderPage() {
             Canvas Grid
           </Button>
           */}
+          {canCreate ? (
           <Button onClick={handleAddWorkOrder} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             Tambah Work Order
           </Button>
+          ) : null}
            </div>
           </div>
           

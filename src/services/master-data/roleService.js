@@ -26,14 +26,14 @@ export const roleService = {
   },
 
   async create(data) {
-    return request("/roles", {
+    return request("/role", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
   async update(id, data) {
-    return request(`/roles/${id}`, {
+    return request(`/role/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
     });
@@ -138,9 +138,9 @@ export const roleService = {
   },
 
   async getRoleMenuPermissions(roleId) {
-    const resp = await request(`/role-menu-permission/grouped/by-role/${roleId}`, { method: "GET" });
-    const data = resp?.data || {};
-    const menus = Array.isArray(data.menus) ? data.menus : [];
+    const resp = await request(`/role/menu-permission/grouped/${roleId}`, { method: "GET" });
+    const data = resp?.data || resp || {};
+    const menus = Array.isArray(data.menus) ? data.menus : (Array.isArray(data.data?.menus) ? data.data.menus : []);
     const out = [];
     menus.forEach((menu) => {
       const mId = Number(menu.menu_id ?? menu.menu?.id);
@@ -156,7 +156,7 @@ export const roleService = {
   },
 
   async getRoleMenuPermissionsData(roleId) {
-    const resp = await request(`/role-menu-permission/grouped/by-role/${roleId}`, { method: "GET" });
+    const resp = await request(`/role/menu-permission/grouped/${roleId}`, { method: "GET" });
     return resp?.data || resp || null;
   },
 
@@ -186,42 +186,16 @@ export const roleService = {
   },
 
   async updateRoleMenuPermissions(roleId, desiredMappings) {
-    // desiredMappings: Array<{ menu_id, permission_id }>
-    const current = await this.getRoleMenuPermissions(roleId);
-    const currentKeyToId = new Map();
-    const currentSet = new Set();
-    (current || []).forEach((row) => {
-      const key = `${Number(row.menu_id)}-${Number(row.permission_id)}`;
-      currentSet.add(key);
-      if (row.id) currentKeyToId.set(key, row.id);
+    const payload = {
+      mappings: (desiredMappings || []).map(m => ({
+        menu_id: Number(m.menu_id),
+        permission_id: Number(m.permission_id)
+      })).filter(x => x.menu_id && x.permission_id)
+    };
+    const resp = await request(`/role-menu-permission/replace/by-role/${roleId}`, {
+      method: "POST",
+      body: JSON.stringify(payload)
     });
-
-    const desiredSet = new Set();
-    (desiredMappings || []).forEach((m) => {
-      desiredSet.add(`${Number(m.menu_id)}-${Number(m.permission_id)}`);
-    });
-
-    const toAdd = [];
-    desiredSet.forEach((key) => {
-      if (!currentSet.has(key)) {
-        const [menuId, permId] = key.split("-").map(Number);
-        toAdd.push({ role_id: roleId, menu_id: menuId, permission_id: permId });
-      }
-    });
-
-    const toRemoveIds = [];
-    currentSet.forEach((key) => {
-      if (!desiredSet.has(key)) {
-        const id = currentKeyToId.get(key);
-        if (id) toRemoveIds.push(id);
-      }
-    });
-
-    // Execute add and remove concurrently
-    const addPromises = toAdd.map((payload) => this.createRoleMenuPermission(payload).catch(() => null));
-    const removePromises = toRemoveIds.map((id) => this.deleteRoleMenuPermission(id).catch(() => null));
-    await Promise.all([...addPromises, ...removePromises]);
-
-    return { success: true };
+    return resp || { success: true };
   }
 };

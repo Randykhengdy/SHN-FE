@@ -18,7 +18,6 @@ export default function RolePermissionEditor({ role, onSave, onCancel }) {
   const [saving, setSaving] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertConfig, setAlertConfig] = useState({ title: "", message: "", type: "warning" });
-  const [successMessage, setSuccessMessage] = useState("");
 
   // Available permissions
   const permissions = [
@@ -129,8 +128,8 @@ export default function RolePermissionEditor({ role, onSave, onCancel }) {
 
     setSaving(true);
     try {
-      // Save role name first
-      const roleData = { name: roleName };
+      // Save role info + mappings
+      const roleData = { name: roleName, role_code: roleCode, mappings: rolePermissions };
       let updatedRole;
 
       if (role?.id) {
@@ -148,12 +147,7 @@ export default function RolePermissionEditor({ role, onSave, onCancel }) {
         updatedRole = response.data;
       }
 
-      // Save permissions
-      if (updatedRole.id) {
-        await roleService.updateRoleMenuPermissions(updatedRole.id, rolePermissions);
-      }
-
-      setSuccessMessage("Role berhasil disimpan");
+      // Mappings telah dikirim dalam body update/create
       onSave(updatedRole);
     } catch (error) {
       console.error("Error saving role:", error);
@@ -199,11 +193,7 @@ export default function RolePermissionEditor({ role, onSave, onCancel }) {
             disabled={!!role?.id}
           />
         </div>
-        {successMessage && (
-          <div className="p-3 rounded-md border border-green-200 bg-green-50 text-green-700 text-sm">
-            {successMessage}
-          </div>
-        )}
+        
         {/* Role Name Input - Outside Card */}
         <div className="space-y-2">
           <Label htmlFor="roleName" className="text-sm font-medium text-gray-700 mb-1">Nama Role *</Label>
