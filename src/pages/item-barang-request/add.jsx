@@ -2,6 +2,7 @@ import PageLayout from "@/components/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SearchSelect from "@/components/ui/search-select";
@@ -12,12 +13,27 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { itemBarangRequestService } from "@/services/itemBarangRequestService";
 import { getItemBarangOptionsPotongan, getGudangOptions } from "@/services/masterDataService";
+import { useAppContext } from "@/context/AppContext";
 
 // Urgency dihapus sesuai API (tidak digunakan)
 
 export default function AddItemBarangRequestPage() {
     const navigate = useNavigate();
     const { showAlert, AlertComponent } = useAlert();
+    const { hasPermission } = useAppContext();
+    const canCreate = hasPermission && hasPermission('ITEM_BARANG_REQUEST', 'Create');
+    if (!canCreate) {
+        return (
+            <PageLayout title="Tambah Item Barang Request" category="TRANSAKSI">
+                <div className="p-6">
+                    <Card>
+                        <CardContent className="p-6 text-center text-gray-600">Anda tidak memiliki akses Create untuk Item Barang Request</CardContent>
+                    </Card>
+                    <AlertComponent />
+                </div>
+            </PageLayout>
+        );
+    }
 
     const [formData, setFormData] = useState({
         item_barang_id: "",
@@ -209,6 +225,8 @@ export default function AddItemBarangRequestPage() {
                                 {/* Urgency dihapus */}
                             </div>
 
+                            <Separator className="my-4" />
+
                             {/* Gudang Tujuan */}
                             <div className="space-y-2">
                                 <Label>Gudang Tujuan</Label>
@@ -225,6 +243,7 @@ export default function AddItemBarangRequestPage() {
                                 />
                             </div>
 
+                            <Separator className="my-4" />
                             {/* Notes */}
                             <div className="space-y-2">
                                 <Label htmlFor="notes">Notes</Label>
@@ -237,6 +256,7 @@ export default function AddItemBarangRequestPage() {
                                 />
                             </div>
 
+                            <Separator className="my-6" />
                             {/* Action Buttons */}
                             <div className="flex gap-4 pt-6">
                                 <Button
