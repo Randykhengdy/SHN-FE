@@ -246,17 +246,15 @@ export default function KonversiBarangPage() {
                                         <TableCell>{ib.totalKG}</TableCell>
                                         <TableCell>
                                             <div className="flex flex-col sm:flex-row gap-2 justify-center">
-                                                {isAdmin() && (
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() => handleConvertBarang(ib)}
-                                                        title="Konversi"
-                                                        disabled={ib.status.toLowerCase() !== 'utuh'}
-                                                    >
-                                                        <TableColumnsSplit className="w-4 h-4" />
-                                                    </Button>
-                                                )}
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => handleConvertBarang(ib)}
+                                                    title="Konversi"
+                                                    disabled={ib.status.toLowerCase() !== 'utuh'}
+                                                >
+                                                    <TableColumnsSplit className="w-4 h-4" />
+                                                </Button>
                                             </div>
                                         </TableCell>
                                     </TableRow>

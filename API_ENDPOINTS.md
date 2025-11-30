@@ -138,6 +138,11 @@
         - `search` (optional): Pencarian berdasarkan kode_barang atau nama_item_barang
         - `sort` (optional): Field untuk sorting
         - `order` (optional): Arah sorting (asc/desc, default: asc)
+        - `jenis_potongan` (optional): Filter berdasarkan jenis potongan, contoh `utuh` (alias: `tipe`)
+        - `jenis_barang_id` (optional): Filter tipe barang (alias: `tipe_barang`)
+        - `quantity` (optional): Filter jumlah persis
+        - `min_quantity` (optional): Filter jumlah minimal
+        - `max_quantity` (optional): Filter jumlah maksimal
       - **Response:** `{ "data": [{ "id": "int", "kode_barang": "string", "nama_item_barang": "string", "sisa_luas": "decimal", "panjang": "decimal", "lebar": "decimal", "tebal": "decimal", "berat": "decimal", "quantity": "decimal", "quantity_tebal_sama": "decimal", "jenis_potongan": "string", "is_available": "boolean", "is_edit": "boolean", "is_edit_by": "string", "jenis_barang_id": "int", "bentuk_barang_id": "int", "grade_barang_id": "int", "gudang_id": "int" }] }`
       - **Example**: `GET /api/item-barang?gudang_id=1&search=aluminium&per_page=20`
     - `GET /api/item-barang/by-gudang/{gudangId}` - Get item barang by gudang ID with search functionality
@@ -1579,7 +1584,10 @@
               "name": "Admin User",
               "username": "admin"
             },
-            "approved_by_user": null
+            "approved_by_user": null,
+            "requested_at": "2025-10-31T19:00:00+07:00",
+            "asal_gudang": { "id": 1, "kode": "GDG001", "nama_gudang": "Gudang Utama" },
+            "tujuan_gudang": { "id": 2, "kode": "GDG002", "nama_gudang": "Gudang Cabang" }
           }
         ],
         "first_page_url": "http://localhost:8000/api/item-barang-request?page=1",
@@ -1603,71 +1611,83 @@
       - **Response:** Same format as list endpoint but filtered to pending status only
 
     ### Get Item Barang Request by ID
-    - `GET /api/item-barang-request/{id}` - Get specific item barang request
+    - `GET /api/item-barang-request/{id}` - Get specific item barang request (view detail)
       - **Response:**
-    ```json
-    {
-      "success": true,
-      "data": {
-        "id": 1,
-        "nomor_request": "REQ-20251031-001",
-        "nama_item_barang": "Plat Besi Tebal 10mm",
-        "jenis_barang_id": 1,
-        "bentuk_barang_id": 1,
-        "grade_barang_id": 1,
-        "panjang": 2000.00,
-        "lebar": 1000.00,
-        "tebal": 10.00,
-        "quantity": 5,
-        "keterangan": "Untuk proyek konstruksi gedung A",
-        "status": "pending",
-        "requested_by": 1,
-        "approved_by": null,
-        "approved_at": null,
-        "approval_notes": null,
-        "created_at": "2025-10-31T12:00:00.000000Z",
-        "updated_at": "2025-10-31T12:00:00.000000Z",
-        "jenis_barang": {...},
-        "bentuk_barang": {...},
-        "grade_barang": {...},
-        "requested_by_user": {...},
-        "approved_by_user": null
+      ```json
+      {
+        "success": true,
+        "data": {
+          "id": 1,
+          "nomor_request": "RCP-31102025-001",
+          "status": "pending",
+          "requested_at": "2025-10-31T19:00:00+07:00",
+          "approval_notes": null,
+          "nama_item_barang": "Plat Besi Tebal 10mm",
+          "jenis_barang_id": 1,
+          "bentuk_barang_id": 1,
+          "grade_barang_id": 1,
+          "panjang": 2000.00,
+          "lebar": 1000.00,
+          "tebal": 10.00,
+          "quantity": 5,
+          "keterangan": "Untuk proyek konstruksi gedung A",
+          "requested_by_user": { "id": 1, "name": "John" },
+          "approved_by_user": null,
+          "asal_gudang": { "id": 1, "kode": "GDG001", "nama_gudang": "Gudang Utama" },
+          "tujuan_gudang": { "id": 2, "kode": "GDG002", "nama_gudang": "Gudang Cabang" },
+          "item_barang": {
+            "id": 42,
+            "kode_barang": "ALU-001",
+            "nama_item_barang": "Aluminium 10mm",
+            "jenis_potongan": "utuh",
+            "gudang": { "id": 1, "kode": "GDG001", "nama_gudang": "Gudang Utama" }
+          }
+        }
       }
-    }
-    ```
+      ```
 
     ### Create Item Barang Request
     - `POST /api/item-barang-request` - Create new item barang request
-      - **Request:**
-    ```json
-    {
-      "nama_item_barang": "Plat Besi Tebal 10mm",
-      "jenis_barang_id": 1,
-      "bentuk_barang_id": 1,
-      "grade_barang_id": 1,
-      "panjang": 2000.00,
-      "lebar": 1000.00,
-      "tebal": 10.00,
-      "quantity": 5,
-      "keterangan": "Untuk proyek konstruksi gedung A"
-    }
-    ```
+      - **Request (dua mode):**
+        - Mode referensi item:
+        ```json
+        { "item_barang_id": 6, "quantity": 1, "gudang_asal_id": 1, "gudang_tujuan_id": 2, "notes": "keterangan" }
+        ```
+        - Mode manual:
+        ```json
+        {
+          "nama_item_barang": "Plat Besi Tebal 10mm",
+          "jenis_barang_id": 1,
+          "bentuk_barang_id": 1,
+          "grade_barang_id": 1,
+          "panjang": 2000.00,
+          "lebar": 1000.00,
+          "tebal": 10.00,
+          "quantity": 5,
+          "keterangan": "Untuk proyek konstruksi gedung A",
+          "gudang_asal_id": 1,
+          "gudang_tujuan_id": 2
+        }
+        ```
       - **Response:**
-    ```json
-    {
-      "success": true,
-      "message": "Item barang request berhasil dibuat",
-      "data": {
-        "id": 1,
-        "nomor_request": "REQ-20251031-001",
-        "nama_item_barang": "Plat Besi Tebal 10mm",
-        "status": "pending",
-        "requested_by": 1,
-        "created_at": "2025-10-31T12:00:00.000000Z",
-        ...
-      }
-    }
-    ```
+        ```json
+        {
+          "success": true,
+          "message": "Request item barang berhasil dibuat",
+          "data": {
+            "id": 1,
+            "nomor_request": "RCP-31102025-001",
+            "nama_item_barang": "Plat Besi Tebal 10mm",
+            "status": "pending",
+            "requested_by": 1,
+            "created_at": "2025-10-31T12:00:00.000000Z",
+            "requested_at": "2025-10-31T19:00:00+07:00",
+            "asal_gudang": { "id": 1, "kode": "GDG001", "nama_gudang": "Gudang Utama" },
+            "tujuan_gudang": { "id": 2, "kode": "GDG002", "nama_gudang": "Gudang Cabang" }
+            ...
+          }
+        }
+        ```
 
     ### Update Item Barang Request
     - `PUT /api/item-barang-request/{id}` - Update item barang request (only if pending and owned by user)
@@ -1734,11 +1754,11 @@
     ```
 
     ### Item Barang Request Features
-    - **Auto Document Number**: Nomor request otomatis generate dengan format REQ-YYYYMMDD-XXX
+    - **Auto Document Number**: Nomor request otomatis generate dengan format RCP-ddmmyyyy-XXX
     - **Status Management**: Status pending, approved, rejected dengan workflow approval
     - **Authorization**: User hanya bisa edit/delete request milik sendiri yang masih pending
     - **Approval System**: Approval dengan notes dan timestamp
-    - **Relationships**: Terintegrasi dengan jenis barang, bentuk barang, grade barang, dan user
+    - **Relationships**: Terintegrasi dengan jenis barang, bentuk barang, grade barang, user, serta gudang asal/tujuan
     - **Validation**: Validasi lengkap untuk semua field required
     - **Pagination & Search**: Support pagination dan pencarian
     - **Soft Delete**: Menggunakan soft delete untuk data integrity

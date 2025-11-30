@@ -4,20 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import SearchSelect from "@/components/ui/search-select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAlert } from "@/hooks/useAlert";
 import { ArrowLeft, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { itemBarangRequestService } from "@/services/itemBarangRequestService";
-import { getItemBarangOptions, getGudangOptions } from "@/services/masterDataService";
+import { getItemBarangOptionsPotongan, getGudangOptions } from "@/services/masterDataService";
 
-const urgencyOptions = [
-    { value: "low", label: "Low" },
-    { value: "medium", label: "Medium" },
-    { value: "high", label: "High" },
-    { value: "urgent", label: "Urgent" },
-];
+// Urgency dihapus sesuai API (tidak digunakan)
 
 export default function AddItemBarangRequestPage() {
     const navigate = useNavigate();
@@ -26,7 +22,7 @@ export default function AddItemBarangRequestPage() {
     const [formData, setFormData] = useState({
         item_barang_id: "",
         quantity: "",
-        urgency_level: "medium",
+        gudang_tujuan_id: "",
         notes: "",
     });
 
@@ -34,27 +30,28 @@ export default function AddItemBarangRequestPage() {
     const [gudangOptions, setGudangOptions] = useState([]);
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [selectedItemInfo, setSelectedItemInfo] = useState({ gudang_nama: "-", gudang_id: null, quantity: 0 });
+    const isSingleStock = selectedItemInfo.quantity === 1;
 
-    // Load item barang options and gudang options
+    // Load item options and gudang options at mount
     useEffect(() => {
-        const loadItemBarangOptions = async () => {
+        const loadData = async () => {
             try {
                 setLoading(true);
-                const response = await getItemBarangOptions();
-                if (response.success) {
-                    setItemBarangOptions(response.data || []);
-                }
-                const gudangResp = await getGudangOptions();
+                const [items, gudangResp] = await Promise.all([
+                    getItemBarangOptionsPotongan({ jenis_potongan: 'utuh' }),
+                    getGudangOptions()
+                ]);
+                setItemBarangOptions(items || []);
                 setGudangOptions(gudangResp || []);
             } catch (error) {
-                console.error("Error loading item barang options:", error);
-                showAlert("error", "Gagal memuat data item barang");
+                console.error("Error loading options:", error);
+                showAlert("error", "Gagal memuat master data");
             } finally {
                 setLoading(false);
             }
         };
-
-        loadItemBarangOptions();
+        loadData();
     }, []);
 
     const handleInputChange = (field, value) => {
@@ -71,13 +68,14 @@ export default function AddItemBarangRequestPage() {
             errors.push("Item barang harus dipilih");
         }
 
-        if (!formData.quantity || formData.quantity <= 0) {
+        if (!formData.quantity || parseInt(formData.quantity) <= 0) {
             errors.push("Quantity harus diisi dan lebih dari 0");
         }
-
-        if (!formData.urgency_level) {
-            errors.push("Urgency level harus dipilih");
+        if (selectedItemInfo.quantity && parseInt(formData.quantity || "0") > selectedItemInfo.quantity) {
+            errors.push("Quantity melebihi stok tersedia");
         }
+
+        // urgency dihapus
 
         return errors;
     };
@@ -95,8 +93,11 @@ export default function AddItemBarangRequestPage() {
             setSubmitting(true);
 
             const submitData = {
-                ...formData,
+                item_barang_id: formData.item_barang_id,
                 quantity: parseInt(formData.quantity),
+                gudang_id: selectedItemInfo.gudang_id || null,
+                gudang_tujuan_id: formData.gudang_tujuan_id || null,
+                notes: formData.notes || "",
             };
 
             const response = await itemBarangRequestService.create(submitData);
@@ -144,22 +145,43 @@ export default function AddItemBarangRequestPage() {
                                     <Label htmlFor="item_barang_id">
                                         Item Barang <span className="text-red-500">*</span>
                                     </Label>
-                                    <Select
+                                    <SearchSelect
+                                        label=""
+                                        placeholder="Pilih item barang"
+                                        searchPlaceholder="Cari item (kode/nama)"
                                         value={formData.item_barang_id}
-                                        onValueChange={(value) => handleInputChange("item_barang_id", value)}
-                                        disabled={loading}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Pilih item barang" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {itemBarangOptions.map((item) => (
-                                                <SelectItem key={item.id} value={item.id.toString()}>
-                                                    {item.nama} - {item.kode}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                        onValueChange={async (value) => {
+                                            handleInputChange("item_barang_id", value);
+                                            const opt = itemBarangOptions.find(o => (o.value?.toString() === String(value)));
+                                            const gudangNama = opt?.gudang_nama || "-";
+                                            const gudangId = opt?.gudang_id || null;
+                                            const qty = typeof opt?.quantity === 'number' ? opt.quantity : parseInt(opt?.quantity || 0);
+                                            setSelectedItemInfo({ gudang_nama: gudangNama, gudang_id: gudangId, quantity: isNaN(qty) ? 0 : qty });
+                                            if (!isNaN(qty) && qty === 1) {
+                                                setFormData(prev => ({ ...prev, quantity: "1" }));
+                                            }
+                                        }}
+                                        options={itemBarangOptions}
+                                        loading={loading}
+                                        required
+                                        usePortal
+                                        displayKey="label"
+                                        valueKey="value"
+                                        searchKey="searchKey"
+                                    />
+                                </div>
+
+                                {/* Info Gudang Asal & Stock */}
+                                <div className="space-y-2">
+                                    <Label>Gudang Saat Ini</Label>
+                                    <div className="flex items-center gap-3">
+                                        <span className="px-3 py-1 rounded-md border bg-gray-50 text-gray-700 text-sm">
+                                            {selectedItemInfo.gudang_nama}
+                                        </span>
+                                        <span className="px-3 py-1 rounded-md border bg-gray-50 text-gray-700 text-sm">
+                                            Stock: {selectedItemInfo.quantity}
+                                        </span>
+                                    </div>
                                 </div>
 
                                 {/* Quantity */}
@@ -171,53 +193,36 @@ export default function AddItemBarangRequestPage() {
                                         id="quantity"
                                         type="number"
                                         min="1"
-                                        value={formData.quantity}
-                                        onChange={(e) => handleInputChange("quantity", e.target.value)}
+                                        max={selectedItemInfo.quantity ? selectedItemInfo.quantity.toString() : undefined}
+                                        value={isSingleStock ? "1" : formData.quantity}
+                                        disabled={isSingleStock}
+                                        onChange={(e) => {
+                                            const v = e.target.value;
+                                            const n = parseInt(v || "0");
+                                            const cap = selectedItemInfo.quantity || n;
+                                            handleInputChange("quantity", Math.min(n, cap).toString());
+                                        }}
                                         placeholder="Masukkan quantity"
                                     />
                                 </div>
 
-                                {/* Urgency Level */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="urgency_level">
-                                        Urgency Level <span className="text-red-500">*</span>
-                                    </Label>
-                                    <Select
-                                        value={formData.urgency_level}
-                                        onValueChange={(value) => handleInputChange("urgency_level", value)}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Pilih urgency level" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {urgencyOptions.map((option) => (
-                                                <SelectItem key={option.value} value={option.value}>
-                                                    {option.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                                {/* Urgency dihapus */}
                             </div>
 
                             {/* Gudang Tujuan */}
                             <div className="space-y-2">
                                 <Label>Gudang Tujuan</Label>
-                                <Select
+                                <SearchSelect
+                                    placeholder="Pilih gudang tujuan"
+                                    searchPlaceholder="Cari gudang"
                                     value={formData.gudang_tujuan_id || ""}
                                     onValueChange={(value) => handleInputChange("gudang_tujuan_id", value)}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Pilih gudang tujuan" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {gudangOptions.map(g => (
-                                            <SelectItem key={g.value} value={g.value.toString()}>
-                                                {g.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                    options={gudangOptions}
+                                    displayKey="label"
+                                    valueKey="value"
+                                    searchKey="searchKey"
+                                    usePortal
+                                />
                             </div>
 
                             {/* Notes */}
