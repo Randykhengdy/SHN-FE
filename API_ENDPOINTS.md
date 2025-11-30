@@ -1646,6 +1646,47 @@
       }
       ```
 
+    ### Approve Item Barang Request
+    - `PATCH /api/item-barang-request/{id}/approve`
+      - **Request:**
+        - `gudang_tujuan_id` (optional; wajib jika request belum menyimpan tujuan)
+        - `approval_notes` (optional)
+      - **Prasyarat:** request berstatus `pending` dan memiliki `item_barang_id` valid
+      - **Efek:**
+        - Memindahkan `item_barang.gudang_id` ke `gudang_tujuan_id`
+        - Mengubah `item_barang.jenis_potongan` menjadi `potongan`
+        - Menyetujui request (`status = approved`, set `approved_by/approved_at/approval_notes`)
+      - **Response:**
+        ```json
+        {
+          "success": true,
+          "message": "Request item barang disetujui, gudang dipindahkan dan jenis_potongan diubah menjadi potongan",
+          "data": {
+            "request": {
+              "id": 1,
+              "status": "approved",
+              "gudang_tujuan_id": 2,
+              "asal_gudang": { "id": 1, "kode": "GDG001", "nama_gudang": "Gudang Utama" },
+              "tujuan_gudang": { "id": 2, "kode": "GDG002", "nama_gudang": "Gudang Cabang" }
+            },
+            "updated_item": {
+              "id": 42,
+              "jenis_potongan": "potongan",
+              "gudang_id": 2
+            }
+          }
+        }
+      ```
+
+    ### Cancel Item Barang Request (Soft Delete)
+    - `DELETE /api/item-barang-request/{id}`
+      - **Prasyarat:** hanya bisa jika `status = pending` dan requester adalah pemilik request
+      - **Efek:** soft delete pada request (data tetap bisa dilihat via with-trashed jika disediakan)
+      - **Response:**
+        ```json
+        { "success": true, "message": "Request item barang berhasil dihapus", "data": null }
+        ```
+
     ### Create Item Barang Request
     - `POST /api/item-barang-request` - Create new item barang request
       - **Request (dua mode):**

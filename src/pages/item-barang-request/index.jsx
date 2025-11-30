@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { isAdmin } from "@/lib/utils";
 import { itemBarangRequestService } from "@/services/itemBarangRequestService";
+import { useAppContext } from "@/context/AppContext";
 
 const statusOptions = [
     { value: "all", label: "Semua Status" },
@@ -27,6 +28,10 @@ export default function ItemBarangRequestPage() {
     const navigate = useNavigate();
     const [requests, setRequests] = useState([]);
     const { showAlert, AlertComponent } = useAlert();
+    const { hasPermission } = useAppContext();
+    const canRead = hasPermission && hasPermission('ITEM_BARANG_REQUEST', 'Read');
+    const canCreate = hasPermission && hasPermission('ITEM_BARANG_REQUEST', 'Create');
+    const canDelete = hasPermission && hasPermission('ITEM_BARANG_REQUEST', 'Delete');
     const showAlertRef = useRef(showAlert);
     useEffect(() => { showAlertRef.current = showAlert; }, [showAlert]);
 
@@ -170,6 +175,19 @@ export default function ItemBarangRequestPage() {
 
     const totalPages = Math.ceil(totalItems / itemsPerPage);
 
+    if (!canRead) {
+        return (
+            <PageLayout title="Item Barang Request">
+                <div className="p-6">
+                    <Card>
+                        <CardContent className="p-6 text-center text-gray-600">Anda tidak memiliki akses Read untuk Item Barang Request</CardContent>
+                    </Card>
+                    <AlertComponent />
+                </div>
+            </PageLayout>
+        );
+    }
+
     return (
         <PageLayout title="Item Barang Request">
             <div className="space-y-6">
@@ -177,10 +195,12 @@ export default function ItemBarangRequestPage() {
                     <CardHeader>
                         <div className="flex justify-between items-center">
                             <CardTitle>Daftar Item Barang Request</CardTitle>
-                            <Button onClick={() => navigate("/item-barang-request/add")} className="bg-green-600 hover:bg-green-700 text-white"> 
-                                <Plus className="h-4 w-4 mr-2" />
-                                Tambah Request
-                            </Button>
+                            {canCreate ? (
+                                <Button onClick={() => navigate("/item-barang-request/add")} className="bg-green-600 hover:bg-green-700 text-white"> 
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Tambah Request
+                                </Button>
+                            ) : null}
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -254,12 +274,7 @@ export default function ItemBarangRequestPage() {
                                                 <TableCell className="font-medium">
                                                     {request.nomor_request || request.document_number || "-"}
                                                 </TableCell>
-                                                <TableCell>
-                                                    <div className="flex flex-col">
-                                                        <span className="font-medium">{request.nama_item_barang || request.item_barang?.nama || "-"}</span>
-                                                        <span className="text-xs text-gray-500">{request.kode_barang || request.item_barang?.kode || "-"}</span>
-                                                    </div>
-                                                </TableCell>
+                                                <TableCell className="font-medium">{`${request.nama_item_barang || request.item_barang?.nama || "-"} | ${request.kode_barang || request.item_barang?.kode || "-"}`}</TableCell>
                                                 <TableCell>{request.quantity}</TableCell>
                                                 {/* Urgency value dihapus */}
                                                 <TableCell>{getStatusBadge(request.status)}</TableCell>
@@ -276,6 +291,16 @@ export default function ItemBarangRequestPage() {
                                                         >
                                                             <Eye className="h-4 w-4" />
                                                         </Button>
+                                                        {canDelete && request.status === 'pending' ? (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="destructive"
+                                                                onClick={() => { setSelectedRequest(request); setShowDeleteModal(true); }}
+                                                                className="text-white"
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        ) : null}
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
@@ -320,15 +345,15 @@ export default function ItemBarangRequestPage() {
 
             {/* Delete Confirmation Modal */}
             <CustomAlert
-                isOpen={showDeleteModal}
-                onClose={() => setShowDeleteModal(false)}
+                open={showDeleteModal}
+                onOpenChange={setShowDeleteModal}
                 onConfirm={handleDelete}
                 title="Konfirmasi Hapus"
-                description={`Apakah Anda yakin ingin menghapus request "${selectedRequest?.document_number}"?`}
+                message={`Apakah Anda yakin ingin menghapus request "${selectedRequest?.nomor_request || selectedRequest?.document_number || ''}"?`}
                 confirmText="Hapus"
+                showCancel={true}
                 cancelText="Batal"
-                variant="destructive"
-                loading={isDeleting}
+                type="error"
             />
 
             <AlertComponent />

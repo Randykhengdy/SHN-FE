@@ -573,7 +573,7 @@ export const getItemBarangOptionsPotongan = async (opts = {}) => {
     return (response?.data || [])
       .map(item => ({
         value: item.id?.toString(),
-        label: item.kode_barang + ' - ' + item.nama_item_barang || 'Unknown',
+        label: `${item.nama_item_barang || 'Unknown'} | ${item.kode_barang || ''}`.trim(),
         searchKey: item.kode_barang || item.nama_item_barang || 'Unknown',
         quantity: Number(item.quantity || 0),
         gudang_id: item.gudang?.id ?? item.gudang_id ?? null,

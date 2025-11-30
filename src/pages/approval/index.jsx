@@ -8,15 +8,21 @@ import { Eye, Check, X, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import CustomAlert from "@/components/modals/CustomAlert";
 import { itemBarangRequestService } from "@/services/itemBarangRequestService";
+import { salesOrderService } from "@/services/salesOrderService";
 import { useAlert } from "@/hooks/useAlert";
 import RejectionModal from "@/components/modals/RejectionModal";
 import SalesOrderLayout from "@/components/SalesOrderLayout";
+import { useAppContext } from "@/context/AppContext";
 
 export default function ApprovalPage() {
   const navigate = useNavigate();
   const { showAlert, AlertComponent } = useAlert();
-  const [activeTab, setActiveTab] = useState("item-barang-request");
+  const { hasPermission } = useAppContext();
+  const canUpdateItemRequest = hasPermission && (hasPermission('ITEM_BARANG_REQUEST_APPROVAL', 'Update') || hasPermission('APPROVAL', 'Update'));
+  const canUpdateSOApproval = hasPermission && (hasPermission('SALES_ORDER_APPROVAL', 'Update') || hasPermission('APPROVAL', 'Update'));
+  const [activeTab, setActiveTab] = useState(canUpdateItemRequest ? "item-barang-request" : "sales-order");
   const [itemRequests, setItemRequests] = useState([]);
+  const [soDeleteRequests, setSoDeleteRequests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [approvingId, setApprovingId] = useState(null); // Track which request is being approved
   const [rejectingId, setRejectingId] = useState(null); // Track which request is being rejected
@@ -32,6 +38,8 @@ export default function ApprovalPage() {
   useEffect(() => {
     if (activeTab === "item-barang-request") {
       loadItemRequests();
+    } else if (activeTab === "sales-order") {
+      loadSalesOrderDeleteRequests();
     }
   }, [activeTab]);
 
@@ -61,6 +69,32 @@ export default function ApprovalPage() {
         showAlert("Error", "Gagal memuat data request item barang", "error");
       }
       setItemRequests([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadSalesOrderDeleteRequests = async (showErrorAlert = true) => {
+    try {
+      setLoading(true);
+      const response = await salesOrderService.getPendingDeleteRequests();
+      const rows = Array.isArray(response?.data) ? response.data : (Array.isArray(response) ? response : []);
+      const transformed = rows.map(r => ({
+        id: r.id,
+        no_so: r.nomor_so || r.no_so,
+        pelanggan: r.pelanggan?.nama_pelanggan || r.pelanggan || 'N/A',
+        requested_by: r.delete_requested_by?.name || r.requested_by?.name || 'Unknown',
+        requested_at: r.delete_requested_at || r.requested_at,
+        reason: r.delete_reason || r.reason || '',
+        status: 'pending'
+      }));
+      setSoDeleteRequests(transformed);
+    } catch (error) {
+      console.error('❌ Error loading SO delete requests:', error);
+      if (showErrorAlert) {
+        showAlert("Error", "Gagal memuat permintaan hapus Sales Order", "error");
+      }
+      setSoDeleteRequests([]);
     } finally {
       setLoading(false);
     }
@@ -154,10 +188,16 @@ export default function ApprovalPage() {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-1">
-              <TabsTrigger value="item-barang-request">Item Barang Request</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2">
+              {canUpdateItemRequest && (
+                <TabsTrigger value="item-barang-request">Item Barang Request</TabsTrigger>
+              )}
+              {canUpdateSOApproval && (
+                <TabsTrigger value="sales-order">Sales Order</TabsTrigger>
+              )}
             </TabsList>
             
+            {canUpdateItemRequest && (
             <TabsContent value="item-barang-request" className="mt-6">
               <Card>
                 <CardHeader>
@@ -258,6 +298,73 @@ export default function ApprovalPage() {
                 </CardContent>
               </Card>
             </TabsContent>
+            )}
+
+            {canUpdateSOApproval && (
+            <TabsContent value="sales-order" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Permintaan Hapus Sales Order</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {loading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                      <span className="ml-2">Loading data...</span>
+                    </div>
+                  ) : soDeleteRequests.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">Tidak ada permintaan hapus Sales Order</div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gray-50">
+                            <TableHead className="font-semibold">No SO</TableHead>
+                            <TableHead className="font-semibold">Pelanggan</TableHead>
+                            <TableHead className="font-semibold">Diminta Oleh</TableHead>
+                            <TableHead className="font-semibold">Tanggal Request</TableHead>
+                            <TableHead className="font-semibold">Alasan</TableHead>
+                            <TableHead className="font-semibold">Status</TableHead>
+                            <TableHead className="font-semibold text-center">Aksi</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {soDeleteRequests.map((r) => (
+                            <TableRow key={r.id} className="hover:bg-gray-50">
+                              <TableCell className="font-medium">{r.no_so}</TableCell>
+                              <TableCell>{r.pelanggan}</TableCell>
+                              <TableCell>{r.requested_by}</TableCell>
+                              <TableCell>{formatDate(r.requested_at)}</TableCell>
+                              <TableCell className="max-w-xs truncate" title={r.reason}>{r.reason}</TableCell>
+                              <TableCell>{getStatusBadge(r.status)}</TableCell>
+                              <TableCell>
+                                <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                                  <Button size="sm" variant="outline" onClick={() => navigate(`/sales-order/view/${r.id}`)} title="Lihat SO">
+                                    <Eye className="w-4 h-4" />
+                                  </Button>
+                                  <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={async () => {
+                                    try { await salesOrderService.approveDelete(r.id); showAlert("Sukses", "Permintaan hapus disetujui", "success", () => loadSalesOrderDeleteRequests(false)); } catch (e) { showAlert("Error", "Gagal menyetujui", "error"); }
+                                  }} title="Setujui">
+                                    <Check className="w-4 h-4" />
+                                  </Button>
+                                  <Button size="sm" variant="destructive" onClick={() => {
+                                    setSelectedRequest(r);
+                                    setShowRejectionModal(true);
+                                  }} title="Tolak">
+                                    <X className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+            )}
           </Tabs>
         </CardContent>
       </Card>

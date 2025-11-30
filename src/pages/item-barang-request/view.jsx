@@ -15,6 +15,8 @@ export default function ViewItemBarangRequestPage() {
     const navigate = useNavigate();
     const location = useLocation();
     const { showAlert, AlertComponent } = useAlert();
+    const { hasPermission } = useAppContext();
+    const canRead = hasPermission && hasPermission('ITEM_BARANG_REQUEST', 'Read');
 
     const [request, setRequest] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -76,6 +78,19 @@ export default function ViewItemBarangRequestPage() {
         const config = urgencyConfig[urgency] || { variant: "secondary", label: urgency };
         return <Badge variant={config.variant}>{config.label}</Badge>;
     };
+
+    if (!canRead) {
+        return (
+            <PageLayout title="Detail Item Barang Request">
+                <div className="p-6">
+                    <Card>
+                        <CardContent className="p-6 text-center text-gray-600">Anda tidak memiliki akses Read untuk Item Barang Request</CardContent>
+                    </Card>
+                    <AlertComponent />
+                </div>
+            </PageLayout>
+        );
+    }
 
     if (loading) {
         return (
@@ -239,3 +254,4 @@ export default function ViewItemBarangRequestPage() {
         </PageLayout>
     );
 }
+import { useAppContext } from "@/context/AppContext";
