@@ -46,6 +46,7 @@ export default function AddWorkOrderPage() {
     gudang_id: '',
     pelanggan_id: '',
     sales_order_id: '',
+    estimate_done: new Date().toISOString().slice(0, 16), // Default to today with current time
     catatan: '',
     status: 'Pending',
     prioritas: 'MEDIUM',
@@ -905,6 +906,7 @@ export default function AddWorkOrderPage() {
         prioritas: workOrderData.prioritas,
         status: workOrderData.status,
         handover_method: workOrderData.handover_method,
+        estimate_done: workOrderData.estimate_done || null,
         catatan: workOrderData.catatan,
         // Add id_pelaksana field at the top level as required by API (array of all pelaksana IDs)
         id_pelaksana: (() => {
@@ -987,6 +989,7 @@ export default function AddWorkOrderPage() {
         prioritas: workOrderData.prioritas,
         status: workOrderData.status,
         handover_method: workOrderData.handover_method,
+        estimate_done: workOrderData.estimate_done || null,
         catatan: workOrderData.catatan,
         id_pelaksana: (() => {
           const allPelaksanaIds = [];
@@ -999,10 +1002,6 @@ export default function AddWorkOrderPage() {
           });
           return allPelaksanaIds.length > 0 ? allPelaksanaIds : null;
         })(),
-        prioritas: workOrderData.prioritas,
-        handover_method: workOrderData.handover_method,
-        catatan: workOrderData.catatan,
-        status: workOrderData.status,
         items: workOrderItems.map((item, index) => ({
           wo_item_unique_id: existingWoItemIds[index] || `WOI-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
           sales_order_item_id: item.sales_order_item_id,
@@ -1113,6 +1112,17 @@ export default function AddWorkOrderPage() {
     if (!workOrderData.nomor_wo || !workOrderData.gudang_id || !workOrderData.pelanggan_id || !workOrderData.sales_order_id) {
       showAlert('Error', 'Mohon lengkapi data Work Order', 'error');
       return;
+    }
+
+    // Validasi estimate_done harus lebih besar dari current date time
+    if (workOrderData.estimate_done) {
+      const estimateDoneDate = new Date(workOrderData.estimate_done);
+      const currentDate = new Date();
+      
+      if (estimateDoneDate <= currentDate) {
+        showAlert('Error', 'Estimate Done harus lebih besar dari tanggal dan waktu saat ini', 'error');
+        return;
+      }
     }
 
     // Validasi pelaksana - cek kelengkapan data pelaksana sesuai quantity
@@ -1327,7 +1337,18 @@ export default function AddWorkOrderPage() {
                 </div>
               </div>
               
-              <div className="md:col-span-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Perkiraan Selesai
+                </label>
+                <Input
+                  type="datetime-local"
+                  value={workOrderData.estimate_done}
+                  onChange={(e) => setWorkOrderData({...workOrderData, estimate_done: e.target.value})}
+                />
+              </div>
+              
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Catatan
                 </label>
