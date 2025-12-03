@@ -76,7 +76,6 @@ export default function AddSalesOrderPage() {
           jenisBarang,
           bentukBarang,
           gradeBarang,
-          units,
           soNumber
         ] = await Promise.all([
           getTermOptions(),
@@ -84,7 +83,6 @@ export default function AddSalesOrderPage() {
           getJenisBarangOptions(),
           getBentukBarangOptions(),
           getGradeBarangOptions(),
-          getUnitOptions(),
           documentSequenceService.generateSONumber()
         ]);
 
@@ -93,7 +91,7 @@ export default function AddSalesOrderPage() {
         setItemTypeOptions(jenisBarang);
         setItemShapeOptions(bentukBarang);
         setItemGradeOptions(gradeBarang);
-        setUnitOptions(units);
+        // Unit options akan dimuat oleh useEffect berdasarkan itemCutType
         
         // Set generated SO number
         setSoNumber(soNumber);
@@ -107,7 +105,7 @@ export default function AddSalesOrderPage() {
         setLoadingItemType(false);
         setLoadingItemShape(false);
         setLoadingItemGrade(false);
-        setLoadingUnit(false);
+        // loadingUnit akan dihandle oleh useEffect untuk unit options
       }
     };
 
@@ -141,6 +139,39 @@ export default function AddSalesOrderPage() {
     { value: "potongan", label: "Potongan" },
     { value: "utuh", label: "Utuh" }
   ];
+
+  // Load unit options when jenis potongan changes
+  useEffect(() => {
+    const loadUnitOptions = async () => {
+      if (!itemCutType) return; // Skip if itemCutType is not set yet
+      
+      try {
+        setLoadingUnit(true);
+        const units = await getUnitOptions(itemCutType);
+        setUnitOptions(units);
+        
+        // Reset itemUnit jika satuan yang dipilih tidak ada dalam options baru
+        const currentUnitExists = units.some(opt => opt.value === itemUnit);
+        if (!currentUnitExists) {
+          if (units.length > 0) {
+            // Set ke satuan pertama yang tersedia
+            setItemUnit(units[0].value);
+          } else {
+            // Reset jika tidak ada satuan yang tersedia
+            setItemUnit("");
+          }
+        }
+      } catch (error) {
+        console.error('Error loading unit options:', error);
+        showAlert('Error', 'Gagal memuat data satuan', 'error');
+      } finally {
+        setLoadingUnit(false);
+      }
+    };
+
+    loadUnitOptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itemCutType]);
 
   // Modal state
   const [shapeModalOpen, setShapeModalOpen] = useState(false);
