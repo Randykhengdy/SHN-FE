@@ -998,6 +998,17 @@ export default function AddSalesOrderPage() {
             </div>
           <div>
             <SearchSelect
+              label="Jenis Potongan"
+              placeholder="Pilih Jenis Potongan"
+              searchPlaceholder="Cari jenis potongan..."
+              value={itemCutType}
+              onValueChange={setItemCutType}
+              options={cutTypeOptions}
+              required
+            />
+          </div>
+          <div>
+            <SearchSelect
               label="Satuan"
               placeholder="Pilih Satuan"
               searchPlaceholder="Cari satuan..."
@@ -1005,17 +1016,6 @@ export default function AddSalesOrderPage() {
               onValueChange={setItemUnit}
               options={unitOptions}
               loading={loadingUnit}
-              required
-            />
-          </div>
-          <div>
-            <SearchSelect
-              label="Jenis Potongan"
-              placeholder="Pilih Jenis Potongan"
-              searchPlaceholder="Cari jenis potongan..."
-              value={itemCutType}
-              onValueChange={setItemCutType}
-              options={cutTypeOptions}
               required
             />
           </div>
