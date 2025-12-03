@@ -170,11 +170,16 @@ export const getTermOptions = async () => {
   }, 'TermService');
 };
 
-// Fetch Satuan options from static API
-export const getUnitOptions = async () => {
+// Fetch Satuan options from API with optional jenis_potongan filter
+export const getUnitOptions = async (jenisPotongan = null) => {
   checkMemoryUsage();
   return await safeApiCall(async () => {
-    const response = await request('/static/satuan', { method: 'GET' });
+    let url = '/static/satuan';
+    if (jenisPotongan) {
+      const queryParams = new URLSearchParams({ jenis_potongan: jenisPotongan });
+      url = `${url}?${queryParams.toString()}`;
+    }
+    const response = await request(url, { method: 'GET' });
     return response.data.map(item => ({
       value: item.id?.toString() || item.kode?.toString(),
       label: item.nama,
