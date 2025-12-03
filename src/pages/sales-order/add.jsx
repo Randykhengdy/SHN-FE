@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, ArrowLeft, Calendar, Trash2, Printer } from "lucide-react";
+import { Plus, ArrowLeft, Calendar, Trash2, Printer, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -173,8 +173,20 @@ export default function AddSalesOrderPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemCutType]);
 
+  // Reset panjang, lebar, dan tebal ketika jenis potongan berubah menjadi "utuh"
+  useEffect(() => {
+    if (itemCutType === "utuh") {
+      setItemLength("");
+      setItemWidth("");
+      setItemDiameter("");
+    }
+  }, [itemCutType]);
+
   // Modal state
   const [shapeModalOpen, setShapeModalOpen] = useState(false);
+  const [groupItemModalOpen, setGroupItemModalOpen] = useState(false);
+  const [groupItemOptions, setGroupItemOptions] = useState([]);
+  const [loadingGroupItem, setLoadingGroupItem] = useState(false);
 
   // Calculated values
   const [itemThickness, setItemThickness] = useState("- mm");
@@ -358,21 +370,24 @@ export default function AddSalesOrderPage() {
   const handleAddItem = () => {
     try {
       // Validasi field wajib
-      if (!itemType || !selectedShape || !itemGrade || !itemPrice || !itemQty || !itemLength) {
+      // Skip validasi panjang jika jenis potongan adalah "utuh"
+      if (!itemType || !selectedShape || !itemGrade || !itemPrice || !itemQty || (!itemLength && itemCutType !== "utuh")) {
         showAlert("Peringatan", "Mohon lengkapi data item yang wajib (*)", "warning");
         return;
       }
 
-      // Validasi berdasarkan dimensi bentuk barang
-      if (selectedShape.dimensi === "1D") {
-        if (!itemLength || !itemDiameter) {
-          showAlert("Peringatan", "Mohon isi panjang dan tebal untuk bentuk 1D", "warning");
-          return;
-        }
-      } else if (selectedShape.dimensi === "2D") {
-        if (!itemLength || !itemWidth || !itemDiameter) {
-          showAlert("Peringatan", "Mohon isi panjang, lebar, dan tebal untuk bentuk 2D", "warning");
-          return;
+      // Validasi berdasarkan dimensi bentuk barang (skip jika jenis potongan adalah "utuh")
+      if (itemCutType !== "utuh") {
+        if (selectedShape.dimensi === "1D") {
+          if (!itemLength || !itemDiameter) {
+            showAlert("Peringatan", "Mohon isi panjang dan tebal untuk bentuk 1D", "warning");
+            return;
+          }
+        } else if (selectedShape.dimensi === "2D") {
+          if (!itemLength || !itemWidth || !itemDiameter) {
+            showAlert("Peringatan", "Mohon isi panjang, lebar, dan tebal untuk bentuk 2D", "warning");
+            return;
+          }
         }
       }
 
@@ -388,7 +403,9 @@ export default function AddSalesOrderPage() {
       }
 
       let dimensiString = "";
-      if (selectedShape.dimensi === "1D") {
+      if (itemCutType === "utuh") {
+        dimensiString = "-"; // Untuk jenis potongan "utuh", tidak perlu dimensi
+      } else if (selectedShape.dimensi === "1D") {
         dimensiString = `${itemLength} x ${itemDiameter}`; // 1D: panjang x tebal
       } else {
         dimensiString = `${itemLength} x ${itemWidth} x ${itemDiameter}`; // 2D: panjang x lebar x tebal
@@ -797,6 +814,44 @@ export default function AddSalesOrderPage() {
     }
   };
 
+  // Handle open group item modal
+  const handleOpenGroupItemModal = async () => {
+    // Validasi field yang diperlukan
+    if (!itemType || !selectedShape || !itemGrade) {
+      showAlert("Peringatan", "Mohon pilih Jenis Barang, Bentuk Barang, dan Grade Barang terlebih dahulu", "warning");
+      return;
+    }
+
+    try {
+      setLoadingGroupItem(true);
+      const queryParams = new URLSearchParams({
+        jenis_barang_id: itemType,
+        bentuk_barang_id: selectedShape.id,
+        grade_barang_id: itemGrade
+      });
+      const response = await request(`/item-barang/group?${queryParams.toString()}`, { method: 'GET' });
+      console.log('Group item response:', response);
+      const groupItems = Array.isArray(response.data) ? response.data : [];
+      console.log('Group items to set:', groupItems);
+      setGroupItemOptions(groupItems);
+      setGroupItemModalOpen(true);
+    } catch (error) {
+      console.error('Error loading group item:', error);
+      showAlert('Error', 'Gagal memuat data group item barang', 'error');
+    } finally {
+      setLoadingGroupItem(false);
+    }
+  };
+
+  // Handle select group item
+  const handleSelectGroupItem = (groupItem) => {
+    setItemLength(groupItem.panjang?.toString() || "");
+    setItemWidth(groupItem.lebar?.toString() || "");
+    setItemDiameter(groupItem.tebal?.toString() || "");
+    setGroupItemModalOpen(false);
+    showAlert("Sukses", "Dimensi berhasil diisi dari group item", "success");
+  };
+
   const shapeColumns = [
     { key: 'id', label: 'ID' },
     { key: 'kode', label: 'Kode' },
@@ -1039,27 +1094,39 @@ export default function AddSalesOrderPage() {
             />
           </div>
           <div>
-            <SearchSelect
-              label="Satuan"
-              placeholder="Pilih Satuan"
-              searchPlaceholder="Cari satuan..."
-              value={itemUnit}
-              onValueChange={setItemUnit}
-              options={unitOptions}
-              loading={loadingUnit}
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="itemWeight">Timbangan (kg)</Label>
-            <Input
-              id="itemWeight"
-              type="number"
-              step="0.01"
-              value={itemWeight}
-              onChange={(e) => setItemWeight(e.target.value)}
-              placeholder="0.00"
-            />
+            <Label htmlFor="itemUnit">Satuan</Label>
+            <div className="flex gap-2 items-end">
+              <div className={itemCutType === "utuh" ? "flex-[4]" : "flex-1"}>
+                <SearchSelect
+                  label=""
+                  placeholder="Pilih Satuan"
+                  searchPlaceholder="Cari satuan..."
+                  value={itemUnit}
+                  onValueChange={setItemUnit}
+                  options={unitOptions}
+                  loading={loadingUnit}
+                  required
+                />
+              </div>
+              {itemCutType === "utuh" && (
+                <div className="flex-[1]">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleOpenGroupItemModal}
+                    disabled={loadingGroupItem || !itemType || !selectedShape || !itemGrade}
+                    className="w-full h-10"
+                    title="Pilih Group Item Barang"
+                  >
+                    {loadingGroupItem ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                    ) : (
+                      <Package className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
 
             {/* Row 3: Panjang, Lebar, Tebal */}
@@ -1072,7 +1139,8 @@ export default function AddSalesOrderPage() {
                 value={itemLength}
                 onChange={(e) => setItemLength(e.target.value)}
                 placeholder="0.00"
-                required
+                disabled={itemCutType === "utuh"}
+                required={itemCutType !== "utuh"}
               />
             </div>
             <div>
@@ -1084,12 +1152,12 @@ export default function AddSalesOrderPage() {
                 value={itemWidth}
                 onChange={(e) => setItemWidth(e.target.value)}
                 placeholder="0.00"
-                disabled={selectedShape?.dimensi === "1D"}
-                required={selectedShape?.dimensi === "2D"}
+                disabled={itemCutType === "utuh" || selectedShape?.dimensi === "1D"}
+                required={itemCutType !== "utuh" && selectedShape?.dimensi === "2D"}
               />
             </div>
             <div>
-              <Label htmlFor="itemDiameter">Tebal (mm) {selectedShape?.dimensi === "2D" ? "*" : ""}</Label>
+              <Label htmlFor="itemDiameter">Tebal (mm) {selectedShape?.dimensi === "2D" && itemCutType !== "utuh" ? "*" : ""}</Label>
               <Input
                 id="itemDiameter"
                 type="number"
@@ -1097,11 +1165,23 @@ export default function AddSalesOrderPage() {
                 value={itemDiameter}
                 onChange={(e) => setItemDiameter(e.target.value)}
                 placeholder="0.00"
-                required={selectedShape?.dimensi === "2D"}
+                disabled={itemCutType === "utuh"}
+                required={itemCutType !== "utuh" && selectedShape?.dimensi === "2D"}
               />
             </div>
 
-            {/* Row 4: Harga, Diskon, Empty */}
+            {/* Row 4: Timbangan, Harga, Diskon */}
+            <div>
+              <Label htmlFor="itemWeight">Timbangan (kg)</Label>
+              <Input
+                id="itemWeight"
+                type="number"
+                step="0.01"
+                value={itemWeight}
+                onChange={(e) => setItemWeight(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
             <div>
               <Label htmlFor="itemPrice">Harga (Rp/m²)</Label>
               <Input
@@ -1125,7 +1205,6 @@ export default function AddSalesOrderPage() {
                 placeholder="0"
               />
             </div>
-            <div></div> {/* Empty cell untuk melengkapi 3 kolom */}
           </div>
 
           {/* Calculated Values */}
@@ -1290,6 +1369,45 @@ export default function AddSalesOrderPage() {
         columns={shapeColumns}
         title="Pilih Bentuk Barang"
         searchPlaceholder="Cari bentuk barang..."
+        selectButtonText="Pilih"
+      />
+
+      {/* Data Table Modal for Group Item Selection */}
+      <DataTableModal
+        open={groupItemModalOpen}
+        onOpenChange={setGroupItemModalOpen}
+        onItemSelect={handleSelectGroupItem}
+        data={groupItemOptions}
+        columns={[
+          { key: 'id', label: 'ID' },
+          { 
+            key: 'panjang', 
+            label: 'Panjang (mm)',
+            render: (value) => value?.toLocaleString('id-ID') || '-'
+          },
+          { 
+            key: 'lebar', 
+            label: 'Lebar (mm)',
+            render: (value) => value?.toLocaleString('id-ID') || '-'
+          },
+          { 
+            key: 'tebal', 
+            label: 'Tebal (mm)',
+            render: (value) => value?.toLocaleString('id-ID') || '-'
+          },
+          { 
+            key: 'quantity_utuh', 
+            label: 'Qty Utuh',
+            render: (value) => value?.toLocaleString('id-ID') || '-'
+          },
+          { 
+            key: 'quantity_potongan', 
+            label: 'Qty Potongan',
+            render: (value) => value?.toLocaleString('id-ID') || '-'
+          }
+        ]}
+        title="Pilih Group Item Barang"
+        searchPlaceholder="Cari group item..."
         selectButtonText="Pilih"
       />
 
