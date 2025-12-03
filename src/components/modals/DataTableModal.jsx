@@ -27,10 +27,17 @@ const DataTableModal = ({
   // Filter data based on search query
   const filteredData = data.filter(item => {
     try {
+      // If no search query, show all data
+      if (!searchQuery || searchQuery.trim() === '') {
+        return true;
+      }
+      
       return columns.some(column => {
         const value = item[column.key];
-        if (value && typeof value === 'string') {
-          return value.toLowerCase().includes(searchQuery.toLowerCase());
+        if (value !== null && value !== undefined) {
+          // Convert value to string for searching (handles numbers, strings, etc.)
+          const valueStr = String(value).toLowerCase();
+          return valueStr.includes(searchQuery.toLowerCase());
         }
         return false;
       });
