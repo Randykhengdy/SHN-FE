@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, ArrowLeft, Calendar, Trash2, Printer, Package } from "lucide-react";
+import { Plus, ArrowLeft, Calendar, Trash2, Printer, Package, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import CustomerInfoTabs from "@/components/CustomerInfoTabs";
 import DataTableModal from "@/components/modals/DataTableModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import SearchSelect from "@/components/ui/search-select";
 import { 
   getTermOptions, 
@@ -187,6 +193,27 @@ export default function AddSalesOrderPage() {
   const [groupItemModalOpen, setGroupItemModalOpen] = useState(false);
   const [groupItemOptions, setGroupItemOptions] = useState([]);
   const [loadingGroupItem, setLoadingGroupItem] = useState(false);
+  
+  // Filter state for group item
+  const [groupItemFilters, setGroupItemFilters] = useState({
+    panjang: "",
+    lebar: "",
+    tebal: "",
+    min_quantity_utuh: "",
+    max_quantity_utuh: "",
+    min_quantity_potongan: "",
+    max_quantity_potongan: ""
+  });
+  
+  // Pagination state for group item
+  const [groupItemPagination, setGroupItemPagination] = useState({
+    current_page: 1,
+    per_page: 10,
+    total: 0,
+    last_page: 1
+  });
+  
+  const [showGroupItemFilters, setShowGroupItemFilters] = useState(false);
 
   // Calculated values
   const [itemThickness, setItemThickness] = useState("- mm");
@@ -814,11 +841,13 @@ export default function AddSalesOrderPage() {
     }
   };
 
-  // Handle open group item modal
-  const handleOpenGroupItemModal = async () => {
+  // Load group item data with filters and pagination
+  const loadGroupItemData = async (page = 1, resetFilters = false) => {
     // Validasi field yang diperlukan
     if (!itemType || !selectedShape || !itemGrade) {
-      showAlert("Peringatan", "Mohon pilih Jenis Barang, Bentuk Barang, dan Grade Barang terlebih dahulu", "warning");
+      if (!resetFilters) {
+        showAlert("Peringatan", "Mohon pilih Jenis Barang, Bentuk Barang, dan Grade Barang terlebih dahulu", "warning");
+      }
       return;
     }
 
@@ -827,19 +856,101 @@ export default function AddSalesOrderPage() {
       const queryParams = new URLSearchParams({
         jenis_barang_id: itemType,
         bentuk_barang_id: selectedShape.id,
-        grade_barang_id: itemGrade
+        grade_barang_id: itemGrade,
+        per_page: groupItemPagination.per_page,
+        page: page
       });
+      
+      // Set min_quantity_utuh default to 1, or use filter value if provided
+      const minQtyUtuh = groupItemFilters.min_quantity_utuh || '1';
+      queryParams.append('min_quantity_utuh', minQtyUtuh);
+      
+      // Add filters if they have values
+      if (groupItemFilters.panjang) queryParams.append('panjang', groupItemFilters.panjang);
+      if (groupItemFilters.lebar) queryParams.append('lebar', groupItemFilters.lebar);
+      if (groupItemFilters.tebal) queryParams.append('tebal', groupItemFilters.tebal);
+      if (groupItemFilters.max_quantity_utuh) queryParams.append('max_quantity_utuh', groupItemFilters.max_quantity_utuh);
+      if (groupItemFilters.min_quantity_potongan) queryParams.append('min_quantity_potongan', groupItemFilters.min_quantity_potongan);
+      if (groupItemFilters.max_quantity_potongan) queryParams.append('max_quantity_potongan', groupItemFilters.max_quantity_potongan);
+      
       const response = await request(`/item-barang/group?${queryParams.toString()}`, { method: 'GET' });
       console.log('Group item response:', response);
       const groupItems = Array.isArray(response.data) ? response.data : [];
       console.log('Group items to set:', groupItems);
       setGroupItemOptions(groupItems);
-      setGroupItemModalOpen(true);
+      
+      // Update pagination
+      if (response.pagination) {
+        setGroupItemPagination({
+          current_page: response.pagination.current_page || page,
+          per_page: response.pagination.per_page || groupItemPagination.per_page,
+          total: response.pagination.total || 0,
+          last_page: response.pagination.last_page || 1
+        });
+      }
     } catch (error) {
       console.error('Error loading group item:', error);
       showAlert('Error', 'Gagal memuat data group item barang', 'error');
     } finally {
       setLoadingGroupItem(false);
+    }
+  };
+
+  // Handle open group item modal
+  const handleOpenGroupItemModal = async () => {
+    // Reset filters and pagination
+    setGroupItemFilters({
+      panjang: "",
+      lebar: "",
+      tebal: "",
+      min_quantity_utuh: "",
+      max_quantity_utuh: "",
+      min_quantity_potongan: "",
+      max_quantity_potongan: ""
+    });
+    setGroupItemPagination({
+      current_page: 1,
+      per_page: 10,
+      total: 0,
+      last_page: 1
+    });
+    setShowGroupItemFilters(false);
+    
+    await loadGroupItemData(1, true);
+    setGroupItemModalOpen(true);
+  };
+  
+  // Handle filter change
+  const handleFilterChange = (key, value) => {
+    setGroupItemFilters(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+  
+  // Handle apply filters
+  const handleApplyFilters = () => {
+    loadGroupItemData(1, true);
+  };
+  
+  // Handle reset filters
+  const handleResetFilters = () => {
+    setGroupItemFilters({
+      panjang: "",
+      lebar: "",
+      tebal: "",
+      min_quantity_utuh: "",
+      max_quantity_utuh: "",
+      min_quantity_potongan: "",
+      max_quantity_potongan: ""
+    });
+    loadGroupItemData(1, true);
+  };
+  
+  // Handle pagination
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= groupItemPagination.last_page) {
+      loadGroupItemData(newPage, true);
     }
   };
 
@@ -1372,44 +1483,214 @@ export default function AddSalesOrderPage() {
         selectButtonText="Pilih"
       />
 
-      {/* Data Table Modal for Group Item Selection */}
-      <DataTableModal
-        open={groupItemModalOpen}
-        onOpenChange={setGroupItemModalOpen}
-        onItemSelect={handleSelectGroupItem}
-        data={groupItemOptions}
-        columns={[
-          { key: 'id', label: 'ID' },
-          { 
-            key: 'panjang', 
-            label: 'Panjang (mm)',
-            render: (value) => value?.toLocaleString('id-ID') || '-'
-          },
-          { 
-            key: 'lebar', 
-            label: 'Lebar (mm)',
-            render: (value) => value?.toLocaleString('id-ID') || '-'
-          },
-          { 
-            key: 'tebal', 
-            label: 'Tebal (mm)',
-            render: (value) => value?.toLocaleString('id-ID') || '-'
-          },
-          { 
-            key: 'quantity_utuh', 
-            label: 'Qty Utuh',
-            render: (value) => value?.toLocaleString('id-ID') || '-'
-          },
-          { 
-            key: 'quantity_potongan', 
-            label: 'Qty Potongan',
-            render: (value) => value?.toLocaleString('id-ID') || '-'
-          }
-        ]}
-        title="Pilih Group Item Barang"
-        searchPlaceholder="Cari group item..."
-        selectButtonText="Pilih"
-      />
+      {/* Custom Modal for Group Item Selection with Filter and Pagination */}
+      <Dialog open={groupItemModalOpen} onOpenChange={setGroupItemModalOpen}>
+        <DialogContent className="modal-content-standard max-h-[85vh] flex flex-col p-0">
+          <DialogHeader className="modal-header-standard flex-shrink-0 px-6 pt-6 pb-4">
+            <DialogTitle className="page-title">Pilih Item</DialogTitle>
+          </DialogHeader>
+
+          <div className="flex flex-col flex-1 min-h-0 px-6 pb-6">
+            {/* Filter Toggle Button */}
+            <div className="flex-shrink-0 mb-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowGroupItemFilters(!showGroupItemFilters)}
+                className="w-full justify-between"
+              >
+                <span className="flex items-center gap-2">
+                  <Filter className="w-4 h-4" />
+                  Filter
+                </span>
+                {showGroupItemFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </Button>
+            </div>
+
+            {/* Filter Form */}
+            {showGroupItemFilters && (
+              <Card className="card-standard mb-4 flex-shrink-0">
+                <CardContent className="p-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <Label htmlFor="filter-panjang">Panjang (mm)</Label>
+                      <Input
+                        id="filter-panjang"
+                        type="number"
+                        value={groupItemFilters.panjang}
+                        onChange={(e) => handleFilterChange('panjang', e.target.value)}
+                        placeholder="Panjang"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="filter-lebar">Lebar (mm)</Label>
+                      <Input
+                        id="filter-lebar"
+                        type="number"
+                        value={groupItemFilters.lebar}
+                        onChange={(e) => handleFilterChange('lebar', e.target.value)}
+                        placeholder="Lebar"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="filter-tebal">Tebal (mm)</Label>
+                      <Input
+                        id="filter-tebal"
+                        type="number"
+                        value={groupItemFilters.tebal}
+                        onChange={(e) => handleFilterChange('tebal', e.target.value)}
+                        placeholder="Tebal"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="filter-min-qty-utuh">Min Qty Utuh</Label>
+                      <Input
+                        id="filter-min-qty-utuh"
+                        type="number"
+                        value={groupItemFilters.min_quantity_utuh}
+                        onChange={(e) => handleFilterChange('min_quantity_utuh', e.target.value)}
+                        placeholder="Min"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="filter-max-qty-utuh">Max Qty Utuh</Label>
+                      <Input
+                        id="filter-max-qty-utuh"
+                        type="number"
+                        value={groupItemFilters.max_quantity_utuh}
+                        onChange={(e) => handleFilterChange('max_quantity_utuh', e.target.value)}
+                        placeholder="Max"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="filter-min-qty-potongan">Min Qty Potongan</Label>
+                      <Input
+                        id="filter-min-qty-potongan"
+                        type="number"
+                        value={groupItemFilters.min_quantity_potongan}
+                        onChange={(e) => handleFilterChange('min_quantity_potongan', e.target.value)}
+                        placeholder="Min"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="filter-max-qty-potongan">Max Qty Potongan</Label>
+                      <Input
+                        id="filter-max-qty-potongan"
+                        type="number"
+                        value={groupItemFilters.max_quantity_potongan}
+                        onChange={(e) => handleFilterChange('max_quantity_potongan', e.target.value)}
+                        placeholder="Max"
+                      />
+                    </div>
+                    <div className="flex items-end gap-2">
+                      <Button onClick={handleApplyFilters} className="flex-1">
+                        Terapkan
+                      </Button>
+                      <Button onClick={handleResetFilters} variant="outline" className="flex-1">
+                        Reset
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Table with scroll */}
+            <Card className="card-standard flex-1 min-h-0 flex flex-col border">
+              <CardContent className="p-0 flex-1 min-h-0 overflow-hidden flex flex-col">
+                <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                  <div 
+                    className="flex-1 overflow-y-auto overflow-x-auto relative"
+                    style={{ 
+                      scrollbarWidth: 'auto',
+                      scrollbarColor: '#cbd5e1 #f1f5f9'
+                    }}
+                  >
+                    <Table className="table-standard w-full">
+                      <TableHeader className="table-header-standard sticky top-0 bg-white z-10 border-b">
+                        <TableRow>
+                          <TableHead className="table-header-cell-standard">ID</TableHead>
+                          <TableHead className="table-header-cell-standard">Panjang (mm)</TableHead>
+                          <TableHead className="table-header-cell-standard">Lebar (mm)</TableHead>
+                          <TableHead className="table-header-cell-standard">Tebal (mm)</TableHead>
+                          <TableHead className="table-header-cell-standard">Qty Utuh</TableHead>
+                          <TableHead className="table-header-cell-standard">Qty Potongan</TableHead>
+                          <TableHead className="table-header-cell-standard text-center">Aksi</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {groupItemOptions.map((item, index) => (
+                          <TableRow key={item.id || index} className="hover:bg-gray-50">
+                            <TableCell className="table-cell-standard">{item.id}</TableCell>
+                            <TableCell className="table-cell-standard">{item.panjang?.toLocaleString('id-ID') || '-'}</TableCell>
+                            <TableCell className="table-cell-standard">{item.lebar?.toLocaleString('id-ID') || '-'}</TableCell>
+                            <TableCell className="table-cell-standard">{item.tebal?.toLocaleString('id-ID') || '-'}</TableCell>
+                            <TableCell className="table-cell-standard">{item.quantity_utuh?.toLocaleString('id-ID') || '-'}</TableCell>
+                            <TableCell className="table-cell-standard">{item.quantity_potongan?.toLocaleString('id-ID') || '-'}</TableCell>
+                            <TableCell className="table-cell-standard text-center">
+                              <Button
+                                size="sm"
+                                onClick={() => handleSelectGroupItem(item)}
+                                className="btn-primary"
+                              >
+                                Pilih
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {groupItemOptions.length === 0 && !loadingGroupItem && (
+                          <TableRow>
+                            <TableCell colSpan={7} className="table-cell-standard text-center text-gray-500 py-8">
+                              Tidak ada data
+                            </TableCell>
+                          </TableRow>
+                        )}
+                        {loadingGroupItem && (
+                          <TableRow>
+                            <TableCell colSpan={7} className="table-cell-standard text-center text-gray-500 py-8">
+                              Memuat data...
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Pagination */}
+            {groupItemPagination.total > 0 && (
+              <div className="flex-shrink-0 mt-4 flex items-center justify-between">
+                <div className="text-sm text-gray-600">
+                  Menampilkan {((groupItemPagination.current_page - 1) * groupItemPagination.per_page) + 1} - {Math.min(groupItemPagination.current_page * groupItemPagination.per_page, groupItemPagination.total)} dari {groupItemPagination.total} data
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(groupItemPagination.current_page - 1)}
+                    disabled={groupItemPagination.current_page === 1 || loadingGroupItem}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <div className="text-sm text-gray-600 px-2">
+                    Halaman {groupItemPagination.current_page} dari {groupItemPagination.last_page}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(groupItemPagination.current_page + 1)}
+                    disabled={groupItemPagination.current_page === groupItemPagination.last_page || loadingGroupItem}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Alert Modal Component */}
       <AlertComponent />
