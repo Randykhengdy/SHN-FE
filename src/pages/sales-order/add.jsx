@@ -469,7 +469,7 @@ export default function AddSalesOrderPage() {
     }).format(amount);
   };
 
-  // Function to get price label based on selected unit
+  // Function to get price label based on selected unit (for input field)
   const getPriceLabel = () => {
     const currentSatuan = unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit;
     const satuanLower = currentSatuan?.toLowerCase() || '';
@@ -496,6 +496,36 @@ export default function AddSalesOrderPage() {
         return 'Harga (Rp/m³)';
       default:
         return 'Harga (Rp/pcs)';
+    }
+  };
+
+  // Function to get price label for calculated values summary (simpler format)
+  const getPriceSummaryLabel = () => {
+    const currentSatuan = unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit;
+    const satuanLower = currentSatuan?.toLowerCase() || '';
+    
+    switch (satuanLower) {
+      case 'utuh':
+      case 'per unit':
+      case 'per pcs':
+        return 'Harga/pcs';
+      case 'kilogram':
+      case 'kg':
+        return 'Harga/kg';
+      case 'dimensi':
+      case 'per dimensi':
+      case 'per m²':
+      case 'm²':
+        // Check if shape is 1D or 2D
+        if (selectedShape?.dimensi === "1D") {
+          return 'Harga/m';
+        }
+        return 'Harga/m²';
+      case 'per m³':
+      case 'm³':
+        return 'Harga/m³';
+      default:
+        return 'Harga/pcs';
     }
   };
 
@@ -1464,7 +1494,7 @@ export default function AddSalesOrderPage() {
               <div className="font-medium text-green-600">{itemArea}</div>
             </div>
             <div>
-              <Label className="text-sm text-gray-600">Harga/m²</Label>
+              <Label className="text-sm text-gray-600">{getPriceSummaryLabel()}</Label>
               <div className="font-medium text-orange-600">{itemPricePerUnit}</div>
             </div>
             <div>
