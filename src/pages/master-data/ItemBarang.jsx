@@ -8,6 +8,9 @@ import {
   gudangService
 } from "@/services/master-data";
 
+// Module-level variable untuk menyimpan mapping dimensi bentuk barang
+let bentukBarangDimensiMap = {};
+
 export default function ItemBarangPage() {
   return (
     <MasterDataLayout
@@ -29,12 +32,60 @@ export default function ItemBarangPage() {
         }
       ]}
       fields={[
-        { name: "panjang", label: "Panjang", type: "number", step: 0.01, required: true },
-        { name: "lebar", label: "Lebar", type: "number", step: 0.01, required: true },
-        { name: "tebal", label: "Tebal", type: "number", step: 0.01, required: true },
         { name: "jenis_barang_id", label: "Jenis Barang", type: "select", optionsService: jenisBarangService, optionLabel: "nama_jenis", required: true },
-        { name: "bentuk_barang_id", label: "Bentuk Barang", type: "select", optionsService: bentukBarangService, optionLabel: "nama_bentuk", required: true },
+        { 
+          name: "bentuk_barang_id", 
+          label: "Bentuk Barang", 
+          type: "select", 
+          optionsLoader: async () => {
+            const response = await bentukBarangService.getAll();
+            const options = (response.data || []).map(item => ({
+              id: item.id,
+              label: item.nama_bentuk ? `${item.nama_bentuk} (${item.dimensi || 'N/A'})` : item.nama || 'Unknown',
+              value: item.id?.toString(),
+              dimensi: item.dimensi,
+              nama: item.nama_bentuk || item.nama
+            }));
+            // Simpan mapping dimensi di module-level variable untuk akses di showIf
+            bentukBarangDimensiMap = {};
+            options.forEach(opt => {
+              if (opt.id && opt.dimensi) {
+                bentukBarangDimensiMap[opt.id] = opt.dimensi;
+                bentukBarangDimensiMap[opt.value] = opt.dimensi;
+              }
+            });
+            return options;
+          },
+          optionLabel: "nama_bentuk", 
+          required: true,
+          onChangeForm: (form, val) => {
+            // Simpan dimensi di form state untuk digunakan oleh hidden
+            const dimensi = bentukBarangDimensiMap[val] || null;
+            const updatedForm = {
+              ...form,
+              _bentuk_barang_dimensi: dimensi
+            };
+            // Set lebar menjadi 0 jika dimensi adalah "1D"
+            if (dimensi === "1D") {
+              updatedForm.lebar = null;
+            }
+            return updatedForm;
+          }
+        },
         { name: "grade_barang_id", label: "Grade Barang", type: "select", optionsService: gradeBarangService, optionLabel: "nama", required: true },
+        { name: "panjang", label: "Panjang", type: "number", step: 0.01, required: true },
+        { 
+          name: "lebar", 
+          label: "Lebar", 
+          type: "number", 
+          step: 0.01, 
+          required: true,
+          hidden: (form) => {
+            // Sembunyikan jika dimensi adalah "1D" (tapi tetap render untuk tidak menggeser kolom)
+            return form._bentuk_barang_dimensi === "1D";
+          }
+        },
+        { name: "tebal", label: "Tebal", type: "number", step: 0.01, required: true },
         { name: "quantity", label: "Quantity", type: "number", step: 0.01, required: true },
         { name: "jenis_potongan", label: "Jenis Potongan", type: "select", options: [
           { value: "utuh", label: "Utuh" },

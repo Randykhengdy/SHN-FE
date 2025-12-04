@@ -114,6 +114,13 @@ export const beratJenisService = {
     return request("/berat-jenis/generate-from-item-barang-group", {
       method: "POST",
     });
+  },
+
+  async calculateWeight(data) {
+    return request("/berat-jenis/calculate-weight", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   }
 };
 
