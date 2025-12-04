@@ -145,6 +145,7 @@ export default function MasterFormModal({
       if (field.hideOnEdit) return;
       if (typeof field.mapFromEdit === 'function') {
         try {
+          // Panggil mapFromEdit tanpa side effects
           const mapped = field.mapFromEdit(editData);
           initialForm[field.name] = mapped !== undefined && mapped !== null ? String(mapped) : "";
         } catch (_) {

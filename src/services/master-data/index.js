@@ -11,5 +11,6 @@ export { pelaksanaService } from './pelaksanaService';
 export { pelangganService } from './pelangganService';
 export { supplierService } from './supplierService';
 export { roleService } from './roleService';
+export { beratJenisService } from './beratJenisService';
 export { default as termService } from './termService';
 export { default as unitService } from './unitService';
