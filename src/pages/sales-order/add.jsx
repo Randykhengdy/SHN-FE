@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import CustomerInfoTabs from "@/components/CustomerInfoTabs";
 import DataTableModal from "@/components/modals/DataTableModal";
 import {
@@ -30,6 +31,7 @@ import { API_ENDPOINTS } from "@/config/api";
 import SalesOrderLayout from "@/components/SalesOrderLayout";
 import { documentSequenceService } from "@/services/master-data/documentSequenceService";
 import { generateSalesOrderPrintContent, openPrintDialog } from "@/lib/printUtils";
+import { beratJenisService } from "@/services/master-data/beratJenisService";
 
 export default function AddSalesOrderPage() {
   const { showAlert, AlertComponent } = useAlert();
@@ -57,6 +59,7 @@ export default function AddSalesOrderPage() {
   const [loadingItemGrade, setLoadingItemGrade] = useState(false);
   const [loadingUnit, setLoadingUnit] = useState(false);
   const [printLoading, setPrintLoading] = useState(false);
+  const [loadingWeight, setLoadingWeight] = useState(false);
 
   // Customer Information
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -125,6 +128,7 @@ export default function AddSalesOrderPage() {
   const [termOfPayment, setTermOfPayment] = useState("cash");
   const [originWarehouse, setOriginWarehouse] = useState("");
   const [handoverMethod, setHandoverMethod] = useState("pickup");
+  const [includePPN, setIncludePPN] = useState(true);
 
   // Item Input Form
   const [itemLength, setItemLength] = useState("");
@@ -187,6 +191,88 @@ export default function AddSalesOrderPage() {
       setItemDiameter("");
     }
   }, [itemCutType]);
+
+  // Auto-calculate berat timbangan when required fields are filled
+  useEffect(() => {
+    // Validate and parse numeric values
+    const panjang = parseFloat(itemLength);
+    const lebar = parseFloat(itemWidth);
+    const tebal = parseFloat(itemDiameter);
+
+    // Check if all required fields are filled with valid numeric values
+    // For "utuh", dimensions should be filled from group item selection
+    const hasRequiredFields = 
+      itemType && 
+      selectedShape?.id && 
+      itemGrade && 
+      itemLength && 
+      !isNaN(panjang) && 
+      panjang > 0 &&
+      itemDiameter &&
+      !isNaN(tebal) &&
+      tebal >= 0;
+
+    // For 2D items, also need width with valid value
+    // For "utuh" items, dimensions come from group item, so we need to check them too
+    const hasAllFields = selectedShape?.dimensi === "1D" 
+      ? hasRequiredFields
+      : hasRequiredFields && itemWidth && !isNaN(lebar) && lebar > 0;
+
+    if (!hasAllFields) {
+      // Reset weight if required fields are missing
+      if (itemWeight && itemWeight !== "0") {
+        setItemWeight("");
+      }
+      return;
+    }
+
+    // Debounce the API call
+    const timeoutId = setTimeout(async () => {
+      try {
+        setLoadingWeight(true);
+        
+        const panjangCm = panjang / 10; // Convert mm to cm
+        const lebarCm = selectedShape.dimensi === "1D" 
+          ? null 
+          : (lebar / 10); // Convert mm to cm
+        const tebalCm = tebal / 10; // Convert mm to cm
+
+        const requestData = {
+          jenis_barang_id: parseInt(itemType),
+          bentuk_barang_id: parseInt(selectedShape.id),
+          grade_barang_id: parseInt(itemGrade),
+          panjang: panjangCm,
+          lebar: lebarCm,
+          tebal: tebalCm
+        };
+
+        const response = await beratJenisService.calculateWeight(requestData);
+        
+        if (response.success && response.data) {
+          const calculatedWeight = response.data.berat_kg || 0;
+          setItemWeight(calculatedWeight.toString());
+          
+          // Optionally show a success message if weight was found
+          if (response.data.berat_jenis_found && calculatedWeight > 0) {
+            console.log('Berat timbangan berhasil dihitung:', calculatedWeight, 'kg');
+          } else if (calculatedWeight === 0) {
+            console.log('Data berat jenis tidak ditemukan, berat di-set ke 0');
+          }
+        } else {
+          console.error('Error calculating weight:', response.message);
+          setItemWeight("0");
+        }
+      } catch (error) {
+        console.error('Error calculating weight:', error);
+        // Don't show error alert to avoid annoying user, just log it
+        // The weight field will remain empty or previous value
+      } finally {
+        setLoadingWeight(false);
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [itemType, selectedShape, itemGrade, itemLength, itemWidth, itemDiameter, itemCutType]);
 
   // Modal state
   const [shapeModalOpen, setShapeModalOpen] = useState(false);
@@ -315,7 +401,7 @@ export default function AddSalesOrderPage() {
             case 'utuh':
             case 'per unit':
             case 'per pcs':
-              priceDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/unit`;
+              priceDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/pcs`;
               break;
             case 'kilogram':
             case 'kg':
@@ -332,7 +418,7 @@ export default function AddSalesOrderPage() {
               priceDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/m³`;
               break;
             default:
-              priceDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/unit`;
+              priceDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/pcs`;
           }
         }
         setItemPricePerUnit(priceDisplay);
@@ -381,6 +467,36 @@ export default function AddSalesOrderPage() {
       currency: 'IDR',
       minimumFractionDigits: 0
     }).format(amount);
+  };
+
+  // Function to get price label based on selected unit
+  const getPriceLabel = () => {
+    const currentSatuan = unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit;
+    const satuanLower = currentSatuan?.toLowerCase() || '';
+    
+    switch (satuanLower) {
+      case 'utuh':
+      case 'per unit':
+      case 'per pcs':
+        return 'Harga (Rp/pcs)';
+      case 'kilogram':
+      case 'kg':
+        return 'Harga (Rp/kg)';
+      case 'dimensi':
+      case 'per dimensi':
+      case 'per m²':
+      case 'm²':
+        // Check if shape is 1D or 2D
+        if (selectedShape?.dimensi === "1D") {
+          return 'Harga (Rp/m)';
+        }
+        return 'Harga (Rp/m²)';
+      case 'per m³':
+      case 'm³':
+        return 'Harga (Rp/m³)';
+      default:
+        return 'Harga (Rp/pcs)';
+    }
   };
 
   const handleCustomerSelect = (customer) => {
@@ -527,7 +643,7 @@ export default function AddSalesOrderPage() {
         pelanggan_id: selectedCustomer?.id || 1,
         subtotal: subtotal || 0,
         total_diskon: totalDiscount || 0,
-        ppn_percent: 11.0,
+        ppn_percent: includePPN ? 11.0 : 0,
         ppn_amount: ppn || 0,
         total_harga_so: totalHargaSO || 0,
         items: items.map(item => ({
@@ -997,7 +1113,7 @@ export default function AddSalesOrderPage() {
     }
   }, 0);
 
-  const ppn = (subtotal - totalDiscount) * 0.11;
+  const ppn = includePPN ? (subtotal - totalDiscount) * 0.11 : 0;
   const totalHargaSO = subtotal - totalDiscount + ppn;
 
   return (
@@ -1268,7 +1384,9 @@ export default function AddSalesOrderPage() {
               />
             </div>
             <div>
-              <Label htmlFor="itemDiameter">Tebal (mm) {selectedShape?.dimensi === "2D" && itemCutType !== "utuh" ? "*" : ""}</Label>
+              <Label htmlFor="itemDiameter">
+                {selectedShape?.dimensi === "1D" ? "Tebal/Diameter/dan lain-lain (mm)" : "Tebal (mm)"} {selectedShape?.dimensi === "2D" && itemCutType !== "utuh" ? "*" : ""}
+              </Label>
               <Input
                 id="itemDiameter"
                 type="number"
@@ -1283,18 +1401,35 @@ export default function AddSalesOrderPage() {
 
             {/* Row 4: Timbangan, Harga, Diskon */}
             <div>
-              <Label htmlFor="itemWeight">Timbangan (kg)</Label>
-              <Input
-                id="itemWeight"
-                type="number"
-                step="0.01"
-                value={itemWeight}
-                onChange={(e) => setItemWeight(e.target.value)}
-                placeholder="0.00"
-              />
+              <Label htmlFor="itemWeight">
+                Timbangan (kg)
+                {loadingWeight && (
+                  <span className="ml-2 text-xs text-gray-500">(Menghitung...)</span>
+                )}
+              </Label>
+              <div className="relative">
+                <Input
+                  id="itemWeight"
+                  type="number"
+                  step="0.01"
+                  value={itemWeight}
+                  onChange={(e) => setItemWeight(e.target.value)}
+                  placeholder="0.00"
+                  disabled={loadingWeight}
+                  className={loadingWeight ? "opacity-60 cursor-wait" : ""}
+                />
+                {loadingWeight && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Berat timbangan akan otomatis terisi saat semua field terisi
+              </p>
             </div>
             <div>
-              <Label htmlFor="itemPrice">Harga (Rp/m²)</Label>
+              <Label htmlFor="itemPrice">{getPriceLabel()}</Label>
               <Input
                 id="itemPrice"
                 type="number"
@@ -1427,6 +1562,18 @@ export default function AddSalesOrderPage() {
       {/* Financial Summary */}
       <Card className="mb-6 bg-green-50 border-green-200">
         <CardContent className="pt-6">
+          <div className="mb-4 flex items-center justify-between pb-4 border-b">
+            <div className="flex items-center gap-3">
+              <Label htmlFor="includePPN" className="text-sm font-medium text-gray-700 cursor-pointer">
+                Sertakan PPN (11%)
+              </Label>
+              <Switch
+                id="includePPN"
+                checked={includePPN}
+                onCheckedChange={setIncludePPN}
+              />
+            </div>
+          </div>
           <div className="grid grid-cols-4 gap-4">
             <div>
               <Label className="text-sm text-gray-600">Subtotal</Label>
