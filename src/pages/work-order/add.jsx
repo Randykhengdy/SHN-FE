@@ -11,6 +11,7 @@ import { useAlert } from '@/hooks/useAlert';
 import PageLayout from '@/components/PageLayout';
 import { workOrderService } from '@/services/workOrderService';
 import { openPrintDialog, generateWOPlanningPrintContent } from '@/lib/printUtils';
+import { workOrderPlanningService } from '@/services/workOrderPlanningService';
 import { request } from '@/lib/request';
 import { Table, TableHead, TableBody, TableRow, TableCell, TableHeader } from '@/components/Table';
 import PelaksanaModal from '@/components/modals/PelaksanaModal';
@@ -109,6 +110,15 @@ export default function AddWorkOrderPage() {
   const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
   const [confirmSaveMessage, setConfirmSaveMessage] = useState('');
   const [includeImages, setIncludeImages] = useState(true);
+  const [validationOpen, setValidationOpen] = useState(false);
+  const [validationMismatches, setValidationMismatches] = useState([]);
+  const [catatanError, setCatatanError] = useState(false);
+  const [catatanRequiredOpen, setCatatanRequiredOpen] = useState(false);
+
+  const getSOItemOrderNumber = (soItemId) => {
+    const idx = workOrderItems.findIndex(i => String(i.sales_order_item_id) === String(soItemId));
+    return idx !== -1 ? (idx + 1) : soItemId;
+  };
 
   // UI State for pelaksana modal
   const [pelaksanaModalOpen, setPelaksanaModalOpen] = useState(false);
@@ -1172,6 +1182,34 @@ export default function AddWorkOrderPage() {
       }
     }
 
+    // Pre-save server validation against Sales Order coverage
+    try {
+      const validatePayload = {
+        id_sales_order: parseInt(workOrderData.sales_order_id),
+        items: workOrderItems.map(item => ({
+          sales_order_item_id: item.sales_order_item_id,
+          quantity: parseInt(item.qty) || 0
+        }))
+      };
+      const validateResp = await workOrderPlanningService.validateSoCoverage(validatePayload);
+      const data = validateResp?.data || validateResp;
+      const isValid = data?.valid ?? data?.data?.valid ?? false;
+      const mismatches = data?.mismatches || data?.data?.mismatches || [];
+      if (!isValid) {
+        setValidationMismatches(Array.isArray(mismatches) ? mismatches : []);
+        if (!workOrderData.catatan || !workOrderData.catatan.trim()) {
+          setCatatanError(true);
+          setCatatanRequiredOpen(true);
+          return;
+        }
+        setValidationOpen(true);
+        return;
+      }
+    } catch (err) {
+      showAlert('Error', 'Gagal melakukan validasi WO terhadap SO', 'error');
+      return;
+    }
+
     const msg = [
       `Nomor WO: ${workOrderData.nomor_wo}`,
       `Tanggal WO: ${workOrderData.tanggal_wo}`,
@@ -1334,8 +1372,15 @@ export default function AddWorkOrderPage() {
                 <Input
                   placeholder="Catatan tambahan..."
                   value={workOrderData.catatan}
-                  onChange={(e) => setWorkOrderData({...workOrderData, catatan: e.target.value})}
+                  onChange={(e) => {
+                    setWorkOrderData({...workOrderData, catatan: e.target.value});
+                    if (e.target.value && e.target.value.trim().length > 0) setCatatanError(false);
+                  }}
+                  className={catatanError ? "border-red-500" : undefined}
                 />
+                {catatanError && (
+                  <p className="text-xs text-red-600 mt-1">Catatan wajib diisi saat validasi tidak valid</p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -1872,6 +1917,43 @@ export default function AddWorkOrderPage() {
               onCheckedChange={setIncludeImages}
               aria-label="Sertakan gambar untuk print"
             />
+          </div>
+        )}
+      />
+      {/* Catatan Required Modal */}
+      <CustomAlert
+        open={catatanRequiredOpen}
+        onOpenChange={setCatatanRequiredOpen}
+        title="Catatan Wajib Diisi"
+        message={"Quantity WO tidak sesuai dengan SO. Harap isi Catatan terlebih dahulu sebelum melanjutkan."}
+        type="warning"
+        showCancel={false}
+        confirmText="Tutup"
+        onConfirm={() => setCatatanRequiredOpen(false)}
+      />
+      {/* Validation Mismatch Modal */}
+      <CustomAlert
+        open={validationOpen}
+        onOpenChange={setValidationOpen}
+        title="Validasi WO Gagal"
+        message={"Jumlah item WO tidak sesuai dengan SO. Perbaiki mismatches berikut."}
+        type="warning"
+        showCancel={false}
+        confirmText="Tutup"
+        onConfirm={() => setValidationOpen(false)}
+        extraContent={(
+          <div className="mt-3 max-h-72 overflow-y-auto">
+            {validationMismatches.length === 0 ? (
+              <div className="text-sm text-gray-600">Tidak ada detail mismatch</div>
+            ) : (
+              <ul className="list-disc list-inside space-y-1 text-sm text-gray-800">
+                {validationMismatches.map((m, idx) => (
+                  <li key={idx}>
+                    {`SO item nomor ${getSOItemOrderNumber(m.sales_order_item_id)} membutuhkan ${m.expected_qty}, sekarang ${m.combined_qty}${(m.existing_planned_qty && Number(m.existing_planned_qty) > 0) ? `, sebelumnya ${m.existing_planned_qty}` : ''}`}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
       />
