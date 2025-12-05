@@ -1649,6 +1649,7 @@ export default function AddWorkOrderPage() {
         value={workOrderItems.find(item => item.id === pelaksanaModalItemId)?.pelaksana || []}
         onSave={savePelaksanaForItem}
         loadingOptions={loadingPelaksana}
+        workOrderItem={workOrderItems.find(item => item.id === pelaksanaModalItemId) || null}
       />
 
       {/* Plat Preview Modal */}

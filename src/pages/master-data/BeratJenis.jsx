@@ -426,9 +426,13 @@ export default function BeratJenisPage() {
             width: "12rem",
             getValue: (item) => {
               if (!item.berat_per_cm || item.berat_per_cm === null) return '-';
-              // Hapus desimal, tampilkan sebagai integer dengan separator dot
-              const num = Math.round(parseFloat(item.berat_per_cm));
-              return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+              // Tampilkan dengan 4 angka di belakang koma
+              const num = parseFloat(item.berat_per_cm);
+              const formatted = num.toFixed(4);
+              // Pisahkan bagian integer dan desimal untuk menambahkan separator dot pada ribuan
+              const parts = formatted.split('.');
+              parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+              return parts.join(',');
             },
             getCellClassName: (item) => {
               // Support both camelCase and snake_case
@@ -448,9 +452,13 @@ export default function BeratJenisPage() {
             width: "12rem",
             getValue: (item) => {
               if (!item.berat_per_luas || item.berat_per_luas === null) return '-';
-              // Hapus desimal, tampilkan sebagai integer dengan separator dot
-              const num = Math.round(parseFloat(item.berat_per_luas));
-              return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+              // Tampilkan dengan 4 angka di belakang koma
+              const num = parseFloat(item.berat_per_luas);
+              const formatted = num.toFixed(4);
+              // Pisahkan bagian integer dan desimal untuk menambahkan separator dot pada ribuan
+              const parts = formatted.split('.');
+              parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+              return parts.join(',');
             },
             getCellClassName: (item) => {
               // Support both camelCase and snake_case
