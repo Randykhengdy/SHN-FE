@@ -415,16 +415,8 @@ export default function AddWorkOrderPage() {
         console.warn('Failed to persist generated WO number to storage/state', e);
       }
       
-      // Try to derive SO header info from the woplanning response
-      let soData = salesOrderItemsResponse?.header
-        || salesOrderItemsResponse?.sales_order
-        || salesOrderItemsResponse?.salesOrder
-        || salesOrderItemsResponse?.data?.header
-        || null;
-      
-      if (!soData) {
-        soData = { pelanggan_id: undefined, gudang_id: undefined, catatan: '', handover_method: 'pickup' };
-      }
+      // Gunakan struktur response yang dikirim API (data)
+      const soData = salesOrderItemsResponse?.data || null;
       
       
       const extractItems = (resp) => {
@@ -490,11 +482,11 @@ export default function AddWorkOrderPage() {
         setWorkOrderData(prev => ({
           ...prev,
           nomor_wo: woNumberResponse,
-          gudang_id: (soData?.id_gudang ?? soData?.gudang_id ?? soData?.warehouse_id ?? soData?.gudang?.id) || prev.gudang_id,
-          pelanggan_id: (soData?.id_pelanggan ?? soData?.pelanggan_id ?? soData?.customer_id ?? soData?.pelanggan?.id) || prev.pelanggan_id,
-          catatan: (soData?.catatan ?? prev.catatan ?? ''),
-          handover_method: (soData?.handover_method ?? prev.handover_method ?? 'pickup'),
-          tanggal_target: workOrderData.tanggal_wo
+          gudang_id: soData?.gudang_id ?? prev.gudang_id,
+          pelanggan_id: soData?.pelanggan_id ?? prev.pelanggan_id,
+          catatan: soData?.catatan ?? prev.catatan ?? '',
+          handover_method: soData?.handover_method ?? prev.handover_method ?? 'pickup',
+          tanggal_target: soData?.tanggal_pengiriman ?? workOrderData.tanggal_wo
         }));
         
         showAlert('Sukses', `${itemsData.length} item berhasil diambil dari Sales Order\nNomor WO: ${woNumberResponse}`, 'success');
@@ -506,11 +498,11 @@ export default function AddWorkOrderPage() {
         setWorkOrderData(prev => ({
           ...prev,
           nomor_wo: woNumberResponse,
-          gudang_id: (soData?.id_gudang ?? soData?.gudang_id ?? soData?.warehouse_id ?? soData?.gudang?.id) || prev.gudang_id,
-          pelanggan_id: (soData?.id_pelanggan ?? soData?.pelanggan_id ?? soData?.customer_id ?? soData?.pelanggan?.id) || prev.pelanggan_id,
-          catatan: (soData?.catatan ?? prev.catatan ?? ''),
-          handover_method: (soData?.handover_method ?? prev.handover_method ?? 'pickup'),
-          tanggal_target: workOrderData.tanggal_wo
+          gudang_id: soData?.gudang_id ?? prev.gudang_id,
+          pelanggan_id: soData?.pelanggan_id ?? prev.pelanggan_id,
+          catatan: soData?.catatan ?? prev.catatan ?? '',
+          handover_method: soData?.handover_method ?? prev.handover_method ?? 'pickup',
+          tanggal_target: soData?.tanggal_pengiriman ?? workOrderData.tanggal_wo
         }));
       }
       
