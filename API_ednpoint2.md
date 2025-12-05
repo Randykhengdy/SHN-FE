@@ -43,3 +43,45 @@ Ringkasan endpoint baru, dengan contoh singkat request/response.
       }
     ]
     ```
+- Save WO: `POST /api/work-order-planning`
+  - Request wajib menyertakan `typeWO` (`normal`, `pending`, `cancel`)
+  - Efek:
+    - `pending`: set `sales_order.is_wo_qty_matched = false`, `process_status = 'pending'`, status tetap `active`
+    - `normal`: tidak mengubah SO (default `is_wo_qty_matched = true`)
+    - `cancel`: set `sales_order.status = 'closed'`, `process_status = 'cancel'`
+  - Notifikasi admin: untuk `Pending` dan `Batal` dibuat notifikasi ke semua user role admin dengan pesan bahwa qty WO vs SO tidak match (berisi `nomor_so` dan `nomor_wo`)
+  - Contoh request:
+    ```json
+    {
+      "wo_unique_id": "WO-TEMP-123",
+      "id_sales_order": 123,
+      "id_pelanggan": 45,
+      "id_gudang": 3,
+      "status": "pending",
+      "typeWO": "pending",
+      "tanggal_wo": "2025-12-05",
+      "prioritas": "normal",
+      "handover_method": "pickup",
+      "items": [
+        {
+          "wo_item_unique_id": "WOITEM-001",
+          "sales_order_item_id": 1001,
+          "qty": 2,
+          "satuan": "PCS"
+        }
+      ]
+    }
+    ```
+
+## Sales Order Header
+- List: `GET /api/sales-order/header`
+  - Query params:
+    - `per_page` (default 100)
+    - `search` (mencari di beberapa kolom dasar)
+    - `sort_by`, `order` atau `sort` multi
+    - `process_status` (exact match)
+    - `status` (exact match; nilai enum: `active`, `delete_requested`, `deleted`, `closed`)
+  - Contoh:
+    - `GET /api/sales-order/header?status=closed&per_page=1000`
+    - `GET /api/sales-order/header?status=cancel&sort_by=id&order=desc`
+    - `GET /api/sales-order/header?process_status=pending&status=active`

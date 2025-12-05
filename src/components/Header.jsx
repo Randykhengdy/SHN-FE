@@ -5,6 +5,7 @@ import { clearAllTokens, setRolePermissionsData } from "@/lib/tokenStorage";
 import { roleService } from "@/services/master-data";
 import { getCurrentRoleId } from "@/lib/utils";
 import logo from "@/assets/logo.png";
+import { Bell } from "lucide-react";
 
 export default function Header() {
   const navigate = useNavigate();
@@ -76,6 +77,14 @@ export default function Header() {
       <div className="flex items-center gap-4">
         {userInfo ? (
           <>
+            {/* Notifications link */}
+            <button
+              onClick={() => navigate('/notifications')}
+              className="flex items-center gap-1 text-sm text-gray-700 rounded-md px-2 py-1 hover:bg-gray-100"
+            >
+              <Bell className="w-4 h-4" />
+              <span>Notifikasi</span>
+            </button>
             {/* User Info */}
             <div className="flex flex-col items-end">
               <div className="font-semibold text-gray-800 text-sm">

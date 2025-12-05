@@ -314,13 +314,13 @@ export const getPelangganFromSOHeader = async () => {
 export const getSalesOrderOptions = async () => {
   checkMemoryUsage();
   return await safeApiCall(async () => {
-    const response = await request('/sales-order/header?per_page=1000', { method: 'GET' });
-    
-    return response.data.map(so => ({
-      value: so.id.toString(),
+    const params = new URLSearchParams({ per_page: '1000', status: 'active' });
+    const response = await request(`/sales-order/header?${params.toString()}`, { method: 'GET' });
+    const rows = Array.isArray(response?.data) ? response.data : (Array.isArray(response) ? response : []);
+    return rows.map(so => ({
+      value: so.id?.toString(),
       label: `${so.nomor_so} - ${so.pelanggan?.nama_pelanggan || 'Unknown'} (${so.tanggal_so})`,
       searchKey: `${so.nomor_so} ${so.pelanggan?.nama_pelanggan || ''}`,
-      // Additional data for reference
       nomor_so: so.nomor_so,
       tanggal_so: so.tanggal_so,
       pelanggan_id: so.pelanggan_id,
