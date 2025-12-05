@@ -1282,7 +1282,7 @@ export default function AddSalesOrderPage() {
         </CardHeader>
         <CardContent className="section-content">
           <div className="grid-form m-lg">
-            {/* Row 1: Bentuk Barang, Jenis Barang, Qty */}
+            {/* Row 1: Bentuk Barang, Jenis Barang, Grade Barang */}
             <div>
               <Label htmlFor="itemShape">Bentuk Barang</Label>
               <div className="flex gap-2">
@@ -1315,19 +1315,6 @@ export default function AddSalesOrderPage() {
               />
             </div>
             <div>
-              <Label htmlFor="itemQty">Qty</Label>
-              <Input
-                id="itemQty"
-                type="number"
-                value={itemQty}
-                onChange={(e) => setItemQty(e.target.value)}
-                min="1"
-                required
-              />
-            </div>
-
-            {/* Row 2: Grade Barang, Satuan, Timbangan */}
-            <div>
               <SearchSelect
                 label="Grade Barang"
                 placeholder="Pilih Grade"
@@ -1336,6 +1323,19 @@ export default function AddSalesOrderPage() {
                 onValueChange={setItemGrade}
                 options={itemGradeOptions}
                 loading={loadingItemGrade}
+                required
+              />
+            </div>
+
+            {/* Row 2: Qty, Jenis Potongan, Satuan */}
+            <div>
+              <Label htmlFor="itemQty">Qty</Label>
+              <Input
+                id="itemQty"
+                type="number"
+                value={itemQty}
+                onChange={(e) => setItemQty(e.target.value)}
+                min="1"
                 required
               />
             </div>
