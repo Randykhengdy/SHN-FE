@@ -1,5 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
+import DatePicker, { registerLocale } from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { format } from "date-fns";
+import { id } from "date-fns/locale";
 import { workshopDashboardService } from "@/services/dashboards/workshopDashboardService";
+
+// Register Indonesian locale
+registerLocale("id", id);
 
 const DashboardWorkshopPage = () => {
   const [workOrders, setWorkOrders] = useState([]);
@@ -7,23 +14,29 @@ const DashboardWorkshopPage = () => {
   const [error, setError] = useState(null);
   const [fontSize, setFontSize] = useState(13); // Default font size
   const [showCustomerName, setShowCustomerName] = useState(true); // Toggle untuk kolom nama pelanggan
+  const [dateFrom, setDateFrom] = useState(null);
+  const [dateTo, setDateTo] = useState(null);
 
-  const fetchWorkOrders = async () => {
+  const fetchWorkOrders = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await workshopDashboardService.getDashboardData();
+      const params = {};
+      if (dateFrom) params.date_from = format(dateFrom, "yyyy-MM-dd");
+      if (dateTo) params.date_to = format(dateTo, "yyyy-MM-dd");
+      
+      const response = await workshopDashboardService.getDashboardData(params);
       setWorkOrders(response.work_orders || []);
     } catch (err) {
       setError(err.message || "Terjadi kesalahan");
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateFrom, dateTo]);
 
   useEffect(() => {
     fetchWorkOrders();
-  }, []);
+  }, [fetchWorkOrders]);
 
   const handleRefresh = () => {
     fetchWorkOrders();
@@ -44,6 +57,88 @@ const DashboardWorkshopPage = () => {
       minHeight: "100vh",
       color: "#ffffff"
     }}>
+      <style>{`
+        .date-picker-wrapper {
+          display: inline-block;
+        }
+        .date-picker-input {
+          background: #2d2d2d !important;
+          border: 1px solid #4a4a4a !important;
+          color: #ffffff !important;
+          padding: 4px 8px !important;
+          border-radius: 4px !important;
+          font-size: 13px !important;
+          cursor: pointer !important;
+          width: 140px !important;
+        }
+        .date-picker-input::placeholder {
+          color: #a0a0a0 !important;
+        }
+        .date-picker-input:focus {
+          outline: none !important;
+          border-color: #6a6a6a !important;
+        }
+        .date-picker-popper {
+          z-index: 9999 !important;
+        }
+        .react-datepicker {
+          background-color: #2d2d2d !important;
+          border: 1px solid #4a4a4a !important;
+          font-family: inherit !important;
+        }
+        .react-datepicker__header {
+          background-color: #3a3a3a !important;
+          border-bottom: 1px solid #4a4a4a !important;
+        }
+        .react-datepicker__current-month {
+          color: #ffffff !important;
+        }
+        .react-datepicker__day-name {
+          color: #ffffff !important;
+        }
+        .react-datepicker__day {
+          color: #ffffff !important;
+        }
+        .react-datepicker__day:hover {
+          background-color: #4a4a4a !important;
+        }
+        .react-datepicker__day--selected {
+          background-color: #6a6a6a !important;
+          color: #ffffff !important;
+        }
+        .react-datepicker__day--selected:hover {
+          background-color: #7a7a7a !important;
+        }
+        .react-datepicker__day--in-range {
+          background-color: #4a4a4a !important;
+          color: #ffffff !important;
+        }
+        .react-datepicker__day--in-selecting-range {
+          background-color: #4a4a4a !important;
+          color: #ffffff !important;
+        }
+        .react-datepicker__day--keyboard-selected {
+          background-color: #5a5a5a !important;
+          color: #ffffff !important;
+        }
+        .react-datepicker__day--today {
+          font-weight: bold !important;
+          color: #39FF14 !important;
+        }
+        .react-datepicker__navigation-icon::before {
+          border-color: #ffffff !important;
+        }
+        .react-datepicker__triangle {
+          border-bottom-color: #2d2d2d !important;
+        }
+        .react-datepicker__triangle::before {
+          border-bottom-color: #4a4a4a !important;
+        }
+        .react-datepicker__close-icon::after {
+          background-color: #ffffff !important;
+          color: #2d2d2d !important;
+        }
+      `}</style>
       {loading && <p style={{ color: "#a0a0a0", fontSize: "16px" }}>Memuat data...</p>}
       {error && <p style={{ color: "#ff6b6b", fontSize: "16px" }}>{error}</p>}
       {!loading && !error && (
@@ -114,6 +209,84 @@ const DashboardWorkshopPage = () => {
             >
               🔍-
             </button>
+            {/* Date Range Filter */}
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              marginLeft: "16px"
+            }}>
+              <label style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                color: "#ffffff",
+                fontSize: "14px"
+              }}>
+                Dari:
+                <DatePicker
+                  selected={dateFrom}
+                  onChange={(date) => setDateFrom(date)}
+                  selectsStart
+                  startDate={dateFrom}
+                  endDate={dateTo}
+                  dateFormat="dd/MM/yyyy"
+                  locale="id"
+                  placeholderText="Pilih tanggal"
+                  isClearable
+                  className="date-picker-input"
+                  wrapperClassName="date-picker-wrapper"
+                  popperClassName="date-picker-popper"
+                />
+              </label>
+              <label style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                color: "#ffffff",
+                fontSize: "14px"
+              }}>
+                Sampai:
+                <DatePicker
+                  selected={dateTo}
+                  onChange={(date) => setDateTo(date)}
+                  selectsEnd
+                  startDate={dateFrom}
+                  endDate={dateTo}
+                  minDate={dateFrom}
+                  dateFormat="dd/MM/yyyy"
+                  locale="id"
+                  placeholderText="Pilih tanggal"
+                  isClearable
+                  className="date-picker-input"
+                  wrapperClassName="date-picker-wrapper"
+                  popperClassName="date-picker-popper"
+                />
+              </label>
+              {(dateFrom || dateTo) && (
+                <button
+                  onClick={() => {
+                    setDateFrom(null);
+                    setDateTo(null);
+                    // fetchWorkOrders will be called automatically via useEffect
+                  }}
+                  style={{
+                    background: "#3a3a3a",
+                    border: "1px solid #4a4a4a",
+                    color: "#ffffff",
+                    padding: "4px 8px",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    fontSize: "12px",
+                    transition: "background-color 0.2s ease"
+                  }}
+                  onMouseOver={(e) => e.target.style.background = "#4a4a4a"}
+                  onMouseOut={(e) => e.target.style.background = "#3a3a3a"}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
             <label style={{
               display: "flex",
               alignItems: "center",

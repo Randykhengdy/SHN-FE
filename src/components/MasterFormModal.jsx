@@ -145,6 +145,7 @@ export default function MasterFormModal({
       if (field.hideOnEdit) return;
       if (typeof field.mapFromEdit === 'function') {
         try {
+          // Panggil mapFromEdit tanpa side effects
           const mapped = field.mapFromEdit(editData);
           initialForm[field.name] = mapped !== undefined && mapped !== null ? String(mapped) : "";
         } catch (_) {
@@ -166,6 +167,32 @@ export default function MasterFormModal({
     });
     setForm(initialForm);
   }, [isOpen, editData, fields]);
+
+  // Set lebar menjadi 0 jika dimensi adalah 1D (setelah options di-load)
+  useEffect(() => {
+    if (!isOpen) return;
+    // Cari field bentuk_barang_id dan lebar
+    const bentukBarangField = fields.find(f => f.name === 'bentuk_barang_id');
+    const lebarField = fields.find(f => f.name === 'lebar');
+    
+    if (bentukBarangField && lebarField && form.bentuk_barang_id && options.bentuk_barang_id) {
+      // Cari dimensi dari options yang sudah di-load
+      const selectedOption = options.bentuk_barang_id.find(opt => 
+        String(opt.id || opt.value) === String(form.bentuk_barang_id)
+      );
+      const dimensi = selectedOption?.dimensi;
+      
+      // Set lebar menjadi 0 jika dimensi adalah 1D dan lebar belum 0
+      if (dimensi === "1D") {
+        const currentLebar = String(form.lebar || "");
+        if (currentLebar !== "0" && currentLebar !== "") {
+          setForm(prev => ({ ...prev, lebar: "0", _bentuk_barang_dimensi: dimensi }));
+        } else if (!form._bentuk_barang_dimensi) {
+          setForm(prev => ({ ...prev, _bentuk_barang_dimensi: dimensi }));
+        }
+      }
+    }
+  }, [isOpen, form.bentuk_barang_id, options.bentuk_barang_id]);
 
   useEffect(() => {
     if (!isOpen || !editData) return;
@@ -215,7 +242,16 @@ export default function MasterFormModal({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(form);
+    // Set lebar menjadi 0 jika hidden (dimensi 1D)
+    let submitForm = { ...form };
+    const lebarField = fields.find(f => f.name === 'lebar');
+    if (lebarField && lebarField.hidden) {
+      const isHidden = typeof lebarField.hidden === 'function' ? lebarField.hidden(form) : lebarField.hidden;
+      if (isHidden) {
+        submitForm.lebar = "0";
+      }
+    }
+    onSave(submitForm);
   };
 
 
@@ -305,8 +341,13 @@ export default function MasterFormModal({
                 }
               }
               
+              // Check if field is hidden
+              const isHidden = field.hidden && (
+                typeof field.hidden === 'function' ? field.hidden(form) : field.hidden
+              );
+              
               return (
-              <div key={field.name} className={`space-y-2 ${field.colSpan === 2 ? 'md:col-span-2' : ''}`}>
+              <div key={field.name} className={`space-y-2 ${field.colSpan === 2 ? 'md:col-span-2' : ''} ${isHidden ? 'hidden' : ''}`}>
               <Label htmlFor={field.name} className="text-sm font-medium text-gray-700">
                 {field.label}
               </Label>
@@ -432,7 +473,7 @@ export default function MasterFormModal({
                   value={form[field.name] || ""}
                   onChange={handleChange}
                   className="w-full"
-                  required={editData && field.hideOnEdit ? false : field.required}
+                  required={isHidden ? false : (editData && field.hideOnEdit ? false : field.required)}
                   maxLength={field.maxLength}
                 />
               )}

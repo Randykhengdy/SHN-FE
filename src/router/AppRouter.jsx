@@ -5,6 +5,7 @@ import Register from "@/pages/Register";
 import JenisBarangPage from "@/pages/master-data/JenisBarang";
 import BentukBarangPage from "@/pages/master-data/BentukBarang";
 import GradeBarangPage from "@/pages/master-data/GradeBarang";
+import BeratJenisPage from "@/pages/master-data/BeratJenis";
 import ItemBarangPage from "@/pages/master-data/ItemBarang";
 import JenisMutasiStockPage from "@/pages/master-data/JenisMutasiStock";
 import JenisTransaksiKasPage from "@/pages/master-data/JenisTransaksiKas";
@@ -61,6 +62,7 @@ const AppRouter = () => {
         <Route path="/masterdata/jenis-barang" element={<JenisBarangPage />} />
         <Route path="/masterdata/bentuk-barang" element={<BentukBarangPage />} />
         <Route path="/masterdata/grade-barang" element={<GradeBarangPage />} />
+        <Route path="/masterdata/berat-jenis" element={<BeratJenisPage />} />
         <Route path="/masterdata/item-barang" element={<ItemBarangPage />} />
         <Route path="/masterdata/jenis-biaya" element={<JenisBiayaPage />} />
         <Route path="/masterdata/jenis-mutasi-stock" element={<JenisMutasiStockPage />} />

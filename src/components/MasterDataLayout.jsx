@@ -16,6 +16,8 @@ export default function MasterDataLayout({
   service,
   customEditComponent,
   customActions,
+  customHeaderButtons,
+  getRowClassName,
   validate,
   preprocess,
   filterConfig,
@@ -319,6 +321,17 @@ export default function MasterDataLayout({
                       <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
                       Refresh
                     </Button>
+                  {customHeaderButtons && customHeaderButtons.map((button, index) => (
+                    <Button
+                      key={index}
+                      onClick={button.onClick}
+                      disabled={button.disabled}
+                      className={button.className || "bg-green-600 hover:bg-green-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"}
+                    >
+                      {button.icon && <span className="mr-2">{button.icon}</span>}
+                      {button.label}
+                    </Button>
+                  ))}
                   {canCreate ? (
                     <Button
                       onClick={handleAdd}
@@ -428,10 +441,13 @@ export default function MasterDataLayout({
                         </td>
                       </tr>
                     ) : (
-                        data.map((item, index) => (
+                        data.map((item, index) => {
+                          const baseClassName = `border-b border-gray-100 last:border-b-0 hover:bg-blue-50/70 hover:border-l-4 hover:border-l-blue-500 transition-all duration-200 group ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`;
+                          const customClassName = getRowClassName ? getRowClassName(item, index) : '';
+                          return (
                           <tr 
                             key={item.id} 
-                            className={`border-b border-gray-100 last:border-b-0 hover:bg-blue-50/70 hover:border-l-4 hover:border-l-blue-500 transition-all duration-200 group ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
+                            className={`${baseClassName} ${customClassName}`}
                           >
                           {(() => {
                             if (!selection) return null;
@@ -449,19 +465,29 @@ export default function MasterDataLayout({
                               </td>
                             );
                           })()}
-                          {columns.map((col) => (
+                          {columns.map((col) => {
+                            // Gunakan custom getValue jika ada, jika tidak gunakan default
+                            const value = col.getValue 
+                              ? col.getValue(item) 
+                              : getValue(item, col.key);
+                            // Gunakan custom getCellClassName jika ada
+                            const cellClassName = col.getCellClassName 
+                              ? col.getCellClassName(item) 
+                              : '';
+                            return (
                             <td 
                               key={col.key} 
-                              className="px-4 py-3 text-sm text-gray-600 group-hover:text-gray-800 transition-colors duration-150"
+                              className={`px-4 py-3 text-sm text-gray-600 group-hover:text-gray-800 transition-colors duration-150 ${cellClassName}`}
                               style={{ 
                                 textAlign: col.align || 'left',
                                 wordWrap: 'break-word',
                                 maxWidth: col.maxWidth
                               }}
                             >
-                              {getValue(item, col.key)}
+                              {value}
                             </td>
-                          ))}
+                            );
+                          })}
                           <td className="px-4 py-3 text-left">
                             <div className="flex gap-2 justify-start opacity-90 group-hover:opacity-100 transition-opacity duration-200">
                               {/* Custom Actions - Always show when not in trashed mode */}
@@ -555,7 +581,8 @@ export default function MasterDataLayout({
                             </div>
                           </td>
                         </tr>
-                      ))
+                          );
+                        })
                     )}
                   </tbody>
                 </table>

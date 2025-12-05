@@ -208,6 +208,7 @@ function createWindow() {
           { label: 'Jenis Barang', accelerator: 'CmdOrCtrl+1', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/jenis-barang') },
           { label: 'Bentuk Barang', accelerator: 'CmdOrCtrl+2', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/bentuk-barang') },
           { label: 'Grade Barang', accelerator: 'CmdOrCtrl+3', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/grade-barang') },
+          { label: 'Berat Jenis', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/berat-jenis') },
           { label: 'Item Barang', accelerator: 'CmdOrCtrl+4', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/item-barang') },
           { label: 'Jenis Mutasi Stock', accelerator: 'CmdOrCtrl+5', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/jenis-mutasi-stock') },
           { type: 'separator' },

@@ -27,10 +27,17 @@ const DataTableModal = ({
   // Filter data based on search query
   const filteredData = data.filter(item => {
     try {
+      // If no search query, show all data
+      if (!searchQuery || searchQuery.trim() === '') {
+        return true;
+      }
+      
       return columns.some(column => {
         const value = item[column.key];
-        if (value && typeof value === 'string') {
-          return value.toLowerCase().includes(searchQuery.toLowerCase());
+        if (value !== null && value !== undefined) {
+          // Convert value to string for searching (handles numbers, strings, etc.)
+          const valueStr = String(value).toLowerCase();
+          return valueStr.includes(searchQuery.toLowerCase());
         }
         return false;
       });
@@ -75,65 +82,77 @@ const DataTableModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="modal-content-standard max-h-[80vh] overflow-hidden">
-        <DialogHeader className="modal-header-standard">
+      <DialogContent className="modal-content-standard max-h-[85vh] flex flex-col p-0">
+        <DialogHeader className="modal-header-standard flex-shrink-0 px-6 pt-6 pb-4">
           <DialogTitle className="page-title">{title}</DialogTitle>
         </DialogHeader>
 
-        <div className="modal-body-standard space-md">
+        <div className="flex flex-col flex-1 min-h-0 px-6 pb-6">
           {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <div className="relative flex-shrink-0 mb-4">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 z-10 pointer-events-none" />
             <Input
               placeholder={searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="form-input-standard pl-10"
+              className="form-input-standard pl-10 pr-4"
+              style={{ paddingLeft: '2.75rem' }}
             />
           </div>
 
-          {/* Table */}
-          <Card className="card-standard">
-            <CardContent className="p-0">
-              <Table className="table-standard">
-                <TableHeader className="table-header-standard">
-                  <TableRow>
-                    {columns.map((column) => (
-                      <TableHead key={column.key} className="table-header-cell-standard">
-                        {column.label}
-                      </TableHead>
-                    ))}
-                    <TableHead className="table-header-cell-standard text-center">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredData.map((item, index) => (
-                    <TableRow key={item.id || index} className="hover:bg-gray-50">
-                      {columns.map((column) => (
-                        <TableCell key={column.key} className="table-cell-standard">
-                          {renderCell(item, column)}
+          {/* Table with scroll */}
+          <Card className="card-standard flex-1 min-h-0 flex flex-col border">
+            <CardContent className="p-0 flex-1 min-h-0 overflow-hidden flex flex-col">
+              <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                {/* Table Container with scroll */}
+                <div 
+                  className="flex-1 overflow-y-auto overflow-x-auto relative"
+                  style={{ 
+                    scrollbarWidth: 'auto',
+                    scrollbarColor: '#cbd5e1 #f1f5f9'
+                  }}
+                >
+                  <Table className="table-standard w-full">
+                    <TableHeader className="table-header-standard sticky top-0 bg-white z-10 border-b">
+                      <TableRow>
+                        {columns.map((column) => (
+                          <TableHead key={column.key} className="table-header-cell-standard">
+                            {column.label}
+                          </TableHead>
+                        ))}
+                        <TableHead className="table-header-cell-standard text-center">Aksi</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                    {filteredData.map((item, index) => (
+                      <TableRow key={item.id || index} className="hover:bg-gray-50">
+                        {columns.map((column) => (
+                          <TableCell key={column.key} className="table-cell-standard">
+                            {renderCell(item, column)}
+                          </TableCell>
+                        ))}
+                        <TableCell className="table-cell-standard text-center">
+                          <Button
+                            size="sm"
+                            onClick={() => handleItemSelect(item)}
+                            className="btn-primary"
+                          >
+                            {selectButtonText}
+                          </Button>
                         </TableCell>
-                      ))}
-                      <TableCell className="table-cell-standard text-center">
-                        <Button
-                          size="sm"
-                          onClick={() => handleItemSelect(item)}
-                          className="btn-primary"
-                        >
-                          {selectButtonText}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {filteredData.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={columns.length + 1} className="table-cell-standard text-center text-gray-500 py-8">
-                        {searchQuery ? "Tidak ada data yang ditemukan" : "Tidak ada data"}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                      </TableRow>
+                    ))}
+                    {filteredData.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={columns.length + 1} className="table-cell-standard text-center text-gray-500 py-8">
+                          {searchQuery ? "Tidak ada data yang ditemukan" : "Tidak ada data"}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
