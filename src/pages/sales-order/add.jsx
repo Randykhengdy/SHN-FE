@@ -1282,7 +1282,7 @@ export default function AddSalesOrderPage() {
         </CardHeader>
         <CardContent className="section-content">
           <div className="grid-form m-lg">
-            {/* Row 1: Bentuk Barang, Qty, Jenis Barang */}
+            {/* Row 1: Bentuk Barang, Jenis Barang, Qty */}
             <div>
               <Label htmlFor="itemShape">Bentuk Barang</Label>
               <div className="flex gap-2">
@@ -1303,17 +1303,6 @@ export default function AddSalesOrderPage() {
               </div>
             </div>
             <div>
-              <Label htmlFor="itemQty">Qty</Label>
-              <Input
-                id="itemQty"
-                type="number"
-                value={itemQty}
-                onChange={(e) => setItemQty(e.target.value)}
-                min="1"
-                required
-              />
-            </div>
-            <div>
               <SearchSelect
                 label="Jenis Barang"
                 placeholder="Pilih Jenis Barang"
@@ -1322,6 +1311,17 @@ export default function AddSalesOrderPage() {
                 onValueChange={setItemType}
                 options={itemTypeOptions}
                 loading={loadingItemType}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="itemQty">Qty</Label>
+              <Input
+                id="itemQty"
+                type="number"
+                value={itemQty}
+                onChange={(e) => setItemQty(e.target.value)}
+                min="1"
                 required
               />
             </div>
