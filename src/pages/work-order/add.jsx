@@ -53,6 +53,7 @@ export default function AddWorkOrderPage() {
     prioritas: 'MEDIUM',
     handover_method: 'pickup'
   });
+  const [typeWO, setTypeWO] = useState('Normal');
 
   // Work Order Items State
   const [workOrderItems, setWorkOrderItems] = useState([]);
@@ -998,6 +999,7 @@ export default function AddWorkOrderPage() {
         id_gudang: workOrderData.gudang_id,
         prioritas: workOrderData.prioritas,
         status: workOrderData.status,
+        typeWO: (String(typeWO).toLowerCase() === 'batal' ? 'cancel' : typeWO),
         handover_method: workOrderData.handover_method,
         estimate_done: workOrderData.estimate_done || null,
         catatan: workOrderData.catatan,
@@ -1220,9 +1222,11 @@ export default function AddWorkOrderPage() {
       return;
     }
 
+    setTypeWO('Normal');
     const msg = [
       `Nomor WO: ${workOrderData.nomor_wo}`,
       `Tanggal WO: ${workOrderData.tanggal_wo}`,
+      `Type WO: ${'Normal'}`,
       `Prioritas: ${workOrderData.prioritas}`,
       `Metode Penyerahan: ${workOrderData.handover_method === 'pickup' ? 'Pickup' : 'Delivery'}`,
       `Jumlah Item: ${workOrderItems.length}`,
@@ -1952,7 +1956,7 @@ export default function AddWorkOrderPage() {
         confirmText="Tutup"
         onConfirm={() => setCatatanRequiredOpen(false)}
       />
-      {/* Validation Mismatch Modal */}
+      {/* Validation Mismatch Modal (CustomAlert with actions) */}
       <CustomAlert
         open={validationOpen}
         onOpenChange={setValidationOpen}
@@ -1975,6 +1979,53 @@ export default function AddWorkOrderPage() {
                 ))}
               </ul>
             )}
+            <div className="mt-4 flex justify-end gap-2">
+              <Button
+                type="button"
+                onClick={() => {
+                  setWorkOrderData(prev => ({ ...prev, status: 'Pending' }));
+                  setTypeWO('Pending');
+                  setValidationOpen(false);
+                  const msg = [
+                    `Nomor WO: ${workOrderData.nomor_wo}`,
+                    `Tanggal WO: ${workOrderData.tanggal_wo}`,
+                    `Type WO: Pending`,
+                    `Prioritas: ${workOrderData.prioritas}`,
+                    `Metode Penyerahan: ${workOrderData.handover_method === 'pickup' ? 'Pickup' : 'Delivery'}`,
+                    `Jumlah Item: ${workOrderItems.length}`,
+                    `Total Pelaksana: ${workOrderItems.reduce((total, item) => total + item.pelaksana.length, 0)}`
+                  ].join('\n');
+                  setConfirmSaveMessage(msg);
+                  setConfirmSaveOpen(true);
+                }}
+                className="bg-gray-900 text-white hover:bg-black"
+                size="sm"
+              >
+                Pending
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  setTypeWO('Batal');
+                  setValidationOpen(false);
+                  const msg = [
+                    `Nomor WO: ${workOrderData.nomor_wo}`,
+                    `Tanggal WO: ${workOrderData.tanggal_wo}`,
+                    `Type WO: Batal`,
+                    `Prioritas: ${workOrderData.prioritas}`,
+                    `Metode Penyerahan: ${workOrderData.handover_method === 'pickup' ? 'Pickup' : 'Delivery'}`,
+                    `Jumlah Item: ${workOrderItems.length}`,
+                    `Total Pelaksana: ${workOrderItems.reduce((total, item) => total + item.pelaksana.length, 0)}`
+                  ].join('\n');
+                  setConfirmSaveMessage(msg);
+                  setConfirmSaveOpen(true);
+                }}
+                variant="outline"
+                size="sm"
+              >
+                Batal
+              </Button>
+            </div>
           </div>
         )}
       />

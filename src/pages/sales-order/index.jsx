@@ -23,7 +23,9 @@ const statusOptions = [
   { value: "submit", label: "Submit" },
   { value: "in_progress", label: "In Progress" },
   { value: "partial_wo", label: "Partial WO" },
-  { value: "complete", label: "Complete" }
+  { value: "complete", label: "Complete" },
+  { value: "pending", label: "Pending" },
+  { value: "cancel", label: "Cancel" }
 ];
 
 // Periode filter dihapus sesuai permintaan
@@ -182,21 +184,27 @@ export default function SalesOrderListPage() {
   };
 
   const getStatusColor = (processStatus) => {
-    switch (processStatus) {
+    const s = String(processStatus || '').toLowerCase();
+    switch (s) {
       case "submit": return "bg-orange-100 text-orange-800";
       case "in_progress": return "bg-yellow-100 text-yellow-800";
       case "partial_wo": return "bg-purple-100 text-purple-800";
       case "complete": return "bg-green-100 text-green-800";
+      case "pending": return "bg-yellow-100 text-yellow-800";
+      case "cancel": return "bg-red-100 text-red-800";
       default: return "bg-gray-100 text-gray-800";
     }
   };
 
   const formatProcessStatus = (processStatus) => {
-    switch (processStatus) {
+    const s = String(processStatus || '').toLowerCase();
+    switch (s) {
       case "submit": return "Submit";
       case "in_progress": return "In Progress";
       case "partial_wo": return "Partial WO";
       case "complete": return "Complete";
+      case "pending": return "Pending";
+      case "cancel": return "Cancel";
       default: return processStatus || "Submit";
     }
   };
