@@ -250,7 +250,7 @@ export default function AddSalesOrderPage() {
         
         if (response.success && response.data) {
           const calculatedWeight = response.data.berat_kg || 0;
-          setItemWeight(calculatedWeight.toString());
+          setItemWeight(calculatedWeight.toFixed(4));
           
           // Optionally show a success message if weight was found
           if (response.data.berat_jenis_found && calculatedWeight > 0) {
@@ -260,7 +260,7 @@ export default function AddSalesOrderPage() {
           }
         } else {
           console.error('Error calculating weight:', response.message);
-          setItemWeight("0");
+          setItemWeight("0.0000");
         }
       } catch (error) {
         console.error('Error calculating weight:', error);
@@ -1283,7 +1283,7 @@ export default function AddSalesOrderPage() {
         </CardHeader>
         <CardContent className="section-content">
           <div className="grid-form m-lg">
-            {/* Row 1: Bentuk Barang, Qty, Jenis Barang */}
+            {/* Row 1: Bentuk Barang, Jenis Barang, Grade Barang */}
             <div>
               <Label htmlFor="itemShape">Bentuk Barang</Label>
               <div className="flex gap-2">
@@ -1304,17 +1304,6 @@ export default function AddSalesOrderPage() {
               </div>
             </div>
             <div>
-              <Label htmlFor="itemQty">Qty</Label>
-              <Input
-                id="itemQty"
-                type="number"
-                value={itemQty}
-                onChange={(e) => setItemQty(e.target.value)}
-                min="1"
-                required
-              />
-            </div>
-            <div>
               <SearchSelect
                 label="Jenis Barang"
                 placeholder="Pilih Jenis Barang"
@@ -1326,8 +1315,6 @@ export default function AddSalesOrderPage() {
                 required
               />
             </div>
-
-            {/* Row 2: Grade Barang, Satuan, Timbangan */}
             <div>
               <SearchSelect
                 label="Grade Barang"
@@ -1340,6 +1327,8 @@ export default function AddSalesOrderPage() {
                 required
               />
             </div>
+
+            {/* Row 2: Jenis Potongan, Qty, Satuan */}
           <div>
             <SearchSelect
               label="Jenis Potongan"
@@ -1351,6 +1340,17 @@ export default function AddSalesOrderPage() {
               required
             />
           </div>
+            <div>
+              <Label htmlFor="itemQty">Qty</Label>
+              <Input
+                id="itemQty"
+                type="number"
+                value={itemQty}
+                onChange={(e) => setItemQty(e.target.value)}
+                min="1"
+                required
+              />
+            </div>
           <div>
             <Label htmlFor="itemUnit">Satuan</Label>
             <div className="flex gap-2 items-end">
@@ -1442,10 +1442,10 @@ export default function AddSalesOrderPage() {
                 <Input
                   id="itemWeight"
                   type="number"
-                  step="0.01"
+                  step="0.0001"
                   value={itemWeight}
                   onChange={(e) => setItemWeight(e.target.value)}
-                  placeholder="0.00"
+                  placeholder="0.0000"
                   disabled={loadingWeight}
                   className={loadingWeight ? "opacity-60 cursor-wait" : ""}
                 />
