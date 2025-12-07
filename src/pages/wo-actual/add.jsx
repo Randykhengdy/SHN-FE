@@ -554,7 +554,7 @@ export default function AddWOActualPage() {
   }, [showDropdown]);
 
   return (
-    <PageLayout>
+    <PageLayout title="Work Order Actual" category="TRANSAKSI">
       <div className="space-y-6">
         <AlertComponent />
         <CustomAlert
@@ -627,39 +627,31 @@ export default function AddWOActualPage() {
           )}
         />
         
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/wo-actual')}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Kembali
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Tambah WO Actual</h1>
-              <p className="text-gray-600">Buat Work Order Actual baru</p>
-            </div>
-          </div>
-          
-          {/* Tombol Simpan dipindah ke bawah kanan sesuai permintaan */}
-        </div>
+        
 
         {/* Main Form */}
         <div className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-6">
             {/* Left Column - Form */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="space-y-6">
               {/* Basic Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    Informasi Dasar
-                  </CardTitle>
+              <Card className="section-card">
+                <CardHeader className="section-header">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="page-title flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Input Work Order Actual
+                    </CardTitle>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button variant="default" size="sm" onClick={handleSave} disabled={saving} className="btn-primary">
+                        {saving ? 'Menyimpan...' : 'Simpan WO Actual'}
+                      </Button>
+                      <Button variant="secondary" size="sm" onClick={() => navigate('/wo-actual')}>
+                        <ArrowLeft className="h-4 w-4 mr-2" />
+                        Kembali ke List
+                      </Button>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -805,78 +797,6 @@ export default function AddWOActualPage() {
                   </CardContent>
                 </Card>
               </div>
-              {/* Right Column - Summary */}
-              <div className="space-y-6">
-                {/* WO Planning Info */}
-                {selectedWOPlanning && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <User className="h-5 w-5" />
-                        Info WO Planning
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div>
-                        <Label className="text-sm font-medium text-gray-600">No. WO</Label>
-                        <p className="text-sm">{selectedWOPlanning.nomor_wo}</p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-gray-600">Pelanggan</Label>
-                        <p className="text-sm">{selectedWOPlanning.pelanggan?.nama || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-gray-600">Gudang</Label>
-                        <p className="text-sm">{selectedWOPlanning.gudang?.nama || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-gray-600">Tanggal WO</Label>
-                        <p className="text-sm">{selectedWOPlanning.tanggal_wo || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-gray-600">Status</Label>
-                        <Badge variant="outline" className="text-xs">
-                          {selectedWOPlanning.status}
-                        </Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Summary */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Package className="h-5 w-5" />
-                      Ringkasan
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Total Item:</span>
-                      <span className="text-sm font-medium">{Object.keys(actualItems).length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Total Qty Actual:</span>
-                      <span className="text-sm font-medium">
-                        {Object.values(actualItems).reduce((sum, item) => {
-                          const assignQty = (item.assignments || []).reduce((a, r) => a + (parseInt(r.qty) || 0), 0);
-                          return sum + assignQty;
-                        }, 0)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Total Berat Actual:</span>
-                      <span className="text-sm font-medium text-blue-600">
-                        {Object.values(actualItems).reduce((sum, item) => {
-                          const assignBerat = (item.assignments || []).reduce((a, r) => a + (parseFloat(r.weight) || 0), 0);
-                          return sum + assignBerat;
-                        }, 0)} kg
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
             </div>
           </div>
 
@@ -990,6 +910,77 @@ export default function AddWOActualPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Info & Summary below */}
+          <div className="space-y-6">
+            {selectedWOPlanning && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    Info WO Planning
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">No. WO</Label>
+                    <p className="text-sm">{selectedWOPlanning.nomor_wo}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Pelanggan</Label>
+                    <p className="text-sm">{selectedWOPlanning.pelanggan?.nama || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Gudang</Label>
+                    <p className="text-sm">{selectedWOPlanning.gudang?.nama || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Tanggal WO</Label>
+                    <p className="text-sm">{selectedWOPlanning.tanggal_wo || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Status</Label>
+                    <Badge variant="outline" className="text-xs">
+                      {selectedWOPlanning.status}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Ringkasan
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Total Item:</span>
+                  <span className="text-sm font-medium">{Object.keys(actualItems).length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Total Qty Actual:</span>
+                  <span className="text-sm font-medium">
+                    {Object.values(actualItems).reduce((sum, item) => {
+                      const assignQty = (item.assignments || []).reduce((a, r) => a + (parseInt(r.qty) || 0), 0);
+                      return sum + assignQty;
+                    }, 0)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Total Berat Actual:</span>
+                  <span className="text-sm font-medium text-blue-600">
+                    {Object.values(actualItems).reduce((sum, item) => {
+                      const assignBerat = (item.assignments || []).reduce((a, r) => a + (parseFloat(r.weight) || 0), 0);
+                      return sum + assignBerat;
+                    }, 0)} kg
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
       </div>
 
       {/* Footer Action: Simpan di bawah kanan */}

@@ -141,14 +141,14 @@ export default function AddMutasiStockPage() {
         setItemMutationModalOpen(true);
     }
 
-    return (
+  return (
         <PageLayout title="Mutasi Stock" subtitle="TRANSAKSI">
             {/* Main Content Card */}
             <Card className="section-card">
                 <CardHeader className="section-header">
                     <div className="flex justify-between items-center">
-                        <CardTitle className="page-title">Input Mutasi Stock Baru</CardTitle>
-                        <div className="flex space-sm">
+                        <CardTitle className="page-title">Input Mutasi Stock</CardTitle>
+                        <div className="flex gap-2">
                             <Button variant="default" size="sm" onClick={handleSimpanMutasi} className="btn-primary">
                                 Simpan Mutasi Stock
                             </Button>
@@ -163,7 +163,7 @@ export default function AddMutasiStockPage() {
                 <CardContent className="section-content space-md">
 
 
-                    <div className="border-t pt-6">
+                    <div className=" pt-6">
                         {/* Pilih Gudang Asal */}
                         <div className="grid-form m-lg">
                             <div className="col-span-2">

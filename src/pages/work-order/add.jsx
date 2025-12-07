@@ -1267,26 +1267,27 @@ export default function AddWorkOrderPage() {
   };
 
   return (
-    <PageLayout title="Tambah Work Order Planning" category="TRANSAKSI">
-      <div className="mb-6">
-        <Button 
-          variant="outline" 
-          onClick={() => { runWOCleansing(); navigate('/work-order'); }}
-          className="flex items-center gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Kembali
-        </Button>
-      </div>
+    <PageLayout title="Work Order Planning" category="TRANSAKSI">
 
       <form onSubmit={handleSubmit}>
         {/* Work Order Planning Header */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="w-5 h-5" />
-              Informasi Work Order Planning
-            </CardTitle>
+        <Card className="section-card">
+          <CardHeader className="section-header">
+            <div className="flex items-center justify-between">
+              <CardTitle className="page-title flex items-center gap-2">
+     
+                Input Work Order Planning
+              </CardTitle>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button variant="default" size="sm" onClick={() => handleSubmit({ preventDefault: () => {} })} className="btn-primary">
+                  Simpan Work Order
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => { runWOCleansing(); navigate('/work-order'); }}>
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Kembali ke List
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
