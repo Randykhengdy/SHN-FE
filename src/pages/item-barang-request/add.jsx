@@ -25,7 +25,7 @@ export default function AddItemBarangRequestPage() {
     const canCreate = hasPermission && hasPermission('ITEM_BARANG_REQUEST', 'Create');
     if (!canCreate) {
         return (
-            <PageLayout title="Tambah Item Barang Request" category="TRANSAKSI">
+            <PageLayout title="Item Barang Request" category="TRANSAKSI">
                 <div className="p-6">
                     <Card>
                         <CardContent className="p-6 text-center text-gray-600">Anda tidak memiliki akses Create untuk Item Barang Request</CardContent>
@@ -153,20 +153,21 @@ export default function AddItemBarangRequestPage() {
     };
 
     return (
-        <PageLayout title="Tambah Item Barang Request">
+        <PageLayout title="Item Barang Request" category="TRANSAKSI">
             <div className="space-y-6">
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center gap-4">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleCancel}
-                            >
-                                <ArrowLeft className="h-4 w-4 mr-2" />
-                                Kembali
-                            </Button>
-                            <CardTitle>Form Tambah Item Barang Request</CardTitle>
+                <Card className="section-card">
+                    <CardHeader className="section-header">
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="page-title">Input Item Barang Request</CardTitle>
+                            <div className="flex items-center gap-2 shrink-0">
+                                <Button variant="default" size="sm" onClick={() => handleSubmit({ preventDefault: () => {} })} className="btn-primary">
+                                    Simpan Request
+                                </Button>
+                                <Button variant="secondary" size="sm" onClick={handleCancel} className="btn-secondary">
+                                    <ArrowLeft className="h-4 w-4 mr-2" />
+                                    Kembali ke List
+                                </Button>
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -273,27 +274,6 @@ export default function AddItemBarangRequestPage() {
                             </div>
 
                             <Separator className="my-6" />
-                            {/* Action Buttons */}
-                            <div className="px-1 pb-1">
-                                <div className="flex justify-end gap-3">
-                                    <Button
-                                        type="button"
-                                        onClick={handleCancel}
-                                        disabled={submitting}
-                                        className="bg-white text-gray-800 border border-gray-300 hover:bg-gray-100"
-                                    >
-                                        Batal
-                                    </Button>
-                                    <Button
-                                        type="submit"
-                                        disabled={submitting}
-                                        className="bg-black hover:bg-gray-900 text-white"
-                                    >
-                                        <Save className="h-4 w-4 mr-2" />
-                                        {submitting ? "Menyimpan..." : "Simpan Request"}
-                                    </Button>
-                                </div>
-                            </div>
                         </form>
                     </CardContent>
                 </Card>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus, ArrowLeft, Calendar, Trash2, Printer, Package, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +36,7 @@ import { jenisBarangService } from "@/services/master-data/jenisBarangService";
 import { gudangService } from "@/services/master-data/gudangService";
 
 export default function AddSalesOrderPage() {
+  const navigate = useNavigate();
   const { showAlert, AlertComponent } = useAlert();
   const { isUserAdmin, hasRole } = useRole();
   
@@ -1142,17 +1144,16 @@ export default function AddSalesOrderPage() {
       <Card className="section-card">
         <CardHeader className="section-header">
           <div className="flex justify-between items-center">
-            <CardTitle className="page-title">Input Sales Order Baru</CardTitle>
+            <CardTitle className="page-title">Input Sales Order</CardTitle>
             <div className="flex space-sm">
               {/* {isUserAdmin && (
                 <Button variant="outline" size="sm" onClick={handleAutoFill} className="btn-outline">
                   🎲 Auto Fill
                 </Button>
               )} */}
-              
-              {/* <Button variant="default" size="sm" onClick={handleTestSimpanSO} className="btn-primary">
+              <Button variant="default" size="sm" onClick={handleTestSimpanSO} className="btn-primary">
                 Simpan Sales Order
-              </Button> */}
+              </Button>
 
               <Button variant="secondary" size="sm" onClick={handleBackToList} className="btn-secondary">
                 <ArrowLeft className="w-4 h-4 mr-2" />
@@ -1270,6 +1271,7 @@ export default function AddSalesOrderPage() {
           </div>
         </CardContent>
       </Card>
+      
 
       {/* Item Input Form */}
       <Card className="section-card">
@@ -1633,28 +1635,25 @@ export default function AddSalesOrderPage() {
         </CardContent>
       </Card>
 
-             {/* Action Buttons */}
-       <div className="flex justify-center gap-4">
-         <Button size="lg" className="bg-green-600 hover:bg-green-700" onClick={handleTestSimpanSO}>
-           Simpan SO
-         </Button>
-         {hasRole(['admin', 'manager', 'supervisor']) && (
-           <Button 
-             size="lg" 
-             variant="outline" 
-             className="border-blue-600 text-blue-600 hover:bg-blue-50"
-             onClick={handlePrintSalesOrder}
-             disabled={printLoading}
-           >
-             {printLoading ? (
-               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-             ) : (
-               <Printer className="w-4 h-4 mr-2" />
-                )}
-                Cetak
-           </Button>
-         )}
-       </div>
+      {/* Action Buttons: only Cetak */}
+      <div className="flex justify-center gap-4">
+        {hasRole(['admin', 'manager', 'supervisor']) && (
+          <Button 
+            size="lg" 
+            variant="outline" 
+            className="border-blue-600 text-blue-600 hover:bg-blue-50"
+            onClick={handlePrintSalesOrder}
+            disabled={printLoading}
+          >
+            {printLoading ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+            ) : (
+              <Printer className="w-4 h-4 mr-2" />
+            )}
+            Cetak
+          </Button>
+        )}
+      </div>
 
       {/* Data Table Modal for Shape Selection */}
       <DataTableModal

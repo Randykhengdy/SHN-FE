@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus, ArrowLeft, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,9 +22,11 @@ import { useRole } from "@/hooks/useRole";
 import { request } from "@/lib/request";
 import { API_ENDPOINTS } from "@/config/api";
 import SalesOrderLayout from "@/components/SalesOrderLayout";
+import PageHeader from "@/components/PageHeader";
 
 export default function AddPurchaseOrderPage() {
   const { showAlert, AlertComponent } = useAlert();
+  const navigate = useNavigate();
   const { isUserAdmin, hasRole } = useRole();
   
   // Master data state
@@ -606,18 +609,11 @@ export default function AddPurchaseOrderPage() {
       <Card className="section-card">
         <CardHeader className="section-header">
           <div className="flex justify-between items-center">
-            <CardTitle className="page-title">Input Purchase Order Baru</CardTitle>
-            <div className="flex space-sm">
-              {/* {isUserAdmin && (
-                <Button variant="outline" size="sm" onClick={handleAutoFill} className="btn-outline">
-                  🎲 Auto Fill (Testing Purposes)
-                </Button>
-              )} */}
-              
+            <CardTitle className="page-title">Input Purchase Order</CardTitle>
+            <div className="flex gap-2">
               <Button variant="default" size="sm" onClick={handleTestSimpanPO} className="btn-primary">
                 Simpan Purchase Order
               </Button>
-
               <Button variant="secondary" size="sm" onClick={handleBackToList} className="btn-secondary">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Kembali ke List
@@ -1047,17 +1043,14 @@ export default function AddPurchaseOrderPage() {
         </CardContent>
       </Card>
 
-             {/* Action Buttons */}
-       <div className="flex justify-center gap-4">
-         <Button size="lg" className="bg-green-600 hover:bg-green-700" onClick={handleTestSimpanPO}>
-           Simpan PO
-         </Button>
-         {hasRole(['admin', 'manager', 'supervisor']) && (
-           <Button size="lg" variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
-             Print PO
-           </Button>
-         )}
-       </div>
+      {/* Action Buttons: only Print */}
+      <div className="flex justify-center gap-4">
+        {hasRole(['admin', 'manager', 'supervisor']) && (
+          <Button size="lg" variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
+            Print PO
+          </Button>
+        )}
+      </div>
 
       {/* Data Table Modal for Shape Selection */}
       <DataTableModal
