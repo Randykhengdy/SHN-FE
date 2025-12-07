@@ -63,35 +63,13 @@ export default function NotificationsPage() {
 
   return (
     <PageLayout title="Notifikasi" category="TRANSAKSI">
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-lg">Filter</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Per Page</label>
-              <Select value={String(perPage)} onValueChange={(v) => { setPerPage(parseInt(v)); setCurrentPage(1); }}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5</SelectItem>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="25">25</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="flex items-end">
-              <Button variant="outline" onClick={loadNotifications} disabled={loading} className="flex items-center gap-2">
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Top Refresh */}
+      <div className="mb-4 flex justify-end">
+        <Button variant="outline" onClick={loadNotifications} disabled={loading} className="flex items-center gap-2">
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+      </div>
 
       <Card>
         <CardContent className="p-0">
@@ -127,15 +105,30 @@ export default function NotificationsPage() {
               </TableBody>
             </Table>
           </div>
-          {/* Pagination */}
+          {/* Controls + Pagination (bottom) */}
           {items.length > 0 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 bg-white border-t border-gray-200 gap-4">
-              <div className="text-sm text-gray-700">
-                {(() => {
-                  const startItem = (currentPage - 1) * perPage + 1
-                  const endItem = Math.min(currentPage * perPage, totalItems)
-                  return `Menampilkan ${startItem}-${endItem} dari ${totalItems} data`
-                })()}
+            <div className="flex flex-col lg:flex-row items-center justify-between px-6 py-4 bg-white border-t border-gray-200 gap-4">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-700">Per Page</span>
+                  <Select value={String(perPage)} onValueChange={(v) => { setPerPage(parseInt(v)); setCurrentPage(1); }}>
+                    <SelectTrigger className="w-20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5</SelectItem>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="text-sm text-gray-700">
+                  {(() => {
+                    const startItem = (currentPage - 1) * perPage + 1
+                    const endItem = Math.min(currentPage * perPage, totalItems)
+                    return `Menampilkan ${startItem}-${endItem} dari ${totalItems} data`
+                  })()}
+                </div>
               </div>
               {Math.ceil((totalItems || 0) / perPage) > 1 && (
                 <div className="flex items-center space-x-2">

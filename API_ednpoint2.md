@@ -74,7 +74,7 @@ Ringkasan endpoint baru, dengan contoh singkat request/response.
     ```
 
 ## Pelanggan
-Fields (data): `kode`, `nama_pelanggan`, `kota`, `telepon_hp`, `contact_person`, `email`, `id`
+Fields (data): `kode`, `nama_pelanggan`, `kota`, `telepon_hp`, `contact_person`, `id`
 
 - Create: `POST /api/pelanggan`
   - Request:
@@ -85,7 +85,6 @@ Fields (data): `kode`, `nama_pelanggan`, `kota`, `telepon_hp`, `contact_person`,
       "kota": "Jakarta",
       "telepon_hp": "08123456789",
       "contact_person": "Budi",
-      "email": "kontak@contoh.id"
     }
     ```
   - Response:
@@ -100,7 +99,6 @@ Fields (data): `kode`, `nama_pelanggan`, `kota`, `telepon_hp`, `contact_person`,
         "kota": "Jakarta",
         "telepon_hp": "08123456789",
         "contact_person": "Budi",
-        "email": "kontak@contoh.id"
       }
     }
     ```
@@ -120,7 +118,6 @@ Fields (data): `kode`, `nama_pelanggan`, `kota`, `telepon_hp`, `contact_person`,
           "kota": "Surabaya",
           "telepon_hp": "0812xxxx",
           "contact_person": "Agus",
-          "email": null
         }
       ],
       "pagination": {
@@ -145,7 +142,6 @@ Fields (data): `kode`, `nama_pelanggan`, `kota`, `telepon_hp`, `contact_person`,
         "kota": "Surabaya",
         "telepon_hp": "0812xxxx",
         "contact_person": "Agus",
-        "email": null
       }
     }
     ```
@@ -155,7 +151,6 @@ Fields (data): `kode`, `nama_pelanggan`, `kota`, `telepon_hp`, `contact_person`,
     ```json
     {
       "nama_pelanggan": "PT Sampoerna Tbk",
-      "email": "halo@sampoerna.co.id"
     }
     ```
   - Response:

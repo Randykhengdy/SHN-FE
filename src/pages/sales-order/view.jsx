@@ -282,8 +282,7 @@ export default function ViewSalesOrderPage() {
       const mappedCustomer = customerData ? {
         nama_customer: customerData.nama_pelanggan || customerData.nama || customerData.name || 'N/A',
         alamat: customerData.alamat || customerData.address || customerData.kota || 'N/A',
-        telepon: customerData.telepon || customerData.telepon_hp || customerData.phone || 'N/A',
-        email: customerData.email || customerData.email_address || 'N/A'
+        telepon: customerData.telepon || customerData.telepon_hp || customerData.phone || 'N/A'
       } : null;
 
       const printData = {
@@ -587,10 +586,13 @@ export default function ViewSalesOrderPage() {
                    ) : (
                      items.map((item, index) => {
                        // Calculate luas per item
-                       const panjang = parseFloat(item.panjang) || 0;
-                       const lebar = parseFloat(item.lebar) || 0;
-                       const tebal = parseFloat(item.ketebalan) || 0;
-                       const luasPerItem = panjang * lebar * tebal;
+                      const panjang = parseFloat(item.panjang) || 0; // mm
+                      const lebar = parseFloat(item.lebar) || 0; // mm
+                      const tebal = parseFloat(item.ketebalan) || 0; // mm
+                      const is2D = lebar > 0;
+                      const luasDisplay = is2D
+                        ? `${(panjang * lebar / 1000000).toFixed(2)} m²`
+                        : `${(panjang / 1000).toFixed(2)} m`;
                        
                        // Format dimensi
                        const dimensi = lebar > 0
@@ -605,7 +607,7 @@ export default function ViewSalesOrderPage() {
                            <TableCell>{item.gradeBarang}</TableCell>
                            <TableCell>{dimensi}</TableCell>
                            <TableCell>{item.qty}</TableCell>
-                           <TableCell>{luasPerItem.toFixed(2)} mm²</TableCell>
+                          <TableCell>{luasDisplay}</TableCell>
                            <TableCell>{formatCurrency(item.harga)}</TableCell>
                            <TableCell>{item.diskon}%</TableCell>
                            <TableCell className="font-semibold">{formatCurrency(item.total)}</TableCell>

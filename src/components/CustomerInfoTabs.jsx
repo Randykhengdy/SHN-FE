@@ -27,9 +27,9 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
     kode: "",
     nama_pelanggan: "",
     telepon_hp: "",
-    email: "",
     alamat: "",
-    kota: ""
+    kota: "",
+    contact_person: ""
   });
 
   // Load customers from service
@@ -102,10 +102,10 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
   };
 
   const handleSaveNewCustomer = async () => {
-    if (!newCustomer.kode || !newCustomer.nama_pelanggan || !newCustomer.email) {
+    if (!newCustomer.kode || !newCustomer.nama_pelanggan) {
       showAlert(
         "Data Tidak Lengkap", 
-        "Kode, Nama Pelanggan, dan Email wajib diisi!", 
+        "Kode dan Nama Pelanggan wajib diisi!", 
         "warning"
       );
       return;
@@ -140,9 +140,9 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
           kode: "",
           nama_pelanggan: "",
           telepon_hp: "",
-          email: "",
           alamat: "",
-          kota: ""
+          kota: "",
+          contact_person: ""
         });
 
         // Switch to existing tab
@@ -300,54 +300,54 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="contact_person">Contact Person</Label>
                 <Input
-                  id="email"
-                  type="email"
-                  value={newCustomer.email}
-                  onChange={(e) => handleNewCustomerChange('email', e.target.value)}
-                  placeholder="Masukkan email"
+                  id="contact_person"
+                  value={newCustomer.contact_person}
+                  onChange={(e) => handleNewCustomerChange('contact_person', e.target.value)}
+                  placeholder="Nama contact person"
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="alamat">Alamat</Label>
-              <Input
-                id="alamat"
-                value={newCustomer.alamat}
-                onChange={(e) => handleNewCustomerChange('alamat', e.target.value)}
-                placeholder="Masukkan alamat lengkap"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="alamat">Alamat</Label>
+                <Input
+                  id="alamat"
+                  value={newCustomer.alamat}
+                  onChange={(e) => handleNewCustomerChange('alamat', e.target.value)}
+                  placeholder="Masukkan alamat lengkap"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="kota">Kota</Label>
+                <Input
+                  id="kota"
+                  value={newCustomer.kota}
+                  onChange={(e) => handleNewCustomerChange('kota', e.target.value)}
+                  placeholder="Masukkan kota"
+                />
+              </div>
             </div>
 
-            <div className="space-y-2 mt-2">
-              <Label htmlFor="kota">Kota</Label>
-              <Input
-                id="kota"
-                value={newCustomer.kota}
-                onChange={(e) => handleNewCustomerChange('kota', e.target.value)}
-                placeholder="Masukkan kota"
-              />
-            </div>
-
-                         <div className="flex justify-end gap-4">
-               <Button
-                 variant="outline"
-                 onClick={() => setActiveTab("existing")}
-                 className="px-6"
-               >
-                 Batal
-               </Button>
-               <Button
-                 onClick={handleSaveNewCustomer}
-                 disabled={loading}
-                 className="flex items-center gap-2 px-6"
-               >
-                 {loading ? (
-                   <>
-                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                     Menyimpan...
+            <div className="flex justify-end gap-4 mt-4 mb-6">
+              <Button
+                variant="outline"
+                onClick={() => setActiveTab("existing")}
+                className="px-6 py-2"
+              >
+                Batal
+              </Button>
+              <Button
+                onClick={handleSaveNewCustomer}
+                disabled={loading}
+                className="flex items-center gap-2 px-6 py-2"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Menyimpan...
                    </>
                  ) : (
                    <>

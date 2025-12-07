@@ -58,6 +58,11 @@ export default function AddWOActualPage() {
   const [printOptionsOpen, setPrintOptionsOpen] = useState(false);
   const [includeImages, setIncludeImages] = useState(true);
   const [pendingPrintData, setPendingPrintData] = useState(null);
+  const [saveErrorOpen, setSaveErrorOpen] = useState(false);
+  const [saveErrorMessage, setSaveErrorMessage] = useState('');
+  const [saveErrorDetails, setSaveErrorDetails] = useState([]);
+  const [preValidateOpen, setPreValidateOpen] = useState(false);
+  const [preValidateMessages, setPreValidateMessages] = useState([]);
 
   // Load WO Planning options
   const loadWOPlanningOptions = useCallback(async () => {
@@ -325,21 +330,42 @@ export default function AddWOActualPage() {
   // Save WO Actual
   const handleSave = async () => {
     try {
-      // Validation
+      const messages = [];
       if (!formData.planningWorkOrderId) {
-        showAlert('WO Planning belum dipilih', 'Silakan pilih WO Planning terlebih dahulu', 'warning');
+        messages.push('WO Planning belum dipilih');
+      }
+      const hasActualData = Object.values(actualItems).some(item => (item.assignments || []).length > 0);
+      if (!hasActualData) {
+        messages.push('Data actual belum ada');
+      }
+      const totalActualQty = Object.values(actualItems).reduce((sum, item) => {
+        const assigns = item.assignments || [];
+        return sum + assigns.reduce((s, a) => s + (parseInt(a.qty) || 0), 0);
+      }, 0);
+      if (totalActualQty <= 0) {
+        messages.push('Qty Actual harus lebih dari 0');
+      }
+      if (!formData.foto_bukti) {
+        messages.push('Gambar foto bukti header belum ada');
+      }
+      const plannedItems = selectedWOPlanning?.items || [];
+      const missingItemImages = [];
+      plannedItems.forEach((pi, idx) => {
+        const ai = actualItems[pi.id];
+        const hasAssign = ai && Array.isArray(ai.assignments) && ai.assignments.length > 0;
+        const hasImage = ai && !!ai.foto_bukti;
+        if (hasAssign && !hasImage) {
+          missingItemImages.push(idx + 1);
+        }
+      });
+      if (missingItemImages.length > 0) {
+        messages.push(`Belum semua gambar diupload untuk item: ${missingItemImages.join(', ')}`);
+      }
+      if (messages.length > 0) {
+        setPreValidateMessages(messages);
+        setPreValidateOpen(true);
         return;
       }
-
-      // Validate that at least one item has actual data
-      const hasActualData = Object.values(actualItems).some(item => {
-        return (item.assignments || []).length > 0;
-      });
-
-      if (!hasActualData) {
-         showAlert('Data actual belum ada', 'Tambahkan assignment minimal untuk satu item', 'warning');
-         return;
-       }
 
       setSaving(true);
 
@@ -466,7 +492,31 @@ export default function AddWOActualPage() {
       }
     } catch (error) {
       console.error('Error saving WO Actual:', error);
-      showAlert('Gagal menyimpan WO Actual', error.message || 'Terjadi kesalahan saat menyimpan', 'error');
+      const errData = error?.response?.data || error?.data || {};
+      const errMsg = errData?.message || error.message || 'Terjadi kesalahan saat menyimpan';
+      const errDetailsObj = errData?.errors || {};
+      const detailsList = [];
+      try {
+        if (Array.isArray(errDetailsObj)) {
+          detailsList.push(...errDetailsObj);
+        } else if (errDetailsObj && typeof errDetailsObj === 'object') {
+          Object.keys(errDetailsObj).forEach((k) => {
+            const v = errDetailsObj[k];
+            if (Array.isArray(v)) {
+              v.forEach((msg) => detailsList.push(msg));
+            } else if (typeof v === 'string') {
+              detailsList.push(v);
+            }
+          });
+        }
+      } catch (_) {}
+      if (detailsList.length > 0) {
+        setSaveErrorMessage(errMsg);
+        setSaveErrorDetails(detailsList);
+        setSaveErrorOpen(true);
+      } else {
+        showAlert('Gagal menyimpan WO Actual', errMsg, 'error');
+      }
     } finally {
       setSaving(false);
     }
@@ -507,6 +557,48 @@ export default function AddWOActualPage() {
     <PageLayout>
       <div className="space-y-6">
         <AlertComponent />
+        <CustomAlert
+          open={preValidateOpen}
+          onOpenChange={setPreValidateOpen}
+          title="Validasi gagal"
+          message={null}
+          type="warning"
+          showCancel={false}
+          confirmText="OK"
+          onConfirm={() => setPreValidateOpen(false)}
+          extraContent={(
+            <div className="mt-1">
+              {Array.isArray(preValidateMessages) && preValidateMessages.length > 0 && (
+                <ul className="list-disc list-inside space-y-1 text-sm text-gray-800">
+                  {preValidateMessages.map((m, idx) => (
+                    <li key={idx}>{m}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        />
+        <CustomAlert
+          open={saveErrorOpen}
+          onOpenChange={setSaveErrorOpen}
+          title="Gagal menyimpan WO Actual"
+          message={saveErrorMessage || 'Validasi gagal'}
+          type="error"
+          showCancel={false}
+          confirmText="OK"
+          onConfirm={() => setSaveErrorOpen(false)}
+          extraContent={(
+            <div className="mt-3">
+              {Array.isArray(saveErrorDetails) && saveErrorDetails.length > 0 && (
+                <ul className="list-disc list-inside space-y-1 text-sm text-gray-800">
+                  {saveErrorDetails.map((m, idx) => (
+                    <li key={idx}>{m}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        />
         <CustomAlert
           open={printOptionsOpen}
           onOpenChange={setPrintOptionsOpen}
