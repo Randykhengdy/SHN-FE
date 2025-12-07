@@ -1560,25 +1560,14 @@ export default function AddWorkOrderPage() {
                           </Button>
                         </TableCell>
                         <TableCell className="text-left">
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openItemEditModal(item)}
-                              className="text-xs"
-                            >
-                              Edit
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => removeWorkOrderItem(item.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => removeWorkOrderItem(item.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                       
@@ -1663,6 +1652,7 @@ export default function AddWorkOrderPage() {
         value={workOrderItems.find(item => item.id === pelaksanaModalItemId)?.pelaksana || []}
         onSave={savePelaksanaForItem}
         loadingOptions={loadingPelaksana}
+        workOrderItem={workOrderItems.find(item => item.id === pelaksanaModalItemId) || null}
       />
 
       {/* Plat Preview Modal */}

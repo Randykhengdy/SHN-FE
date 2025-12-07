@@ -365,7 +365,31 @@ export default function ViewSalesOrderPage() {
       return sum + discountAmount;
     }, 0);
     
-    const ppnAmount = (subtotal - totalDiscount) * 0.11; // 11% PPN
+    // Use PPN from API if available, otherwise calculate with 11%
+    let ppnAmount = 0;
+    if (salesOrder) {
+      // Prioritize ppn_amount from API
+      if (salesOrder.ppn_amount !== undefined && salesOrder.ppn_amount !== null) {
+        ppnAmount = parseFloat(salesOrder.ppn_amount) || 0;
+        console.log('🔍 Using PPN amount from API:', ppnAmount);
+      } 
+      // If ppn_amount not available but ppn_percent is, calculate it
+      else if (salesOrder.ppn_percent !== undefined && salesOrder.ppn_percent !== null) {
+        const ppnPercent = parseFloat(salesOrder.ppn_percent) || 0;
+        ppnAmount = (subtotal - totalDiscount) * (ppnPercent / 100);
+        console.log('🔍 Calculating PPN from API percent:', { ppnPercent, ppnAmount });
+      }
+      // Fallback to 11% if no PPN data from API
+      else {
+        ppnAmount = (subtotal - totalDiscount) * 0.11;
+        console.log('🔍 Using default 11% PPN (no API data)');
+      }
+    } else {
+      // Fallback if salesOrder not loaded yet
+      ppnAmount = (subtotal - totalDiscount) * 0.11;
+      console.log('🔍 Using default 11% PPN (salesOrder not loaded)');
+    }
+    
     const grandTotal = subtotal - totalDiscount + ppnAmount;
     
     console.log('🔍 Final calculations:', {
@@ -373,11 +397,13 @@ export default function ViewSalesOrderPage() {
       totalDiscount,
       ppnAmount,
       grandTotal,
-      itemsCount: items.length
+      itemsCount: items.length,
+      salesOrderPPN: salesOrder?.ppn_amount,
+      salesOrderPPNPercent: salesOrder?.ppn_percent
     });
     
     return { subtotal, totalDiscount, ppnAmount, grandTotal };
-  }, [items]);
+  }, [items, salesOrder]);
 
 
 
