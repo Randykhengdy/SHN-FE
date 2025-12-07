@@ -331,10 +331,6 @@ export async function previewImageExists(itemId) {
  */
 export function clearCanvasPreviews() {
   try {
-    console.log('🧹 Clearing canvas preview cache...');
-    
-    // Clear any existing object URLs from memory
-    // This forces the browser to fetch fresh images
     if (window.canvasPreviewUrls) {
       Object.values(window.canvasPreviewUrls).forEach(url => {
         if (url.startsWith('blob:')) {
@@ -343,14 +339,12 @@ export function clearCanvasPreviews() {
       });
       window.canvasPreviewUrls = {};
     }
-    
-    // Clear browser cache for canvas-previews folder
-    // We'll add a cache-busting parameter to force fresh requests
     const timestamp = Date.now();
     window.canvasPreviewCacheBuster = timestamp;
-    
-    console.log('✅ Canvas preview cache cleared, fresh API calls will be made');
+    if (window.electronAPI && typeof window.electronAPI.clearCanvasPreviews === 'function') {
+      window.electronAPI.clearCanvasPreviews();
+    }
   } catch (error) {
-    console.error('❌ Error clearing canvas preview cache:', error);
+    
   }
 }

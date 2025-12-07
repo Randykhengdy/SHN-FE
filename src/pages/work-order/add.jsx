@@ -11,6 +11,7 @@ import { useAlert } from '@/hooks/useAlert';
 import PageLayout from '@/components/PageLayout';
 import { workOrderService } from '@/services/workOrderService';
 import { openPrintDialog, generateWOPlanningPrintContent } from '@/lib/printUtils';
+import { clearCanvasPreviews } from '@/lib/canvasUtils';
 import { workOrderPlanningService } from '@/services/workOrderPlanningService';
 import { request } from '@/lib/request';
 import { Table, TableHead, TableBody, TableRow, TableCell, TableHeader } from '@/components/Table';
@@ -121,6 +122,40 @@ export default function AddWorkOrderPage() {
     const idx = workOrderItems.findIndex(i => String(i.sales_order_item_id) === String(soItemId));
     return idx !== -1 ? (idx + 1) : soItemId;
   };
+
+  const runWOCleansing = () => {
+    try {
+      const keys = Object.keys(localStorage);
+      const woKeys = keys.filter(key => key.startsWith('WO_'));
+      woKeys.forEach(key => localStorage.removeItem(key));
+    } catch (_) {}
+    try { clearCanvasPreviews(); } catch (_) {}
+    setWorkOrderItems([]);
+    setSelectedSalesOrder(null);
+    setSelectedPlatDasar({});
+    setPreviewItems([]);
+    setLoadingPreview(false);
+    setValidationMismatches([]);
+    setCatatanError(false);
+    setCatatanRequiredOpen(false);
+    setPelaksanaModalOpen(false);
+    setItemEditModalOpen(false);
+    setUtuhModalOpen(false);
+    setSelectedUtuhItem(null);
+    setSaranUtuhData([]);
+    setSelectedSaranUtuhItems([]);
+    setSaranUtuhQuantities({});
+    setWoTotalQuantity([]);
+    setWorkOrderData(prev => ({
+      ...prev,
+      nomor_wo: '',
+      catatan: '',
+    }));
+  };
+
+  useEffect(() => {
+    runWOCleansing();
+  }, []);
 
   // UI State for pelaksana modal
   const [pelaksanaModalOpen, setPelaksanaModalOpen] = useState(false);
@@ -1236,7 +1271,7 @@ export default function AddWorkOrderPage() {
       <div className="mb-6">
         <Button 
           variant="outline" 
-          onClick={() => navigate('/work-order')}
+          onClick={() => { runWOCleansing(); navigate('/work-order'); }}
           className="flex items-center gap-2"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -1266,6 +1301,7 @@ export default function AddWorkOrderPage() {
                   onValueChange={(value) => {
                     const selectedSO = salesOrderList.find(so => so.value === value);
                     if (selectedSO) {
+                      runWOCleansing();
                       setWorkOrderData({
                         ...workOrderData, 
                         sales_order_id: parseInt(value),

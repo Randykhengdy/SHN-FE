@@ -363,8 +363,8 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
           <span class="info-value">${salesOrderData.customer.telepon || salesOrderData.customer.telepon_hp || salesOrderData.customer.phone || 'N/A'}</span>
         </div>
         <div class="info-row">
-          <span class="info-label">Email</span>
-          <span class="info-value">${salesOrderData.customer.email || salesOrderData.customer.email_address || 'N/A'}</span>
+          <span class="info-label">Contact Person</span>
+          <span class="info-value">${salesOrderData.customer.contact_person || 'N/A'}</span>
         </div>
       </div>
       ` : ''}

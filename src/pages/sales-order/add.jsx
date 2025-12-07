@@ -65,7 +65,6 @@ export default function AddSalesOrderPage() {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
-  const [customerEmail, setCustomerEmail] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
 
   // Load master data on component mount
@@ -280,7 +279,7 @@ export default function AddSalesOrderPage() {
   const [groupItemOptions, setGroupItemOptions] = useState([]);
   const [loadingGroupItem, setLoadingGroupItem] = useState(false);
   
-  // Filter state for group item
+  // Filter state for group i tem
   const [groupItemFilters, setGroupItemFilters] = useState({
     panjang: "",
     lebar: "",
@@ -387,8 +386,8 @@ export default function AddSalesOrderPage() {
           areaPerItem = (area / 1000).toFixed(2); // Convert mm to m
         } else if (selectedShape?.dimensi === "2D") {
           // Untuk bentuk 2D (plat), luas = panjang x lebar (tanpa tebal)
-          area = length * width;
-          areaPerItem = (area / 10000).toFixed(2); // Convert mm² to m²
+          area = length * width; // mm²
+          areaPerItem = (area / 1000000).toFixed(2); // Convert mm² → m²
         }
 
         // Get current satuan
@@ -536,7 +535,6 @@ export default function AddSalesOrderPage() {
     // Update customer form state with proper field names
     setCustomerName(customer.nama_pelanggan || customer.nama || "");
     setCustomerPhone(customer.telepon_hp || customer.telepon || "");
-    setCustomerEmail(customer.email || "");
     setCustomerAddress(customer.alamat || customer.kota || "");
   };
 
@@ -711,12 +709,12 @@ export default function AddSalesOrderPage() {
         const customerData = selectedCustomer ? {
           nama: selectedCustomer.nama_pelanggan || selectedCustomer.nama || customerName || 'N/A',
           telepon: selectedCustomer.telepon_hp || selectedCustomer.telepon || customerPhone || 'N/A',
-          email: selectedCustomer.email || customerEmail || 'N/A',
+          contact_person: selectedCustomer.contact_person || 'N/A',
           alamat: selectedCustomer.alamat || selectedCustomer.kota || customerAddress || 'N/A'
         } : {
           nama: customerName || 'N/A',
           telepon: customerPhone || 'N/A',
-          email: customerEmail || 'N/A',
+          contact_person: 'N/A',
           alamat: customerAddress || 'N/A'
         };
         
@@ -782,12 +780,12 @@ export default function AddSalesOrderPage() {
       const customerData = selectedCustomer ? {
         nama: selectedCustomer.nama_pelanggan || selectedCustomer.nama || customerName || 'N/A',
         telepon: selectedCustomer.telepon_hp || selectedCustomer.telepon || customerPhone || 'N/A',
-        email: selectedCustomer.email || customerEmail || 'N/A',
+        contact_person: selectedCustomer.contact_person || 'N/A',
         alamat: selectedCustomer.alamat || selectedCustomer.kota || customerAddress || 'N/A'
       } : {
         nama: customerName || 'N/A',
         telepon: customerPhone || 'N/A',
-        email: customerEmail || 'N/A',
+        contact_person: 'N/A',
         alamat: customerAddress || 'N/A'
       };
       
@@ -834,7 +832,6 @@ export default function AddSalesOrderPage() {
     
     setCustomerName("PT Jaya Makmur Sejahtera");
     setCustomerPhone("08123456789");
-    setCustomerEmail("info@jayamakmur.com");
     setCustomerAddress("Jl. Raya Jakarta No. 123, Jakarta Selatan");
     
     setSelectedCustomer({
@@ -1190,7 +1187,7 @@ export default function AddSalesOrderPage() {
                 <div><strong>Nama:</strong> {selectedCustomer.nama_pelanggan || 'Tidak tersedia'}</div>
                 <div><strong>Kode:</strong> {selectedCustomer.kode || 'Tidak tersedia'}</div>
                 <div><strong>Telepon:</strong> {selectedCustomer.telepon_hp || 'Tidak tersedia'}</div>
-                <div><strong>Email:</strong> {selectedCustomer.email || 'Tidak tersedia'}</div>
+                <div><strong>Contact Person:</strong> {selectedCustomer.contact_person || 'Tidak tersedia'}</div>
                 <div className="col-span-2"><strong>Alamat:</strong> {selectedCustomer.kota || 'Tidak tersedia'}</div>
               </div>
             </div>
