@@ -990,8 +990,11 @@ export default function AddWorkOrderPage() {
         id_pelanggan: workOrderData.pelanggan_id,
         id_gudang: workOrderData.gudang_id,
         prioritas: workOrderData.prioritas,
-        status: workOrderData.status,
-        typeWO: (String(typeWO).toLowerCase() === 'batal' ? 'cancel' : typeWO),
+        status: String(workOrderData.status || '').toLowerCase(),
+        typeWO: (() => {
+          const t = String(typeWO || '').toLowerCase();
+          return t === 'batal' ? 'cancel' : t || 'normal';
+        })(),
         handover_method: workOrderData.handover_method,
         estimate_done: workOrderData.estimate_done || null,
         catatan: workOrderData.catatan,
