@@ -73,6 +73,123 @@ Ringkasan endpoint baru, dengan contoh singkat request/response.
     }
     ```
 
+## Pelanggan
+Fields (data): `kode`, `nama_pelanggan`, `kota`, `telepon_hp`, `contact_person`, `email`, `id`
+
+- Create: `POST /api/pelanggan`
+  - Request:
+    ```json
+    {
+      "kode": "CUST-001",
+      "nama_pelanggan": "PT Contoh",
+      "kota": "Jakarta",
+      "telepon_hp": "08123456789",
+      "contact_person": "Budi",
+      "email": "kontak@contoh.id"
+    }
+    ```
+  - Response:
+    ```json
+    {
+      "success": true,
+      "message": "Data berhasil ditambahkan",
+      "data": {
+        "id": 9,
+        "kode": "CUST-001",
+        "nama_pelanggan": "PT Contoh",
+        "kota": "Jakarta",
+        "telepon_hp": "08123456789",
+        "contact_person": "Budi",
+        "email": "kontak@contoh.id"
+      }
+    }
+    ```
+
+- List: `GET /api/pelanggan`
+  - Query: `per_page`, `search`, `sort_by`, `order`
+  - Response (paginated):
+    ```json
+    {
+      "success": true,
+      "message": "Data ditemukan",
+      "data": [
+        {
+          "id": 8,
+          "kode": "CUST-0008",
+          "nama_pelanggan": "PT Sampoerna",
+          "kota": "Surabaya",
+          "telepon_hp": "0812xxxx",
+          "contact_person": "Agus",
+          "email": null
+        }
+      ],
+      "pagination": {
+        "current_page": 1,
+        "per_page": 100,
+        "last_page": 1,
+        "total": 1
+      }
+    }
+    ```
+
+- Show: `GET /api/pelanggan/{id}`
+  - Response:
+    ```json
+    {
+      "success": true,
+      "message": "Data ditemukan",
+      "data": {
+        "id": 8,
+        "kode": "CUST-0008",
+        "nama_pelanggan": "PT Sampoerna",
+        "kota": "Surabaya",
+        "telepon_hp": "0812xxxx",
+        "contact_person": "Agus",
+        "email": null
+      }
+    }
+    ```
+
+- Update: `PATCH /api/pelanggan/{id}`
+  - Request (contoh minimal):
+    ```json
+    {
+      "nama_pelanggan": "PT Sampoerna Tbk",
+      "email": "halo@sampoerna.co.id"
+    }
+    ```
+  - Response:
+    ```json
+    {
+      "success": true,
+      "message": "Data berhasil diupdate",
+      "data": {
+        "id": 8,
+        "kode": "CUST-0008",
+        "nama_pelanggan": "PT Sampoerna Tbk",
+        "kota": "Surabaya",
+        "telepon_hp": "0812xxxx",
+        "contact_person": "Agus",
+        "email": "halo@sampoerna.co.id"
+      }
+    }
+    ```
+
+- Delete (soft): `DELETE /api/pelanggan/{id}`
+  - Response:
+    ```json
+    { "success": true, "message": "Data berhasil di-soft delete", "data": null }
+    ```
+
+- Restore: `PATCH /api/pelanggan/{id}/restore`
+  - Response:
+    ```json
+    {
+      "success": true,
+      "message": "Data berhasil di-restore",
+      "data": { "id": 8, "kode": "CUST-0008", "nama_pelanggan": "PT Sampoerna" }
+    }
+    ```
 ## Sales Order Header
 - List: `GET /api/sales-order/header`
   - Query params:

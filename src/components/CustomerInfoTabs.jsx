@@ -26,9 +26,10 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
   const [newCustomer, setNewCustomer] = useState({
     kode: "",
     nama_pelanggan: "",
-    telepon: "",
+    telepon_hp: "",
     email: "",
-    alamat: ""
+    alamat: "",
+    kota: ""
   });
 
   // Load customers from service
@@ -48,11 +49,8 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
         }
       } catch (error) {
         console.error('Error loading customers:', error);
-        showAlert(
-          "Error", 
-          "Gagal memuat data pelanggan. Silakan coba lagi.", 
-          "error"
-        );
+        const msg = error?.message || 'Gagal memuat data pelanggan.';
+        showAlert("Error", msg, "error");
         setCustomers([]);
         setFilteredCustomers([]);
       } finally {
@@ -76,9 +74,19 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
     }
   }, [searchQuery, customers]);
 
-  const handleCustomerSelect = (customer) => {
-    onCustomerSelect(customer);
-    console.log("Customer selected:", customer);
+  const handleCustomerSelect = async (customer) => {
+    try {
+      const resp = await pelangganService.getById(customer.id);
+      const detailed = resp?.data || resp || {};
+      const merged = { ...customer, ...detailed };
+      onCustomerSelect(merged);
+      console.log("Customer selected (merged):", merged);
+    } catch (error) {
+      onCustomerSelect(customer);
+      console.log("Customer selected (fallback):", customer, error);
+      const msg = error?.message || 'Gagal mengambil detail pelanggan.';
+      showAlert("Error", msg, "error");
+    }
   };
 
   const handleNewCustomerChange = (field, value) => {
@@ -94,10 +102,10 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
   };
 
   const handleSaveNewCustomer = async () => {
-    if (!newCustomer.kode || !newCustomer.nama_pelanggan) {
+    if (!newCustomer.kode || !newCustomer.nama_pelanggan || !newCustomer.email) {
       showAlert(
         "Data Tidak Lengkap", 
-        "Kode dan Nama Pelanggan wajib diisi!", 
+        "Kode, Nama Pelanggan, dan Email wajib diisi!", 
         "warning"
       );
       return;
@@ -116,11 +124,10 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
     try {
       setLoading(true);
       
-      // Save to backend using service
-      const response = await pelangganService.createWithoutValidation(newCustomer);
+      const response = await pelangganService.create(newCustomer);
       
-      if (response && response.data) {
-        const newCustomerData = response.data;
+      if (response && (response.data || response.id)) {
+        const newCustomerData = response.data || response;
         
         // Add to customers list
         setCustomers(prev => [...prev, newCustomerData]);
@@ -132,9 +139,10 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
         setNewCustomer({
           kode: "",
           nama_pelanggan: "",
-          telepon: "",
+          telepon_hp: "",
           email: "",
-          alamat: ""
+          alamat: "",
+          kota: ""
         });
 
         // Switch to existing tab
@@ -153,11 +161,8 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
       }
     } catch (error) {
       console.error('Error saving new customer:', error);
-      showAlert(
-        "Error", 
-        "Gagal menyimpan pelanggan baru. Silakan coba lagi.", 
-        "error"
-      );
+      const msg = error?.message || 'Gagal menyimpan pelanggan baru.';
+      showAlert("Error", msg, "error");
     } finally {
       setLoading(false);
     }
@@ -286,11 +291,11 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="telepon">Telepon</Label>
+                <Label htmlFor="telepon_hp">Telepon</Label>
                 <Input
-                  id="telepon"
-                  value={newCustomer.telepon}
-                  onChange={(e) => handleNewCustomerChange('telepon', e.target.value)}
+                  id="telepon_hp"
+                  value={newCustomer.telepon_hp}
+                  onChange={(e) => handleNewCustomerChange('telepon_hp', e.target.value)}
                   placeholder="Masukkan nomor telepon"
                 />
               </div>
@@ -313,6 +318,16 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
                 value={newCustomer.alamat}
                 onChange={(e) => handleNewCustomerChange('alamat', e.target.value)}
                 placeholder="Masukkan alamat lengkap"
+              />
+            </div>
+
+            <div className="space-y-2 mt-2">
+              <Label htmlFor="kota">Kota</Label>
+              <Input
+                id="kota"
+                value={newCustomer.kota}
+                onChange={(e) => handleNewCustomerChange('kota', e.target.value)}
+                placeholder="Masukkan kota"
               />
             </div>
 

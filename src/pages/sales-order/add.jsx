@@ -693,6 +693,7 @@ export default function AddSalesOrderPage() {
       };
       
       console.log("Data yang akan dikirim ke API:", salesOrderData);
+
       
       const result = await request(API_ENDPOINTS.salesOrder, {
         method: 'POST',
@@ -1415,7 +1416,7 @@ export default function AddSalesOrderPage() {
             </div>
             <div>
               <Label htmlFor="itemDiameter">
-                {selectedShape?.dimensi === "1D" ? "Tebal/Diameter/dan lain-lain (mm)" : "Tebal (mm)"} {selectedShape?.dimensi === "2D" && itemCutType !== "utuh" ? "*" : ""}
+                {selectedShape?.dimensi === "1D" ? "Tebal/Diameter/dan lain-lain (mm)" : "Tebal (mm)"} {itemCutType !== "utuh" && (selectedShape?.dimensi === "2D" || selectedShape?.dimensi === "1D") ? "*" : ""}
               </Label>
               <Input
                 id="itemDiameter"
@@ -1425,7 +1426,7 @@ export default function AddSalesOrderPage() {
                 onChange={(e) => setItemDiameter(e.target.value)}
                 placeholder="0.00"
                 disabled={itemCutType === "utuh"}
-                required={itemCutType !== "utuh" && selectedShape?.dimensi === "2D"}
+                required={itemCutType !== "utuh" && (selectedShape?.dimensi === "2D" || selectedShape?.dimensi === "1D")}
               />
             </div>
 

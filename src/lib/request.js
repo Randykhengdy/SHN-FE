@@ -23,7 +23,19 @@ export async function request(path, options = {}) {
   };
 
   const isCanvasEndpoint = /canvas/i.test(path);
-  const response = await fetch(`${apiConfig.baseUrl}${path}`, {
+  let base = apiConfig.baseUrl || '';
+  if (!/^https?:\/\//i.test(base)) {
+    base = `http://${base}`;
+  }
+  let finalPath = path || '';
+  const baseEndsWithApi = /\/api\/?$/i.test(base);
+  const pathStartsWithApi = /^\/api(\/|$)/i.test(finalPath);
+  if (baseEndsWithApi && pathStartsWithApi) {
+    finalPath = finalPath.replace(/^\/api/i, '');
+  }
+  const needsSlash = !base.endsWith('/') && !finalPath.startsWith('/');
+  const url = `${base}${needsSlash ? '/' : ''}${finalPath}`;
+  const response = await fetch(url, {
     ...options,
     headers: mergedHeaders,
   });
