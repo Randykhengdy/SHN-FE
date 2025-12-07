@@ -16,12 +16,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import SearchSelect from "@/components/ui/search-select";
+import AsyncSearchSelect from "@/components/ui/async-search-select";
 import { 
   getTermOptions, 
-  getGudangOptions, 
-  getJenisBarangOptions, 
   getBentukBarangOptions, 
-  getGradeBarangOptions, 
   getUnitOptions 
 } from "@/services/masterDataService";
 import { useAlert } from "@/hooks/useAlert";
@@ -32,6 +30,9 @@ import SalesOrderLayout from "@/components/SalesOrderLayout";
 import { documentSequenceService } from "@/services/master-data/documentSequenceService";
 import { generateSalesOrderPrintContent, openPrintDialog } from "@/lib/printUtils";
 import { beratJenisService } from "@/services/master-data/beratJenisService";
+import { gradeBarangService } from "@/services/master-data/gradeBarangService";
+import { jenisBarangService } from "@/services/master-data/jenisBarangService";
+import { gudangService } from "@/services/master-data/gudangService";
 
 export default function AddSalesOrderPage() {
   const { showAlert, AlertComponent } = useAlert();
@@ -75,30 +76,21 @@ export default function AddSalesOrderPage() {
         setLoadingWarehouse(true);
         setLoadingItemType(true);
         setLoadingItemShape(true);
-        setLoadingItemGrade(true);
+        
         setLoadingUnit(true);
 
         const [
           terms,
-          gudang,
-          jenisBarang,
           bentukBarang,
-          gradeBarang,
           soNumber
         ] = await Promise.all([
           getTermOptions(),
-          getGudangOptions(),
-          getJenisBarangOptions(),
           getBentukBarangOptions(),
-          getGradeBarangOptions(),
           documentSequenceService.generateSONumber()
         ]);
 
         setTermOptions(terms);
-        setWarehouseOptions(gudang);
-        setItemTypeOptions(jenisBarang);
         setItemShapeOptions(bentukBarang);
-        setItemGradeOptions(gradeBarang);
         // Unit options akan dimuat oleh useEffect berdasarkan itemCutType
         
         // Set generated SO number
@@ -112,7 +104,7 @@ export default function AddSalesOrderPage() {
         setLoadingWarehouse(false);
         setLoadingItemType(false);
         setLoadingItemShape(false);
-        setLoadingItemGrade(false);
+        
         // loadingUnit akan dihandle oleh useEffect untuk unit options
       }
     };
@@ -1246,16 +1238,22 @@ export default function AddSalesOrderPage() {
                 />
               </div>
               <div>
-                <SearchSelect
-                  label="Asal Gudang"
-                  placeholder="Pilih Gudang"
-                  searchPlaceholder="Cari gudang..."
-                  value={originWarehouse}
-                  onValueChange={setOriginWarehouse}
-                  options={warehouseOptions}
-                  loading={loadingWarehouse}
-                  required
-                />
+              <AsyncSearchSelect
+                label="Asal Gudang"
+                placeholder="Pilih Gudang"
+                searchPlaceholder="Cari gudang..."
+                value={originWarehouse}
+                onValueChange={setOriginWarehouse}
+                required
+                fetchOptions={async (q, page) => {
+                  const resp = await gudangService.getPaginated(page || 1, 10, q || "", "", "asc", { tipe_gudang: "gudang" });
+                  const rows = Array.isArray(resp?.data) ? resp.data : (Array.isArray(resp) ? resp : []);
+                  return rows.map((item) => ({
+                    value: item.id?.toString(),
+                    label: item.nama_gudang || item.nama || "Unknown",
+                  }));
+                }}
+              />
               </div>
               <div>
                 <SearchSelect
@@ -1301,27 +1299,39 @@ export default function AddSalesOrderPage() {
               </div>
             </div>
             <div>
-              <SearchSelect
+              <AsyncSearchSelect
                 label="Jenis Barang"
                 placeholder="Pilih Jenis Barang"
                 searchPlaceholder="Cari jenis barang..."
                 value={itemType}
                 onValueChange={setItemType}
-                options={itemTypeOptions}
-                loading={loadingItemType}
                 required
+                fetchOptions={async (q, page) => {
+                  const resp = await jenisBarangService.getPaginated(page || 1, 10, q || "");
+                  const rows = Array.isArray(resp?.data) ? resp.data : (Array.isArray(resp) ? resp : []);
+                  return rows.map((item) => ({
+                    value: item.id?.toString(),
+                    label: item.nama_jenis || item.nama || item.label || "Unknown",
+                  }));
+                }}
               />
             </div>
             <div>
-              <SearchSelect
+              <AsyncSearchSelect
                 label="Grade Barang"
                 placeholder="Pilih Grade"
                 searchPlaceholder="Cari grade..."
                 value={itemGrade}
                 onValueChange={setItemGrade}
-                options={itemGradeOptions}
-                loading={loadingItemGrade}
                 required
+                fetchOptions={async (q, page) => {
+                  const resp = await gradeBarangService.getPaginated(page || 1, 10, q || "");
+                  const rows = Array.isArray(resp?.data) ? resp.data : (Array.isArray(resp) ? resp : []);
+                  return rows.map((item) => ({
+                    value: item.id?.toString(),
+                    label: item.nama || item.nama_grade || item.label || "Unknown",
+                  }));
+                }}
               />
             </div>
 

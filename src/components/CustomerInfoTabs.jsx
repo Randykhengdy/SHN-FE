@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Search, Plus, User, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,8 +11,12 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
   const [activeTab, setActiveTab] = useState("existing");
   const [searchQuery, setSearchQuery] = useState("");
   const [customers, setCustomers] = useState([]);
-  const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const listRef = useRef(null);
+  const debounceRef = useRef(null);
   
   // Alert state
   const [alertOpen, setAlertOpen] = useState(false);
@@ -32,47 +36,45 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
     contact_person: ""
   });
 
-  // Load customers from service
-  useEffect(() => {
-    const loadCustomers = async () => {
-      try {
-        setLoading(true);
-        const response = await pelangganService.getAll();
-        
-        if (response && response.data) {
-          setCustomers(response.data);
-          setFilteredCustomers(response.data);
-        } else {
-          console.warn('No customer data received from service');
-          setCustomers([]);
-          setFilteredCustomers([]);
-        }
-      } catch (error) {
-        console.error('Error loading customers:', error);
-        const msg = error?.message || 'Gagal memuat data pelanggan.';
-        showAlert("Error", msg, "error");
-        setCustomers([]);
-        setFilteredCustomers([]);
-      } finally {
-        setLoading(false);
+  // Load customers with pagination
+  const loadCustomers = async (q = "", p = 1, append = false) => {
+    try {
+      append ? setLoadingMore(true) : setLoading(true);
+      const resp = await pelangganService.getPaginated(p, 10, q || "");
+      const rows = Array.isArray(resp?.data) ? resp.data : (Array.isArray(resp) ? resp : []);
+      if (append) {
+        const existingIds = new Set(customers.map(c => c.id));
+        const merged = [...customers];
+        rows.forEach(r => { if (!existingIds.has(r.id)) merged.push(r); });
+        setCustomers(merged);
+      } else {
+        setCustomers(rows);
       }
-    };
-
-    loadCustomers();
-  }, []);
-
-  // Filter customers based on search query
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredCustomers(customers);
-    } else {
-      const filtered = customers.filter(customer =>
-        (customer.nama_pelanggan && customer.nama_pelanggan.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (customer.kode && customer.kode.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
-      setFilteredCustomers(filtered);
+      setHasMore(rows.length >= 10);
+      setPage(p);
+    } catch (error) {
+      console.error('Error loading customers:', error);
+      const msg = error?.message || 'Gagal memuat data pelanggan.';
+      showAlert("Error", msg, "error");
+      if (!append) setCustomers([]);
+      setHasMore(false);
+    } finally {
+      append ? setLoadingMore(false) : setLoading(false);
     }
-  }, [searchQuery, customers]);
+  };
+
+  useEffect(() => { loadCustomers("", 1, false); }, []);
+
+  // Server-side search with debounce
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setPage(1);
+      setHasMore(true);
+      loadCustomers(searchQuery, 1, false);
+    }, 250);
+    return () => debounceRef.current && clearTimeout(debounceRef.current);
+  }, [searchQuery]);
 
   const handleCustomerSelect = async (customer) => {
     try {
@@ -222,19 +224,28 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
 
               <div className="space-y-2">
                 <Label>Daftar Pelanggan</Label>
-                <div className="max-h-60 overflow-y-auto border rounded-md">
+                <div className="max-h-60 overflow-y-auto border rounded-md" ref={listRef}
+                  onScroll={(e) => {
+                    const el = e.currentTarget;
+                    if (!hasMore || loadingMore) return;
+                    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
+                      const nextPage = page + 1;
+                      loadCustomers(searchQuery, nextPage, true);
+                    }
+                  }}
+                >
                   {loading ? (
                     <div className="p-4 text-center text-gray-500">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
                       Memuat data pelanggan...
                     </div>
-                  ) : filteredCustomers.length === 0 ? (
+                  ) : customers.length === 0 ? (
                     <div className="p-4 text-center text-gray-500">
                       {searchQuery ? "Tidak ada pelanggan yang ditemukan" : "Tidak ada data pelanggan"}
                     </div>
                   ) : (
                     <div className="divide-y">
-                      {filteredCustomers.map((customer) => (
+                      {customers.map((customer) => (
                         <div
                           key={customer.id}
                           className={`p-3 cursor-pointer hover:bg-gray-50 transition-colors ${
@@ -258,6 +269,9 @@ export default function CustomerInfoTabs({ onCustomerSelect, selectedCustomer })
                           </div>
                         </div>
                       ))}
+                      {loadingMore && (
+                        <div className="p-2 text-center text-gray-500 text-xs">Memuat...</div>
+                      )}
                     </div>
                   )}
                 </div>
