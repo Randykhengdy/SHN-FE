@@ -1,4 +1,11 @@
-const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog, shell } = require('electron');
+const axios = require('axios');
+let autoUpdater;
+try {
+  ({ autoUpdater } = require('electron-updater'));
+} catch (_) {
+  autoUpdater = null;
+}
 const path = require('path');
 const fs = require('fs');
 
@@ -146,6 +153,157 @@ function createWindow() {
     }
   });
 
+  // Auto Update wiring
+  if (autoUpdater) {
+    try {
+      autoUpdater.autoDownload = false;
+      autoUpdater.allowPrerelease = false;
+      autoUpdater.on('checking-for-update', () => {
+        if (mainWindow) mainWindow.webContents.send('update-event', { type: 'checking' });
+        if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Update', message: 'Memeriksa pembaruan…', type: 'info' });
+      });
+      autoUpdater.on('update-available', (info) => {
+        if (mainWindow) mainWindow.webContents.send('update-event', { type: 'available', info });
+        if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Update Tersedia', message: `Versi ${info.version} tersedia. Klik "Download Update" untuk mengunduh.`, type: 'info' });
+      });
+      autoUpdater.on('update-not-available', (info) => {
+        if (mainWindow) mainWindow.webContents.send('update-event', { type: 'none', info });
+        if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Up-to-date', message: 'Tidak ada pembaruan tersedia.', type: 'info' });
+      });
+      autoUpdater.on('error', (err) => {
+        if (mainWindow) mainWindow.webContents.send('update-event', { type: 'error', error: err?.message || String(err) });
+        if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Update Error', message: err?.message || 'Terjadi kesalahan saat update', type: 'error' });
+      });
+      autoUpdater.on('download-progress', (progressObj) => {
+        if (mainWindow) mainWindow.webContents.send('update-event', { type: 'progress', progress: progressObj });
+      });
+      autoUpdater.on('update-downloaded', (info) => {
+        if (mainWindow) mainWindow.webContents.send('update-event', { type: 'downloaded', info });
+        if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Update Siap', message: 'Pembaruan sudah diunduh. Aplikasi akan restart untuk menginstall.', type: 'success' });
+        try { autoUpdater.quitAndInstall(); } catch (_) {}
+      });
+    } catch (_) {}
+  }
+
+  const askRendererConfirm = (options = {}) => {
+    return new Promise((resolve) => {
+      const id = `${Date.now()}_${Math.random()}`;
+      const handler = (_event, payload) => {
+        if (!payload || payload.id !== id) return;
+        ipcMain.removeListener('confirm-result', handler);
+        resolve(!!payload.result);
+      };
+      ipcMain.on('confirm-result', handler);
+      if (mainWindow) mainWindow.webContents.send('request-confirm', { id, title: options.title || 'Konfirmasi', message: options.message || 'Lanjutkan?' });
+    });
+  };
+
+  // Fallback updater (GitHub releases) when electron-updater unavailable
+  const getPublishRepo = () => {
+    try {
+      const pkgPathCandidates = [
+        path.join(__dirname, '..', 'package.json'),
+        path.join(app.getAppPath(), 'package.json')
+      ];
+      let pkg;
+      for (const p of pkgPathCandidates) {
+        if (fs.existsSync(p)) { pkg = require(p); break; }
+      }
+      const pub = Array.isArray(pkg && pkg.build && pkg.build.publish) ? pkg.build.publish[0] : null;
+      if (pub && pub.provider === 'github' && pub.owner && pub.repo) {
+        return { owner: pub.owner, repo: pub.repo };
+      }
+    } catch (_) {}
+    return { owner: 'Randykhengdy', repo: 'SHN-FE' };
+  };
+  const compareSemver = (a, b) => {
+    const pa = String(a).replace(/^v/, '').split('.').map(n => parseInt(n || '0', 10));
+    const pb = String(b).replace(/^v/, '').split('.').map(n => parseInt(n || '0', 10));
+    for (let i = 0; i < 3; i++) {
+      if ((pa[i]||0) > (pb[i]||0)) return 1;
+      if ((pa[i]||0) < (pb[i]||0)) return -1;
+    }
+    return 0;
+  };
+  const checkForUpdatesFallback = async () => {
+    const repo = getPublishRepo();
+    if (!repo) throw new Error('Publish repo tidak terkonfigurasi');
+    const url = `https://api.github.com/repos/${repo.owner}/${repo.repo}/releases/latest`;
+    const res = await axios.get(url, { headers: { 'User-Agent': 'SHNUpdater' } });
+    const latest = res.data;
+    let latestVersion = latest.tag_name || latest.name || latest.id;
+    const ymlAsset = (latest.assets || []).find(a => /latest\.yml$/i.test(a.name));
+    if (ymlAsset && ymlAsset.browser_download_url) {
+      try {
+        const yml = await axios.get(ymlAsset.browser_download_url, { headers: { 'User-Agent': 'SHNUpdater' } });
+        const m = /version:\s*([^\s]+)/.exec(String(yml.data || ''));
+        if (m && m[1]) latestVersion = m[1];
+      } catch (_) {}
+    }
+    const current = app.getVersion();
+    const cmp = compareSemver(latestVersion, current);
+    if (cmp > 0) {
+      if (mainWindow) mainWindow.webContents.send('update-event', { type: 'available', info: { version: latestVersion } });
+      if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Update Tersedia', message: `Versi ${latestVersion} tersedia.`, type: 'info' });
+    } else {
+      if (mainWindow) mainWindow.webContents.send('update-event', { type: 'none', info: { version: latestVersion } });
+      if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Up-to-date', message: `Anda sudah di versi ${current}.`, type: 'info' });
+    }
+  };
+  const downloadUpdateFallback = async () => {
+    const repo = getPublishRepo();
+    if (!repo) throw new Error('Publish repo tidak terkonfigurasi');
+    const url = `https://api.github.com/repos/${repo.owner}/${repo.repo}/releases/latest`;
+    const res = await axios.get(url, { headers: { 'User-Agent': 'SHNUpdater' } });
+    const latest = res.data;
+    let latestVersion = latest.tag_name || latest.name || latest.id;
+    const ymlAsset = (latest.assets || []).find(a => /latest\.yml$/i.test(a.name));
+    if (ymlAsset && ymlAsset.browser_download_url) {
+      try {
+        const yml = await axios.get(ymlAsset.browser_download_url, { headers: { 'User-Agent': 'SHNUpdater' } });
+        const m = /version:\s*([^\s]+)/.exec(String(yml.data || ''));
+        if (m && m[1]) latestVersion = m[1];
+      } catch (_) {}
+    }
+    const current = app.getVersion();
+    const cmp = compareSemver(latestVersion, current);
+    if (cmp <= 0) {
+      if (mainWindow) mainWindow.webContents.send('update-event', { type: 'none', info: { version: latestVersion } });
+      if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Up-to-date', message: `Versi rilis (${latestVersion}) sama/lebih rendah dari app (${current}). Tidak mengunduh.`, type: 'info' });
+      return;
+    }
+    const asset = (latest.assets || []).find(a => /\.exe$/i.test(a.name));
+    if (!asset) throw new Error('Asset installer .exe tidak ditemukan di Release');
+    const controller = new AbortController();
+    const dl = await axios.get(asset.browser_download_url, { responseType: 'stream', signal: controller.signal });
+    const saveDir = app.getPath('downloads');
+    const savePath = path.join(saveDir, asset.name);
+    await new Promise((resolve, reject) => {
+      const ws = fs.createWriteStream(savePath);
+      const total = Number(dl.headers && dl.headers['content-length'] ? dl.headers['content-length'] : 0);
+      let received = 0;
+      let lastEmit = 0;
+      currentDownload = { controller, total, received };
+      dl.data.on('data', chunk => {
+        received += chunk.length;
+        currentDownload.received = received;
+        const now = Date.now();
+        if (now - lastEmit > 200) {
+          const percent = total > 0 ? Math.round((received / total) * 100) : null;
+          if (mainWindow) mainWindow.webContents.send('update-event', { type: 'progress', progress: { transferred: received, total, percent } });
+          lastEmit = now;
+        }
+      });
+      dl.data.pipe(ws);
+      ws.on('finish', resolve);
+      ws.on('error', reject);
+    });
+    if (mainWindow) mainWindow.webContents.send('update-event', { type: 'downloaded', info: { file: savePath } });
+    if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Update Diunduh', message: `File disimpan: ${savePath}`, type: 'success' });
+    lastDownloadedInstallerPath = savePath;
+    try { await shell.openPath(savePath); } catch (_) {}
+  };
+
   // Add keyboard shortcuts for all environments
   mainWindow.webContents.on('before-input-event', (event, input) => {
     // Ctrl+Shift+I to toggle DevTools
@@ -255,13 +413,51 @@ function createWindow() {
         {
           label: 'About',
           click: () => {
+            const name = app.getName();
+            const version = app.getVersion();
             mainWindow.webContents.send('show-alert', {
               title: 'About',
-              message: 'SHN React App v1.0.0\n\nAplikasi manajemen untuk Surya Logam Jaya',
+              message: `${name} v${version}\n\nAplikasi manajemen untuk Surya Logam Jaya`,
               type: 'info'
             });
           }
         },
+        {
+          label: 'Check for Updates…',
+          enabled: true,
+          click: async () => {
+            if (autoUpdater) { autoUpdater.checkForUpdates(); return; }
+            try { await checkForUpdatesFallback(); } catch (e) {
+              mainWindow.webContents.send('show-alert', { title: 'Updater', message: e?.message || String(e), type: 'error' });
+            }
+          }
+        },
+        {
+          label: 'Download Update',
+          enabled: true,
+          click: async () => {
+            const ok = await askRendererConfirm({ title: 'Download Update', message: 'Download update sekarang?' });
+            if (!ok) return;
+            if (autoUpdater) { autoUpdater.downloadUpdate(); return; }
+            try { await downloadUpdateFallback(); } catch (e) {
+              mainWindow.webContents.send('show-alert', { title: 'Download Update', message: e?.message || String(e), type: 'error' });
+            }
+          }
+        },
+        {
+          label: 'Run Downloaded Installer',
+          enabled: !!lastDownloadedInstallerPath,
+          click: async () => {
+            if (!lastDownloadedInstallerPath) {
+              mainWindow.webContents.send('show-alert', { title: 'Installer', message: 'Belum ada file installer yang diunduh.', type: 'info' });
+              return;
+            }
+            try { await shell.openPath(lastDownloadedInstallerPath); } catch (e) {
+              mainWindow.webContents.send('show-alert', { title: 'Installer', message: e?.message || String(e), type: 'error' });
+            }
+          }
+        },
+        
         {
           label: 'Toggle DevTools',
           accelerator: 'F12',
@@ -383,6 +579,26 @@ ipcMain.handle('get-app-version', () => {
 ipcMain.handle('get-app-name', () => {
   return app.getName();
 });
+
+// Updater IPC
+if (autoUpdater) {
+  ipcMain.handle('check-for-updates', async () => {
+    try {
+      const r = await autoUpdater.checkForUpdates();
+      return { ok: true, result: r };
+    } catch (e) {
+      return { ok: false, error: e?.message || String(e) };
+    }
+  });
+  ipcMain.handle('download-update', async () => {
+    try {
+      await autoUpdater.downloadUpdate();
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e?.message || String(e) };
+    }
+  });
+}
 
 // Handle canvas file saving
 ipcMain.handle('save-canvas-file', async (event, { dataUrl, filename }) => {
@@ -520,3 +736,17 @@ ipcMain.handle('clear-canvas-previews', async () => {
     };
   }
 });
+let lastDownloadedInstallerPath = null;
+let currentDownload = { controller: null, total: 0, received: 0 };
+  ipcMain.handle('cancel-download-update', async () => {
+    try {
+      if (currentDownload && currentDownload.controller) {
+        currentDownload.controller.abort();
+        currentDownload.controller = null;
+        if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Download Update', message: 'Unduhan dibatalkan.', type: 'info' });
+      }
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e?.message || String(e) };
+    }
+  });
