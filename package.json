@@ -4,7 +4,7 @@
   "description": "SHN React Application",
   "author": "SHN",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.4",
   "type": "module",
   "scripts": {
     "dev:vite": "vite",
@@ -89,8 +89,7 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
-      "package.json",
-      "!node_modules/**/*"
+      "package.json"
     ],
     "extraResources": [
       {
@@ -128,6 +127,14 @@
     "nodeGypRebuild": false,
     "disableSanityCheckAsar": true,
     "beforeBuild": "./scripts/fix-dependencies.js",
-    "onNodeModuleFile": "./scripts/filter-node-modules.js"
+    "onNodeModuleFile": "./scripts/filter-node-modules.js",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Randykhengdy",
+        "repo": "SHN-FE",
+        "releaseType": "release"
+      }
+    ]
   }
 }

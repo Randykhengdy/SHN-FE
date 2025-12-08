@@ -10,5 +10,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveCanvasFile: (dataUrl, filename) => ipcRenderer.invoke('save-canvas-file', { dataUrl, filename }),
   clearCanvasPreviews: () => ipcRenderer.invoke('clear-canvas-previews'),
   onShowAlert: (callback) => ipcRenderer.on('show-alert', (event, data) => callback(data)),
-  setRolePermissionsData: (data) => ipcRenderer.send('role-permissions-data', data)
+  setRolePermissionsData: (data) => ipcRenderer.send('role-permissions-data', data),
+  // Updater APIs
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  downloadUpdate: () => ipcRenderer.invoke('download-update'),
+  cancelDownloadUpdate: () => ipcRenderer.invoke('cancel-download-update'),
+  onUpdateEvent: (callback) => ipcRenderer.on('update-event', (_event, data) => callback(data)),
+  onRequestConfirm: (callback) => ipcRenderer.on('request-confirm', (_event, data) => callback(data)),
+  sendConfirmResult: (id, result) => ipcRenderer.send('confirm-result', { id, result }),
+  // App info
+  getVersion: () => ipcRenderer.invoke('get-app-version'),
+  getName: () => ipcRenderer.invoke('get-app-name')
 });
