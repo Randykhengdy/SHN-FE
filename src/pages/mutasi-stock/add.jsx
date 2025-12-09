@@ -4,12 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import SearchSelect from "@/components/ui/search-select";
+import AsyncSearchSelect from "@/components/ui/async-search-select";
 import { useAlert } from "@/hooks/useAlert";
 import { request } from "@/lib/request";
 import { API_ENDPOINTS } from "@/config/api";
 import PageLayout from "@/components/PageLayout";
 import MutationModal from "@/components/modals/ItemMutationModal";
-import { getGudangOptions, getItemBarangOptions } from "@/services/masterDataService";
+import { getGudangOptions } from "@/services/masterDataService";
 
 export default function AddMutasiStockPage() {
     const { showAlert, AlertComponent } = useAlert();
@@ -21,7 +22,7 @@ export default function AddMutasiStockPage() {
     const [loadingWarehouse, setLoadingWarehouse] = useState(false);
     const [loadingStockItem, setLoadingStockItem] = useState(false);
 
-    const [itemStockOptions, setItemStockOptions] = useState([]);
+    // const [itemStockOptions, setItemStockOptions] = useState([]);
 
     // Modal state
     const [itemMutationModalOpen, setItemMutationModalOpen] = useState(false);
@@ -42,16 +43,7 @@ export default function AddMutasiStockPage() {
                 setLoadingStockItem(true);
                 setLoadingWarehouse(true);
 
-                const [
-                    gudang,
-                    itemBarang
-                ] = await Promise.all([
-                    getGudangOptions(),
-                    getItemBarangOptions(),
-                ]);
-
-                setWarehouseOptions(gudang);
-                setItemStockOptions(itemBarang);
+                // Item barang tidak di-prefetch; dropdown modal akan fetch on demand
             } catch (error) {
                 console.error('Error loading master data:', error);
             } finally {
@@ -121,7 +113,7 @@ export default function AddMutasiStockPage() {
     };
 
     const saveStockForMutation = (rows) => {
-        const data = { ...rows, barang: itemStockOptions.find(opt => opt.value === rows.item_barang_id)?.label };
+        const data = { ...rows, barang: rows.barang || undefined };
         setMutasiStockData(prev => {
             const exists = prev.stock_mutation.some(item => item.item_barang_id === rows.item_barang_id && item.unit === rows.unit);
 
@@ -167,11 +159,10 @@ export default function AddMutasiStockPage() {
                         {/* Pilih Gudang Asal */}
                         <div className="grid-form m-lg">
                             <div className="col-span-2">
-                                <SearchSelect
+                                <AsyncSearchSelect
                                     label="Gudang Asal"
                                     placeholder="Pilih Gudang"
                                     searchPlaceholder="Cari gudang..."
-                                    options={warehouseOptions}
                                     value={mutasiStockData.gudang_asal_id ? mutasiStockData.gudang_asal_id.toString() : ''}
                                     onValueChange={(value) => {
                                         setMutasiStockData({ 
@@ -180,7 +171,18 @@ export default function AddMutasiStockPage() {
                                             stock_mutation: [] 
                                         });
                                     }}
-                                    loading={loadingWarehouse}
+                                    fetchOptions={async (q, page) => {
+                                        const params = new URLSearchParams();
+                                        params.append('page', String(page || 1));
+                                        params.append('per_page', '10');
+                                        params.append('tipe_gudang', 'gudang');
+                                        if (q) params.append('search', q);
+                                        const resp = await request(`/gudang?${params.toString()}`, { method: 'GET' });
+                                        const rows = Array.isArray(resp?.data) ? resp.data : [];
+                                        return rows.map(item => ({ value: String(item.id), label: item.nama_gudang || item.nama || 'Unknown' }));
+                                    }}
+                                    displayKey="label"
+                                    valueKey="value"
                                     required
                                 />
                             </div>
@@ -188,16 +190,26 @@ export default function AddMutasiStockPage() {
                         {/* Pilih Gudang Tujuan */}
                         <div className="grid-form m-lg">
                             <div className="col-span-2">
-                                <SearchSelect
+                                <AsyncSearchSelect
                                     label="Gudang Tujuan"
                                     placeholder="Pilih Gudang"
                                     searchPlaceholder="Cari gudang..."
-                                    options={warehouseOptions}
                                     value={mutasiStockData.gudang_tujuan_id ? mutasiStockData.gudang_tujuan_id.toString() : ''}
                                     onValueChange={(value) => {
                                         setMutasiStockData({ ...mutasiStockData, gudang_tujuan_id: parseInt(value) });
                                     }}
-                                    loading={loadingWarehouse}
+                                    fetchOptions={async (q, page) => {
+                                        const params = new URLSearchParams();
+                                        params.append('page', String(page || 1));
+                                        params.append('per_page', '10');
+                                        params.append('tipe_gudang', 'gudang');
+                                        if (q) params.append('search', q);
+                                        const resp = await request(`/gudang?${params.toString()}`, { method: 'GET' });
+                                        const rows = Array.isArray(resp?.data) ? resp.data : [];
+                                        return rows.map(item => ({ value: String(item.id), label: item.nama_gudang || item.nama || 'Unknown' }));
+                                    }}
+                                    displayKey="label"
+                                    valueKey="value"
                                     required
                                 />
                             </div>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import SearchSelect from '@/components/ui/search-select';
+import AsyncSearchSelect from '@/components/ui/async-search-select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Save, ArrowLeft, Users, Package, Grid3X3, X, Eye } from 'lucide-react';
@@ -376,12 +377,8 @@ export default function AddWorkOrderPage() {
         // Load pelanggan separately since it needs different handling
         try {
           setLoadingPelanggan(true);
-          setLoadingSalesOrder(true);
           
-          const [salesOrderResponse, pelangganResponse] = await Promise.all([
-            getSalesOrderOptions(),
-            getPelangganOptions()
-          ]);
+          const pelangganResponse = await getPelangganOptions();
           // getPelangganOptions sudah mengembalikan data yang sudah di-map
           if (pelangganResponse && Array.isArray(pelangganResponse)) {
             setPelangganList(pelangganResponse);
@@ -395,14 +392,12 @@ export default function AddWorkOrderPage() {
             setPelangganList(pelangganOptions);
           }
           
-          // Set sales order data
-          setSalesOrderList(salesOrderResponse || []);
+          setSalesOrderList([]);
           
         } catch (error) {
           console.error('Error loading additional data:', error);
         } finally {
           setLoadingPelanggan(false);
-          setLoadingSalesOrder(false);
         }
         
         // Debug: Log semua state setelah di-set
@@ -1279,10 +1274,10 @@ export default function AddWorkOrderPage() {
                 Input Work Order Planning
               </CardTitle>
               <div className="flex items-center gap-2 shrink-0">
-                <Button variant="default" size="sm" onClick={() => handleSubmit({ preventDefault: () => {} })} className="btn-primary">
+                <Button type="button" variant="default" size="sm" onClick={() => handleSubmit({ preventDefault: () => {} })} className="btn-primary">
                   Simpan Work Order
                 </Button>
-                <Button variant="secondary" size="sm" onClick={() => { runWOCleansing(); navigate('/work-order'); }}>
+                <Button type="button" variant="secondary" size="sm" onClick={() => { runWOCleansing(); navigate('/work-order'); }}>
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Kembali ke List
                 </Button>
@@ -1295,30 +1290,35 @@ export default function AddWorkOrderPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Sales Order *
                 </label>
-                <SearchSelect
+                <AsyncSearchSelect
                   label=""
-                  options={salesOrderList}
-                  value={workOrderData.sales_order_id ? workOrderData.sales_order_id.toString() : ''} 
-                  onValueChange={(value) => {
-                    const selectedSO = salesOrderList.find(so => so.value === value);
-                    if (selectedSO) {
-                      runWOCleansing();
-                      setWorkOrderData({
-                        ...workOrderData, 
-                        sales_order_id: parseInt(value),
-                        gudang_id: selectedSO.gudang_id ? parseInt(selectedSO.gudang_id) : workOrderData.gudang_id,
-                        pelanggan_id: selectedSO.pelanggan_id ? parseInt(selectedSO.pelanggan_id) : workOrderData.pelanggan_id
-                      });
-                      
-                      // Load Sales Order detail and populate items automatically
-                      // WO number will be generated automatically in loadSalesOrderDetail
-                      loadSalesOrderDetail(parseInt(value));
-                    } else {
-                       setWorkOrderData({...workOrderData, sales_order_id: parseInt(value)});
-                    }
-                  }}
                   placeholder="Pilih Sales Order"
-                  loading={loadingSalesOrder}
+                  value={workOrderData.sales_order_id ? workOrderData.sales_order_id.toString() : ''}
+                  onValueChange={(value) => {
+                    if (!value) return;
+                    runWOCleansing();
+                    const id = parseInt(value);
+                    setWorkOrderData({ ...workOrderData, sales_order_id: id });
+                    loadSalesOrderDetail(id);
+                  }}
+                  fetchOptions={async (q, page) => {
+                    const params = new URLSearchParams({ per_page: '10', page: String(page || 1), status: 'active' });
+                    if (q) params.append('search', q);
+                    const resp = await request(`/sales-order/header?${params.toString()}`, { method: 'GET' });
+                    const rows = Array.isArray(resp?.data) ? resp.data : [];
+                    return rows.map(so => ({
+                      value: String(so.id),
+                      label: `${so.nomor_so} - ${so.pelanggan?.nama_pelanggan || 'Unknown'} (${so.tanggal_so})`,
+                      nomor_so: so.nomor_so,
+                      tanggal_so: so.tanggal_so,
+                      pelanggan_id: so.pelanggan_id,
+                      pelanggan_nama: so.pelanggan?.nama_pelanggan,
+                      gudang_id: so.gudang_id,
+                      gudang_nama: so.gudang?.nama_gudang
+                    }));
+                  }}
+                  displayKey="label"
+                  valueKey="value"
                 />
               </div>
               
@@ -1363,26 +1363,14 @@ export default function AddWorkOrderPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Gudang *</label>
                 <div className="flex h-10 items-center justify-between rounded-md border px-3 py-2 bg-gray-50 text-gray-600 cursor-default">
-                  <span>{(() => { 
-                    const soOpt = salesOrderList.find(so => String(so.value) === String(workOrderData.sales_order_id));
-                    const fromSO = (selectedSalesOrder?.gudang?.nama_gudang) || soOpt?.gudang_nama;
-                    if (fromSO) return fromSO;
-                    const gOpt = gudangList.find(g => String(g.value) === String(workOrderData.gudang_id));
-                    return gOpt ? gOpt.label : 'Belum dipilih'; 
-                  })()}</span>
+                  <span>{selectedSalesOrder?.gudang?.nama_gudang ? selectedSalesOrder.gudang.nama_gudang : (gudangList.find(g => String(g.value) === String(workOrderData.gudang_id))?.label || 'Belum dipilih')}</span>
                 </div>
               </div>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Pelanggan *</label>
                 <div className="flex h-10 items-center justify-between rounded-md border px-3 py-2 bg-gray-50 text-gray-600 cursor-default">
-                  <span>{(() => { 
-                    const soOpt = salesOrderList.find(so => String(so.value) === String(workOrderData.sales_order_id));
-                    const fromSO = (selectedSalesOrder?.pelanggan?.nama_pelanggan) || soOpt?.pelanggan_nama;
-                    if (fromSO) return fromSO;
-                    const pOpt = pelangganList.find(p => String(p.value) === String(workOrderData.pelanggan_id));
-                    return pOpt ? pOpt.label : 'Belum dipilih'; 
-                  })()}</span>
+                  <span>{selectedSalesOrder?.pelanggan?.nama_pelanggan ? selectedSalesOrder.pelanggan.nama_pelanggan : (pelangganList.find(p => String(p.value) === String(workOrderData.pelanggan_id))?.label || 'Belum dipilih')}</span>
                 </div>
               </div>
               
@@ -1638,6 +1626,7 @@ export default function AddWorkOrderPage() {
           <Button
             type="button"
             variant="outline"
+            type="button"
             onClick={() => navigate('/work-order')}
             disabled={loading}
           >

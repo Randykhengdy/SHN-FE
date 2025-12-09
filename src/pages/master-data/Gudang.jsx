@@ -97,13 +97,25 @@ export default function GudangPage() {
           if (val === 'gudang') { next.gudang_id = ''; }
           return next;
         } },
-        { name: "gudang_id", label: "Gudang", type: "select", optionLabel: "nama_gudang", required: true, mapFromEdit: (edit) => {
-          const tipe = edit?.tipe_gudang ? String(edit.tipe_gudang).toLowerCase() : '';
-          return tipe === 'rak' ? (edit?.parent_id || '') : '';
-        }, prefetchById: (id) => getGudangById(id), optionsLoader: async (_form, p) => {
-          const res = await getGudang({ tipe_gudang: "Gudang", page: (p?.page || 1), per_page: (p?.perPage || 100), search: (p?.search || "") });
-          return res.data || [];
-        }, showIf: (f) => f.tipe_gudang === "rak" },
+        { 
+          name: "gudang_id", 
+          label: "Gudang", 
+          type: "asyncSelect", 
+          required: true, 
+          mapFromEdit: (edit) => {
+            const tipe = edit?.tipe_gudang ? String(edit.tipe_gudang).toLowerCase() : '';
+            return tipe === 'rak' ? (edit?.parent_id || '') : '';
+          }, 
+          prefetchById: (id) => gudangService.getById(id),
+          fetchOptions: async (q, page) => {
+            const res = await gudangService.getPaginated(page || 1, 10, q || "", "nama_gudang", "asc", { tipe_gudang: "Gudang" });
+            const list = res?.data || [];
+            return list.map(it => ({ value: String(it.id), label: it.nama_gudang || it.nama || String(it.id) }));
+          },
+          showIf: (f) => f.tipe_gudang === "rak",
+          displayKey: "label",
+          valueKey: "value"
+        },
         
       ]}
       columns={[
