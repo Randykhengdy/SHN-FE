@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AuthErrorAlert from "@/components/AuthErrorAlert";
+import AsyncSearchSelect from "@/components/ui/async-search-select";
 
 /**
  * MasterFormModal – konfigurasi field dapat menerima opsi lanjutan untuk konten dan perilaku custom
@@ -151,7 +152,7 @@ export default function MasterFormModal({
         } catch (_) {
           initialForm[field.name] = String(editData[field.name] || "");
         }
-      } else if (field.type === "select") {
+      } else if (field.type === "select" || field.type === "asyncSelect") {
         if (field.name === "role") {
           if (editData.roles && editData.roles.length > 0) {
             initialForm[field.name] = String(editData.roles[0].id);
@@ -465,6 +466,26 @@ export default function MasterFormModal({
                     </div>
                   )}
                 </div>
+              ) : field.type === 'asyncSelect' ? (
+                <AsyncSearchSelect
+                  label={null}
+                  placeholder={`Pilih ${field.label}`}
+                  searchPlaceholder={`Cari ${field.label.toLowerCase()}...`}
+                  value={form[field.name] || ""}
+                  onValueChange={(val) => handleSelectChange(field.name, String(val || ""), field)}
+                  fetchOptions={async (q, page) => {
+                    if (typeof field.fetchOptions === 'function') {
+                      const rows = await field.fetchOptions(q, page, form);
+                      return Array.isArray(rows) ? rows : (rows?.data || []);
+                    }
+                    return [];
+                  }}
+                  displayKey={field.displayKey || field.optionLabel || 'label'}
+                  valueKey={field.valueKey || 'value'}
+                  required={field.required}
+                  disabled={!!(editData && field.disabledOnEdit)}
+                  className=""
+                />
               ) : (
                 <Input
                   id={field.name}

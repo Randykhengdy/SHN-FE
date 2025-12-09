@@ -3,8 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import SearchSelect from "@/components/ui/search-select";
+import AsyncSearchSelect from "@/components/ui/async-search-select";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { getItemBarangOptions } from "@/services/masterDataService";
+import { itemBarangService } from "@/services/master-data/itemBarangService";
+import { request } from "@/lib/request";
 import { useAlert } from "../ui/modal";
 
 const unitOptions = [
@@ -25,6 +28,7 @@ const MutationModal = ({
     const [unit, setUnit] = useState(null);
     const [quantity, setQuantity] = useState(0);
     const [availableQuantity, setAvailableQuantity] = useState(0);
+    const [selectedItemLabel, setSelectedItemLabel] = useState("");
 
     useEffect(() => {
         if (!open) return; // hanya jalan ketika modal dibuka
@@ -35,12 +39,14 @@ const MutationModal = ({
             setUnit(item.unit);
             setQuantity(item.quantity);
             setAvailableQuantity(item.available_quantity || 0);
+            setSelectedItemLabel(item.barang || "");
         } else {
             // add mode
             setSelectedItemStock(null);
             setUnit(null);
             setQuantity(0);
             setAvailableQuantity(0);
+            setSelectedItemLabel("");
         }
     }, [open, item]); // depend ke open & item
 
@@ -52,25 +58,9 @@ const MutationModal = ({
 
     // Load master data on component mount
     useEffect(() => {
-        const loadMasterData = async () => {
-            try {
-                setLoadingItemStock(true);
-
-                const [
-                    itemStocks,
-                ] = await Promise.all([
-                    getItemBarangOptions(gudangId),
-                ]);
-                setItemStockOptions(itemStocks);
-            } catch (error) {
-                console.error('Error loading master data:', error);
-            } finally {
-                setLoadingItemStock(false);
-            }
-        };
-
         if (open) {
-            loadMasterData();
+            // keep existing helper available for potential reuse; async select will fetch on demand
+            setItemStockOptions([]);
         }
     }, [open, gudangId]);
 
@@ -100,7 +90,9 @@ const MutationModal = ({
         const result = {
             item_barang_id: selectedItemStock,
             unit: unit,
-            quantity: unit === 'bulk' ? parseInt(quantity) : 1
+            quantity: unit === 'bulk' ? parseInt(quantity) : 1,
+            available_quantity: availableQuantity,
+            barang: selectedItemLabel
         }
 
         onSave?.(result);
@@ -125,19 +117,40 @@ const MutationModal = ({
                         {/* Pilih Item Mutasi */}
                         <div className="grid-form m-lg !mt-0">
                             <div className="col-span-2">
-                                <SearchSelect
+                                <AsyncSearchSelect
                                     label="Item Barang"
                                     placeholder="Pilih Item Barang"
                                     searchPlaceholder="Cari barang..."
-                                    value={selectedItemStock}
-                                    onValueChange={(value) => {
+                                    value={selectedItemStock || ""}
+                                    onValueChange={async (value) => {
                                         setSelectedItemStock(value);
-                                        // Find the selected item and set its quantity
-                                        const selectedItem = itemStockOptions.find(item => item.value === value);
-                                        setAvailableQuantity(selectedItem?.quantity || 0);
+                                        try {
+                                            const resp = await itemBarangService.getById(value);
+                                            const data = resp?.data || resp;
+                                            setAvailableQuantity(Number(data?.quantity || 0));
+                                            const lbl = `${data?.kode_barang || ''} - ${data?.nama_item_barang || 'Unknown'}`.trim();
+                                            setSelectedItemLabel(lbl);
+                                        } catch (_) {
+                                            setAvailableQuantity(0);
+                                            setSelectedItemLabel("");
+                                        }
                                     }}
-                                    options={itemStockOptions}
-                                    loading={loadingItemStock}
+                                    fetchOptions={async (q, page) => {
+                                        const params = new URLSearchParams();
+                                        params.append('page', String(page || 1));
+                                        params.append('per_page', '10');
+                                        if (gudangId) params.append('gudang_id', String(gudangId));
+                                        if (q) params.append('search', q);
+                                        const resp = await request(`/item-barang?${params.toString()}`, { method: 'GET' });
+                                        const rows = Array.isArray(resp?.data) ? resp.data : [];
+                                        return rows.map(item => ({
+                                            value: String(item.id),
+                                            label: `${item.kode_barang || ''} - ${item.nama_item_barang || 'Unknown'}`.trim(),
+                                            quantity: Number(item.quantity || 0)
+                                        }));
+                                    }}
+                                    displayKey="label"
+                                    valueKey="value"
                                     required
                                 />
                             </div>

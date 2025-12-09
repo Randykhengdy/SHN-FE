@@ -3,7 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import SearchSelect from "@/components/ui/search-select";
+import AsyncSearchSelect from "@/components/ui/async-search-select";
 import { getItemBarangUtuhOptions } from "@/services/masterDataService";
+import { request } from "@/lib/request";
 import { useAlert } from "../ui/modal";
 import { itemBarangService } from "@/services/master-data";
 import { Label } from "../ui/label";
@@ -39,23 +41,8 @@ const SplitBarangModal = ({
     const [isSplitting, setSplitting] = useState(false);
     // Load master data on component mount
     useEffect(() => {
-        const loadMasterData = async () => {
-            try {
-                setLoadingItemStock(true);
-                const [
-                    itemStocks,
-                ] = await Promise.all([
-                    getItemBarangUtuhOptions(),
-                ]);
-                setItemStockOptions(itemStocks);
-            } catch (error) {
-                console.error('Error loading master data:', error);
-            } finally {
-                setLoadingItemStock(false);
-            }
-        };
-
-        loadMasterData();
+        // No prefetch; dropdown fetches on demand
+        setItemStockOptions([]);
     }, []);
 
     const getItemQuantity = async (id, setQuantity) => {
@@ -128,16 +115,30 @@ const SplitBarangModal = ({
                         <div className="flex">
                             <div className="flex-1 m-lg !mt-0 w-[60%]">
                                 <div className="col-span-2">
-                                    <SearchSelect
+                                    <AsyncSearchSelect
                                         label="Item Barang"
                                         placeholder="Pilih Item Barang"
                                         searchPlaceholder="Cari barang..."
-                                        value={itemStock}
+                                        value={itemStock || ""}
                                         onValueChange={(value) => {
                                             setItemStock(value);
                                         }}
-                                        options={itemStockOptions}
-                                        loading={loadingItemStock}
+                                        fetchOptions={async (q, page) => {
+                                            const params = new URLSearchParams();
+                                            params.append('page', String(page || 1));
+                                            params.append('per_page', '10');
+                                            params.append('jenis_potongan', 'utuh');
+                                            if (q) params.append('search', q);
+                                            const resp = await request(`/item-barang?${params.toString()}`, { method: 'GET' });
+                                            const rows = Array.isArray(resp?.data) ? resp.data : [];
+                                            return rows.map(item => ({
+                                                value: String(item.id),
+                                                label: `${item.kode_barang || ''} - ${item.nama_item_barang || 'Unknown'}`.trim(),
+                                                quantity: Number(item.quantity || 0)
+                                            }));
+                                        }}
+                                        displayKey="label"
+                                        valueKey="value"
                                         required
                                     />
                                 </div>

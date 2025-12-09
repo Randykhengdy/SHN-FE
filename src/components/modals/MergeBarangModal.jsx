@@ -3,7 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import SearchSelect from "@/components/ui/search-select";
-import { getItemBarangOptionsFiltered, getItemBarangOptionsMergeable } from "@/services/masterDataService";
+import AsyncSearchSelect from "@/components/ui/async-search-select";
+import { getItemBarangOptionsFiltered } from "@/services/masterDataService";
+import { request } from "@/lib/request";
 import { useAlert } from "../ui/modal";
 import { itemBarangService } from "@/services/master-data";
 import { Label } from "../ui/label";
@@ -36,26 +38,11 @@ const MergeBarangModal = ({
     const [total, setTotal] = useState(0);
     const [showMergeModal, setShowMergeModal] = useState(false);
     const [isMerging, setMerging] = useState(false);
+    const [pairResetKey, setPairResetKey] = useState(0);
 
-    // Load master data on component mount
     useEffect(() => {
-        const loadMasterData = async () => {
-            try {
-                setLoadingItemStock(true);
-                const [
-                    itemStocks,
-                ] = await Promise.all([
-                    getItemBarangOptionsMergeable(),
-                ]);
-                setItemStockOptions(itemStocks);
-            } catch (error) {
-                console.error('Error loading master data:', error);
-            } finally {
-                setLoadingItemStock(false);
-            }
-        };
-
-        loadMasterData();
+        setItemStockOptions([]);
+        setItemStockPairOptions([]);
     }, []);
 
     const getItemQuantity = async (id, setQuantity) => {
@@ -71,25 +58,12 @@ const MergeBarangModal = ({
     }
 
     useEffect(() => {
+        setItemStock2(null);
+        setItemStock2Quantity(0);
+        setItemStockPairOptions([]);
+        setPairResetKey((k) => k + 1);
         if (itemStock1) getItemQuantity(itemStock1, setItemStock1Quantity);
-        const loadMasterDataPair = async (id) => {
-            if (id) {
-                try {
-                    setLoadingItemStockPair(true);
-                    const [
-                        itemStocks,
-                    ] = await Promise.all([
-                        getItemBarangOptionsFiltered(id),
-                    ]);
-                    setItemStockPairOptions(itemStocks);
-                } catch (error) {
-                    console.error('Error loading master data:', error);
-                } finally {
-                    setLoadingItemStockPair(false);
-                }
-            }
-        };
-        loadMasterDataPair(itemStock1);
+        
     }, [itemStock1]);
     useEffect(() => {
         if (itemStock2) getItemQuantity(itemStock2, setItemStock2Quantity);
@@ -113,9 +87,9 @@ const MergeBarangModal = ({
             messages += 'Mohon pilih item barang';
             isValid = false;
         }
-        if (!itemStockPairOptions.some(item => item.value == itemStock2)) {
+        if (String(itemStock1 || '') === String(itemStock2 || '')) {
             messages += (messages.length != 0) ? '\n' : '';
-            messages += 'Mohon pilih ulang item barang kedua';
+            messages += 'Tidak bisa merge item yang sama';
             isValid = false;
         }
 
@@ -156,16 +130,33 @@ const MergeBarangModal = ({
                         <div className="flex">
                             <div className="flex-1 m-lg !mt-0 w-[60%]">
                                 <div className="col-span-2">
-                                    <SearchSelect
+                                    <AsyncSearchSelect
                                         label="Item Barang"
                                         placeholder="Pilih Item Barang"
                                         searchPlaceholder="Cari barang..."
-                                        value={itemStock1}
+                                        value={itemStock1 || ""}
                                         onValueChange={(value) => {
                                             setItemStock1(value);
+                                            setItemStock2(null);
+                                            setItemStock2Quantity(0);
+                                            setItemStockPairOptions([]);
+                                            setPairResetKey((k) => k + 1);
                                         }}
-                                        options={itemStockOptions}
-                                        loading={loadingItemStock}
+                                        fetchOptions={async (q, page) => {
+                                            const params = new URLSearchParams();
+                                            params.append('page', String(page || 1));
+                                            params.append('per_page', '10');
+                                            if (q) params.append('search', q);
+                                            const resp = await request(`/item-barang/mergeable?${params.toString()}`, { method: 'GET' });
+                                            const rows = Array.isArray(resp?.data) ? resp.data : [];
+                                            return rows.map(item => ({
+                                                value: String(item.id),
+                                                label: `${item.kode_barang || ''} - ${item.nama_item_barang || 'Unknown'}`.trim(),
+                                                quantity: Number(item.quantity || 0)
+                                            }));
+                                        }}
+                                        displayKey="label"
+                                        valueKey="value"
                                         required
                                     />
                                 </div>
@@ -180,16 +171,46 @@ const MergeBarangModal = ({
                         <div className="flex">
                             <div className="flex-1 m-lg !mt-0 w-[60%]">
                                 <div className="col-span-2">
-                                    <SearchSelect
+                                    <AsyncSearchSelect
+                                        key={`pair-${pairResetKey}`}
                                         label="Item Barang"
                                         placeholder="Pilih Item Barang"
                                         searchPlaceholder="Cari barang..."
-                                        value={itemStock2}
-                                        onValueChange={(value) => {
+                                        value={itemStock2 || ""}
+                                        onValueChange={async (value) => {
                                             setItemStock2(value);
+                                            if (value) getItemQuantity(value, setItemStock2Quantity);
                                         }}
-                                        options={itemStockPairOptions}
-                                        loading={loadingItemStockPair}
+                                        fetchOptions={async (q, page) => {
+                                            if (!itemStock1) return [];
+                                            let rows = [];
+                                            try {
+                                                const qs = q ? `?search=${encodeURIComponent(q)}` : '';
+                                                const resp = await request(`/api/item-barang/similar-type/${itemStock1}${qs}`, { method: 'GET' });
+                                                rows = Array.isArray(resp?.data) ? resp.data : (Array.isArray(resp) ? resp : []);
+                                            } catch (_) { rows = []; }
+                                            const term = String(q || '').toLowerCase();
+                                            const base = (Array.isArray(rows) ? rows : [])
+                                                .filter(r => String(r.id) !== String(itemStock1 || ''))
+                                                .filter(r => {
+                                                    if (!term) return true;
+                                                    const text = `${r.kode_barang || ''} ${r.nama_item_barang || r.nama || ''}`.toLowerCase();
+                                                    return text.includes(term);
+                                                });
+                                            const PAGE_SIZE = 10;
+                                            const p = Math.max(1, page || 1);
+                                            const start = (p - 1) * PAGE_SIZE;
+                                            const slice = base.slice(start, start + PAGE_SIZE);
+                                            return slice.map(item => ({
+                                                value: String(item.id),
+                                                label: `${item.kode_barang || ''} - ${item.nama_item_barang || item.nama || 'Unknown'}`.trim(),
+                                                searchKey: `${item.kode_barang || ''} ${item.nama_item_barang || item.nama || ''}`.trim(),
+                                                quantity: Number(item.quantity || 0)
+                                            }));
+                                        }}
+                                        displayKey="label"
+                                        valueKey="value"
+                                        disabled={!itemStock1}
                                         required
                                     />
                                 </div>

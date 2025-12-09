@@ -3,13 +3,14 @@ import { Plus, ArrowLeft, Minus, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import SearchSelect from "@/components/ui/search-select";
+// import SearchSelect from "@/components/ui/search-select";
 import { useAlert } from "@/hooks/useAlert";
 import { request } from "@/lib/request";
 import { API_ENDPOINTS } from "@/config/api";
 import PageLayout from "@/components/PageLayout";
 import MutationModal from "@/components/modals/ItemMutationModal";
-import { getGudangOptions, getItemBarangOptions } from "@/services/masterDataService";
+// import { getGudangOptions } from "@/services/masterDataService";
+import { gudangService } from "@/services/master-data/gudangService";
 import { useParams } from "react-router-dom";
 import { stockMutationService } from "@/services/mutationStockService";
 
@@ -17,15 +18,15 @@ export default function ViewMutasiStockPage() {
     const { id } = useParams();
     const { showAlert, AlertComponent } = useAlert();
 
-    // Master data state
-    const [warehouseOptions, setWarehouseOptions] = useState([]);
+    // Master data state (removed full gudang list prefetch)
 
     // Loading state
-    const [loadingWarehouse, setLoadingWarehouse] = useState(false);
     const [loadingStockItem, setLoadingStockItem] = useState(false);
     const [loading, setLoading] = useState(true);
 
-    const [itemStockOptions, setItemStockOptions] = useState([]);
+    // const [itemStockOptions, setItemStockOptions] = useState([]);
+    const [gudangAsalName, setGudangAsalName] = useState("");
+    const [gudangTujuanName, setGudangTujuanName] = useState("");
 
 
     // Modal state
@@ -41,31 +42,7 @@ export default function ViewMutasiStockPage() {
     });
 
     // Load master data on component mount
-    useEffect(() => {
-        const loadMasterData = async () => {
-            try {
-                setLoadingStockItem(true);
-                setLoadingWarehouse(true);
-
-                const [
-                    gudang,
-                    itemBarang
-                ] = await Promise.all([
-                    getGudangOptions(),
-                    getItemBarangOptions(),
-                ]);
-
-                setWarehouseOptions(gudang);
-                setItemStockOptions(itemBarang);
-            } catch (error) {
-                console.error('Error loading master data:', error);
-            } finally {
-                setLoadingWarehouse(false);
-            }
-        };
-
-        loadMasterData();
-    }, []);
+    // Removed: do not prefetch gudang list on view page
 
     useEffect(() => {
         loadStockMutation();
@@ -76,6 +53,18 @@ export default function ViewMutasiStockPage() {
             setLoading(true);
             const result = await stockMutationService.getById(id);
             setMutasiStockData(result.data);
+            try {
+                const asalId = result?.data?.gudang_asal_id;
+                const tujuanId = result?.data?.gudang_tujuan_id;
+                if (asalId) {
+                    const resA = await gudangService.getById(asalId);
+                    setGudangAsalName(resA?.data?.nama_gudang || resA?.data?.nama || "");
+                }
+                if (tujuanId) {
+                    const resT = await gudangService.getById(tujuanId);
+                    setGudangTujuanName(resT?.data?.nama_gudang || resT?.data?.nama || "");
+                }
+            } catch (_) {}
         } catch (error) {
             console.error('Error loading stock mutation:', error);
             showAlert("Error", "Gagal memuat data Mutasi Stock", "error");
@@ -101,7 +90,7 @@ export default function ViewMutasiStockPage() {
     };
 
     const saveStockForMutation = (rows) => {
-        const data = { ...rows, barang: itemStockOptions.find(opt => opt.value === rows.item_barang_id)?.label };
+        const data = { ...rows, barang: rows.barang || undefined };
         setMutasiStockData(prev => {
             const exists = prev.stock_mutation.some(item => item.item_barang_id === rows.item_barang_id && item.unit === rows.unit);
 
@@ -122,7 +111,7 @@ export default function ViewMutasiStockPage() {
     }
     if (loading) {
         return (
-            <PageLayout title="Stock Mutation" category="TRANSAKSI">
+            <PageLayout title="Mutasi Stock" category="TRANSAKSI">
                 <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                     <span className="ml-2">Loading...</span>
@@ -165,38 +154,22 @@ export default function ViewMutasiStockPage() {
 
 
                     <div className="border-t pt-6">
-                        {/* Pilih Gudang Tujuan */}
+                        {/* Gudang Tujuan */}
                         <div className="grid-form m-lg">
                             <div className="col-span-2">
-                                <SearchSelect
-                                    label="Gudang Tujuan"
-                                    placeholder="Pilih Gudang"
-                                    searchPlaceholder="Cari gudang..."
-                                    options={warehouseOptions}
-                                    value={mutasiStockData.gudang_tujuan_id ? mutasiStockData.gudang_tujuan_id.toString() : ''}
-                                    onValueChange={(value) => {
-                                        setMutasiStockData({ ...mutasiStockData, gudang_tujuan_id: parseInt(value) });
-                                    }}
-                                    loading={loadingWarehouse}
-                                    disabled
-                                />
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Gudang Tujuan</label>
+                                <div className="flex h-10 items-center justify-between rounded-md border px-3 py-2 bg-gray-50 text-gray-600 cursor-default">
+                                    <span>{gudangTujuanName || 'Belum dipilih'}</span>
+                                </div>
                             </div>
                         </div>
-                        {/* Pilih Gudang Asal */}
+                        {/* Gudang Asal */}
                         <div className="grid-form m-lg">
                             <div className="col-span-2">
-                                <SearchSelect
-                                    label="Gudang Asal"
-                                    placeholder="Pilih Gudang"
-                                    searchPlaceholder="Cari gudang..."
-                                    options={warehouseOptions}
-                                    value={mutasiStockData.gudang_asal_id ? mutasiStockData.gudang_asal_id.toString() : ''}
-                                    onValueChange={(value) => {
-                                        setMutasiStockData({ ...mutasiStockData, gudang_asal_id: parseInt(value) });
-                                    }}
-                                    loading={loadingWarehouse}
-                                    disabled
-                                />
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Gudang Asal</label>
+                                <div className="flex h-10 items-center justify-between rounded-md border px-3 py-2 bg-gray-50 text-gray-600 cursor-default">
+                                    <span>{gudangAsalName || 'Belum dipilih'}</span>
+                                </div>
                             </div>
                         </div>
                     </div>

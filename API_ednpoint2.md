@@ -103,6 +103,67 @@ Fields (data): `kode`, `nama_pelanggan`, `kota`, `telepon_hp`, `contact_person`,
     }
     ```
 
+- Item Barang Mergeable: `GET /api/item-barang/mergeable`
+  - Query: `per_page`, `page`, `search`
+  - Search di: `kode_barang`, `nama_item_barang`, `gudang.nama_gudang`, `gudang.kode`, `jenisBarang.kode`, `bentukBarang.kode`, `gradeBarang.kode`
+  - Response (paginated):
+    ```json
+    {
+      "success": true,
+      "message": "Data ditemukan",
+      "data": [
+        {
+          "id": 101,
+          "kode_barang": "PLT-ALU-A-200x100x5-000123",
+          "nama_item_barang": "PLT-ALU-A-200x100x5",
+          "jenis_potongan": "utuh",
+          "quantity": 12,
+          "gudang": { "id": 3, "kode": "GDG-01", "nama_gudang": "Gudang Utama" },
+          "jenisBarang": { "id": 8, "kode": "ALU" },
+          "bentukBarang": { "id": 9, "kode": "PLT" },
+          "gradeBarang": { "id": 6, "kode": "A" }
+        }
+      ],
+      "pagination": {
+        "current_page": 1,
+        "per_page": 50,
+        "last_page": 10,
+        "total": 500
+      }
+    }
+    ```
+
+ - Item Barang Similar Type: `GET /api/item-barang/similar-type/{id}`
+   - Query: `per_page`, `page`, `search`
+   - Mengembalikan item di gudang yang sama, dengan kombinasi `jenis_barang_id`, `bentuk_barang_id`, `grade_barang_id`, dan `tebal` yang sama, serta `jenis_potongan = 'utuh'`
+   - Search di: `kode_barang`, `nama_item_barang`, `gudang.nama_gudang`, `gudang.kode`, `jenisBarang.kode`, `bentukBarang.kode`, `gradeBarang.kode`
+   - Response (paginated):
+     ```json
+     {
+       "success": true,
+       "message": "Data ditemukan",
+       "data": [
+         {
+           "id": 202,
+           "kode_barang": "PLT-ALU-A-200x100x5-000456",
+           "nama_item_barang": "PLT-ALU-A-200x100x5",
+           "jenis_potongan": "utuh",
+           "quantity": 6,
+           "gudang": { "id": 3, "kode": "GDG-01", "nama_gudang": "Gudang Utama" },
+           "jenisBarang": { "id": 8, "kode": "ALU" },
+           "bentukBarang": { "id": 9, "kode": "PLT" },
+           "gradeBarang": { "id": 6, "kode": "A" }
+         }
+       ],
+       "pagination": {
+         "current_page": 1,
+         "per_page": 50,
+         "last_page": 3,
+         "total": 120
+       }
+     }
+     ```
+
 - List: `GET /api/pelanggan`
   - Query: `per_page`, `search`, `sort_by`, `order`
   - Response (paginated):
