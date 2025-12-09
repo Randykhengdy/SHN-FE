@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import AsyncSearchSelect from '@/components/ui/async-search-select';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -524,7 +525,6 @@ export default function AddWOActualPage() {
 
   // Load initial data
   useEffect(() => {
-    loadWOPlanningOptions();
     // Load pelaksana options for assignment modal
     (async () => {
       try {
@@ -656,53 +656,43 @@ export default function AddWOActualPage() {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <Label htmlFor="planningWorkOrderId">WO Planning *</Label>
-                        <div className="relative">
-                          <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            <Input
-                              type="text"
-                              placeholder={selectedWOPlanning ? selectedWOPlanning.nomor_wo : "Cari WO Planning..."}
-                              value={searchTerm}
-                              onChange={(e) => {
-                                setSearchTerm(e.target.value);
-                                setShowDropdown(true);
-                              }}
-                              onFocus={() => setShowDropdown(true)}
-                              className="pl-10"
-                            />
-                          </div>
-                          
-                          {/* Dropdown */}
-                          {showDropdown && (
-                            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
-                              {loadingWOPlanning ? (
-                                <div className="p-3 text-center text-gray-500">Loading...</div>
-                              ) : filteredWOPlanningList.length === 0 ? (
-                                <div className="p-3 text-center text-gray-500">
-                                  {searchTerm ? 'Tidak ada WO Planning yang cocok' : 'Tidak ada WO Planning tersedia'}
-                                </div>
-                              ) : (
-                                filteredWOPlanningList.map((planning) => (
-                                  <div
-                                    key={planning.id}
-                                    className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                                    onClick={() => {
-                                      handleWOPlanningChange(planning.id);
-                                      setSearchTerm('');
-                                      setShowDropdown(false);
-                                    }}
-                                  >
-                                    <div className="font-medium text-gray-900">
-                                      {planning.nomor_wo}
-                                    </div>
-                                  </div>
-                                ))
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      <Label htmlFor="planningWorkOrderId">WO Planning *</Label>
+                      <AsyncSearchSelect
+                        label={null}
+                        placeholder={selectedWOPlanning ? selectedWOPlanning.nomor_wo : 'Pilih WO Planning'}
+                        searchPlaceholder="Cari nomor WO atau pelanggan..."
+                        value={formData.planningWorkOrderId ? String(formData.planningWorkOrderId) : ''}
+                        onValueChange={(val) => {
+                          const id = parseInt(val, 10);
+                          if (id) {
+                            handleWOPlanningChange(id);
+                          } else {
+                            handleWOPlanningChange(null);
+                          }
+                        }}
+                        fetchOptions={async (q, page) => {
+                          try {
+                            const resp = await woActualService.getWOPlanningForActual({
+                              page: page || 1,
+                              per_page: 10,
+                              search: q || '',
+                              exclude_status: 'Selesai'
+                            });
+                            const rows = resp?.data || [];
+                            return rows.map(pl => {
+                              const nomor = pl.nomor_wo || String(pl.id);
+                              const nama = (pl.pelanggan?.nama_pelanggan || pl.pelanggan?.nama || pl.customer?.name || '').trim();
+                              const label = nama ? `${nomor} - ${nama}` : nomor;
+                              return { value: String(pl.id), label };
+                            });
+                          } catch (_) {
+                            return [];
+                          }
+                        }}
+                        displayKey="label"
+                        valueKey="value"
+                      />
+                    </div>
 
                       <div>
                         {/* Removed Actual WO ID field as requested */}

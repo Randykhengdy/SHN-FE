@@ -167,7 +167,7 @@ export default function AsyncSearchSelect({
           }}
           disabled={disabled}
         >
-          <span className={`${value ? 'text-gray-900' : 'text-gray-500'} truncate`}>
+          <span className={`${value ? 'text-gray-900 text-base font-medium' : 'text-gray-500 text-sm'} truncate`}>
             {selectedOption ? selectedOption[displayKey] : placeholder}
           </span>
           <div className="flex items-center gap-1 shrink-0">
@@ -187,7 +187,7 @@ export default function AsyncSearchSelect({
                   placeholder={searchPlaceholder}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 h-8 text-sm"
+                  className="pl-10 h-9 text-sm"
                   autoFocus
                 />
               </div>
@@ -203,7 +203,7 @@ export default function AsyncSearchSelect({
                 options.map((option, idx) => (
                   <div
                     key={option[valueKey] || idx}
-                    className={`px-3 py-2 cursor-pointer text-sm hover:bg-gray-100 ${value === option[valueKey] ? 'bg-blue-50 text-blue-900' : 'text-gray-900'}`}
+                    className={`px-3 py-2 cursor-pointer hover:bg-gray-100 ${value === option[valueKey] ? 'bg-blue-50 text-blue-900 font-semibold text-base' : 'text-gray-900 text-base'}`}
                     onClick={() => handleSelect(option)}
                   >
                     {option[displayKey]}

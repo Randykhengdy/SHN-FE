@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, ArrowLeft, Calendar } from "lucide-react";
+import { Plus, ArrowLeft, Calendar, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 // import CustomerInfoTabs from "@/components/CustomerInfoTabs"; // Commented out - akan diganti dengan supplier selection
 import DataTableModal from "@/components/modals/DataTableModal";
 import SearchSelect from "@/components/ui/search-select";
+import AsyncSearchSelect from "@/components/ui/async-search-select";
 import { 
   getSupplierOptions,
   getJenisBarangOptions, 
@@ -17,6 +18,9 @@ import {
   getGradeBarangOptions, 
   getUnitOptions 
 } from "@/services/masterDataService";
+import { supplierService } from "@/services/master-data/supplierService";
+import { jenisBarangService } from "@/services/master-data/jenisBarangService";
+import { gradeBarangService } from "@/services/master-data/gradeBarangService";
 import { useAlert } from "@/hooks/useAlert";
 import { useRole } from "@/hooks/useRole";
 import { request } from "@/lib/request";
@@ -54,38 +58,23 @@ export default function AddPurchaseOrderPage() {
   useEffect(() => {
     const loadMasterData = async () => {
       try {
-        setLoadingSupplier(true);
-        setLoadingItemType(true);
         setLoadingItemShape(true);
-        setLoadingItemGrade(true);
         setLoadingUnit(true);
 
         const [
-          suppliers,
-          jenisBarang,
           bentukBarang,
-          gradeBarang,
           units
         ] = await Promise.all([
-          getSupplierOptions(),
-          getJenisBarangOptions(),
           getBentukBarangOptions(),
-          getGradeBarangOptions(),
           getUnitOptions()
         ]);
 
-        setSupplierOptions(suppliers);
-        setItemTypeOptions(jenisBarang);
         setItemShapeOptions(bentukBarang);
-        setItemGradeOptions(gradeBarang);
         setUnitOptions(units);
       } catch (error) {
         console.error('Error loading master data:', error);
       } finally {
-        setLoadingSupplier(false);
-        setLoadingItemType(false);
         setLoadingItemShape(false);
-        setLoadingItemGrade(false);
         setLoadingUnit(false);
       }
     };
@@ -240,13 +229,15 @@ export default function AddPurchaseOrderPage() {
 
       // Validasi berdasarkan dimensi bentuk barang
       if (selectedShape.dimensi === "1D") {
-        if (!itemLength || !itemWidth) {
-          showAlert("Peringatan", "Mohon isi panjang dan lebar untuk bentuk 1D", "warning");
+        // 1D: wajib panjang dan tebal (lebar tidak digunakan)
+        if (!itemLength || !itemDiameter) {
+          showAlert("Peringatan", "Mohon isi panjang dan tebal untuk bentuk 1D", "warning");
           return;
         }
       } else if (selectedShape.dimensi === "2D") {
-        if (!itemLength || !itemDiameter) {
-          showAlert("Peringatan", "Mohon isi panjang dan tebal untuk bentuk 2D", "warning");
+        // 2D: wajib panjang, lebar, dan tebal
+        if (!itemLength || !itemWidth || !itemDiameter) {
+          showAlert("Peringatan", "Mohon isi panjang, lebar, dan tebal untuk bentuk 2D", "warning");
           return;
         }
       }
@@ -607,13 +598,13 @@ export default function AddPurchaseOrderPage() {
     <SalesOrderLayout title="Purchase Order (PO)" subtitle="TRANSAKSI">
       {/* Main Content Card */}
       <Card className="section-card">
-        <CardHeader className="section-header">
-          <div className="flex justify-between items-center">
-            <CardTitle className="page-title">Input Purchase Order</CardTitle>
-            <div className="flex gap-2">
-              <Button variant="default" size="sm" onClick={handleTestSimpanPO} className="btn-primary">
-                Simpan Purchase Order
-              </Button>
+            <CardHeader className="section-header">
+              <div className="flex justify-between items-center">
+                <CardTitle className="page-title text-xl md:text-2xl font-bold">Input Purchase Order</CardTitle>
+                <div className="flex gap-2">
+                  <Button variant="default" size="sm" onClick={handleTestSimpanPO} className="btn-primary">
+                    Simpan Purchase Order
+                  </Button>
               <Button variant="secondary" size="sm" onClick={handleBackToList} className="btn-secondary">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Kembali ke List
@@ -624,21 +615,27 @@ export default function AddPurchaseOrderPage() {
 
         <CardContent className="section-content space-md">
           {/* Supplier Information */}
-          <div className="grid-form m-lg">
+          <div className="grid-form m-lg grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="col-span-2">
-              <SearchSelect
+              <AsyncSearchSelect
                 label="Supplier"
                 placeholder="Pilih Supplier"
                 searchPlaceholder="Cari supplier..."
-                value={selectedSupplier?.id || ""}
-                onValueChange={(value) => {
-                  const supplier = supplierOptions.find(opt => opt.value == value);
-                  if (supplier) {
-                    handleSupplierSelect(supplier);
-                  }
+                value={selectedSupplier?.id ? String(selectedSupplier.id) : ""}
+                onValueChange={async (value) => {
+                  try {
+                    const resp = await supplierService.getById(value);
+                    const sup = resp?.data || resp;
+                    if (sup) handleSupplierSelect(sup);
+                  } catch (_) {}
                 }}
-                options={supplierOptions}
-                loading={loadingSupplier}
+                fetchOptions={async (q, page) => {
+                  const resp = await supplierService.getPaginated(page || 1, 10, q || "", "nama_supplier", "asc");
+                  const rows = resp?.data || [];
+                  return rows.map(item => ({ value: String(item.id), label: item.nama_supplier || item.nama || "Unknown", kode: item.kode_supplier || item.kode, nama: item.nama_supplier || item.nama, telepon: item.telepon, email: item.email, alamat: item.alamat }));
+                }}
+                displayKey="label"
+                valueKey="value"
                 required
               />
             </div>
@@ -662,7 +659,7 @@ export default function AddPurchaseOrderPage() {
 
           <div className="border-t pt-6">
             {/* Purchase Order Details */}
-            <div className="grid-form m-lg">
+            <div className="grid-form m-lg grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="poNumber">Nomor PO *</Label>
                 <Input
@@ -743,7 +740,7 @@ export default function AddPurchaseOrderPage() {
             </div>
             
             {/* Catatan */}
-            <div className="mt-6">
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
               <Label htmlFor="catatan">Catatan</Label>
               <Textarea
                 id="catatan"
@@ -763,11 +760,11 @@ export default function AddPurchaseOrderPage() {
 
       {/* Item Input Form */}
       <Card className="section-card">
-        <CardHeader className="section-header">
-          <CardTitle className="page-title">Input Item</CardTitle>
-        </CardHeader>
-        <CardContent className="section-content">
-          <div className="grid-form m-lg">
+            <CardHeader className="section-header">
+              <CardTitle className="page-title">Input Item</CardTitle>
+            </CardHeader>
+            <CardContent className="section-content">
+              <div className="grid-form m-lg grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Row 1: Bentuk Barang, Qty, Jenis Barang */}
             <div>
               <Label htmlFor="itemShape">Bentuk Barang</Label>
@@ -789,7 +786,7 @@ export default function AddPurchaseOrderPage() {
               </div>
             </div>
             <div>
-              <Label htmlFor="itemQty">Qty</Label>
+              <Label htmlFor="itemQty" className="font-semibold text-gray-800">Qty</Label>
               <Input
                 id="itemQty"
                 type="number"
@@ -800,28 +797,38 @@ export default function AddPurchaseOrderPage() {
               />
             </div>
             <div>
-              <SearchSelect
+              <AsyncSearchSelect
                 label="Jenis Barang"
                 placeholder="Pilih Jenis Barang"
                 searchPlaceholder="Cari jenis barang..."
-                value={itemType}
-                onValueChange={setItemType}
-                options={itemTypeOptions}
-                loading={loadingItemType}
+                value={itemType || ""}
+                onValueChange={(val) => setItemType(String(val || ""))}
+                fetchOptions={async (q, page) => {
+                  const resp = await jenisBarangService.getPaginated(page || 1, 10, q || "", "nama_jenis", "asc");
+                  const list = resp?.data || [];
+                  return list.map(it => ({ value: String(it.id), label: it.nama_jenis || it.nama || it.kode || String(it.id) }));
+                }}
+                displayKey="label"
+                valueKey="value"
                 required
               />
             </div>
 
             {/* Row 2: Grade Barang, Satuan, Timbangan */}
             <div>
-              <SearchSelect
+              <AsyncSearchSelect
                 label="Grade Barang"
                 placeholder="Pilih Grade"
                 searchPlaceholder="Cari grade..."
-                value={itemGrade}
-                onValueChange={setItemGrade}
-                options={itemGradeOptions}
-                loading={loadingItemGrade}
+                value={itemGrade || ""}
+                onValueChange={(val) => setItemGrade(String(val || ""))}
+                fetchOptions={async (q, page) => {
+                  const resp = await gradeBarangService.getPaginated(page || 1, 10, q || "", "nama", "asc");
+                  const list = resp?.data || [];
+                  return list.map(it => ({ value: String(it.id), label: it.nama || it.kode || String(it.id) }));
+                }}
+                displayKey="label"
+                valueKey="value"
                 required
               />
             </div>
@@ -838,7 +845,7 @@ export default function AddPurchaseOrderPage() {
               />
             </div>
             <div>
-              <Label htmlFor="itemWeight">Timbangan (kg)</Label>
+              <Label htmlFor="itemWeight" className="font-semibold text-gray-800">Timbangan (kg)</Label>
               <Input
                 id="itemWeight"
                 type="number"
@@ -851,7 +858,7 @@ export default function AddPurchaseOrderPage() {
 
             {/* Row 3: Panjang, Lebar, Tebal */}
             <div>
-              <Label htmlFor="itemLength">Panjang (mm)</Label>
+              <Label htmlFor="itemLength" className="font-semibold text-gray-800">Panjang (mm)</Label>
               <Input
                 id="itemLength"
                 type="number"
@@ -863,7 +870,7 @@ export default function AddPurchaseOrderPage() {
               />
             </div>
             <div>
-              <Label htmlFor="itemWidth">Lebar (mm)</Label>
+              <Label htmlFor="itemWidth" className="font-semibold text-gray-800">Lebar (mm)</Label>
               <Input
                 id="itemWidth"
                 type="number"
@@ -876,7 +883,7 @@ export default function AddPurchaseOrderPage() {
               />
             </div>
             <div>
-              <Label htmlFor="itemDiameter">Tebal (mm) {selectedShape?.dimensi === "2D" ? "*" : ""}</Label>
+              <Label htmlFor="itemDiameter" className="font-semibold text-gray-800">Tebal (mm) {selectedShape?.dimensi === "2D" ? "*" : ""}</Label>
               <Input
                 id="itemDiameter"
                 type="number"
@@ -890,7 +897,7 @@ export default function AddPurchaseOrderPage() {
 
             {/* Row 4: Harga, Diskon, Empty */}
             <div>
-              <Label htmlFor="itemPrice">Harga (Rp/m²)</Label>
+              <Label htmlFor="itemPrice" className="font-semibold text-gray-800">Harga (Rp/m²)</Label>
               <Input
                 id="itemPrice"
                 type="number"
@@ -901,7 +908,7 @@ export default function AddPurchaseOrderPage() {
               />
             </div>
             <div>
-              <Label htmlFor="itemDiscount">Diskon (%)</Label>
+              <Label htmlFor="itemDiscount" className="font-semibold text-gray-800">Diskon (%)</Label>
               <Input
                 id="itemDiscount"
                 type="number"
@@ -916,7 +923,7 @@ export default function AddPurchaseOrderPage() {
           </div>
 
           {/* Calculated Values */}
-          <div className="grid-summary m-lg p-md bg-gray-50 rounded-lg">
+          <div className="grid-summary m-lg p-md bg-gray-50 rounded-lg grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <Label className="text-sm text-gray-600">Ketebalan</Label>
               <div className="font-medium text-blue-600">{itemThickness}</div>
@@ -958,11 +965,11 @@ export default function AddPurchaseOrderPage() {
 
       {/* Item List Table */}
       <Card className="section-card">
-        <CardHeader className="section-header">
-          <div className="flex justify-between items-center">
-            <CardTitle className="page-title">Daftar Item dalam PO</CardTitle>
-          </div>
-        </CardHeader>
+            <CardHeader className="section-header">
+              <div className="flex justify-between items-center">
+                <CardTitle className="page-title text-xl md:text-2xl font-bold">Daftar Item dalam PO</CardTitle>
+              </div>
+            </CardHeader>
         <CardContent className="section-content">
           <Table className="table-standard">
             <TableHeader className="table-header-standard">
@@ -996,13 +1003,8 @@ export default function AddPurchaseOrderPage() {
                   <TableCell className="table-cell-standard">{item.diskonDisplay}</TableCell>
                   <TableCell className="table-cell-standard">{item.total}</TableCell>
                   <TableCell className="table-cell-standard">
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleRemoveItem(item.id)}
-                      className="btn-danger"
-                    >
-                      <Plus className="w-4 h-4" />
+                    <Button variant="destructive" size="sm" onClick={() => handleRemoveItem(item.id)} className="btn-danger">
+                      <Trash2 className="w-4 h-4" />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -1022,22 +1024,22 @@ export default function AddPurchaseOrderPage() {
       {/* Financial Summary */}
       <Card className="mb-6 bg-green-50 border-green-200">
         <CardContent className="pt-6">
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <Label className="text-sm text-gray-600">Subtotal</Label>
-              <div className="text-lg font-semibold">{formatCurrency(subtotal)}</div>
+              <Label className="text-sm text-gray-700 font-semibold">Subtotal</Label>
+              <div className="text-2xl font-bold">{formatCurrency(subtotal)}</div>
             </div>
             <div>
-              <Label className="text-sm text-gray-600">Total Diskon</Label>
-              <div className="text-lg font-semibold">{formatCurrency(totalDiscount)}</div>
+              <Label className="text-sm text-gray-700 font-semibold">Total Diskon</Label>
+              <div className="text-2xl font-bold">{formatCurrency(totalDiscount)}</div>
             </div>
             <div>
-              <Label className="text-sm text-gray-600">PPN (11%)</Label>
-              <div className="text-lg font-semibold">{formatCurrency(ppn)}</div>
+              <Label className="text-sm text-gray-700 font-semibold">PPN (11%)</Label>
+              <div className="text-2xl font-bold">{formatCurrency(ppn)}</div>
             </div>
             <div>
-              <Label className="text-sm text-gray-600">Total Harga PO</Label>
-              <div className="text-xl font-bold text-green-700">{formatCurrency(subtotal)}</div>
+              <Label className="text-sm text-gray-700 font-semibold">Total Harga PO</Label>
+              <div className="text-2xl font-bold text-green-700">{formatCurrency(totalHargaSO)}</div>
             </div>
           </div>
         </CardContent>
