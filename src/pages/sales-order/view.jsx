@@ -282,7 +282,8 @@ export default function ViewSalesOrderPage() {
       const mappedCustomer = customerData ? {
         nama_customer: customerData.nama_pelanggan || customerData.nama || customerData.name || 'N/A',
         alamat: customerData.alamat || customerData.address || customerData.kota || 'N/A',
-        telepon: customerData.telepon || customerData.telepon_hp || customerData.phone || 'N/A'
+        telepon: customerData.telepon || customerData.telepon_hp || customerData.phone || 'N/A',
+        contact_person: customerData.contact_person || customerData.contactPerson || customerData.pic || customerData.cp || ''
       } : null;
 
       const printData = {

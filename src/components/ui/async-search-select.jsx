@@ -167,13 +167,10 @@ export default function AsyncSearchSelect({
           }}
           disabled={disabled}
         >
-          <span className={`${value ? 'text-gray-900 text-base font-medium' : 'text-gray-500 text-sm'} truncate`}>
+          <span className={`${value ? 'text-gray-900 text-sm' : 'text-gray-500 text-sm'} truncate`}>
             {selectedOption ? selectedOption[displayKey] : placeholder}
           </span>
           <div className="flex items-center gap-1 shrink-0">
-            {value && !disabled && (
-              <X className="h-4 w-4 text-gray-400 hover:text-gray-600" onClick={handleClear} />
-            )}
             <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
           </div>
         </Button>
@@ -203,7 +200,7 @@ export default function AsyncSearchSelect({
                 options.map((option, idx) => (
                   <div
                     key={option[valueKey] || idx}
-                    className={`px-3 py-2 cursor-pointer hover:bg-gray-100 ${value === option[valueKey] ? 'bg-blue-50 text-blue-900 font-semibold text-base' : 'text-gray-900 text-base'}`}
+                    className={`px-3 py-2 cursor-pointer hover:bg-gray-100 ${value === option[valueKey] ? 'bg-blue-50 text-blue-900' : 'text-gray-900'}`}
                     onClick={() => handleSelect(option)}
                   >
                     {option[displayKey]}

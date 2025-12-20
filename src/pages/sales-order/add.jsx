@@ -129,6 +129,7 @@ export default function AddSalesOrderPage() {
   const [itemDiameter, setItemDiameter] = useState("");
   const [itemQty, setItemQty] = useState("1");
   const [itemType, setItemType] = useState("");
+  const [itemTypeLabel, setItemTypeLabel] = useState("");
   const [itemShape, setItemShape] = useState("");
   const [selectedShape, setSelectedShape] = useState(null);
   const [itemGrade, setItemGrade] = useState("");
@@ -602,7 +603,7 @@ export default function AddSalesOrderPage() {
 
       const newItem = {
         id: Date.now(),
-        jenisBarang: itemTypeOptions.find(opt => opt.value === itemType)?.label || itemType,
+        jenisBarang: itemTypeLabel || itemTypeOptions.find(opt => opt.value === itemType)?.label || itemType,
         bentuk: selectedShape.nama,
         grade: itemGradeOptions.find(opt => opt.value === itemGrade)?.label || itemGrade,
         dimensi: dimensiString,
@@ -634,6 +635,7 @@ export default function AddSalesOrderPage() {
       setItemDiameter("");
       setItemQty("1");
       setItemType("");
+      setItemTypeLabel("");
       setItemShape("");
       setSelectedShape(null);
       setItemGrade("");
@@ -1306,7 +1308,21 @@ export default function AddSalesOrderPage() {
                 placeholder="Pilih Jenis Barang"
                 searchPlaceholder="Cari jenis barang..."
                 value={itemType}
-                onValueChange={setItemType}
+                onValueChange={async (val) => {
+                  setItemType(val);
+                  try {
+                    if (!val) {
+                      setItemTypeLabel("");
+                      return;
+                    }
+                    const resp = await jenisBarangService.getById(val);
+                    const data = resp?.data || resp;
+                    const label = data?.nama_jenis || data?.nama || data?.label || String(val);
+                    setItemTypeLabel(label);
+                  } catch (e) {
+                    setItemTypeLabel(String(val));
+                  }
+                }}
                 required
                 fetchOptions={async (q, page) => {
                   const resp = await jenisBarangService.getPaginated(page || 1, 10, q || "");
