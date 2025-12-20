@@ -394,8 +394,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         }
         
         // Update base container dimensions (Saran Plat)
-        const platWidth = data.selectedItem?.platPanjang || data.platPanjang || 1;
-        const platHeight = data.selectedItem?.platLebar || data.platLebar || 1;
+        const platWidth = data.selectedItem?.platPanjang || data.platPanjang ;
+        const platHeight = data.selectedItem?.platLebar || data.platLebar || data.platPanjang/10;
         setBaseContainer(prev => ({
           ...prev,
           width: platWidth,
@@ -403,8 +403,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         }));
         
         // Update box size (Work Order Item)
-        const itemWidth = data.workOrderItem?.width || data.itemPanjang || 1;
-        const itemHeight = data.workOrderItem?.height || data.itemLebar || 1;
+        const itemWidth = data.workOrderItem?.width || data.itemPanjang;
+        const itemHeight = data.workOrderItem?.height || data.itemLebar || data.platPanjang/10;
         setNewBoxSize({
           width: itemWidth,
           height: itemHeight
