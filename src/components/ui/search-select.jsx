@@ -120,16 +120,10 @@ const SearchSelect = ({
           }}
           disabled={disabled}
         >
-          <span className={`${selectedOption ? 'text-gray-900' : 'text-gray-500'} truncate`}>
+          <span className={`${selectedOption ? 'text-gray-900 text-sm' : 'text-gray-500 text-sm'} truncate`}>
             {selectedOption ? selectedOption[displayKey] : placeholder}
           </span>
           <div className="flex items-center gap-1 shrink-0">
-            {value && !disabled && (
-              <X
-                className="h-4 w-4 text-gray-400 hover:text-gray-600"
-                onClick={handleClear}
-              />
-            )}
             <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${
               isOpen ? 'rotate-180' : ''
             }`} />
