@@ -364,7 +364,7 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
         </div>
         <div class="info-row">
           <span class="info-label">Contact Person</span>
-          <span class="info-value">${salesOrderData.customer.contact_person || 'N/A'}</span>
+          <span class="info-value">${salesOrderData.customer.contact_person || salesOrderData.customer.contactPerson || salesOrderData.customer.pic || salesOrderData.customer.cp || 'N/A'}</span>
         </div>
       </div>
       ` : ''}
@@ -372,7 +372,7 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
       <table>
         <thead>
           <tr>
-            <th>Nama Item</th>
+            <th>Jenis Barang</th>
             <th>Bentuk</th>
             <th>Grade</th>
             <th>Dimensi Potong</th>
