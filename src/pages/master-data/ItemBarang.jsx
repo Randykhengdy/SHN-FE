@@ -1,9 +1,9 @@
 import React from "react";
 import MasterDataLayout from "@/components/MasterDataLayout";
-import { 
-  itemBarangService, 
-  jenisBarangService, 
-  bentukBarangService, 
+import {
+  itemBarangService,
+  jenisBarangService,
+  bentukBarangService,
   gradeBarangService,
   gudangService
 } from "@/services/master-data";
@@ -32,23 +32,23 @@ export default function ItemBarangPage() {
         }
       ]}
       fields={[
-        { 
-          name: "jenis_barang_id", 
-          label: "Jenis Barang", 
-          type: "asyncSelect", 
+        {
+          name: "jenis_barang_id",
+          label: "Jenis Barang",
+          type: "asyncSelect",
           fetchOptions: async (q, page) => {
             const res = await jenisBarangService.getPaginated(page, 10, q || "", "nama_jenis", "asc");
             const list = res?.data || [];
             return list.map(it => ({ value: String(it.id), label: it.nama_jenis || it.nama || it.kode || String(it.id) }));
-          }, 
+          },
           displayKey: "label",
           valueKey: "value",
-          required: true 
+          required: true
         },
-        { 
-          name: "bentuk_barang_id", 
-          label: "Bentuk Barang", 
-          type: "asyncSelect", 
+        {
+          name: "bentuk_barang_id",
+          label: "Bentuk Barang",
+          type: "asyncSelect",
           fetchOptions: async (q, page) => {
             const res = await bentukBarangService.getPaginated(page, 10, q || "", "nama_bentuk", "asc");
             const options = (res.data || []).map(item => ({
@@ -71,10 +71,10 @@ export default function ItemBarangPage() {
           },
           prefetchById: async (id) => bentukBarangService.getById(id)
         },
-        { 
-          name: "grade_barang_id", 
-          label: "Grade Barang", 
-          type: "asyncSelect", 
+        {
+          name: "grade_barang_id",
+          label: "Grade Barang",
+          type: "asyncSelect",
           fetchOptions: async (q, page) => {
             const res = await gradeBarangService.getPaginated(page, 10, q || "", "nama", "asc");
             const list = res?.data || [];
@@ -82,26 +82,26 @@ export default function ItemBarangPage() {
           },
           displayKey: "label",
           valueKey: "value",
-          required: true 
+          required: true
         },
-        { name: "panjang", label: "Panjang", type: "number", step: 0.01, required: true },
-        { 
-          name: "lebar", 
-          label: "Lebar", 
-          type: "number", 
-          step: 0.01, 
-          required: true,
+        { name: "panjang", label: "Panjang (mm)", type: "number", step: 0.01, required: true },
+        {
+          name: "lebar",
+          label: "Lebar (mm)",
+          type: "number",
+          step: 0.01,
+          required: (form) => form._bentuk_barang_dimensi === "2D",
           hidden: (form) => {
             // Sembunyikan jika dimensi adalah "1D" (tapi tetap render untuk tidak menggeser kolom)
             return form._bentuk_barang_dimensi === "1D";
           }
         },
-        { name: "tebal", label: "Tebal", type: "number", step: 0.01, required: true },
+        { name: "tebal", label: "Tebal/Diameter/dll (mm)", type: "number", step: 0.01, required: true },
         { name: "quantity", label: "Quantity", type: "number", step: 0.01, required: true },
-        { 
-          name: "jenis_potongan", 
-          label: "Jenis Potongan", 
-          type: "asyncSelect", 
+        {
+          name: "jenis_potongan",
+          label: "Jenis Potongan",
+          type: "asyncSelect",
           fetchOptions: async (q) => {
             const base = [
               { value: "utuh", label: "Utuh" },
@@ -112,12 +112,12 @@ export default function ItemBarangPage() {
           },
           displayKey: "label",
           valueKey: "value",
-          required: true 
+          required: true
         },
-        { 
-          name: "gudang_id", 
-          label: "Gudang", 
-          type: "asyncSelect", 
+        {
+          name: "gudang_id",
+          label: "Gudang",
+          type: "asyncSelect",
           fetchOptions: async (q, page) => {
             const res = await gudangService.getPaginated(page, 10, q || "", "nama_gudang", "asc");
             const list = res?.data || [];
@@ -125,7 +125,7 @@ export default function ItemBarangPage() {
           },
           displayKey: "label",
           valueKey: "value",
-          required: true 
+          required: true
         },
       ]}
       columns={[
