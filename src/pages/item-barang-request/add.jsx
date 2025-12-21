@@ -135,7 +135,7 @@ export default function AddItemBarangRequestPage() {
                     };
                     const html = generateItemRequestPrintContent(printData);
                     openPrintDialog(html);
-                } catch (_) {}
+                } catch (_) { }
                 navigate("/item-barang-request");
             } else {
                 showAlert("error", response.message || "Gagal membuat request");
@@ -160,7 +160,7 @@ export default function AddItemBarangRequestPage() {
                         <div className="flex items-center justify-between">
                             <CardTitle className="page-title">Input Item Barang Request</CardTitle>
                             <div className="flex items-center gap-2 shrink-0">
-                                <Button variant="default" size="sm" onClick={() => handleSubmit({ preventDefault: () => {} })} className="btn-primary">
+                                <Button variant="default" size="sm" onClick={() => handleSubmit({ preventDefault: () => { } })} className="btn-primary">
                                     Simpan Request
                                 </Button>
                                 <Button variant="secondary" size="sm" onClick={handleCancel} className="btn-secondary">
