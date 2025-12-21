@@ -1,7 +1,7 @@
-import { 
-  gudangService, 
-  jenisBarangService, 
-  bentukBarangService, 
+import {
+  gudangService,
+  jenisBarangService,
+  bentukBarangService,
   gradeBarangService,
   pelangganService,
   supplierService,
@@ -27,35 +27,35 @@ const logError = (serviceName, error, context = {}) => {
       limit: Math.round(performance.memory.jsHeapSizeLimit / 1024 / 1024) + 'MB'
     } : 'Not available'
   };
-  
+
   console.error(`🚨 CRITICAL ERROR in ${serviceName}:`, errorInfo);
-  
+
   // Send to error tracking service if available
   if (window.electronAPI?.logError) {
     window.electronAPI.logError(errorInfo);
   }
-  
+
   return errorInfo;
 };
 
 // Helper function to safely handle API calls with retry and detailed logging
 const safeApiCall = async (apiCall, serviceName, retries = 2) => {
   const startTime = Date.now();
-  
+
   for (let i = 0; i <= retries; i++) {
     try {
       console.log(`🔄 [${serviceName}] Attempt ${i + 1}/${retries + 1} - Starting API call`);
-      
+
       const result = await apiCall();
-      
+
       const duration = Date.now() - startTime;
       console.log(`✅ [${serviceName}] Success - ${result.length} items loaded in ${duration}ms`);
-      
+
       return result;
     } catch (error) {
       const duration = Date.now() - startTime;
       console.error(`❌ [${serviceName}] Attempt ${i + 1}/${retries + 1} failed after ${duration}ms:`, error);
-      
+
       // Log detailed error information
       logError(serviceName, error, {
         attempt: i + 1,
@@ -63,13 +63,13 @@ const safeApiCall = async (apiCall, serviceName, retries = 2) => {
         duration,
         timestamp: new Date().toISOString()
       });
-      
+
       // If it's the last attempt, return empty array instead of throwing
       if (i === retries) {
         console.warn(`⚠️ [${serviceName}] All retry attempts failed, returning empty array`);
         return [];
       }
-      
+
       // Wait before retrying (exponential backoff)
       const waitTime = 1000 * Math.pow(2, i);
       console.log(`⏳ [${serviceName}] Waiting ${waitTime}ms before retry...`);
@@ -84,11 +84,11 @@ const checkMemoryUsage = () => {
     const used = performance.memory.usedJSHeapSize / 1024 / 1024;
     const limit = performance.memory.jsHeapSizeLimit / 1024 / 1024;
     const usagePercent = (used / limit) * 100;
-    
+
     if (usagePercent > 80) {
       console.warn(`⚠️ HIGH MEMORY USAGE: ${usagePercent.toFixed(1)}% (${used.toFixed(1)}MB/${limit.toFixed(1)}MB)`);
     }
-    
+
     return { used, limit, usagePercent };
   }
   return null;
@@ -207,19 +207,19 @@ export const getSupplierOptions = async () => {
   checkMemoryUsage();
   return await safeApiCall(async () => {
     console.log('🔄 [SupplierService] Starting to fetch supplier data...');
-    
+
     try {
       const response = await supplierService.getAll();
       console.log('📡 [SupplierService] Raw response:', response);
       console.log('📡 [SupplierService] Response data:', response.data);
       console.log('📡 [SupplierService] Response data type:', typeof response.data);
       console.log('📡 [SupplierService] Response data length:', response.data?.length);
-      
+
       if (!response.data || !Array.isArray(response.data)) {
         console.error('❌ [SupplierService] Invalid response data format:', response);
         return [];
       }
-      
+
       const mappedData = response.data.map(item => {
         const mapped = {
           value: item.id?.toString(),
@@ -236,10 +236,10 @@ export const getSupplierOptions = async () => {
         console.log('🔄 [SupplierService] Mapping item:', item, '→', mapped);
         return mapped;
       });
-      
+
       console.log('✅ [SupplierService] Final mapped data:', mappedData);
       return mappedData;
-      
+
     } catch (error) {
       console.error('❌ [SupplierService] Error in getSupplierOptions:', error);
       throw error;
@@ -252,19 +252,19 @@ export const getPelangganOptions = async () => {
   checkMemoryUsage();
   return await safeApiCall(async () => {
     console.log('🔄 [PelangganService] Starting to fetch pelanggan data...');
-    
+
     try {
       const response = await pelangganService.getAll();
       console.log('📡 [PelangganService] Raw response:', response);
       console.log('📡 [PelangganService] Response data:', response.data);
       console.log('📡 [PelangganService] Response data type:', typeof response.data);
       console.log('📡 [PelangganService] Response data length:', response.data?.length);
-      
+
       if (!response.data || !Array.isArray(response.data)) {
         console.error('❌ [PelangganService] Invalid response data format:', response);
         return [];
       }
-      
+
       const mappedData = response.data.map(item => {
         const mapped = {
           value: item.id?.toString(),
@@ -274,10 +274,10 @@ export const getPelangganOptions = async () => {
         console.log('🔄 [PelangganService] Mapping item:', item, '→', mapped);
         return mapped;
       });
-      
+
       console.log('✅ [PelangganService] Final mapped data:', mappedData);
       return mappedData;
-      
+
     } catch (error) {
       console.error('❌ [PelangganService] Error in getPelangganOptions:', error);
       throw error;
@@ -290,11 +290,11 @@ export const getPelangganFromSOHeader = async () => {
   checkMemoryUsage();
   return await safeApiCall(async () => {
     const response = await request('/api/sales-order/header?per_page=1000', { method: 'GET' });
-    
+
     // Extract unique pelanggan from sales order header
     const uniquePelanggan = [];
     const seenIds = new Set();
-    
+
     response.data.forEach(so => {
       if (so.pelanggan && !seenIds.has(so.pelanggan.id)) {
         seenIds.add(so.pelanggan.id);
@@ -305,7 +305,7 @@ export const getPelangganFromSOHeader = async () => {
         });
       }
     });
-    
+
     return uniquePelanggan;
   }, 'PelangganFromSOHeaderService');
 };
@@ -353,12 +353,12 @@ export const getItemBarangOptions = async (gudangId = null) => {
 // Gudang
 export const getGudang = async (params = {}) => {
   const queryParams = new URLSearchParams();
-  
+
   if (params.page) queryParams.append('page', params.page);
   if (params.per_page) queryParams.append('per_page', params.per_page);
   if (params.search) queryParams.append('search', params.search);
   if (params.tipe_gudang) queryParams.append('tipe_gudang', params.tipe_gudang);
-  
+
   const url = `/gudang?${queryParams.toString()}`;
   return request(url, { method: 'GET' });
 };
@@ -382,11 +382,11 @@ export const deleteGudang = async (id) => {
 // Pelanggan
 export const getPelanggan = async (params = {}) => {
   const queryParams = new URLSearchParams();
-  
+
   if (params.page) queryParams.append('page', params.page);
   if (params.per_page) queryParams.append('per_page', params.per_page);
   if (params.search) queryParams.append('search', params.search);
-  
+
   const url = `/api/pelanggan?${queryParams.toString()}`;
   return request.get(url);
 };
@@ -410,11 +410,11 @@ export const deletePelanggan = async (id) => {
 // Jenis Barang
 export const getJenisBarang = async (params = {}) => {
   const queryParams = new URLSearchParams();
-  
+
   if (params.page) queryParams.append('page', params.page);
   if (params.per_page) queryParams.append('per_page', params.per_page);
   if (params.search) queryParams.append('search', params.search);
-  
+
   const url = `/api/jenis-barang?${queryParams.toString()}`;
   return request.get(url);
 };
@@ -438,11 +438,11 @@ export const deleteJenisBarang = async (id) => {
 // Bentuk Barang
 export const getBentukBarang = async (params = {}) => {
   const queryParams = new URLSearchParams();
-  
+
   if (params.page) queryParams.append('page', params.page);
   if (params.per_page) queryParams.append('per_page', params.per_page);
   if (params.search) queryParams.append('search', params.search);
-  
+
   const url = `/api/bentuk-barang?${queryParams.toString()}`;
   return request.get(url);
 };
@@ -466,11 +466,11 @@ export const deleteBentukBarang = async (id) => {
 // Grade Barang
 export const getGradeBarang = async (params = {}) => {
   const queryParams = new URLSearchParams();
-  
+
   if (params.page) queryParams.append('page', params.page);
   if (params.per_page) queryParams.append('per_page', params.per_page);
   if (params.search) queryParams.append('search', params.search);
-  
+
   const url = `/api/grade-barang?${queryParams.toString()}`;
   return request.get(url);
 };
@@ -494,12 +494,12 @@ export const deleteGradeBarang = async (id) => {
 // Pelaksana
 export const getPelaksana = async (params = {}) => {
   const queryParams = new URLSearchParams();
-  
+
   if (params.page) queryParams.append('page', params.page);
   if (params.per_page) queryParams.append('per_page', params.per_page);
   if (params.search) queryParams.append('search', params.search);
   if (params.jabatan) queryParams.append('jabatan', params.jabatan);
-  
+
   const url = `/api/pelaksana?${queryParams.toString()}`;
   return request.get(url);
 };
@@ -569,8 +569,6 @@ export const getItemBarangOptionsPotongan = async (opts = {}) => {
     const params = new URLSearchParams();
     // Use jenis_potongan filter per API spec
     params.append('jenis_potongan', jenis_potongan || 'potongan');
-    // Use strict quantity filter = 1 as requested
-    params.append('quantity', '1');
     // Append gudang filters only if provided
     if (gudang_id) params.append('gudang_id', String(gudang_id));
     if (gudang_tujuan_id) params.append('gudang_tujuan_id', String(gudang_tujuan_id));
