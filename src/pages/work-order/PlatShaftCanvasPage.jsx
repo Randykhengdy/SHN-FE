@@ -8,35 +8,35 @@ import { Camera, Image, ArrowLeft } from 'lucide-react';
 const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCanvasSaved }, ref) => {
   const { showAlert } = useAlert();
   const navigate = useNavigate();
-  
+
   // Canvas refs
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
-  
+
   // State
   const [boxes, setBoxes] = useState([]);
   const [baseContainer, setBaseContainer] = useState({ width: 20, height: 20, x: 0, y: 0 });
   const [gridSize, setGridSize] = useState(30);
   const [zoom, setZoom] = useState(1);
   const [newBoxSize, setNewBoxSize] = useState({ width: 1, height: 1 });
-  
+
   // Work order data from sessionStorage
   const [workOrderData, setWorkOrderData] = useState(null);
   const [isInitialized, setIsInitialized] = useState(false);
-  
+
   // Quantity tracking
   const [totalQuantity, setTotalQuantity] = useState(0);
   const [forceUpdate, setForceUpdate] = useState(0);
-  
+
   // Function to update WO_total_quantity in localStorage
   const updateWOQuantity = useCallback((woItemId, saranItemId, quantity) => {
     const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
-    
+
     // Find or create WO item
-    let woItemData = totalQuantityData.find(item => 
+    let woItemData = totalQuantityData.find(item =>
       item.WoItemID === woItemId || item.WoItemID === parseInt(woItemId)
     );
-    
+
     if (!woItemData) {
       woItemData = {
         WoItemID: woItemId,
@@ -45,12 +45,12 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       };
       totalQuantityData.push(woItemData);
     }
-    
+
     // Find or create saran item
-    let saranItem = woItemData.WOQuantity.find(item => 
+    let saranItem = woItemData.WOQuantity.find(item =>
       item.ItemId === saranItemId || item.ItemId === parseInt(saranItemId)
     );
-    
+
     if (!saranItem) {
       saranItem = {
         ItemId: saranItemId,
@@ -58,37 +58,37 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       };
       woItemData.WOQuantity.push(saranItem);
     }
-    
+
     // Update quantity
     saranItem.Quantity = quantity;
-    
+
     // Validate total quantity doesn't exceed TargetQuantity (only for current WO item)
     const totalUsedQuantity = woItemData.WOQuantity.reduce((total, item) => total + (parseInt(item.Quantity) || 0), 0);
     const targetQuantity = woItemData.TargetQuantity || 0;
-    
+
     if (totalUsedQuantity > targetQuantity) {
       console.warn(`Total quantity (${totalUsedQuantity}) exceeds TargetQuantity (${targetQuantity}) for WO Item ${woItemId}. Adjusting...`);
-      
+
       // Adjust current saran item quantity to fit within target
       const otherQuantity = woItemData.WOQuantity
         .filter(item => item.ItemId !== saranItemId && item.ItemId !== parseInt(saranItemId))
         .reduce((total, item) => total + (parseInt(item.Quantity) || 0), 0);
-      
+
       const maxAllowedQuantity = Math.max(0, targetQuantity - otherQuantity);
       saranItem.Quantity = Math.min(quantity, maxAllowedQuantity);
-      
+
       console.log(`Adjusted quantity to ${saranItem.Quantity} (max allowed: ${maxAllowedQuantity}) for saran item ${saranItemId}`);
     }
-    
+
     // Remove saran items with 0 quantity
     woItemData.WOQuantity = woItemData.WOQuantity.filter(item => item.Quantity > 0);
-    
+
     // Save back to localStorage
     localStorage.setItem('WO_total_quantity', JSON.stringify(totalQuantityData));
-    
+
     // Force UI re-render to update Quantity Remaining
     setForceUpdate(prev => prev + 1);
-    
+
     console.log('Updated WO_total_quantity:', {
       woItemId,
       saranItemId,
@@ -100,22 +100,22 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   // Function to update TargetQuantity in WO_total_quantity
   const updateTargetQuantity = useCallback((woItemId, targetQuantity) => {
     const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
-    
+
     // Find existing WO item
-    let woItemData = totalQuantityData.find(item => 
+    let woItemData = totalQuantityData.find(item =>
       item.WoItemID === woItemId || item.WoItemID === parseInt(woItemId)
     );
-    
+
     if (woItemData) {
       // Update existing WO item target quantity
       woItemData.TargetQuantity = parseInt(targetQuantity) || 0;
-      
+
       // Save back to localStorage
       localStorage.setItem('WO_total_quantity', JSON.stringify(totalQuantityData));
-      
+
       // Force UI re-render to update Quantity Remaining
       setForceUpdate(prev => prev + 1);
-      
+
       console.log('Updated TargetQuantity in WO_total_quantity:', {
         woItemId,
         targetQuantity,
@@ -126,17 +126,17 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         woItemId,
         targetQuantity
       });
-      
+
       // Create new WO item if not exists
       const newWoItem = {
         WoItemID: woItemId,
         TargetQuantity: parseInt(targetQuantity) || 0,
         WOQuantity: []
       };
-      
+
       totalQuantityData.push(newWoItem);
       localStorage.setItem('WO_total_quantity', JSON.stringify(totalQuantityData));
-      
+
       // Force UI re-render
       setForceUpdate(prev => prev + 1);
     }
@@ -145,33 +145,33 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   // Function to remove WO item from WO_total_quantity
   const removeWOItem = useCallback((woItemId) => {
     const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
-    
+
     // Filter out the WO item
-    const filteredData = totalQuantityData.filter(item => 
+    const filteredData = totalQuantityData.filter(item =>
       item.WoItemID !== woItemId && item.WoItemID !== parseInt(woItemId)
     );
-    
+
     // Save back to localStorage
     localStorage.setItem('WO_total_quantity', JSON.stringify(filteredData));
-    
+
     // Force UI re-render to update Quantity Remaining
     setForceUpdate(prev => prev + 1);
-    
+
     console.log('Removed WO item from WO_total_quantity:', {
       woItemId,
       remainingItems: filteredData.length
     });
   }, []);
-  
+
   // Sync target quantity when workOrderData changes
   useEffect(() => {
     if (workOrderData?.workOrderItem?.id || workOrderData?.itemId) {
       const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
       const targetQuantity = parseInt(workOrderData?.itemQty) || 0;
-      
+
       // Always update target quantity (even if 0, to sync with workOrderData)
       updateTargetQuantity(woItemId, targetQuantity);
-      
+
       console.log('Syncing target quantity from workOrderData:', {
         woItemId,
         targetQuantity,
@@ -183,13 +183,13 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   // Sidebar toggle state
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [activeTab, setActiveTab] = useState('stats');
-  
+
   // JPG generation state
   const [isGeneratingJPG, setIsGeneratingJPG] = useState(false);
   const [jpgProgress, setJpgProgress] = useState(0);
   const [jpgStatus, setJpgStatus] = useState('');
   const [usePNG, setUsePNG] = useState(false); // Option to use PNG for smaller files
-  
+
   // Interaction state
   const [isDragging, setIsDragging] = useState(false);
   const [draggedBoxId, setDraggedBoxId] = useState(null);
@@ -209,18 +209,18 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   const [isLeftClickPanning, setIsLeftClickPanning] = useState(false);
   const [leftClickPanStart, setLeftClickPanStart] = useState({ x: 0, y: 0 });
   const [selectedBoxIds, setSelectedBoxIds] = useState(new Set());
-  
+
   // Colors for boxes
   const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#8b5cf6'];
-  
+
   // Debug function to show all canvas layouts in localStorage
   const debugCanvasLayouts = useCallback(() => {
     const allKeys = Object.keys(localStorage);
     const canvasKeys = allKeys.filter(key => key.startsWith('WO_canvas_layout_'));
-    
+
     console.log('=== ALL CANVAS LAYOUTS IN LOCALSTORAGE ===');
     console.log('Total canvas keys found:', canvasKeys.length);
-    
+
     canvasKeys.forEach(key => {
       try {
         const data = localStorage.getItem(key);
@@ -239,7 +239,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     });
     console.log('=== END CANVAS LAYOUTS DEBUG ===');
   }, []);
-  
+
   // Load canvas data from API (for loading data only, not saving)
   const loadCanvasFromAPI = useCallback(async (itemBarangId) => {
     try {
@@ -247,62 +247,62 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       const result = await request(`/item-barang/${itemBarangId}/canvas`, {
         method: 'GET'
       });
-      
+
       console.log('Canvas data loaded from API:', result);
-      
+
       if (result.success && result.data && result.data.canvas_data) {
         const canvasData = result.data.canvas_data;
-        
+
         // Load canvas data
         if (canvasData.boxes && Array.isArray(canvasData.boxes)) {
           setBoxes(canvasData.boxes);
           console.log('Loaded boxes from API:', canvasData.boxes.length);
         }
-        
+
         if (canvasData.baseContainer) {
           setBaseContainer(canvasData.baseContainer);
           console.log('Loaded base container from API:', canvasData.baseContainer);
         }
-        
+
         if (canvasData.gridSize) {
           setGridSize(canvasData.gridSize);
         }
-        
+
         if (canvasData.zoom) {
           setZoom(canvasData.zoom);
         }
-        
+
         if (canvasData.panOffset) {
           setPanOffset(canvasData.panOffset);
         }
-        
+
         showAlert('Success', 'Canvas data loaded from server!', 'success');
       } else if (result.boxes && Array.isArray(result.boxes)) {
         // Handle direct response format (without success wrapper)
         console.log('Loading canvas data from direct response format');
-        
+
         if (result.boxes) {
           setBoxes(result.boxes);
           console.log('Loaded boxes from API:', result.boxes.length);
         }
-        
+
         if (result.baseContainer) {
           setBaseContainer(result.baseContainer);
           console.log('Loaded base container from API:', result.baseContainer);
         }
-        
+
         if (result.gridSize) {
           setGridSize(result.gridSize);
         }
-        
+
         if (result.zoom) {
           setZoom(result.zoom);
         }
-        
+
         if (result.panOffset) {
           setPanOffset(result.panOffset);
         }
-        
+
         showAlert('Success', 'Canvas data loaded from server!', 'success');
       } else {
         console.log('No canvas data found in API response');
@@ -316,7 +316,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   // Load work order data from sessionStorage
   useEffect(() => {
     if (isInitialized) return; // Prevent multiple initializations
-    
+
     const storedData = sessionStorage.getItem('WO_canvasData');
     if (storedData) {
       try {
@@ -325,47 +325,47 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         console.log('Selected item data:', data.selectedItem);
         console.log('Work order item data:', data.workOrderItem);
         setWorkOrderData(data);
-        
+
         // Debug: Show all canvas layouts in localStorage
         debugCanvasLayouts();
-        
+
         // Check if canvas data exists in localStorage first
         if (data.selectedItem && data.selectedItem.id) {
           const itemBarangId = data.selectedItem.id;
-          
+
           // Check if this saran plat is in WO_used_saran_plats
           const usedSaranPlats = JSON.parse(localStorage.getItem('WO_used_saran_plats') || '[]');
           const isSaranPlatUsed = usedSaranPlats.includes(itemBarangId.toString()) || usedSaranPlats.includes(parseInt(itemBarangId));
-          
+
           console.log('Canvas load check:', {
             itemBarangId,
             isSaranPlatUsed,
             usedSaranPlats
           });
-          
+
           if (isSaranPlatUsed) {
             // If saran plat is used, search for existing canvas layout
             const allKeys = Object.keys(localStorage);
-            
+
             // Search for canvas keys that start with WO_canvas_layout_{itemBarangId}_
-            const canvasKeys = allKeys.filter(key => 
+            const canvasKeys = allKeys.filter(key =>
               key.startsWith(`WO_canvas_layout_${itemBarangId}_`)
             );
-            
+
             console.log('Searching for canvas keys:', {
               itemBarangId,
               searchPattern: `WO_canvas_layout_${itemBarangId}_`,
               allKeys: allKeys.filter(key => key.startsWith('WO_canvas_layout_')),
               foundKeys: canvasKeys
             });
-            
+
             if (canvasKeys.length > 0) {
               // Use the first found key (or could be the latest one)
               const canvasKey = canvasKeys[0];
               const existingCanvasData = localStorage.getItem(canvasKey);
-              
+
               console.log('Using canvas key:', canvasKey, 'hasData:', !!existingCanvasData);
-              
+
               if (existingCanvasData) {
                 console.log('Found existing canvas data for used saran plat, loading from localStorage');
                 // Canvas data will be loaded by existing localStorage logic below
@@ -382,7 +382,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
             const workOrderUniqueId = localStorage.getItem('WO_current_work_order_item_id');
             const canvasKey = workOrderUniqueId ? `WO_canvas_layout_${itemBarangId}_${workOrderUniqueId}` : `WO_canvas_layout_${itemBarangId}`;
             const existingCanvasData = localStorage.getItem(canvasKey);
-            
+
             if (existingCanvasData) {
               console.log('Canvas data found in localStorage, using cached data');
               // Canvas data will be loaded by existing localStorage logic below
@@ -392,37 +392,37 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
             }
           }
         }
-        
+
         // Update base container dimensions (Saran Plat)
-        const platWidth = data.selectedItem?.platPanjang || data.platPanjang ;
-        const platHeight = data.selectedItem?.platLebar || data.platLebar || data.platPanjang/10;
+        const platWidth = data.selectedItem?.platPanjang || data.platPanjang;
+        const platHeight = data.selectedItem?.platLebar || data.platLebar || data.platPanjang / 10;
         setBaseContainer(prev => ({
           ...prev,
           width: platWidth,
           height: platHeight
         }));
-        
+
         // Update box size (Work Order Item)
         const itemWidth = data.workOrderItem?.width || data.itemPanjang;
-        const itemHeight = data.workOrderItem?.height || data.itemLebar || data.platPanjang/10;
+        const itemHeight = data.workOrderItem?.height || data.itemLebar || data.platPanjang / 10;
         setNewBoxSize({
           width: itemWidth,
           height: itemHeight
         });
-        
+
         // Sync quantity tracking - totalQuantity should be the number of boxes in canvas
         const totalQty = data.itemQty || 0;
         setTotalQuantity(0); // Start with 0, will be updated when boxes are added
-        
+
         // Check if there's cached data for this work order item
         const workOrderUniqueId = localStorage.getItem('WO_current_work_order_id') || 'unknown';
         const saranId = data.selectedItem?.id || 'unknown';
         const cacheKey = `WO_canvas_layout_${saranId}_${workOrderUniqueId}`;
-        
+
         // Check if current work order ID matches stored ID
         const storedWorkOrderId = localStorage.getItem('WO_current_work_order_id');
         const isCurrentWorkOrder = storedWorkOrderId === workOrderUniqueId;
-        
+
         console.log('Work Order ID Comparison:', {
           current: workOrderUniqueId,
           stored: storedWorkOrderId,
@@ -430,12 +430,12 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
           cacheKey: cacheKey,
           totalQty: totalQty
         });
-        
+
         try {
           const cachedData = localStorage.getItem(cacheKey);
           if (cachedData) {
             const parsedCache = JSON.parse(cachedData);
-            
+
             // Check if it's new format (canvas data only) or old format (with workOrderData)
             let cachedBoxes = [];
             if (parsedCache.version === "2.0" && !parsedCache.workOrderData) {
@@ -445,11 +445,11 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               // Old format - with workOrderData wrapper
               cachedBoxes = parsedCache.canvasData.boxes;
             }
-            
+
             if (cachedBoxes.length > 0) {
               const usedQuantity = cachedBoxes.length;
               const remainingQty = Math.max(0, totalQty - usedQuantity);
-              
+
               console.log('Loading cached layout:', {
                 totalQty: totalQty,
                 usedQuantity: usedQuantity,
@@ -457,30 +457,30 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                 boxes: cachedBoxes.length,
                 format: parsedCache.version === "2.0" ? "new" : "old"
               });
-              
-              
+
+
               // Process boxes with color logic
               const currentWoItemId = data.workOrderItem?.id || data.itemId;
               const currentWorkOrderId = data.workOrderId;
               const currentWorkOrderUniqueId = localStorage.getItem('WO_current_work_order_item_id') || currentWorkOrderId;
-              
+
               const processedBoxes = cachedBoxes.map(box => {
                 const boxWoItemId = box.woItemId || 'unknown';
                 // const workItemUniqueId = box.workItemUniqueId || 'unknown';
                 const isFromDifferentWO = boxWoItemId !== currentWoItemId;
-                
-              // Determine color based on woItemId array check (simpler) - memoized to avoid repeated parsing
-              
-              
-              let boxColor = '#10b981'; // Default green
-              if (box.isSave === true) {
-                boxColor = '#ef4444'; // Red for saved boxes
-              } else if (boxWoItemId && boxWoItemId !== currentWoItemId && boxWoItemId !== parseInt(currentWoItemId)) {
-                boxColor = '#f59e0b'; // Yellow for different WO item
-              } else {
-                console.log('🟢 Box set to GREEN - in current WO items');
-              }
-                
+
+                // Determine color based on woItemId array check (simpler) - memoized to avoid repeated parsing
+
+
+                let boxColor = '#10b981'; // Default green
+                if (box.isSave === true) {
+                  boxColor = '#ef4444'; // Red for saved boxes
+                } else if (boxWoItemId && boxWoItemId !== currentWoItemId && boxWoItemId !== parseInt(currentWoItemId)) {
+                  boxColor = '#f59e0b'; // Yellow for different WO item
+                } else {
+                  console.log('🟢 Box set to GREEN - in current WO items');
+                }
+
                 return {
                   ...box,
                   woItemId: boxWoItemId,
@@ -491,15 +491,15 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                   color: boxColor
                 };
               });
-              
+
               setBoxes(processedBoxes);
-              
+
               console.log('Processed cached boxes:', {
                 totalBoxes: processedBoxes.length,
                 currentWoItemBoxes: processedBoxes.filter(box => box.woItemId === currentWoItemId).length,
                 otherWoItemBoxes: processedBoxes.filter(box => box.woItemId !== currentWoItemId).length
               });
-              
+
               const idStatus = isCurrentWorkOrder ? 'Current Work Order' : 'Different Work Order';
               showAlert('Info', `Loaded cached layout: ${usedQuantity} boxes used, ${remainingQty} remaining\n\nID Status: ${idStatus}`, 'info');
             } else {
@@ -515,10 +515,10 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
           console.error('Error loading cache:', error);
           console.log('Error occurred, setting remaining to total:', totalQty);
         }
-        
-        
+
+
         // Don't auto-generate boxes - let user choose when to fill
-        
+
         setIsInitialized(true);
         showAlert('Success', `Loaded work order data: ${totalQty} items`, 'success');
       } catch (error) {
@@ -533,13 +533,13 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     if (workOrderData?.itemQty) {
       const targetQuantity = parseInt(workOrderData.itemQty) || 0;
       const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
-      
+
       // Read from WO_total_quantity to get shared quantity data
       const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
-      let woItemData = totalQuantityData.find(item => 
+      let woItemData = totalQuantityData.find(item =>
         item.WoItemID === woItemId || item.WoItemID === parseInt(woItemId)
       );
-      
+
       // If WO item doesn't exist, create it with PreviousQuantity
       if (!woItemData) {
         woItemData = {
@@ -551,18 +551,18 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         totalQuantityData.push(woItemData);
         localStorage.setItem('WO_total_quantity', JSON.stringify(totalQuantityData));
       }
-      
+
       // Save PreviousQuantity for rollback (current saran plat only)
       const currentSaranId = workOrderData?.selectedItem?.id;
       if (currentSaranId) {
-        const currentSaranItem = woItemData.WOQuantity.find(item => 
+        const currentSaranItem = woItemData.WOQuantity.find(item =>
           item.ItemId === currentSaranId || item.ItemId === parseInt(currentSaranId)
         );
         woItemData.PreviousQuantity = currentSaranItem ? (parseInt(currentSaranItem.Quantity) || 0) : 0;
         localStorage.setItem('WO_total_quantity', JSON.stringify(totalQuantityData));
         console.log('Saved PreviousQuantity (current saran plat):', woItemData.PreviousQuantity);
       }
-      
+
       // Calculate total used quantity across all saran plats for this WO item
       let totalUsedQuantity = 0;
       if (woItemData && woItemData.WOQuantity && Array.isArray(woItemData.WOQuantity)) {
@@ -570,11 +570,11 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
           return total + (parseInt(saranItem.Quantity) || 0);
         }, 0);
       }
-      
+
       // Set totalQuantity to remaining quantity (target - used from other saran plats)
       const remainingQuantity = Math.max(0, targetQuantity - totalUsedQuantity);
       setTotalQuantity(remainingQuantity);
-      
+
       console.log('Updated totalQuantity from WO_total_quantity:', {
         woItemId,
         targetQuantity,
@@ -588,39 +588,39 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   }, [workOrderData?.itemQty, workOrderData?.workOrderItem?.id, workOrderData?.itemId, workOrderData]);
 
 
-  
+
   // Generate initial boxes based on work order quantity
   const generateInitialBoxes = useCallback((quantity, itemWidth, itemHeight) => {
     const newBoxes = [];
     const newId = 1; // Start from 1 for new boxes
-    
+
     // Use single color for all boxes
     const singleColor = '#10b981'; // Green color for all boxes
-    
+
     // Calculate optimal grid layout
     const maxBoxesPerRow = Math.floor(baseContainer.width / itemWidth);
     const maxBoxesPerCol = Math.floor(baseContainer.height / itemHeight);
     const maxBoxesInContainer = maxBoxesPerRow * maxBoxesPerCol;
-    
+
     // Only generate boxes that can fit
     const boxesToGenerate = Math.min(quantity, maxBoxesInContainer);
-    
+
     // Create a grid to track occupied positions
-    const grid = Array(baseContainer.height).fill().map(() => 
+    const grid = Array(baseContainer.height).fill().map(() =>
       Array(baseContainer.width).fill(false)
     );
-    
+
     // Place boxes in perfect grid layout (no gaps)
     for (let i = 0; i < boxesToGenerate; i++) {
       const boxId = newId + i;
-      
+
       // Calculate position in perfect grid (no spacing) - use exact grid positioning
       const row = Math.floor(i / maxBoxesPerRow);
       const col = i % maxBoxesPerRow;
-      
+
       const x = baseContainer.x + (col * itemWidth);
       const y = baseContainer.y + (row * itemHeight);
-      
+
       // Check if this position is completely available
       let canPlace = true;
       for (let checkY = y; checkY < y + itemHeight && canPlace; checkY++) {
@@ -630,7 +630,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
           }
         }
       }
-      
+
       if (canPlace) {
         // Mark this position as occupied
         for (let markY = y; markY < y + itemHeight; markY++) {
@@ -640,7 +640,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
             }
           }
         }
-        
+
         newBoxes.push({
           id: boxId,
           x: x,
@@ -652,21 +652,21 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         });
       }
     }
-    
+
     setBoxes(newBoxes);
   }, [baseContainer]);
-  
+
   // Canvas drawing functions
   const drawGrid = useCallback((ctx, width, height) => {
     ctx.strokeStyle = '#e5e7eb';
     ctx.lineWidth = 1;
-    
+
     const scaledGridSize = gridSize * zoom;
-    
+
     // Apply pan offset
     ctx.save();
     ctx.translate(panOffset.x, panOffset.y);
-    
+
     // Draw vertical lines
     for (let x = 0; x <= width + Math.abs(panOffset.x); x += scaledGridSize) {
       ctx.beginPath();
@@ -674,7 +674,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       ctx.lineTo(x, height + Math.abs(panOffset.y));
       ctx.stroke();
     }
-    
+
     // Draw horizontal lines
     for (let y = 0; y <= height + Math.abs(panOffset.y); y += scaledGridSize) {
       ctx.beginPath();
@@ -682,20 +682,20 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       ctx.lineTo(width + Math.abs(panOffset.x), y);
       ctx.stroke();
     }
-    
+
     ctx.restore();
   }, [gridSize, zoom, panOffset]);
 
-  
+
   const drawBaseContainer = useCallback((ctx) => {
     ctx.save();
     ctx.translate(panOffset.x, panOffset.y);
-    
+
     const x = baseContainer.x * gridSize * zoom;
     const y = baseContainer.y * gridSize * zoom;
     const width = baseContainer.width * gridSize * zoom;
     const height = baseContainer.height * gridSize * zoom;
-    
+
     // Draw container background with enhanced styling when dragging
     if (isDraggingContainer) {
       ctx.fillStyle = 'rgba(59, 130, 246, 0.2)'; // Blue tint when dragging
@@ -707,40 +707,40 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       ctx.fillStyle = 'rgba(243, 244, 246, 0.3)';
     }
     ctx.fillRect(x, y, width, height);
-    
+
     // Reset shadow
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
-    
+
     // Draw drag handle indicator
     if (isDraggingContainer) {
       ctx.fillStyle = '#3b82f6';
       ctx.font = `${10 * zoom}px Arial`;
       ctx.fillText('🔄 Dragging...', x + 5, y + 15);
     }
-    
+
     ctx.restore();
   }, [baseContainer, gridSize, zoom, panOffset, isDraggingContainer]);
-  
+
   const drawBox = useCallback((ctx, box, isPreview = false, isDragged = false, isMovingWithContainer = false, isSelected = false, hasCollision = false) => {
     ctx.save();
     ctx.translate(panOffset.x, panOffset.y);
-    
+
     // Handle rotation - swap width and height if rotated
     const isRotated = box.isRotated || false;
     const boxWidth = isRotated ? box.height : box.width;
     const boxHeight = isRotated ? box.width : box.height;
-    
+
     const x = box.x * gridSize * zoom;
     const y = box.y * gridSize * zoom;
     const width = boxWidth * gridSize * zoom;
     const height = boxHeight * gridSize * zoom;
-    
+
     // Save context state
     ctx.save();
-    
+
     // Draw box background with enhanced visual feedback
     if (isDragged) {
       // Add shadow for dragged box with more dramatic effect
@@ -748,7 +748,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       ctx.shadowBlur = 12;
       ctx.shadowOffsetX = 4;
       ctx.shadowOffsetY = 4;
-      
+
       // Add slight rotation for more dynamic feel
       const centerX = x + width / 2;
       const centerY = y + height / 2;
@@ -768,7 +768,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       ctx.shadowOffsetX = 2;
       ctx.shadowOffsetY = 2;
     }
-    
+
     // Create gradient for more modern look
     if (isDragged) {
       const gradient = ctx.createLinearGradient(x, y, x + width, y + height);
@@ -790,23 +790,23 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     } else if (box.isSave === true) {
       // Red color for boxes that are saved
       ctx.fillStyle = '#ef4444';
-      console.log('Box color: RED - Saved box', { 
-        boxId: box.id, 
+      console.log('Box color: RED - Saved box', {
+        boxId: box.id,
         isSave: box.isSave,
         // workItemUniqueId: box.workItemUniqueId
       });
     } else if (box.color && box.color !== '#10b981') {
       // Use box color if it's explicitly set (for loaded boxes)
       ctx.fillStyle = box.color;
-      console.log('Box color: USING BOX COLOR', { 
-        boxId: box.id, 
+      console.log('Box color: USING BOX COLOR', {
+        boxId: box.id,
         color: box.color
       });
     } else {
       // Determine color based on woItemId comparison (simple logic)
       const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
       const boxWoItemId = box.woItemId;
-      
+
       if (!boxWoItemId || boxWoItemId === currentWoItemId || boxWoItemId === parseInt(currentWoItemId)) {
         // Green for boxes from current WO item or no woItemId
         ctx.fillStyle = '#10b981';
@@ -815,46 +815,46 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         ctx.fillStyle = '#f59e0b';
       }
     }
-    
+
     // Draw perfect rectangles (no rounded corners)
     ctx.fillRect(x, y, width, height);
-    
+
     // Reset shadow and rotation
     ctx.restore();
     ctx.save();
-    
+
     // Draw box border with enhanced styling
-    ctx.strokeStyle = isPreview ? (hasCollision ? '#ef4444' : box.color) : 
-                      (isDragged ? '#fff' : 
-                       (isMovingWithContainer ? '#3b82f6' : 
-                        (isSelected ? '#ef4444' : 
-                         (box.isDisabled ? '#dc2626' : '#000'))));
-    ctx.lineWidth = isPreview ? 3 : 
-                    (isDragged ? 3 : 
-                     (isMovingWithContainer ? 2 : 
-                      (isSelected ? 3 : 
-                       (box.isDisabled ? 2 : 1))));
-    ctx.setLineDash(isPreview ? [8, 4] : 
-                    (isMovingWithContainer ? [4, 2] : 
-                     (isSelected ? [6, 3] : 
-                      (box.isDisabled ? [3, 3] : []))));
-    
+    ctx.strokeStyle = isPreview ? (hasCollision ? '#ef4444' : box.color) :
+      (isDragged ? '#fff' :
+        (isMovingWithContainer ? '#3b82f6' :
+          (isSelected ? '#ef4444' :
+            (box.isDisabled ? '#dc2626' : '#000'))));
+    ctx.lineWidth = isPreview ? 3 :
+      (isDragged ? 3 :
+        (isMovingWithContainer ? 2 :
+          (isSelected ? 3 :
+            (box.isDisabled ? 2 : 1))));
+    ctx.setLineDash(isPreview ? [8, 4] :
+      (isMovingWithContainer ? [4, 2] :
+        (isSelected ? [6, 3] :
+          (box.isDisabled ? [3, 3] : []))));
+
     // Draw perfect rectangle border
     ctx.strokeRect(x, y, width, height);
     ctx.setLineDash([]);
-    
+
     // Draw box content with better visibility
-    ctx.fillStyle = isDragged ? '#000' : 
-                    (isMovingWithContainer ? '#1d4ed8' : 
-                     (isSelected ? '#fff' : 
-                      (box.isDisabled ? '#4b5563' : '#fff')));
+    ctx.fillStyle = isDragged ? '#000' :
+      (isMovingWithContainer ? '#1d4ed8' :
+        (isSelected ? '#fff' :
+          (box.isDisabled ? '#4b5563' : '#fff')));
     ctx.font = `bold ${Math.max(12, Math.min(width, height) * 0.3)}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    
+
     const centerX = x + width / 2;
     const centerY = y + height / 2;
-    
+
     // Add text shadow for better readability
     if (isDragged) {
       ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
@@ -872,85 +872,85 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       ctx.shadowOffsetX = 1;
       ctx.shadowOffsetY = 1;
     }
-    
+
     // Display box size only
     ctx.font = `${Math.max(10, Math.min(width, height) * 0.22)}px Arial`;
     ctx.fillText(`${box.width}×${box.height}`, centerX, centerY);
-    
+
     // Draw selection indicator
     if (isSelected) {
       ctx.fillStyle = '#ef4444';
       ctx.font = `${Math.max(10, Math.min(width, height) * 0.25)}px Arial`;
       ctx.fillText('✓', x + width - 8, y + 8);
     }
-    
+
     // Draw disabled indicator
     if (box.isDisabled) {
       ctx.fillStyle = '#6b7280';
       ctx.font = `${Math.max(8, Math.min(width, height) * 0.2)}px Arial`;
       ctx.fillText('🔒', x + width - 8, y + height - 8);
     }
-    
+
     // Draw rotation indicator
     if (isRotated) {
       ctx.fillStyle = '#3b82f6';
       ctx.font = `${Math.max(8, Math.min(width, height) * 0.2)}px Arial`;
       ctx.fillText('↻', x + 4, y + height - 4);
     }
-    
+
     // Restore context
     ctx.restore();
     ctx.restore(); // Restore pan offset
   }, [gridSize, zoom, panOffset, isDraggingContainer]);
-  
+
   // Removed preview system for better performance
-  
+
   // Main draw function
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
+
     const ctx = canvas.getContext('2d');
     const rect = canvas.getBoundingClientRect();
-    
+
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
+
     // Set up clipping area for container border
     ctx.save();
-    
+
     // Calculate container bounds in pixel coordinates
     const containerPixelX = (baseContainer.x * gridSize * zoom) + panOffset.x;
     const containerPixelY = (baseContainer.y * gridSize * zoom) + panOffset.y;
     const containerPixelWidth = baseContainer.width * gridSize * zoom;
     const containerPixelHeight = baseContainer.height * gridSize * zoom;
-    
+
     // Create clipping path for container area
     ctx.beginPath();
     ctx.rect(containerPixelX, containerPixelY, containerPixelWidth, containerPixelHeight);
     ctx.clip();
-    
+
     // Draw grid only within container bounds
     drawGrid(ctx, canvas.width, canvas.height);
-    
+
     // Draw base container
     drawBaseContainer(ctx);
-    
+
     // Draw all boxes
     if (boxes && boxes.length > 0) {
       boxes.forEach(box => {
-      const isDragged = isDragging && box.id === draggedBoxId;
-      const isMovingWithContainer = isDraggingContainer && 
-        box.x >= baseContainer.x && 
-        box.x < baseContainer.x + baseContainer.width &&
-        box.y >= baseContainer.y && 
-        box.y < baseContainer.y + baseContainer.height;
-      const isSelected = selectedBoxIds.has(box.id);
-      
-      drawBox(ctx, box, false, isDragged, isMovingWithContainer, isSelected);
+        const isDragged = isDragging && box.id === draggedBoxId;
+        const isMovingWithContainer = isDraggingContainer &&
+          box.x >= baseContainer.x &&
+          box.x < baseContainer.x + baseContainer.width &&
+          box.y >= baseContainer.y &&
+          box.y < baseContainer.y + baseContainer.height;
+        const isSelected = selectedBoxIds.has(box.id);
+
+        drawBox(ctx, box, false, isDragged, isMovingWithContainer, isSelected);
       });
     }
-    
+
     // Draw preview position if dragging
     if (isDragging && previewPosition && draggedBoxId) {
       const draggedBox = boxes && boxes.length > 0 ? boxes.find(box => box.id === draggedBoxId) : null;
@@ -963,10 +963,10 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         drawBox(ctx, previewBox, true, false, false, false, hasCollision);
       }
     }
-    
+
     // Restore clipping area
     ctx.restore();
-    
+
     // Draw container border outline (outside clipping area)
     ctx.save();
     ctx.strokeStyle = isDraggingContainer ? '#3b82f6' : '#9ca3af';
@@ -974,49 +974,49 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     ctx.setLineDash(isDraggingContainer ? [8, 4] : []);
     ctx.strokeRect(containerPixelX, containerPixelY, containerPixelWidth, containerPixelHeight);
     ctx.setLineDash([]);
-    
+
     // Draw container label
     ctx.fillStyle = isDraggingContainer ? '#1d4ed8' : '#6b7280';
     ctx.font = `bold ${12 * zoom}px Arial`;
     ctx.fillText(`Base: ${baseContainer.width}×${baseContainer.height}`, containerPixelX + 5, containerPixelY - 5);
     ctx.restore();
   }, [boxes, drawGrid, drawBaseContainer, drawBox, isDragging, draggedBoxId, previewPosition, hasCollision, baseContainer, gridSize, zoom, panOffset, isDraggingContainer]);
-  
+
   // Mouse event handlers
   const getMousePos = useCallback((e) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
-    
+
     const rect = canvas.getBoundingClientRect();
     return {
       x: e.clientX - rect.left,
       y: e.clientY - rect.top
     };
   }, []);
-  
+
   const getGridPos = useCallback((mousePos) => {
     const gridX = Math.round(mousePos.x / (gridSize * zoom));
     const gridY = Math.round(mousePos.y / (gridSize * zoom));
     return { x: gridX, y: gridY };
   }, [gridSize, zoom]);
-  
+
   // Alternative method to check if mouse is over a box using pixel coordinates
   const isMouseOverBox = useCallback((mousePos, box) => {
     const boxPixelX = (box.x * gridSize * zoom) + panOffset.x;
     const boxPixelY = (box.y * gridSize * zoom) + panOffset.y;
-    
+
     // Handle rotation - use actual dimensions
     const isRotated = box.isRotated || false;
     const boxWidth = isRotated ? box.height : box.width;
     const boxHeight = isRotated ? box.width : box.height;
-    
+
     const boxPixelWidth = boxWidth * gridSize * zoom;
     const boxPixelHeight = boxHeight * gridSize * zoom;
-    
-    return mousePos.x >= boxPixelX && 
-           mousePos.x <= boxPixelX + boxPixelWidth &&
-           mousePos.y >= boxPixelY && 
-           mousePos.y <= boxPixelY + boxPixelHeight;
+
+    return mousePos.x >= boxPixelX &&
+      mousePos.x <= boxPixelX + boxPixelWidth &&
+      mousePos.y >= boxPixelY &&
+      mousePos.y <= boxPixelY + boxPixelHeight;
   }, [gridSize, zoom, panOffset]);
 
   // Check if mouse is over container boundary
@@ -1025,37 +1025,37 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     const containerPixelY = (baseContainer.y * gridSize * zoom) + panOffset.y;
     const containerPixelWidth = baseContainer.width * gridSize * zoom;
     const containerPixelHeight = baseContainer.height * gridSize * zoom;
-    
+
     // Check if mouse is on the border (not inside)
     const borderThickness = 8; // pixels
     const isOnBorder = (
       (mousePos.x >= containerPixelX - borderThickness && mousePos.x <= containerPixelX + containerPixelWidth + borderThickness &&
-       mousePos.y >= containerPixelY - borderThickness && mousePos.y <= containerPixelY + borderThickness) || // Top border
+        mousePos.y >= containerPixelY - borderThickness && mousePos.y <= containerPixelY + borderThickness) || // Top border
       (mousePos.x >= containerPixelX - borderThickness && mousePos.x <= containerPixelX + containerPixelWidth + borderThickness &&
-       mousePos.y >= containerPixelY + containerPixelHeight - borderThickness && mousePos.y <= containerPixelY + containerPixelHeight + borderThickness) || // Bottom border
+        mousePos.y >= containerPixelY + containerPixelHeight - borderThickness && mousePos.y <= containerPixelY + containerPixelHeight + borderThickness) || // Bottom border
       (mousePos.x >= containerPixelX - borderThickness && mousePos.x <= containerPixelX + borderThickness &&
-       mousePos.y >= containerPixelY - borderThickness && mousePos.y <= containerPixelY + containerPixelHeight + borderThickness) || // Left border
+        mousePos.y >= containerPixelY - borderThickness && mousePos.y <= containerPixelY + containerPixelHeight + borderThickness) || // Left border
       (mousePos.x >= containerPixelX + containerPixelWidth - borderThickness && mousePos.x <= containerPixelX + containerPixelWidth + borderThickness &&
-       mousePos.y >= containerPixelY - borderThickness && mousePos.y <= containerPixelY + containerPixelHeight + borderThickness) // Right border
+        mousePos.y >= containerPixelY - borderThickness && mousePos.y <= containerPixelY + containerPixelHeight + borderThickness) // Right border
     );
-    
+
     return isOnBorder;
   }, [baseContainer, gridSize, zoom, panOffset]);
-  
+
   const handleMouseDown = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const mousePos = getMousePos(e);
     const gridPos = getGridPos(mousePos);
-    
+
     // Handle panning for middle mouse or Ctrl+Left
     if (e.button === 1 || (e.button === 0 && e.ctrlKey)) {
       setIsPanning(true);
       setLastPanPos(mousePos);
       return;
     }
-    
+
     // Check if clicking on container boundary first
     if (isMouseOverContainer(mousePos)) {
       setIsDraggingContainer(true);
@@ -1068,39 +1068,39 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       setVelocity({ x: 0, y: 0 });
       return;
     }
-    
+
     // Find clicked box using pixel-based detection (more accurate)
     const clickedBox = boxes && boxes.length > 0 ? boxes.find(box => {
       return isMouseOverBox(mousePos, box);
     }) : null;
-    
-    
+
+
     if (clickedBox) {
       // Check if box is disabled
       if (clickedBox.isDisabled) {
         showAlert('Info', 'This box is disabled and cannot be moved', 'info');
         return;
       }
-      
+
       // Check if box belongs to the same WO item - STRICT RESTRICTION
       const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
       const boxWoItemId = clickedBox.woItemId;
-      
+
       // If box has woItemId and it's different from current WO item, block all interaction
       if (boxWoItemId && currentWoItemId && currentWoItemId !== boxWoItemId) {
         showAlert('Info', `This box belongs to a different Work Order item (ID: ${boxWoItemId}). You cannot edit it.`, 'info');
         return;
       }
-      
+
       // If current WO item has ID but box doesn't, also block (backward compatibility protection)
       if (currentWoItemId && !boxWoItemId) {
         showAlert('Info', 'This box is from a previous session and cannot be edited. Please create new boxes.', 'info');
         return;
       }
-      
+
       // Left-click: single select box and prepare for drag
       setSelectedBoxIds(new Set([clickedBox.id]));
-      
+
       // Prepare for drag (will start dragging on mousemove)
       setDraggedBoxId(clickedBox.id);
       setDragOffset({
@@ -1112,7 +1112,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       setVelocity({ x: 0, y: 0 });
       return;
     }
-    
+
     // If clicking on empty canvas area
     if (e.button === 0) { // Left mouse button
       // Start left-click panning
@@ -1126,14 +1126,14 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   const handleRightClick = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const mousePos = getMousePos(e);
-    
+
     // Find clicked box
     const clickedBox = boxes && boxes.length > 0 ? boxes.find(box => {
       return isMouseOverBox(mousePos, box);
     }) : null;
-    
+
     if (clickedBox) {
       // Toggle selection on right-click
       setSelectedBoxIds(prev => {
@@ -1150,62 +1150,62 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       setSelectedBoxIds(new Set());
     }
   }, [boxes, getMousePos, isMouseOverBox]);
-  
+
   // Smooth drag update using requestAnimationFrame with momentum
   const updateDragPosition = useCallback((mousePos) => {
-    
+
     if (isDraggingContainer) {
       // Handle container dragging
       const newX = Math.round((mousePos.x - containerDragOffset.x) / (gridSize * zoom));
       const newY = Math.round((mousePos.y - containerDragOffset.y) / (gridSize * zoom));
-      
+
       // Clamp container position to reasonable bounds
       const clampedX = Math.max(0, Math.min(newX, 50 - baseContainer.width));
       const clampedY = Math.max(0, Math.min(newY, 50 - baseContainer.height));
-      
+
       // Calculate the movement delta
       const deltaX = clampedX - baseContainer.x;
       const deltaY = clampedY - baseContainer.y;
-      
+
       // Update container position
       setBaseContainer(prev => ({ ...prev, x: clampedX, y: clampedY }));
-      
+
       // Move all boxes inside container by the same delta
       if (deltaX !== 0 || deltaY !== 0) {
-        setBoxes(prevBoxes => 
+        setBoxes(prevBoxes =>
           prevBoxes.map(box => {
             // Check if box is inside the container
-            const isInsideContainer = 
-              box.x >= baseContainer.x && 
+            const isInsideContainer =
+              box.x >= baseContainer.x &&
               box.x < baseContainer.x + baseContainer.width &&
-              box.y >= baseContainer.y && 
+              box.y >= baseContainer.y &&
               box.y < baseContainer.y + baseContainer.height;
-            
+
             if (isInsideContainer) {
               // Move box by the same delta as container
               const newBoxX = box.x + deltaX;
               const newBoxY = box.y + deltaY;
-              
+
               // Ensure box stays within reasonable bounds
               const clampedBoxX = Math.max(0, Math.min(newBoxX, 50 - box.width));
               const clampedBoxY = Math.max(0, Math.min(newBoxY, 50 - box.height));
-              
+
               return { ...box, x: clampedBoxX, y: clampedBoxY };
             }
-            
+
             return box; // Don't move boxes outside container
           })
         );
       }
-      
+
       return;
     }
-    
+
     if (!isDragging || !draggedBoxId) return;
-    
+
     const draggedBox = boxes && boxes.length > 0 ? boxes.find(box => box.id === draggedBoxId) : null;
     if (!draggedBox) return;
-    
+
     // Calculate velocity for momentum
     const deltaTime = 16; // ~60fps
     const newVelocity = {
@@ -1214,48 +1214,48 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     };
     setVelocity(newVelocity);
     setLastMousePos(mousePos);
-    
+
     // Calculate new position with better precision
     const newX = Math.round((mousePos.x - dragOffset.x) / (gridSize * zoom));
     const newY = Math.round((mousePos.y - dragOffset.y) / (gridSize * zoom));
-    
+
     // Clamp to container bounds
     // Get actual dimensions for dragged box (considering rotation)
     const draggedBoxWidth = draggedBox.isRotated ? draggedBox.height : draggedBox.width;
     const draggedBoxHeight = draggedBox.isRotated ? draggedBox.width : draggedBox.height;
-    
-    const clampedX = Math.max(baseContainer.x, 
+
+    const clampedX = Math.max(baseContainer.x,
       Math.min(newX, baseContainer.x + baseContainer.width - draggedBoxWidth));
-    const clampedY = Math.max(baseContainer.y, 
+    const clampedY = Math.max(baseContainer.y,
       Math.min(newY, baseContainer.y + baseContainer.height - draggedBoxHeight));
-    
+
     // Check for collisions with other boxes (handle rotation)
     const hasCollision = boxes && boxes.length > 0 ? boxes.some(box => {
       if (box.id === draggedBoxId) return false;
-      
+
       // Get actual dimensions for both boxes (considering rotation)
       const draggedBoxWidth = draggedBox.isRotated ? draggedBox.height : draggedBox.width;
       const draggedBoxHeight = draggedBox.isRotated ? draggedBox.width : draggedBox.height;
       const otherBoxWidth = box.isRotated ? box.height : box.width;
       const otherBoxHeight = box.isRotated ? box.width : box.height;
-      
-      return !(clampedX >= box.x + otherBoxWidth || 
-               clampedX + draggedBoxWidth <= box.x || 
-               clampedY >= box.y + otherBoxHeight || 
-               clampedY + draggedBoxHeight <= box.y);
+
+      return !(clampedX >= box.x + otherBoxWidth ||
+        clampedX + draggedBoxWidth <= box.x ||
+        clampedY >= box.y + otherBoxHeight ||
+        clampedY + draggedBoxHeight <= box.y);
     }) : false;
-    
+
     // Always update preview position for smooth visual feedback
     setPreviewPosition({ x: clampedX, y: clampedY });
-    
+
     // Update collision state for visual feedback
     setHasCollision(hasCollision);
-    
+
     // Only update actual position if no collision
     if (!hasCollision) {
-      setBoxes(prevBoxes => 
-        prevBoxes.map(box => 
-          box.id === draggedBoxId 
+      setBoxes(prevBoxes =>
+        prevBoxes.map(box =>
+          box.id === draggedBoxId
             ? { ...box, x: clampedX, y: clampedY }
             : box
         )
@@ -1264,70 +1264,70 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   }, [isDragging, isDraggingContainer, draggedBoxId, boxes, dragOffset, containerDragOffset, gridSize, zoom, baseContainer, lastMousePos]);
 
   const handleMouseMove = useCallback((e) => {
-    
+
     // Start dragging if we have a draggedBoxId but not yet dragging
     if (draggedBoxId && !isDragging && !isDraggingContainer && !isLeftClickPanning) {
       const mousePos = getMousePos(e);
       const dragDistance = Math.sqrt(
-        Math.pow(mousePos.x - dragStartPos.x, 2) + 
+        Math.pow(mousePos.x - dragStartPos.x, 2) +
         Math.pow(mousePos.y - dragStartPos.y, 2)
       );
-      
+
       // Start dragging if mouse moved more than 5 pixels
       if (dragDistance > 5) {
         setIsDragging(true);
       }
     }
-    
-    if ((!isDragging && !isDraggingContainer && !isLeftClickPanning) || 
-        (!draggedBoxId && !isDraggingContainer && !isLeftClickPanning)) return;
-    
+
+    if ((!isDragging && !isDraggingContainer && !isLeftClickPanning) ||
+      (!draggedBoxId && !isDraggingContainer && !isLeftClickPanning)) return;
+
     e.preventDefault();
     e.stopPropagation();
-    
+
     const mousePos = getMousePos(e);
-    
+
     // Handle left-click panning
     if (isLeftClickPanning) {
       const deltaX = mousePos.x - lastPanPos.x;
       const deltaY = mousePos.y - lastPanPos.y;
-      
+
       setPanOffset(prev => ({
         x: prev.x + deltaX,
         y: prev.y + deltaY
       }));
-      
+
       setLastPanPos(mousePos);
       return;
     }
-    
+
     // Cancel previous animation frame
     if (animationFrameId) {
       cancelAnimationFrame(animationFrameId);
     }
-    
+
     // Use requestAnimationFrame for smooth updates
     const frameId = requestAnimationFrame(() => {
       updateDragPosition(mousePos);
     });
-    
+
     setAnimationFrameId(frameId);
   }, [isDragging, isDraggingContainer, isLeftClickPanning, draggedBoxId, getMousePos, updateDragPosition, animationFrameId, lastPanPos]);
-  
+
   const handleMouseUp = useCallback((e) => {
     e.preventDefault();
-    
+
     // Cancel any pending animation frame
     if (animationFrameId) {
       cancelAnimationFrame(animationFrameId);
       setAnimationFrameId(null);
     }
-    
+
     // If we had a draggedBoxId but didn't actually drag, it was just a click
     if (draggedBoxId && !isDragging) {
       // Box was selected on click, no need to clear selection
     }
-    
+
     setIsDragging(false);
     setDraggedBoxId(null);
     setPreviewPosition(null);
@@ -1504,12 +1504,12 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   const handleDoubleClick = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const mousePos = getMousePos(e);
     const clickedBox = boxes && boxes.length > 0 ? boxes.find(box => {
       return isMouseOverBox(mousePos, box);
     }) : null;
-    
+
     if (clickedBox) rotateBoxById(clickedBox.id);
   }, [boxes, getMousePos, isMouseOverBox, showAlert, workOrderData, baseContainer]);
 
@@ -1517,17 +1517,17 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   const handleWheel = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const mousePos = getMousePos(e);
     const delta = e.deltaY > 0 ? -0.1 : 0.1;
     const newZoom = Math.max(0.01, Math.min(3, zoom + delta)); // Minimum 1% (0.01x)
-    
+
     if (newZoom !== zoom) {
       // Zoom towards mouse cursor
       const zoomFactor = newZoom / zoom;
       const newPanX = mousePos.x - (mousePos.x - panOffset.x) * zoomFactor;
       const newPanY = mousePos.y - (mousePos.y - panOffset.y) * zoomFactor;
-      
+
       setZoom(newZoom);
       setPanOffset({ x: newPanX, y: newPanY });
     }
@@ -1539,16 +1539,16 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     if (isPanning) {
       e.preventDefault();
       e.stopPropagation();
-      
+
       const mousePos = getMousePos(e);
       const deltaX = mousePos.x - lastPanPos.x;
       const deltaY = mousePos.y - lastPanPos.y;
-      
+
       setPanOffset(prev => ({
         x: prev.x + deltaX,
         y: prev.y + deltaY
       }));
-      
+
       setLastPanPos(mousePos);
     }
   }, [isPanning, lastPanPos, getMousePos]);
@@ -1559,33 +1559,33 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       setIsPanning(false);
     }
   }, [isPanning]);
-  
+
   // Box management functions
   const addBox = useCallback(() => {
     // Calculate current boxes for current WO item only
     const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
-    const currentWoItemBoxes = boxes ? boxes.filter(box => 
+    const currentWoItemBoxes = boxes ? boxes.filter(box =>
       box.woItemId === currentWoItemId || box.woItemId === parseInt(currentWoItemId)
     ) : [];
     const currentQuantity = currentWoItemBoxes.length;
-    
+
     // Get remaining quantity from WO_total_quantity (shared across canvases)
     const targetQuantity = parseInt(workOrderData?.itemQty) || 0;
     const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
-    const woItemData = totalQuantityData.find(item => 
+    const woItemData = totalQuantityData.find(item =>
       item.WoItemID === currentWoItemId || item.WoItemID === parseInt(currentWoItemId)
     );
-    
+
     let totalUsedQuantity = 0;
     if (woItemData && woItemData.WOQuantity && Array.isArray(woItemData.WOQuantity)) {
       totalUsedQuantity = woItemData.WOQuantity.reduce((total, saranItem) => {
         return total + (parseInt(saranItem.Quantity) || 0);
       }, 0);
     }
-    
+
     // Calculate remaining quantity: target - used (from other saran plats)
     const remainingQuantity = Math.max(0, targetQuantity - totalUsedQuantity);
-    
+
     console.log('AddBox - Validation using Quantity Remaining:', {
       currentWoItemId,
       currentQuantity,
@@ -1595,18 +1595,18 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       workOrderData: workOrderData,
       explanation: `Current: ${currentQuantity}, Target: ${targetQuantity}, Used: ${totalUsedQuantity}, Remaining: ${remainingQuantity}`
     });
-    
+
     // Check if no remaining quantity available (validation using Quantity Remaining)
     if (remainingQuantity <= 0) {
       showAlert('Warning', `No remaining quantity available! (Used: ${totalUsedQuantity}/${targetQuantity})`, 'warning');
       return;
     }
-    
+
     if (newBoxSize.width > baseContainer.width || newBoxSize.height > baseContainer.height) {
       showAlert('Error', `Box size (${newBoxSize.width}×${newBoxSize.height}) is too big for container (${baseContainer.width}×${baseContainer.height})`, 'error');
       return;
     }
-    
+
     setBoxes(prevBoxes => {
       const newId = prevBoxes && prevBoxes.length > 0 ? Math.max(...prevBoxes.map(b => b.id)) + 1 : 1;
       const currentWoItemIdLocal = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
@@ -1747,25 +1747,25 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       return [...prevBoxes, newBox];
     });
   }, [newBoxSize, baseContainer, showAlert, workOrderData?.itemQty, workOrderData?.workOrderItem?.id, workOrderData?.itemId, boxes]);
-  
+
   const clearAllBoxes = useCallback(() => {
     const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
-    
+
     setBoxes(prevBoxes => {
       // Only remove boxes from current WO item, keep others
       const otherWoItemBoxes = prevBoxes.filter(box => {
         const boxWoItemId = box.woItemId;
         return (boxWoItemId && currentWoItemId && currentWoItemId !== boxWoItemId) ||
-               (!currentWoItemId && boxWoItemId);
+          (!currentWoItemId && boxWoItemId);
       });
-      
+
       // Update WO_total_quantity in localStorage (set to 0 for current WO item)
       const saranItemId = workOrderData?.selectedItem?.id || 'unknown';
       updateWOQuantity(currentWoItemId, saranItemId, 0);
-      
+
       return otherWoItemBoxes;
     });
-    
+
     showAlert('Success', 'All boxes from current Work Order item cleared!', 'success');
   }, [showAlert, totalQuantity, workOrderData?.workOrderItem?.id, workOrderData?.itemId]);
 
@@ -1773,7 +1773,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     console.log('🎯 GENERATE JPG FUNCTION CALLED');
     console.log('📋 Save mode:', saveMode);
     console.log('📦 Container ref exists:', !!containerRef.current);
-    
+
     if (!containerRef.current) {
       console.error('❌ Container not found!');
       showAlert('Error', 'Container not found!', 'error');
@@ -1790,11 +1790,11 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     const containerWidth = containerRef.current.offsetWidth;
     const containerHeight = containerRef.current.offsetHeight;
     const maxDimension = 8000; // Maximum dimension to prevent memory issues
-    
+
     if (containerWidth > maxDimension || containerHeight > maxDimension) {
       showAlert('Warning', `Canvas terlalu besar (${containerWidth}x${containerHeight}). Mencoba dengan ukuran yang lebih kecil...`, 'warning');
     }
-    
+
     // Determine optimal format based on canvas size and content
     const canvasArea = containerWidth * containerHeight;
     const shouldUsePNG = canvasArea < 1000000 && usePNG; // Use PNG for smaller canvases with solid colors
@@ -1808,31 +1808,31 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
 
     try {
       showAlert('Info', 'Generating JPG...', 'info');
-      
+
       // Wait a bit for canvas to fully render
       console.log('Waiting for canvas to render...');
       setJpgProgress(5);
       setJpgStatus('Menunggu canvas render...');
       await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms
-      
+
       let dataURL = null;
       let method = '';
-      
+
       // Method 1: Try dom-to-image first (better for large containers)
       try {
         console.log('Trying dom-to-image method...');
         setJpgProgress(10);
         setJpgStatus('Mencoba metode dom-to-image...');
-        
+
         const domToImage = (await import('dom-to-image')).default;
-        
+
         // Calculate safe dimensions
         const safeWidth = Math.min(containerWidth, maxDimension);
         const safeHeight = Math.min(containerHeight, maxDimension);
-        
+
         setJpgProgress(20);
         setJpgStatus('Memproses canvas dengan dom-to-image...');
-        
+
         if (format === 'png') {
           dataURL = await domToImage.toPng(containerRef.current, {
             bgcolor: '#ffffff',
@@ -1869,34 +1869,34 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
             }
           });
         }
-        
+
         method = 'dom-to-image';
         setJpgProgress(50);
         setJpgStatus('dom-to-image berhasil!');
         console.log('dom-to-image success');
-        
+
       } catch (domError) {
         console.log('dom-to-image failed:', domError);
-        
+
         // Method 2: Try html2canvas with reduced settings
         try {
           console.log('Trying html2canvas method...');
           setJpgProgress(30);
           setJpgStatus('Mencoba metode html2canvas...');
-          
+
           const html2canvas = (await import('html2canvas')).default;
-          
+
           // Calculate safe scale to prevent memory issues
           const containerRect = containerRef.current.getBoundingClientRect();
           const viewportWidth = window.innerWidth;
           const viewportHeight = window.innerHeight;
           const maxScale = Math.min(
-            viewportWidth / containerWidth, 
-            viewportHeight / containerHeight, 
+            viewportWidth / containerWidth,
+            viewportHeight / containerHeight,
             0.8 // Limit scale to prevent memory issues
           );
           const scale = Math.max(0.3, maxScale); // Minimum scale 0.3
-          
+
           console.log('Scaling calculation:', {
             containerWidth,
             containerHeight,
@@ -1905,7 +1905,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
             maxScale,
             finalScale: scale
           });
-          
+
           const canvas = await html2canvas(containerRef.current, {
             backgroundColor: '#ffffff',
             scale: scale,
@@ -1962,21 +1962,21 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               clonedDoc.head.appendChild(style);
             }
           });
-          
+
           dataURL = canvas.toDataURL(`image/${format}`, quality);
           method = 'html2canvas';
           setJpgProgress(50);
           setJpgStatus('html2canvas berhasil!');
           console.log('html2canvas success');
-          
+
         } catch (html2canvasError) {
           console.log('html2canvas failed:', html2canvasError);
-          
+
           // Method 3: Try with minimal settings
           try {
             console.log('Trying html2canvas with minimal settings...');
             const html2canvas = (await import('html2canvas')).default;
-            
+
             const canvas = await html2canvas(containerRef.current, {
               backgroundColor: '#ffffff',
               scale: 0.5, // Fixed low scale
@@ -1986,68 +1986,68 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               removeContainer: true,
               foreignObjectRendering: false
             });
-            
+
             dataURL = canvas.toDataURL(`image/${format}`, quality);
             method = 'html2canvas-minimal';
             setJpgProgress(50);
             setJpgStatus('html2canvas minimal berhasil!');
             console.log('html2canvas minimal success');
-            
+
           } catch (minimalError) {
             console.error('All capture methods failed:', minimalError);
             throw new Error('Semua metode capture gagal. Canvas mungkin terlalu kompleks atau besar.');
           }
         }
       }
-      
+
       if (!dataURL) {
         throw new Error('Gagal menghasilkan data gambar');
       }
-      
+
       console.log('DataURL generated successfully:', dataURL.substring(0, 50) + '...');
       setJpgProgress(70);
       setJpgStatus('Mengompres file...');
-      
+
       // Compress the image further if it's too large
       let finalDataURL = dataURL;
       const originalSize = dataURL.length;
       console.log('Original dataURL size:', originalSize, 'characters');
-      
+
       // If dataURL is too large (> 2MB), compress it further
       if (originalSize > 2000000) {
         console.log('File terlalu besar, mengompres lebih lanjut...');
         setJpgStatus('Mengompres file yang besar...');
-        
+
         try {
           // Create a canvas to recompress the image
           const img = new Image();
           img.onload = () => {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            
+
             // Calculate new dimensions (reduce by 50% if too large)
             const maxWidth = 2000;
             const maxHeight = 2000;
             let { width, height } = img;
-            
+
             if (width > maxWidth || height > maxHeight) {
               const ratio = Math.min(maxWidth / width, maxHeight / height);
               width *= ratio;
               height *= ratio;
             }
-            
+
             canvas.width = width;
             canvas.height = height;
-            
+
             // Draw with lower quality
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'low';
             ctx.drawImage(img, 0, 0, width, height);
-            
+
             // Convert to format with lower quality
             finalDataURL = canvas.toDataURL(`image/${format}`, format === 'png' ? 1.0 : 0.5);
             console.log('Compressed dataURL size:', finalDataURL.length, 'characters');
-            
+
             // Continue with download
             downloadFile(finalDataURL, method);
           };
@@ -2058,42 +2058,42 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
           // Continue with original dataURL
         }
       }
-      
+
       // If not too large, proceed with download
       await downloadFile(finalDataURL, method);
-      
+
       async function downloadFile(dataURL, method) {
         setJpgProgress(80);
         setJpgStatus('Menyiapkan download...');
-        
+
         // Create filename based on save mode
         const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
         const fileExtension = format === 'png' ? 'png' : 'jpg';
-        
+
         let filename;
         let woItemIdFilename; // New filename for woitemid_itemid format
-        
+
         if (saveMode === 'preview') {
           // For preview mode, use itemBarangId (saranId) format
           const itemBarangId = workOrderData?.selectedItem?.id || 'unknown';
           const woItemUniqueId = workOrderData?.workOrderItem?.wo_item_unique_id || 'unknown';
-          
+
           // Original filename format (per item ID)
           filename = `canvas-preview-ItemId-${itemBarangId}.${fileExtension}`;
-          
+
           // New filename format (per woitemid_itemid)
           woItemIdFilename = `canvas-preview-WoItemId-${woItemUniqueId}_ItemId-${itemBarangId}.${fileExtension}`;
         } else {
           // For download mode, use generic name
           filename = `canvas-layout-${timestamp}.${fileExtension}`;
         }
-        
+
         // Save to app folder instead of downloads
         console.log('Saving to app folder:', filename);
         if (woItemIdFilename) {
           console.log('Also saving with woitemid_itemid format:', woItemIdFilename);
         }
-        
+
         if (saveMode === 'preview') {
           // For preview mode, save to app folder using Electron API
           try {
@@ -2104,15 +2104,15 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
             console.log('DataURL length:', dataURL ? dataURL.length : 'null');
             console.log('window.electronAPI exists:', !!window.electronAPI);
             console.log('saveCanvasFile exists:', !!(window.electronAPI && window.electronAPI.saveCanvasFile));
-            
+
             // Check if we're in Electron environment
             if (window.electronAPI && window.electronAPI.saveCanvasFile) {
               console.log('Calling Electron API to save canvas...');
-              
+
               // Save with original filename format (per item ID)
               const result = await window.electronAPI.saveCanvasFile(dataURL, filename);
               console.log('Electron API result (ItemId):', result);
-              
+
               // Save with new filename format (per woitemid_itemid)
               let woItemResult = null;
               if (woItemIdFilename) {
@@ -2120,7 +2120,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                 woItemResult = await window.electronAPI.saveCanvasFile(dataURL, woItemIdFilename);
                 console.log('Electron API result (WoItemId_ItemId):', woItemResult);
               }
-              
+
               if (result.success) {
                 if (typeof window !== 'undefined') {
                   window.canvasPreviewCacheBuster = Date.now();
@@ -2130,33 +2130,33 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                   if (itemBarangId) {
                     window.dispatchEvent(new CustomEvent('canvasPreviewSaved', { detail: { itemId: itemBarangId } }));
                   }
-                } catch {}
+                } catch { }
                 console.log('✅ CANVAS SAVE SUCCESS (ItemId format)!');
                 console.log(`📁 File saved to: ${result.path}`);
                 console.log(`📄 Filename: ${filename}`);
-                
+
                 if (woItemResult && woItemResult.success) {
-                console.log('✅ CANVAS SAVE SUCCESS (WoItemId_ItemId format)!');
-                if (typeof window !== 'undefined') {
-                  window.canvasPreviewCacheBuster = Date.now();
-                }
-                try {
-                  const itemBarangId = workOrderData?.selectedItem?.id || null;
-                  if (itemBarangId) {
-                    window.dispatchEvent(new CustomEvent('canvasPreviewSaved', { detail: { itemId: itemBarangId } }));
+                  console.log('✅ CANVAS SAVE SUCCESS (WoItemId_ItemId format)!');
+                  if (typeof window !== 'undefined') {
+                    window.canvasPreviewCacheBuster = Date.now();
                   }
-                } catch {}
-                console.log(`📁 Additional file saved to: ${woItemResult.path}`);
-                console.log(`📄 Additional filename: ${woItemIdFilename}`);
-              }
-                
+                  try {
+                    const itemBarangId = workOrderData?.selectedItem?.id || null;
+                    if (itemBarangId) {
+                      window.dispatchEvent(new CustomEvent('canvasPreviewSaved', { detail: { itemId: itemBarangId } }));
+                    }
+                  } catch { }
+                  console.log(`📁 Additional file saved to: ${woItemResult.path}`);
+                  console.log(`📄 Additional filename: ${woItemIdFilename}`);
+                }
+
                 console.log(`📊 DataURL length: ${dataURL.length} characters`);
                 console.log(`💾 Full path: public/canvas-previews/${filename}`);
-                
-                const successMessage = woItemResult && woItemResult.success 
+
+                const successMessage = woItemResult && woItemResult.success
                   ? `Canvas berhasil disimpan!\n\nFile 1: ${filename}\nFile 2: ${woItemIdFilename}\nLokasi: public/canvas-previews/`
                   : `Canvas berhasil disimpan!\n\nFile: ${filename}\nLokasi: public/canvas-previews/`;
-                
+
                 showAlert('Success', successMessage, 'success');
               } else {
                 console.error('❌ CANVAS SAVE FAILED!');
@@ -2205,12 +2205,12 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
           link.click();
           document.body.removeChild(link);
         }
-        
+
         console.log('File operation completed successfully');
-        
+
         setJpgProgress(100);
         setJpgStatus('Download berhasil!');
-        
+
         if (saveMode === 'preview') {
           console.log(`Canvas preview saved to app folder: /canvas-previews/${filename}`);
           // Don't show alert for preview mode to avoid interrupting save flow
@@ -2218,7 +2218,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
           showAlert('Success', `JPG berhasil dibuat dengan metode ${method}: ${filename}`, 'success');
         }
       }
-      
+
     } catch (error) {
       console.error('Error generating JPG:', error);
       setJpgStatus('Error: ' + error.message);
@@ -2230,7 +2230,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         setJpgProgress(0);
         setJpgStatus('');
       }, 2000); // Keep status for 2 seconds then clear
-      
+
       // Force garbage collection if available
       if (window.gc) {
         setTimeout(() => window.gc(), 1000);
@@ -2240,29 +2240,29 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
 
   const fillAllBoxes = useCallback(() => {
     const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
-    
+
     // Get remaining quantity from WO_total_quantity (shared across canvases)
     const targetQuantity = parseInt(workOrderData?.itemQty) || 0;
     const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
-    const woItemData = totalQuantityData.find(item => 
+    const woItemData = totalQuantityData.find(item =>
       item.WoItemID === currentWoItemId || item.WoItemID === parseInt(currentWoItemId)
     );
-    
+
     let totalUsedQuantity = 0;
     if (woItemData && woItemData.WOQuantity && Array.isArray(woItemData.WOQuantity)) {
       totalUsedQuantity = woItemData.WOQuantity.reduce((total, saranItem) => {
         return total + (parseInt(saranItem.Quantity) || 0);
       }, 0);
     }
-    
+
     const remainingQuantity = Math.max(0, targetQuantity - totalUsedQuantity);
-    
+
     // Count current boxes in canvas for this WO item
-    const currentWoItemBoxes = boxes ? boxes.filter(box => 
+    const currentWoItemBoxes = boxes ? boxes.filter(box =>
       box.woItemId === currentWoItemId || box.woItemId === parseInt(currentWoItemId)
     ) : [];
     const currentQuantity = currentWoItemBoxes.length;
-    
+
     console.log('Fill All Boxes - Validation using Quantity Remaining:', {
       currentWoItemId,
       targetQuantity,
@@ -2288,26 +2288,26 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
 
     // Use single color for all boxes
     const singleColor = '#10b981'; // Green color for all boxes
-    
+
     // Loop strictly by Quantity Remaining; placement will stop when no slot available
     const boxesToAdd = boxesToFill;
 
     // Generate boxes with perfect grid layout (no gaps)
     const newBoxes = [];
     let newId = boxes && boxes.length > 0 ? Math.max(...boxes.map(b => b.id)) + 1 : 1;
-    
+
     // Create a grid to track occupied positions
-    const grid = Array(baseContainer.height).fill().map(() => 
+    const grid = Array(baseContainer.height).fill().map(() =>
       Array(baseContainer.width).fill(false)
     );
-    
+
     // Mark existing boxes as occupied (handle rotation)
     if (boxes && boxes.length > 0) {
       boxes.forEach(box => {
         // Get actual dimensions considering rotation
         const boxWidth = box.isRotated ? box.height : box.width;
         const boxHeight = box.isRotated ? box.width : box.height;
-        
+
         for (let y = box.y; y < box.y + boxHeight; y++) {
           for (let x = box.x; x < box.x + boxWidth; x++) {
             if (x >= 0 && x < baseContainer.width && y >= 0 && y < baseContainer.height) {
@@ -2317,7 +2317,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         }
       });
     }
-    
+
     // Place new boxes with collision detection and position finding (optimized for speed)
     const placeBoxesWithDelay = async () => {
       const working = boxes ? [...boxes] : [];
@@ -2425,34 +2425,34 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         newBoxes.push({ id: newId++, x: pos.x, y: pos.y, width: newBoxSize.width, height: newBoxSize.height, color: '#10b981', isDisabled: false, isRotated: pos.rotated, woItemId, workOrderId, saranId, isSave: false });
         working.push({ id: newId - 1, x: pos.x, y: pos.y, width: newBoxSize.width, height: newBoxSize.height, color: '#10b981', isDisabled: false, isRotated: pos.rotated, woItemId, workOrderId, saranId, isSave: false });
       }
-      
+
       // Update boxes after all are placed
       if (newBoxes.length > 0) {
         setBoxes(prevBoxes => {
           const updatedBoxes = [...(prevBoxes || []), ...newBoxes];
-          
+
           // Update WO_total_quantity in localStorage
           const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
           const saranItemId = workOrderData?.selectedItem?.id || 'unknown';
-          
+
           // Count only boxes from current WO item
-          const currentWoItemBoxes = updatedBoxes.filter(box => 
+          const currentWoItemBoxes = updatedBoxes.filter(box =>
             box.woItemId === currentWoItemId || box.woItemId === parseInt(currentWoItemId)
           );
           const totalBoxes = currentWoItemBoxes.length;
           updateWOQuantity(currentWoItemId, saranItemId, totalBoxes);
-          
+
           return updatedBoxes;
         });
-        
+
         // Calculate remaining quantity correctly
         const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
-        const currentWoItemBoxes = boxes ? boxes.filter(box => 
+        const currentWoItemBoxes = boxes ? boxes.filter(box =>
           box.woItemId === currentWoItemId || box.woItemId === parseInt(currentWoItemId)
         ) : [];
         const totalBoxes = currentWoItemBoxes.length + newBoxes.length;
         const newRemaining = Math.max(0, targetQuantity - totalBoxes);
-        
+
         console.log('Fill All - Final Calculation:', {
           targetQuantity: targetQuantity,
           currentWoItemBoxes: currentWoItemBoxes.length,
@@ -2460,8 +2460,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
           totalBoxes: totalBoxes,
           newRemaining: newRemaining
         });
-        
-        const message = newBoxes.length < boxesToFill 
+
+        const message = newBoxes.length < boxesToFill
           ? `Added ${newBoxes.length} boxes! Total: ${totalBoxes}/${targetQuantity} (${newRemaining} remaining - not enough space)`
           : `Added ${newBoxes.length} boxes! Total: ${totalBoxes}/${targetQuantity} (${newRemaining} remaining)`;
         showAlert('Success', message, 'success');
@@ -2469,15 +2469,15 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         showAlert('Error', 'No space available for new boxes!', 'error');
       }
     };
-    
+
     // Start placing boxes with delay
     placeBoxesWithDelay();
   }, [boxes, newBoxSize, baseContainer, showAlert, workOrderData?.itemQty, workOrderData?.workOrderItem?.id, workOrderData?.itemId]);
-  
+
   const updateBaseContainer = useCallback((width, height) => {
     setBaseContainer(prev => ({ ...prev, width, height }));
   }, []);
-  
+
   // Zoom functions
   const zoomIn = useCallback(() => {
     const newZoom = Math.min(zoom + 0.2, 3);
@@ -2485,14 +2485,14 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       setZoom(newZoom);
     }
   }, [zoom]);
-  
+
   const zoomOut = useCallback(() => {
-    const newZoom = Math.max(zoom - 0.2, 0.01); // Minimum 1% (0.01x)
+    const newZoom = Math.max(zoom - 0.2, 0.005); // Minimum 0.5% (0.005x)
     if (newZoom !== zoom) {
       setZoom(newZoom);
     }
   }, [zoom]);
-  
+
   const resetZoom = useCallback(() => {
     setZoom(1);
     // Position at top-left with small margin
@@ -2503,38 +2503,38 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   const zoomFit = useCallback(() => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
-    
+
     if (!canvas || !container) return;
-    
+
     // Get canvas dimensions
     const canvasWidth = canvas.width;
     const canvasHeight = canvas.height;
-    
+
     // Get base container dimensions in grid units
     const containerWidth = baseContainer.width;
     const containerHeight = baseContainer.height;
-    
+
     // Calculate scale factors for both dimensions
     const scaleX = canvasWidth / (containerWidth * gridSize);
     const scaleY = canvasHeight / (containerHeight * gridSize);
-    
+
     // Choose the smaller scale and apply slight padding so edges are visible
     const fitZoom = Math.min(scaleX, scaleY);
     const paddingFactor = 0.95;
-    const newZoom = Math.max(fitZoom * paddingFactor, 0.01);
-    
+    const newZoom = Math.max(fitZoom * paddingFactor, 0.005);
+
     // Apply the new zoom
     setZoom(newZoom);
-    
+
     // Position container at top-left corner
     const containerPixelWidth = containerWidth * gridSize * newZoom;
     const containerPixelHeight = containerHeight * gridSize * newZoom;
-    
+
     // Set position to top-left (0, 0) with small margin
     const margin = 20; // Small margin from edge
     let topLeftX = margin;
     let topLeftY = margin;
-    
+
     setPanOffset({ x: topLeftX, y: topLeftY });
   }, [baseContainer, gridSize]);
 
@@ -2545,12 +2545,12 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
     const currentWorkOrderId = workOrderData?.workOrderId;
     const currentWorkOrderUniqueId = localStorage.getItem('WO_current_work_order_item_id') || currentWorkOrderId;
-    
+
     // Calculate total area used
     const totalAreaUsed = boxes ? boxes.reduce((total, box) => total + (box.width * box.height), 0) : 0;
     const containerArea = baseContainer.width * baseContainer.height;
     const areaUtilization = containerArea > 0 ? Math.round((totalAreaUsed / containerArea) * 100) : 0;
-    
+
     console.log('Generating canvas save data:', {
       currentWoItemId,
       currentWorkOrderId,
@@ -2559,26 +2559,26 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       totalAreaUsed: totalAreaUsed,
       containerArea: containerArea,
       areaUtilization: areaUtilization,
-      allBoxes: boxes?.map(box => ({ 
-        id: box.id, 
-        woItemId: box.woItemId, 
+      allBoxes: boxes?.map(box => ({
+        id: box.id,
+        woItemId: box.woItemId,
         // workItemUniqueId: box.workItemUniqueId,
         area: box.width * box.height
       })) || []
     });
-    
+
     // Only save canvas layout data - no work order data
     const canvasData = {
       version: "2.0",
       timestamp: new Date().toISOString(),
-      
+
       // Canvas layout data only
       baseContainer: baseContainer,
       boxes: boxes || [], // All boxes from all work orders
       gridSize: gridSize,
       zoom: zoom,
       panOffset: panOffset,
-      
+
       // Canvas metadata only
       metadata: {
         containerSize: `${baseContainer.width}×${baseContainer.height}`,
@@ -2592,7 +2592,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         saveType: 'canvas_layout'
       }
     };
-    
+
     return canvasData;
   }, [workOrderData, baseContainer, boxes, gridSize, zoom, panOffset]);
 
@@ -2613,7 +2613,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         zoomLevel: `${Math.round(zoom * 100)}%`
       }
     };
-    
+
     return JSON.stringify(gridData, null, 2);
   }, [baseContainer, boxes, gridSize, zoom, panOffset]);
 
@@ -2622,27 +2622,27 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     // Auto zoom fit before save for optimal view
     console.log('Auto zoom fit before save...');
     zoomFit();
-    
+
     // Small delay to ensure zoom fit is applied
     setTimeout(() => {
       const saveData = generateSaveData();
-    
+
       // Generate unique key for localStorage
       const workOrderUniqueId = localStorage.getItem('WO_current_work_order_id') || 'unknown';
       const saranId = workOrderData?.selectedItem?.id || 'unknown';
       const woItemUniqueId = workOrderData?.workOrderItem?.wo_item_unique_id || workOrderData?.workOrderItem?.id || 'unknown';
       const itemBarangId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
-      
+
       // Primary storage key (existing format)
       const storageKey = `WO_canvas_layout_${saranId}_${workOrderUniqueId}`;
-      
+
       // Additional storage key with woitemid_itemid format
       const woItemIdStorageKey = `WO_canvas_layout_WoItemId-${woItemUniqueId}_ItemId-${itemBarangId}_${workOrderUniqueId}`;
-      
+
       // Check if current work order ID matches stored ID
       const storedWorkOrderId = localStorage.getItem('WO_current_work_order_id');
       const isCurrentWorkOrder = storedWorkOrderId === workOrderUniqueId;
-      
+
       console.log('Saving Canvas Layout:', {
         current: workOrderUniqueId,
         stored: storedWorkOrderId,
@@ -2652,34 +2652,34 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         woItemUniqueId: woItemUniqueId,
         itemBarangId: itemBarangId
       });
-      
+
       try {
         const jsonString = JSON.stringify(saveData);
         const jsonSize = new Blob([jsonString]).size;
-        
+
         console.log('Canvas JSON size:', {
           sizeBytes: jsonSize,
           sizeKB: Math.round(jsonSize / 1024),
           totalBoxes: saveData.boxes?.length || 0,
           storageKey: storageKey
         });
-        
+
         // Check localStorage size limit (usually 5-10MB)
         if (jsonSize > 5 * 1024 * 1024) { // 5MB
           console.warn('⚠️ Canvas JSON size is large:', jsonSize, 'bytes');
         }
-        
+
         localStorage.setItem(storageKey, jsonString);
-        
+
         // Also save with woitemid_itemid format for additional access pattern
         localStorage.setItem(woItemIdStorageKey, jsonString);
-        
+
         // Verify save integrity for both keys
         const savedData = localStorage.getItem(storageKey);
         const savedWoItemData = localStorage.getItem(woItemIdStorageKey);
-        
-        if (savedData && savedData.length === jsonString.length && 
-            savedWoItemData && savedWoItemData.length === jsonString.length) {
+
+        if (savedData && savedData.length === jsonString.length &&
+          savedWoItemData && savedWoItemData.length === jsonString.length) {
           console.log('✅ Canvas saved successfully to both storage keys');
         } else {
           console.error('❌ Canvas save verification failed:', {
@@ -2688,25 +2688,25 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
             savedWoItemLength: savedWoItemData?.length || 0
           });
         }
-        
+
         // Update saran plat usage tracking
         const saranId = workOrderData?.selectedItem?.id || 'unknown';
         const workOrderId = workOrderData?.workOrderId || 'unknown';
         const itemName = workOrderData?.itemName || workOrderData?.workOrderItem?.nama_item_barang || workOrderData?.selectedItem?.nama || 'Unknown Item';
-        
+
         // Save total quantity with new format for multiple saran plats per WO item
         const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
         const woItemId = workOrderData?.workOrderItem?.id || 'unknown';
-        
+
         // Calculate actual quantity arranged in canvas for this WO item
-        const currentWoItemBoxes = boxes ? boxes.filter(box => 
+        const currentWoItemBoxes = boxes ? boxes.filter(box =>
           box.woItemId === woItemId || box.woItemId === parseInt(woItemId)
         ) : [];
         const arrangedQuantity = currentWoItemBoxes.length;
-        
+
         // Don't update totalQuantity state - it should remain as target quantity
         // setTotalQuantity(arrangedQuantity);
-        
+
         console.log('🔍 DEBUG: Calculating arranged quantity for save:', {
           woItemId: woItemId,
           woItemIdType: typeof woItemId,
@@ -2720,27 +2720,27 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
             itemId: workOrderData?.itemId
           }
         });
-        
+
         // Get target quantity from WO item
         const targetQuantity = parseInt(workOrderData?.itemQty) || 0;
-        
+
         // Find existing WO item or add new one
-        let existingWoItemIndex = totalQuantityData.findIndex(item => 
+        let existingWoItemIndex = totalQuantityData.findIndex(item =>
           item.WoItemID === woItemId || item.WoItemID === parseInt(woItemId)
         );
-        
+
         if (existingWoItemIndex >= 0) {
           // Update existing WO item
           const woItemData = totalQuantityData[existingWoItemIndex];
-          
+
           // Update target quantity
           woItemData.TargetQuantity = targetQuantity;
-          
+
           // Find existing saran item or add new one
-          const existingSaranIndex = woItemData.WOQuantity.findIndex(saranItem => 
+          const existingSaranIndex = woItemData.WOQuantity.findIndex(saranItem =>
             saranItem.ItemId === saranId || saranItem.ItemId === parseInt(saranId)
           );
-          
+
           if (existingSaranIndex >= 0) {
             // Update existing saran item quantity
             woItemData.WOQuantity[existingSaranIndex].Quantity = arrangedQuantity;
@@ -2762,9 +2762,9 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
             }]
           });
         }
-        
+
         localStorage.setItem('WO_total_quantity', JSON.stringify(totalQuantityData));
-        
+
         // Handle saran item ID in used saran plats when canvas is saved
         if (isCurrentWorkOrder && saranId && saranId !== 'unknown') {
           if (arrangedQuantity > 0) {
@@ -2772,23 +2772,23 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
             try {
               console.log('=== ADDING SARAN ITEM ID TO USED SARAN PLATS ===');
               console.log('Saran Item ID:', saranId);
-              
+
               // Get current used saran plats array (simple format: ["1","2"])
               const usedSaranPlats = JSON.parse(localStorage.getItem('WO_used_saran_plats') || '[]');
-              
+
               // Check if saran item ID already exists
               const saranIdStr = saranId.toString();
               const alreadyExists = usedSaranPlats.includes(saranIdStr) || usedSaranPlats.includes(parseInt(saranIdStr));
-              
+
               if (!alreadyExists) {
                 // Add new saran item ID
                 usedSaranPlats.push(saranIdStr);
-                
+
                 // Update localStorage
                 localStorage.setItem('WO_used_saran_plats', JSON.stringify(usedSaranPlats));
                 console.log('✅ Added saran item ID to used saran plats');
                 console.log('📦 Total used saran plats:', usedSaranPlats.length);
-                
+
                 // Trigger custom event to notify other components
                 window.dispatchEvent(new CustomEvent('usedSaranPlatsChanged'));
               } else {
@@ -2803,27 +2803,27 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
             console.log(`Canvas empty for saran item ${saranId}, but preserving existing data to avoid deleting boxes from other WO items`);
           }
         }
-        
+
         const idStatus = isCurrentWorkOrder ? 'Current Work Order' : 'Different Work Order';
         showAlert('Success', `Canvas saved for ${itemName}!\n\nID Status: ${idStatus}\nPrimary Key: ${storageKey}\nWoItemId Key: ${woItemIdStorageKey}\n\nJPG preview will be saved to /canvas-previews/ folder in both formats.`, 'success');
-        
+
         // Recalculate quantity after save
         setForceUpdate(prev => prev + 1);
-        
+
         // Call onCanvasSaved callback if provided
         if (onCanvasSaved && workOrderData?.selectedItem) {
           onCanvasSaved(workOrderData.selectedItem);
         }
-        
+
         // Generate JPG for preview (save to folder) - wait for completion before closing
         console.log('🖼️ GENERATING JPG FOR CANVAS PREVIEW...');
         console.log('⏰ Will start JPG generation in 1 second...');
         console.log('📦 Container ref before delay:', !!containerRef.current);
-        
+
         setTimeout(async () => {
           console.log('🚀 Starting JPG generation now...');
           console.log('📦 Container ref after delay:', !!containerRef.current);
-          
+
           // Check if container still exists before generating
           if (!containerRef.current) {
             console.error('❌ Container ref is null after delay - cannot generate JPG');
@@ -2833,7 +2833,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
             }
             return;
           }
-          
+
           try {
             await generateJPG('preview');
             console.log('✅ JPG generation completed successfully');
@@ -2841,7 +2841,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
             console.error('❌ Failed to generate JPG:', jpgError);
             // Don't show error to user as JPG is optional for preview
           }
-          
+
           // Close canvas and return to work order modal AFTER JPG generation
           if (onClose) {
             onClose();
@@ -2862,31 +2862,31 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     // Rollback to PreviousQuantity (current saran plat only)
     const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
     const currentSaranId = workOrderData?.selectedItem?.id;
-    
+
     if (currentWoItemId && currentSaranId) {
       const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
-      const woItemData = totalQuantityData.find(item => 
+      const woItemData = totalQuantityData.find(item =>
         item.WoItemID === currentWoItemId || item.WoItemID === parseInt(currentWoItemId)
       );
-      
+
       if (woItemData && woItemData.PreviousQuantity !== undefined) {
         // Find current saran item and rollback to PreviousQuantity
-        const saranItem = woItemData.WOQuantity.find(item => 
+        const saranItem = woItemData.WOQuantity.find(item =>
           item.ItemId === currentSaranId || item.ItemId === parseInt(currentSaranId)
         );
-        
+
         if (saranItem) {
           saranItem.Quantity = woItemData.PreviousQuantity;
-          
+
           // Remove saran items with 0 quantity
           woItemData.WOQuantity = woItemData.WOQuantity.filter(item => item.Quantity > 0);
-          
+
           localStorage.setItem('WO_total_quantity', JSON.stringify(totalQuantityData));
           console.log(`Rolled back to PreviousQuantity: ${woItemData.PreviousQuantity}`);
         }
       }
     }
-    
+
     // Call original onClose if provided (for modal usage)
     if (onClose) {
       onClose();
@@ -2901,30 +2901,30 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     try {
       console.log('=== ADDING SARAN ITEM ID TO USED SARAN PLATS ===');
       console.log('Saran Item ID:', saranItemId);
-      
+
       // Get current used saran plats array (simple format: ["1","2"])
       const usedSaranPlats = JSON.parse(localStorage.getItem('WO_used_saran_plats') || '[]');
-      
+
       // Check if saran item ID already exists
       const saranId = saranItemId.toString();
       const alreadyExists = usedSaranPlats.includes(saranId) || usedSaranPlats.includes(parseInt(saranId));
-      
+
       if (alreadyExists) {
         console.log('✅ Saran item ID already exists in used saran plats');
         return;
       }
-      
+
       // Add new saran item ID
       usedSaranPlats.push(saranId);
-      
+
       // Update localStorage
       localStorage.setItem('WO_used_saran_plats', JSON.stringify(usedSaranPlats));
       console.log('✅ Added saran item ID to used saran plats');
       console.log('📦 Total used saran plats:', usedSaranPlats.length);
-      
+
       // Trigger custom event to notify other components
       window.dispatchEvent(new CustomEvent('usedSaranPlatsChanged'));
-      
+
     } catch (error) {
       console.error('❌ Error adding saran item ID to used saran plats:', error);
     }
@@ -2935,31 +2935,31 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     try {
       console.log('=== REMOVING SARAN ITEM ID FROM USED SARAN PLATS ===');
       console.log('Saran Item ID:', saranItemId);
-      
+
       // Get current used saran plats array (simple format: ["1","2"])
       const usedSaranPlats = JSON.parse(localStorage.getItem('WO_used_saran_plats') || '[]');
-      
+
       if (!Array.isArray(usedSaranPlats)) {
         console.log('❌ Used saran plats is not an array');
         return;
       }
-      
+
       // Filter out saran item ID
       const saranId = saranItemId.toString();
-      const filteredUsedSaranPlats = usedSaranPlats.filter(item => 
+      const filteredUsedSaranPlats = usedSaranPlats.filter(item =>
         item !== saranId && item !== parseInt(saranId)
       );
-      
+
       console.log('📦 Original array length:', usedSaranPlats.length);
       console.log('📦 Filtered array length:', filteredUsedSaranPlats.length);
-      
+
       // Update localStorage with filtered array
       localStorage.setItem('WO_used_saran_plats', JSON.stringify(filteredUsedSaranPlats));
       console.log('✅ Updated used saran plats array, removed saran item ID');
-      
+
       // Trigger custom event to notify other components
       window.dispatchEvent(new CustomEvent('usedSaranPlatsChanged'));
-      
+
     } catch (error) {
       console.error('❌ Error removing saran item ID from used saran plats:', error);
     }
@@ -2973,7 +2973,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
 
   // Function removed - logic moved to saveCanvasLayout for better reliability
 
-   
+
 
   // Check if saran plat is used
   const isSaranPlatUsed = useCallback((saranId) => {
@@ -2986,11 +2986,11 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     const saranId = workOrderData?.selectedItem?.id || 'unknown';
     const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
     const currentWorkOrderUniqueId = localStorage.getItem('WO_current_work_order_id') || 'unknown';
-    
+
     // Get all canvas layouts for this saran plat
     const keys = Object.keys(localStorage);
     const canvasKeys = keys.filter(key => key.startsWith(`WO_canvas_layout_${saranId}_`));
-    
+
     console.log('Loading additional boxes from other WO items:', {
       saranId,
       currentWoItemId,
@@ -2998,18 +2998,18 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       currentWorkOrderUniqueId,
       canvasKeys
     });
-    
+
     const additionalBoxes = [];
-    
+
     canvasKeys.forEach(key => {
       try {
         const savedData = localStorage.getItem(key);
         if (savedData) {
           const data = JSON.parse(savedData);
-          
+
           // Check if it's new format (canvas data only) or old format (with workOrderData)
           let boxes = [];
-          
+
           if (data.version === "2.0" && !data.workOrderData) {
             // New format - canvas data only, data WO ada di box attributes
             boxes = data.boxes || [];
@@ -3017,7 +3017,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
             // Old format - with workOrderData wrapper
             boxes = data.canvasData.boxes;
           }
-          
+
           if (boxes.length > 0) {
             boxes.forEach(box => {
               // Data WO sekarang ada di box attributes
@@ -3026,7 +3026,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               const boxWorkOrderId = box.workOrderId || 'unknown';
               const boxSaranId = box.saranId || 'unknown';
               const isFromDifferentWO = boxWoItemId !== currentWoItemId;
-              
+
               // Determine color based on workItemUniqueId comparison
               let boxColor = '#10b981'; // Default green
               if (box.isSave === true || box.isDisabled === true) {
@@ -3034,7 +3034,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               } else if (boxWoItemId && boxWoItemId !== currentWoItemId && boxWoItemId !== parseInt(currentWoItemId)) {
                 boxColor = '#f59e0b'; // Yellow for different WO item
               }
-              
+
               console.log('Additional box color decision:', {
                 boxId: box.id,
                 boxWoItemId: boxWoItemId,
@@ -3047,7 +3047,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                 boxColor: boxColor,
                 // isSameWorkOrderUniqueId: workItemUniqueId === currentWorkOrderUniqueId
               });
-              
+
               additionalBoxes.push({
                 ...box,
                 woItemId: boxWoItemId,
@@ -3066,22 +3066,22 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         console.error('Error loading additional canvas from key:', key, error);
       }
     });
-    
+
     console.log('Loaded additional boxes:', {
       totalAdditionalBoxes: additionalBoxes.length,
       currentWoItemBoxes: additionalBoxes.filter(box => box.woItemId === currentWoItemId).length,
       otherWoItemBoxes: additionalBoxes.filter(box => box.woItemId !== currentWoItemId).length,
-      allAdditionalBoxes: additionalBoxes.map(box => ({ 
-        id: box.id, 
-        woItemId: box.woItemId, 
+      allAdditionalBoxes: additionalBoxes.map(box => ({
+        id: box.id,
+        woItemId: box.woItemId,
         workOrderId: box.workOrderId,
         saranId: box.saranId,
         // workItemUniqueId: box.workItemUniqueId,
         color: box.color,
-        isFromDifferentWO: box.isFromDifferentWO 
+        isFromDifferentWO: box.isFromDifferentWO
       }))
     });
-    
+
     // Merge with existing boxes (don't overwrite)
     setBoxes(prevBoxes => {
       const existingBoxIds = new Set(prevBoxes.map(box => box.id));
@@ -3095,12 +3095,12 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     const saranId = workOrderData?.selectedItem?.id || 'unknown';
     const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
     const currentWorkOrderUniqueId = localStorage.getItem('WO_current_work_order_id') || 'unknown';
-    
+
     // Get all canvas layouts for this saran plat
     const allBoxes = [];
     const keys = Object.keys(localStorage);
     const canvasKeys = keys.filter(key => key.startsWith(`WO_canvas_layout_${saranId}_`));
-    
+
     console.log('Loading all boxes for saran plat:', {
       saranId,
       currentWoItemId,
@@ -3108,16 +3108,16 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       currentWorkOrderUniqueId,
       canvasKeys
     });
-    
+
     canvasKeys.forEach(key => {
       try {
         const savedData = localStorage.getItem(key);
         if (savedData) {
           const data = JSON.parse(savedData);
-          
+
           // Check if it's new format (canvas data only) or old format (with workOrderData)
           let boxes = [];
-          
+
           if (data.version === "2.0" && !data.workOrderData) {
             // New format - canvas data only, data WO ada di box attributes
             boxes = data.boxes || [];
@@ -3125,7 +3125,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
             // Old format - with workOrderData wrapper
             boxes = data.canvasData.boxes;
           }
-          
+
           if (boxes.length > 0) {
             boxes.forEach(box => {
               // Data WO sekarang ada di box attributes
@@ -3134,7 +3134,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               const boxWorkOrderId = box.workOrderId || 'unknown';
               const boxSaranId = box.saranId || 'unknown';
               const isFromDifferentWO = boxWoItemId !== currentWoItemId;
-              
+
               // Determine color based on workItemUniqueId comparison
               let boxColor = '#10b981'; // Default green
               if (box.isSave === true || box.isDisabled === true) {
@@ -3142,7 +3142,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               } else if (boxWoItemId && boxWoItemId !== currentWoItemId && boxWoItemId !== parseInt(currentWoItemId)) {
                 boxColor = '#f59e0b'; // Yellow for different WO item
               }
-              
+
               console.log('Box color decision during load:', {
                 boxId: box.id,
                 boxWoItemId: boxWoItemId,
@@ -3155,7 +3155,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                 boxColor: boxColor,
                 // isSameWorkOrderUniqueId: workItemUniqueId === currentWorkOrderUniqueId
               });
-              
+
               allBoxes.push({
                 ...box,
                 woItemId: boxWoItemId,
@@ -3172,22 +3172,22 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         console.error('Error loading canvas from key:', key, error);
       }
     });
-    
-        console.log('Loaded all boxes:', {
-          totalBoxes: allBoxes.length,
-          currentWoItemBoxes: allBoxes.filter(box => box.woItemId === currentWoItemId).length,
-          otherWoItemBoxes: allBoxes.filter(box => box.woItemId !== currentWoItemId).length,
-            allBoxes: allBoxes.map(box => ({ 
-              id: box.id, 
-              woItemId: box.woItemId, 
-              workOrderId: box.workOrderId,
-              saranId: box.saranId,
-              // workItemUniqueId: box.workItemUniqueId,
-              color: box.color,
-              isFromDifferentWO: box.isFromDifferentWO 
-            }))
-        });
-    
+
+    console.log('Loaded all boxes:', {
+      totalBoxes: allBoxes.length,
+      currentWoItemBoxes: allBoxes.filter(box => box.woItemId === currentWoItemId).length,
+      otherWoItemBoxes: allBoxes.filter(box => box.woItemId !== currentWoItemId).length,
+      allBoxes: allBoxes.map(box => ({
+        id: box.id,
+        woItemId: box.woItemId,
+        workOrderId: box.workOrderId,
+        saranId: box.saranId,
+        // workItemUniqueId: box.workItemUniqueId,
+        color: box.color,
+        isFromDifferentWO: box.isFromDifferentWO
+      }))
+    });
+
     setBoxes(allBoxes);
   }, [workOrderData]);
 
@@ -3197,12 +3197,12 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     const workOrderUniqueId = localStorage.getItem('WO_current_work_order_id') || 'unknown';
     const saranId = workOrderData?.selectedItem?.id || 'unknown';
     const storageKey = `WO_canvas_layout_${saranId}_${workOrderUniqueId}`;
-    
+
     try {
       const savedData = localStorage.getItem(storageKey);
       if (savedData) {
         const data = JSON.parse(savedData);
-        
+
         // Check if it's new format (canvas data only) or old format (with workOrderData)
         if (data.version === "2.0" && !data.workOrderData) {
           // New format - canvas data only
@@ -3210,18 +3210,18 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
           if (data.gridSize) setGridSize(data.gridSize);
           if (data.zoom) setZoom(data.zoom);
           if (data.panOffset) setPanOffset(data.panOffset);
-          
+
           // Load boxes from new format
           if (data.boxes && data.boxes.length > 0) {
             const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
             const currentWorkOrderId = workOrderData?.workOrderId;
             // const currentWorkOrderUniqueId = localStorage.getItem('WO_current_work_order_item_id') || currentWorkOrderId;
-            
+
             const processedBoxes = data.boxes.map(box => {
               const boxWoItemId = box.woItemId || 'unknown';
               // const workItemUniqueId = box.workItemUniqueId || 'unknown';
               const isFromDifferentWO = boxWoItemId !== currentWoItemId;
-              
+
               // Determine color based on woItemId comparison
               let boxColor = '#10b981'; // Default green
               if (box.isSave === true || box.isDisabled === true) {
@@ -3229,7 +3229,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               } else if (boxWoItemId && boxWoItemId !== currentWoItemId && boxWoItemId !== parseInt(currentWoItemId)) {
                 boxColor = '#f59e0b'; // Yellow for different WO item
               }
-              
+
               return {
                 ...box,
                 woItemId: boxWoItemId,
@@ -3240,7 +3240,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                 color: boxColor
               };
             });
-            
+
             setBoxes(processedBoxes);
             console.log('Loaded boxes from new format:', {
               totalBoxes: processedBoxes.length,
@@ -3248,7 +3248,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               otherWoItemBoxes: processedBoxes.filter(box => box.woItemId !== currentWoItemId).length
             });
           }
-          
+
           console.log('Loaded canvas from new format:', {
             totalBoxes: data.boxes?.length || 0,
             containerSize: data.metadata?.containerSize
@@ -3259,16 +3259,16 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
           if (data.canvasData.gridSize) setGridSize(data.canvasData.gridSize);
           if (data.canvasData.zoom) setZoom(data.canvasData.zoom);
           if (data.canvasData.panOffset) setPanOffset(data.canvasData.panOffset);
-          
+
           console.log('Loaded canvas from old format:', {
             totalBoxes: data.canvasData.boxes?.length || 0,
             containerSize: data.canvasData.baseContainer
           });
         }
-        
+
         // Load additional boxes from other WO items (but don't overwrite current ones)
         loadAdditionalBoxesFromOtherWOItems();
-        
+
         showAlert('Success', `Canvas loaded with all WO items!`, 'success');
       } else {
         // If no saved layout found, still load all boxes from all WO items
@@ -3299,22 +3299,22 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   const importFromJSON = useCallback((jsonString) => {
     try {
       const data = JSON.parse(jsonString);
-      
+
       // Check if it's new format (v2.0) or legacy format (v1.0)
       if (data.version === "2.0" && data.canvasData) {
         // New format with work order data
         const canvasData = data.canvasData;
-        
+
         // Validate data structure
         if (!canvasData.baseContainer || !canvasData.boxes || !Array.isArray(canvasData.boxes)) {
           throw new Error('Invalid canvas data format');
         }
-        
+
         // Update work order data if available
         if (data.workOrderData) {
           setWorkOrderData(data.workOrderData);
         }
-        
+
         // Update canvas state
         setBaseContainer(canvasData.baseContainer);
         const boxesWithDefaults = canvasData.boxes.map(box => ({
@@ -3327,14 +3327,14 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         if (canvasData.gridSize) setGridSize(canvasData.gridSize);
         if (canvasData.zoom) setZoom(canvasData.zoom);
         if (canvasData.panOffset) setPanOffset(canvasData.panOffset);
-        
+
         showAlert('Success', `Canvas layout imported successfully! Loaded ${canvasData.boxes.length} boxes.`, 'success');
       } else {
         // Legacy format (v1.0) - backward compatibility
         if (!data.baseContainer || !data.boxes || !Array.isArray(data.boxes)) {
           throw new Error('Invalid data format');
         }
-        
+
         // Update state with imported data
         setBaseContainer(data.baseContainer);
         const boxesWithDefaults = data.boxes.map(box => ({
@@ -3347,7 +3347,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         if (data.gridSize) setGridSize(data.gridSize);
         if (data.zoom) setZoom(data.zoom);
         if (data.panOffset) setPanOffset(data.panOffset);
-        
+
         showAlert('Success', `Legacy layout imported successfully! Loaded ${data.boxes.length} boxes.`, 'success');
       }
     } catch (error) {
@@ -3369,27 +3369,27 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         percentage: 0
       };
     }
-    
+
     const totalCells = baseContainer.width * baseContainer.height;
     let occupiedCells = 0;
-    
+
     // Create a grid to track occupied cells
-    const grid = Array(baseContainer.height).fill().map(() => 
+    const grid = Array(baseContainer.height).fill().map(() =>
       Array(baseContainer.width).fill(false)
     );
-    
+
     // Mark occupied cells (handle rotation)
     if (boxes && boxes.length > 0) {
       boxes.forEach(box => {
         // Safety check for box properties
-        if (box && typeof box.x === 'number' && typeof box.y === 'number' && 
-            typeof box.width === 'number' && typeof box.height === 'number' &&
-            box.width > 0 && box.height > 0) {
-          
+        if (box && typeof box.x === 'number' && typeof box.y === 'number' &&
+          typeof box.width === 'number' && typeof box.height === 'number' &&
+          box.width > 0 && box.height > 0) {
+
           // Get actual dimensions considering rotation
           const boxWidth = box.isRotated ? box.height : box.width;
           const boxHeight = box.isRotated ? box.width : box.height;
-          
+
           for (let y = box.y; y < box.y + boxHeight; y++) {
             for (let x = box.x; x < box.x + boxWidth; x++) {
               if (x >= 0 && x < baseContainer.width && y >= 0 && y < baseContainer.height) {
@@ -3405,10 +3405,10 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         }
       });
     }
-    
+
     const emptyCells = totalCells - occupiedCells;
     const occupancyPercentage = totalCells > 0 ? Math.round((occupiedCells / totalCells) * 100) : 0;
-    
+
     return {
       total: totalCells,
       occupied: occupiedCells,
@@ -3423,23 +3423,23 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       showAlert('Info', 'No boxes selected to toggle disable state', 'info');
       return;
     }
-    
-    setBoxes(prevBoxes => 
-      prevBoxes.map(box => 
-        selectedBoxIds.has(box.id) 
+
+    setBoxes(prevBoxes =>
+      prevBoxes.map(box =>
+        selectedBoxIds.has(box.id)
           ? { ...box, isDisabled: !box.isDisabled }
           : box
       )
     );
-    
-    const disabledCount = boxes && boxes.length > 0 ? boxes.filter(box => 
+
+    const disabledCount = boxes && boxes.length > 0 ? boxes.filter(box =>
       selectedBoxIds.has(box.id) && !box.isDisabled
     ).length : 0;
-    
-    const enabledCount = boxes && boxes.length > 0 ? boxes.filter(box => 
+
+    const enabledCount = boxes && boxes.length > 0 ? boxes.filter(box =>
       selectedBoxIds.has(box.id) && box.isDisabled
     ).length : 0;
-    
+
     if (disabledCount > 0) {
       showAlert('Success', `${disabledCount} box(es) disabled`, 'success');
     } else if (enabledCount > 0) {
@@ -3452,36 +3452,36 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       showAlert('Info', 'No boxes selected for deletion', 'info');
       return;
     }
-    
+
     // Check if any selected box belongs to different WO item
     const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
     const selectedBoxes = boxes.filter(box => selectedBoxIds.has(box.id));
     const invalidBoxes = selectedBoxes.filter(box => {
       const boxWoItemId = box.woItemId;
       return (boxWoItemId && currentWoItemId && currentWoItemId !== boxWoItemId) ||
-             (currentWoItemId && !boxWoItemId);
+        (currentWoItemId && !boxWoItemId);
     });
-    
+
     if (invalidBoxes.length > 0) {
       showAlert('Error', 'Cannot delete boxes from different Work Order items or previous sessions', 'error');
       return;
     }
-    
+
     const deletedCount = selectedBoxIds.size;
     setBoxes(prevBoxes => {
       const updatedBoxes = prevBoxes.filter(box => !selectedBoxIds.has(box.id));
       // Calculate remaining quantity correctly (only for current WO item)
-      const currentWoItemBoxes = updatedBoxes.filter(box => 
+      const currentWoItemBoxes = updatedBoxes.filter(box =>
         box.woItemId === currentWoItemId || !box.woItemId
       );
       const targetQuantity = parseInt(workOrderData?.itemQty) || 0;
       const totalBoxes = currentWoItemBoxes.length;
       const newRemaining = Math.max(0, targetQuantity - totalBoxes);
-      
+
       // Update WO_total_quantity in localStorage
       const saranItemId = workOrderData?.selectedItem?.id || 'unknown';
       updateWOQuantity(currentWoItemId, saranItemId, totalBoxes);
-      
+
       return updatedBoxes;
     });
     setSelectedBoxIds(new Set());
@@ -3490,12 +3490,12 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
 
   const selectAllBoxes = useCallback(() => {
     const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
-    const currentWoItemBoxes = boxes ? boxes.filter(box => 
+    const currentWoItemBoxes = boxes ? boxes.filter(box =>
       box.woItemId === currentWoItemId || !box.woItemId
     ) : [];
     const currentWoItemBoxIds = new Set(currentWoItemBoxes.map(box => box.id));
     setSelectedBoxIds(currentWoItemBoxIds);
-    
+
     if (currentWoItemBoxes.length === 0) {
       showAlert('Info', 'No boxes available for current Work Order item', 'info');
     } else {
@@ -3506,23 +3506,23 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   const clearSelection = useCallback(() => {
     setSelectedBoxIds(new Set());
   }, []);
-  
+
   // Canvas setup and resize
   useEffect(() => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
     if (!canvas || !container) return;
-    
+
     const resizeCanvas = () => {
       const rect = container.getBoundingClientRect();
       canvas.width = rect.width;
       canvas.height = rect.height;
       draw();
     };
-    
+
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
-    
+
     return () => {
       window.removeEventListener('resize', resizeCanvas);
       // Cleanup animation frame on unmount
@@ -3531,14 +3531,14 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       }
     };
   }, [draw, animationFrameId, zoomFit]);
-  
+
   // Update remainingQuantity when totalQuantity changes and no boxes exist
 
   // Redraw when state changes
   useEffect(() => {
     draw();
   }, [draw, boxes, baseContainer, isDragging, previewPosition]);
-  
+
   // Touch event handlers
   const handleTouchStart = useCallback((e) => {
     e.preventDefault();
@@ -3571,7 +3571,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     // Canvas panning controls (always active when canvas exists)
     if (canvasRef.current) {
       const panSpeed = 20; // pixels per key press
-      
+
       switch (e.key) {
         case 'ArrowLeft':
           e.preventDefault();
@@ -3606,7 +3606,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
           return;
       }
     }
-    
+
     // General keyboard shortcuts
     if (e.key === 'Delete' || e.key === 'Backspace') {
       if (selectedBoxIds.size > 0) {
@@ -3624,7 +3624,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
+
     // Mouse events
     canvas.addEventListener('mousedown', handleMouseDown);
     canvas.addEventListener('dblclick', handleDoubleClick);
@@ -3634,15 +3634,15 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     document.addEventListener('mouseup', handleMouseUp);
     document.addEventListener('mouseup', handleMouseUpPan);
     canvas.addEventListener('wheel', handleWheel, { passive: false });
-    
+
     // Touch events
     canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
     document.addEventListener('touchmove', handleTouchMove, { passive: false });
     document.addEventListener('touchend', handleTouchEnd, { passive: false });
-    
+
     // Keyboard events
     document.addEventListener('keydown', handleKeyDown);
-    
+
     return () => {
       canvas.removeEventListener('mousedown', handleMouseDown);
       canvas.removeEventListener('dblclick', handleDoubleClick);
@@ -3652,15 +3652,15 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       document.removeEventListener('mouseup', handleMouseUp);
       document.removeEventListener('mouseup', handleMouseUpPan);
       canvas.removeEventListener('wheel', handleWheel);
-      
+
       canvas.removeEventListener('touchstart', handleTouchStart);
       document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('touchend', handleTouchEnd);
-      
+
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [handleMouseDown, handleDoubleClick, handleMouseMove, handleMouseUp, handleMouseMovePan, handleMouseUpPan, handleWheel, handleTouchStart, handleTouchMove, handleTouchEnd, handleKeyDown, handleRightClick]);
-  
+
   return (
     <div className="h-screen flex flex-col">
       {!hideTitle && (
@@ -3701,13 +3701,13 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               <div className="text-sm font-medium text-green-600">
                 ✅ {(() => {
                   const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
-                  
+
                   // Get total quantity added from all saran plats for this WO item
                   const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
-                  const woItemData = totalQuantityData.find(item => 
+                  const woItemData = totalQuantityData.find(item =>
                     item.WoItemID === currentWoItemId || item.WoItemID === parseInt(currentWoItemId)
                   );
-                  
+
                   let totalAddedQuantity = 0;
                   if (woItemData && woItemData.WOQuantity && Array.isArray(woItemData.WOQuantity)) {
                     // Sum all quantities from all saran plats for this WO item
@@ -3715,9 +3715,9 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                       return total + (parseInt(saranItem.Quantity) || 0);
                     }, 0);
                   }
-                  
+
                   const targetQuantity = parseInt(workOrderData?.itemQty) || 0;
-                  
+
                   // Display: totalAddedQuantity/targetQuantity
                   return `${totalAddedQuantity}/${targetQuantity}`;
                 })()} Boxes Added
@@ -3729,7 +3729,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
           </div>
         </div>
       )}
-      
+
       <div className="flex-1 flex">
         {/* Controls Panel */}
         {sidebarVisible && (
@@ -3739,21 +3739,19 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               <div className="flex">
                 <button
                   onClick={() => setActiveTab('stats')}
-                  className={`flex-1 px-3 py-2 text-xs font-medium ${
-                    activeTab === 'stats'
-                      ? 'bg-blue-100 text-blue-700 border-b-2 border-blue-500'
-                      : 'text-gray-600 hover:text-gray-800'
-                  }`}
+                  className={`flex-1 px-3 py-2 text-xs font-medium ${activeTab === 'stats'
+                    ? 'bg-blue-100 text-blue-700 border-b-2 border-blue-500'
+                    : 'text-gray-600 hover:text-gray-800'
+                    }`}
                 >
                   📊 Stats
                 </button>
                 <button
                   onClick={() => setActiveTab('actions')}
-                  className={`flex-1 px-3 py-2 text-xs font-medium ${
-                    activeTab === 'actions'
-                      ? 'bg-blue-100 text-blue-700 border-b-2 border-blue-500'
-                      : 'text-gray-600 hover:text-gray-800'
-                  }`}
+                  className={`flex-1 px-3 py-2 text-xs font-medium ${activeTab === 'actions'
+                    ? 'bg-blue-100 text-blue-700 border-b-2 border-blue-500'
+                    : 'text-gray-600 hover:text-gray-800'
+                    }`}
                 >
                   ⚡ Actions
                 </button>
@@ -3789,13 +3787,13 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                         <div className="text-sm">
                           <span className="font-medium">Quantity Added:</span> {(() => {
                             const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
-                            
+
                             // Get total quantity from all saran plats for this WO item
                             const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
-                            const woItemData = totalQuantityData.find(item => 
+                            const woItemData = totalQuantityData.find(item =>
                               item.WoItemID === currentWoItemId || item.WoItemID === parseInt(currentWoItemId)
                             );
-                            
+
                             let totalAddedQuantity = 0;
                             if (woItemData && woItemData.WOQuantity && Array.isArray(woItemData.WOQuantity)) {
                               // Sum all quantities from all saran plats for this WO item
@@ -3803,13 +3801,13 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                                 return total + (parseInt(saranItem.Quantity) || 0);
                               }, 0);
                             }
-                            
+
                             console.log('Quantity Added for WO Item (All Saran Plats):', {
                               currentWoItemId: currentWoItemId,
                               woItemData: woItemData,
                               totalAddedQuantity: totalAddedQuantity
                             });
-                            
+
                             return `${totalAddedQuantity}`;
                           })()}
                         </div>
@@ -3822,23 +3820,23 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                         <div className="text-sm">
                           <span className="font-medium">Quantity Remaining:</span> {(() => {
                             const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
-                            
+
                             // Always read from WO_total_quantity in localStorage (real-time)
                             const targetQuantity = parseInt(workOrderData?.itemQty) || 0;
                             const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
-                            const woItemData = totalQuantityData.find(item => 
+                            const woItemData = totalQuantityData.find(item =>
                               item.WoItemID === currentWoItemId || item.WoItemID === parseInt(currentWoItemId)
                             );
-                            
+
                             let totalUsedQuantity = 0;
                             if (woItemData && woItemData.WOQuantity && Array.isArray(woItemData.WOQuantity)) {
                               totalUsedQuantity = woItemData.WOQuantity.reduce((total, saranItem) => {
                                 return total + (parseInt(saranItem.Quantity) || 0);
                               }, 0);
                             }
-                            
+
                             const remainingQuantity = Math.max(0, targetQuantity - totalUsedQuantity);
-                            
+
                             console.log('Quantity Remaining - Reading from storage:', {
                               currentWoItemId,
                               targetQuantity,
@@ -3847,7 +3845,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                               woItemData,
                               forceUpdate
                             });
-                            
+
                             return (
                               <span className={`ml-1 ${remainingQuantity === 0 ? 'text-red-600 font-bold' : remainingQuantity <= 2 ? 'text-yellow-600 font-medium' : 'text-green-600'}`}>
                                 {remainingQuantity}
@@ -3861,37 +3859,37 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                         <div className="text-sm">
                           <span className="font-medium">Quantity in this Canvas:</span> {(() => {
                             const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
-                            
+
                             // Count actual boxes in canvas for current work item
-                            const currentWoItemBoxes = boxes ? boxes.filter(box => 
+                            const currentWoItemBoxes = boxes ? boxes.filter(box =>
                               box.woItemId === currentWoItemId || box.woItemId === parseInt(currentWoItemId)
                             ) : [];
                             const canvasBoxCount = currentWoItemBoxes.length;
-                            
+
                             return `${canvasBoxCount}`;
                           })()}
                         </div>
                         <div className="text-sm">
                           <span className="font-medium">Progress:</span> {(() => {
                             const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
-                            const currentWoItemBoxes = boxes ? boxes.filter(box => 
+                            const currentWoItemBoxes = boxes ? boxes.filter(box =>
                               box.woItemId === currentWoItemId || box.woItemId === parseInt(currentWoItemId)
                             ) : [];
                             const currentQuantity = currentWoItemBoxes.length;
-                            
+
                             // Calculate total used quantity across all saran plats for this WO item
                             const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
-                            const woItemData = totalQuantityData.find(item => 
+                            const woItemData = totalQuantityData.find(item =>
                               item.WoItemID === currentWoItemId || item.WoItemID === parseInt(currentWoItemId)
                             );
-                            
+
                             let totalUsedQuantity = 0;
                             if (woItemData && woItemData.WOQuantity && Array.isArray(woItemData.WOQuantity)) {
                               totalUsedQuantity = woItemData.WOQuantity.reduce((total, saranItem) => {
                                 return total + (parseInt(saranItem.Quantity) || 0);
                               }, 0);
                             }
-                            
+
                             const targetQuantity = woItemData?.TargetQuantity || parseInt(workOrderData?.itemQty) || 0;
                             return targetQuantity > 0 ? Math.round((totalUsedQuantity / targetQuantity) * 100) : 0;
                           })()}%
@@ -3902,18 +3900,18 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                         <div className="text-sm">
                           <span className="font-medium">Luas:</span> {(() => {
                             const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
-                            const currentWoItemBoxes = boxes ? boxes.filter(box => 
+                            const currentWoItemBoxes = boxes ? boxes.filter(box =>
                               box.woItemId === currentWoItemId || box.woItemId === parseInt(currentWoItemId)
                             ) : [];
-                            
+
                             const totalArea = currentWoItemBoxes.reduce((total, box) => {
                               return total + (box.width * box.height);
                             }, 0);
-                            
+
                             return `${totalArea} px²`;
                           })()}
                         </div>
-                        
+
                         {/* Total Area */}
                         <div className="text-sm">
                           <span className="font-medium">Total Area:</span> {(() => {
@@ -3921,7 +3919,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                             return `${totalArea} px²`;
                           })()}
                         </div>
-                        
+
                         {/* Area Utilization */}
                         <div className="text-sm">
                           <span className="font-medium">Area Utilization:</span> {(() => {
@@ -3931,7 +3929,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                             return `${areaUtilization}%`;
                           })()}
                         </div>
-                      
+
                         {/* Cell Occupancy */}
                         {(() => {
                           const occupancy = baseContainer && baseContainer.width > 0 && baseContainer.height > 0 ? calculateCellOccupancy() : {
@@ -3957,8 +3955,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                                   <span className="font-medium">Usage:</span> {occupancy.percentage}%
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                                  <div 
-                                    className="bg-green-500 h-2 rounded-full transition-all duration-300" 
+                                  <div
+                                    className="bg-green-500 h-2 rounded-full transition-all duration-300"
                                     style={{ width: `${occupancy.percentage}%` }}
                                   ></div>
                                 </div>
@@ -4185,7 +4183,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               </Button>
             </div>
           )}
-          <div 
+          <div
             ref={containerRef}
             className="h-full border-2 border-gray-300 rounded-lg bg-white shadow-lg overflow-hidden"
           >
@@ -4193,12 +4191,12 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               ref={canvasRef}
               className="w-full h-full"
               tabIndex={0}
-              style={{ 
+              style={{
                 background: '#f9fafb',
-                cursor: isDragging ? 'grabbing' : 
-                        (isPanning ? 'grabbing' : 
-                         (isDraggingContainer ? 'move' : 
-                          (isLeftClickPanning ? 'grabbing' : 'grab'))),
+                cursor: isDragging ? 'grabbing' :
+                  (isPanning ? 'grabbing' :
+                    (isDraggingContainer ? 'move' :
+                      (isLeftClickPanning ? 'grabbing' : 'grab'))),
                 touchAction: 'none' // Prevent scrolling on touch devices
               }}
             />
