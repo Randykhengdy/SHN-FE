@@ -1312,6 +1312,7 @@ export default function AddWorkOrderPage() {
                   fetchOptions={async (q, page) => {
                     const params = new URLSearchParams({ per_page: '10', page: String(page || 1), status: 'active' });
                     if (q) params.append('search', q);
+                    params.set('per_page', '50');
                     const resp = await request(`/sales-order/header?${params.toString()}`, { method: 'GET' });
                     const rows = Array.isArray(resp?.data) ? resp.data : [];
                     return rows.map(so => ({

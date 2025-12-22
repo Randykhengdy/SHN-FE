@@ -145,7 +145,7 @@ const MergeBarangModal = ({
                                         fetchOptions={async (q, page) => {
                                             const params = new URLSearchParams();
                                             params.append('page', String(page || 1));
-                                            params.append('per_page', '10');
+                                            params.append('per_page', '50');
                                             if (q) params.append('search', q);
                                             const resp = await request(`/item-barang/mergeable?${params.toString()}`, { method: 'GET' });
                                             const rows = Array.isArray(resp?.data) ? resp.data : [];

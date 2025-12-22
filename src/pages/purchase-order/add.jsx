@@ -630,7 +630,7 @@ export default function AddPurchaseOrderPage() {
                   } catch (_) {}
                 }}
                 fetchOptions={async (q, page) => {
-                  const resp = await supplierService.getPaginated(page || 1, 10, q || "", "nama_supplier", "asc");
+                  const resp = await supplierService.getPaginated(page || 1, 50, q || "", "nama_supplier", "asc");
                   const rows = resp?.data || [];
                   return rows.map(item => ({ value: String(item.id), label: item.nama_supplier || item.nama || "Unknown", kode: item.kode_supplier || item.kode, nama: item.nama_supplier || item.nama, telepon: item.telepon, email: item.email, alamat: item.alamat }));
                 }}
@@ -804,7 +804,7 @@ export default function AddPurchaseOrderPage() {
                 value={itemType || ""}
                 onValueChange={(val) => setItemType(String(val || ""))}
                 fetchOptions={async (q, page) => {
-                  const resp = await jenisBarangService.getPaginated(page || 1, 10, q || "", "nama_jenis", "asc");
+                  const resp = await jenisBarangService.getPaginated(page || 1, 50, q || "", "nama_jenis", "asc");
                   const list = resp?.data || [];
                   return list.map(it => ({ value: String(it.id), label: it.nama_jenis || it.nama || it.kode || String(it.id) }));
                 }}
@@ -823,7 +823,7 @@ export default function AddPurchaseOrderPage() {
                 value={itemGrade || ""}
                 onValueChange={(val) => setItemGrade(String(val || ""))}
                 fetchOptions={async (q, page) => {
-                  const resp = await gradeBarangService.getPaginated(page || 1, 10, q || "", "nama", "asc");
+                  const resp = await gradeBarangService.getPaginated(page || 1, 50, q || "", "nama", "asc");
                   const list = resp?.data || [];
                   return list.map(it => ({ value: String(it.id), label: it.nama || it.kode || String(it.id) }));
                 }}

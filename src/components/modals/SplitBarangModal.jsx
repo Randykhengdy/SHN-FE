@@ -126,7 +126,7 @@ const SplitBarangModal = ({
                                         fetchOptions={async (q, page) => {
                                             const params = new URLSearchParams();
                                             params.append('page', String(page || 1));
-                                            params.append('per_page', '10');
+                                            params.append('per_page', '50');
                                             params.append('jenis_potongan', 'utuh');
                                             if (q) params.append('search', q);
                                             const resp = await request(`/item-barang?${params.toString()}`, { method: 'GET' });

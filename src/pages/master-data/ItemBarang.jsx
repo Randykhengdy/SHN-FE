@@ -37,7 +37,7 @@ export default function ItemBarangPage() {
           label: "Jenis Barang",
           type: "asyncSelect",
           fetchOptions: async (q, page) => {
-            const res = await jenisBarangService.getPaginated(page, 10, q || "", "nama_jenis", "asc");
+            const res = await jenisBarangService.getPaginated(page, 50, q || "", "nama_jenis", "asc");
             const list = res?.data || [];
             return list.map(it => ({ value: String(it.id), label: it.nama_jenis || it.nama || it.kode || String(it.id) }));
           },
@@ -50,7 +50,7 @@ export default function ItemBarangPage() {
           label: "Bentuk Barang",
           type: "asyncSelect",
           fetchOptions: async (q, page) => {
-            const res = await bentukBarangService.getPaginated(page, 10, q || "", "nama_bentuk", "asc");
+            const res = await bentukBarangService.getPaginated(page, 50, q || "", "nama_bentuk", "asc");
             const options = (res.data || []).map(item => ({
               value: String(item.id),
               label: (item.nama_bentuk || item.nama || 'Unknown') + ` (${item.dimensi || 'N/A'})`,
@@ -76,7 +76,7 @@ export default function ItemBarangPage() {
           label: "Grade Barang",
           type: "asyncSelect",
           fetchOptions: async (q, page) => {
-            const res = await gradeBarangService.getPaginated(page, 10, q || "", "nama", "asc");
+            const res = await gradeBarangService.getPaginated(page, 50, q || "", "nama", "asc");
             const list = res?.data || [];
             return list.map(it => ({ value: String(it.id), label: it.nama || it.kode || String(it.id) }));
           },
@@ -119,7 +119,7 @@ export default function ItemBarangPage() {
           label: "Gudang",
           type: "asyncSelect",
           fetchOptions: async (q, page) => {
-            const res = await gudangService.getPaginated(page, 10, q || "", "nama_gudang", "asc");
+            const res = await gudangService.getPaginated(page, 50, q || "", "nama_gudang", "asc");
             const list = res?.data || [];
             return list.map(it => ({ value: String(it.id), label: it.nama_gudang || it.nama || String(it.id) }));
           },

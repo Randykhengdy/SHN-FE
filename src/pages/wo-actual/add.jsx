@@ -678,7 +678,7 @@ export default function AddWOActualPage() {
                           try {
                             const resp = await woActualService.getWOPlanningForActual({
                               page: page || 1,
-                              per_page: 10,
+                              per_page: 50,
                               search: q || '',
                               exclude_status: 'Selesai'
                             });

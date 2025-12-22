@@ -1249,7 +1249,7 @@ export default function AddSalesOrderPage() {
                 onValueChange={setOriginWarehouse}
                 required
                 fetchOptions={async (q, page) => {
-                  const resp = await gudangService.getPaginated(page || 1, 10, q || "", "", "asc", { tipe_gudang: "gudang" });
+                  const resp = await gudangService.getPaginated(page || 1, 50, q || "", "", "asc", { tipe_gudang: "gudang" });
                   const rows = Array.isArray(resp?.data) ? resp.data : (Array.isArray(resp) ? resp : []);
                   return rows.map((item) => ({
                     value: item.id?.toString(),
@@ -1325,7 +1325,7 @@ export default function AddSalesOrderPage() {
                 }}
                 required
                 fetchOptions={async (q, page) => {
-                  const resp = await jenisBarangService.getPaginated(page || 1, 10, q || "");
+                  const resp = await jenisBarangService.getPaginated(page || 1, 50, q || "");
                   const rows = Array.isArray(resp?.data) ? resp.data : (Array.isArray(resp) ? resp : []);
                   return rows.map((item) => ({
                     value: item.id?.toString(),
@@ -1343,7 +1343,7 @@ export default function AddSalesOrderPage() {
                 onValueChange={setItemGrade}
                 required
                 fetchOptions={async (q, page) => {
-                  const resp = await gradeBarangService.getPaginated(page || 1, 10, q || "");
+                  const resp = await gradeBarangService.getPaginated(page || 1, 50, q || "");
                   const rows = Array.isArray(resp?.data) ? resp.data : (Array.isArray(resp) ? resp : []);
                   return rows.map((item) => ({
                     value: item.id?.toString(),

@@ -138,7 +138,7 @@ const MutationModal = ({
                                     fetchOptions={async (q, page) => {
                                         const params = new URLSearchParams();
                                         params.append('page', String(page || 1));
-                                        params.append('per_page', '10');
+                                        params.append('per_page', '50');
                                         if (gudangId) params.append('gudang_id', String(gudangId));
                                         if (q) params.append('search', q);
                                         const resp = await request(`/item-barang?${params.toString()}`, { method: 'GET' });
