@@ -393,6 +393,7 @@ export default function ViewWOActualPage() {
                         <TableHead className="text-center">Jenis</TableHead>
                         <TableHead className="text-center">Bentuk</TableHead>
                         <TableHead className="text-center">Grade</TableHead>
+                        <TableHead className="text-center">Jenis Potongan</TableHead>
                         <TableHead className="text-center">Qty Planning</TableHead>
                         <TableHead className="text-center">Berat Planning (kg)</TableHead>
                         <TableHead className="text-center">Qty Actual</TableHead>
@@ -420,6 +421,7 @@ export default function ViewWOActualPage() {
                         const pelaksanas = actualItem.work_order_actual_pelaksanas || actualItem.has_many_pelaksana || [];
                         const bentukNama = actualItem.bentuk_barang?.nama_bentuk || actualItem.bentuk_barang_nama || planningItem.bentuk_barang?.nama_bentuk_barang || planningItem.bentuk_barang?.nama;
                         const gradeNama = actualItem.grade_barang?.nama || actualItem.grade_barang_nama || planningItem.grade_barang?.nama_grade_barang || planningItem.grade_barang?.nama;
+                        const jenisPotongan = planningItem.jenis_potongan || actualItem.jenis_potongan || 'N/A';
                         const openPelaksanaModal = () => {
                           setPelaksanaModalData(pelaksanas);
                           setPelaksanaPlanningData(pelaksanaArr);
@@ -430,6 +432,7 @@ export default function ViewWOActualPage() {
                             <TableCell className="text-center">{jenisNama || 'N/A'}</TableCell>
                             <TableCell className="text-center">{bentukNama || 'N/A'}</TableCell>
                             <TableCell className="text-center">{gradeNama || 'N/A'}</TableCell>
+                            <TableCell className="text-center">{jenisPotongan}</TableCell>
                             <TableCell className="text-center">{qtyPlanning}</TableCell>
                             <TableCell className="text-center">{Math.round(beratPlanning)}</TableCell>
                             <TableCell className="text-center">{qtyActual}</TableCell>

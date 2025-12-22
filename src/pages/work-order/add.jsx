@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import SearchSelect from '@/components/ui/search-select';
 import AsyncSearchSelect from '@/components/ui/async-search-select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Save, ArrowLeft, Users, Package, Grid3X3, X, Eye } from 'lucide-react';
+import { Plus, Trash2, Save, ArrowLeft, Users, Package, Grid3X3, X } from 'lucide-react';
 import SelectPlatShaftDasar from './select-platshaftdasar';
 import { useAlert } from '@/hooks/useAlert';
 import PageLayout from '@/components/PageLayout';
@@ -27,10 +26,8 @@ import {
   getJenisBarangOptions, 
   getBentukBarangOptions, 
   getGradeBarangOptions,
-  getPelangganFromSOHeader,
   getPelaksanaOptions,
   getPelangganOptions,
-  getSalesOrderOptions
 } from '@/services/masterDataService';
 import { documentSequenceService } from '@/services/master-data/documentSequenceService';
 import CustomAlert from '@/components/modals/CustomAlert';
