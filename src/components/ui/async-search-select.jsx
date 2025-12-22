@@ -16,7 +16,7 @@ export default function AsyncSearchSelect({
   className = "",
   required = false,
   disabled = false,
-  pageSize = 10
+  pageSize = 50
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
