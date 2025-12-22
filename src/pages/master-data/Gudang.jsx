@@ -108,7 +108,7 @@ export default function GudangPage() {
           }, 
           prefetchById: (id) => gudangService.getById(id),
           fetchOptions: async (q, page) => {
-            const res = await gudangService.getPaginated(page || 1, 10, q || "", "nama_gudang", "asc", { tipe_gudang: "Gudang" });
+            const res = await gudangService.getPaginated(page || 1, 50, q || "", "nama_gudang", "asc", { tipe_gudang: "Gudang" });
             const list = res?.data || [];
             return list.map(it => ({ value: String(it.id), label: it.nama_gudang || it.nama || String(it.id) }));
           },
