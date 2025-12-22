@@ -489,7 +489,8 @@ export default function AddWorkOrderPage() {
             sales_order_item_id: item.id || item.sales_order_item_id,
             panjang: (item.panjang ?? item.length ?? item.p ?? 0),
             lebar: (item.lebar ?? item.width ?? item.l ?? 0),
-            tebal: (item.tebal ?? item.ketebalan ?? item.thickness ?? 0),
+            tebal: (item.tebal  ?? 0),
+            berat: (item.berat ?? item.weight ?? 0),
             qty: (item.sisa_qty ?? item.remaining_qty ?? item.available_qty ?? item.qty ?? item.qty_so ?? 1),
             jenis_barang_id: (item.jenis_barang_id || item.jenis_barang?.id || item.item_jenis_id)?.toString?.() || '',
             bentuk_barang_id: (item.bentuk_barang_id || item.bentuk_barang?.id || item.item_bentuk_id)?.toString?.() || '',
@@ -672,6 +673,10 @@ export default function AddWorkOrderPage() {
     setShowPlatPreviewModal(false);
     setCurrentItemData(null);
     setPreviewItems([]);
+    
+    // Refresh woTotalQuantity from localStorage
+    const savedData = localStorage.getItem('WO_total_quantity');
+    setWoTotalQuantity(savedData ? JSON.parse(savedData) : []);
   };
 
   const handlePlatDasarSelection = (selectedItems) => {
@@ -708,6 +713,12 @@ export default function AddWorkOrderPage() {
   const isLuasCukup = (itemId, totalDibutuhkan) => {
     const totalTercukupi = getTotalLuasTercukupi(itemId);
     return totalTercukupi >= (totalDibutuhkan * 1.1); // 110% tolerance
+  };
+
+  const isQuantityAvailable = (item) => {
+    const entry = woTotalQuantity.find(e => e.WoItemID === item.id || e.WoItemID === parseInt(item.id));
+    // Only check current WOQuantity, ignore PreviousQuantity as it's for rollback only
+    return entry && (entry.WOQuantity && entry.WOQuantity.some(q => q.Quantity > 0));
   };
 
    
@@ -964,7 +975,7 @@ export default function AddWorkOrderPage() {
           bentuk_barang_id: item.bentuk_barang_id,
           grade_barang_id: item.grade_barang_id,
           jenis_potongan: item.jenis_potongan || 'potongan',
-          berat: 0,
+          berat: parseFloat(item.berat) || 0,
           satuan: "PCS",
           diskon: 0,
           catatan: item.catatan,
@@ -981,7 +992,7 @@ export default function AddWorkOrderPage() {
           pelaksana: item.pelaksana.map(p => ({
             pelaksana_id: p.pelaksana_id,
             qty: p.qty,
-            weight: 0,
+            weight: (typeof p.berat !== 'undefined') ? (parseFloat(p.berat) || 0) : (parseFloat(p.weight) || 0),
             tanggal: p.tanggal,
             jam_mulai: p.jam_mulai,
             jam_selesai: p.jam_selesai,
@@ -1050,7 +1061,7 @@ export default function AddWorkOrderPage() {
           bentuk_barang_id: item.bentuk_barang_id,
           grade_barang_id: item.grade_barang_id,
           jenis_potongan: item.jenis_potongan || 'potongan',
-          berat: 0,
+          berat: parseFloat(item.berat) || 0,
           satuan: 'PCS',
           diskon: 0,
           catatan: item.catatan,
@@ -1454,6 +1465,7 @@ export default function AddWorkOrderPage() {
                     <TableHeader className="text-left">Lebar (mm)</TableHeader>
                     <TableHeader className="text-left">Tebal (mm)</TableHeader>
                     <TableHeader className="text-left">Qty</TableHeader>
+                    <TableHeader className="text-left">Berat (kg)</TableHeader>
                     <TableHeader className="text-left">Jenis</TableHeader>
                     <TableHeader className="text-left">Bentuk</TableHeader>
                     <TableHeader className="text-left">Grade</TableHeader>
@@ -1494,6 +1506,11 @@ export default function AddWorkOrderPage() {
                         <TableCell className="text-left">
                           <div className="px-3 py-2 bg-gray-50 rounded text-sm">
                             {item.qty || '0'}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-left">
+                          <div className="px-3 py-2 bg-gray-50 rounded text-sm">
+                            {item.berat ? `${parseFloat(item.berat).toFixed(2)}` : '0.00'}
                           </div>
                         </TableCell>
                         <TableCell className="text-left">
@@ -1543,7 +1560,7 @@ export default function AddWorkOrderPage() {
                                 size="sm"
                                 onClick={() => openPlatPreviewModal(item)}
                                 disabled={!item.jenis_barang_id || !item.bentuk_barang_id || !item.grade_barang_id || !item.tebal}
-                                className="text-xs"
+                                className={`text-xs ${isQuantityAvailable(item) ? "bg-green-50 border-green-200 text-green-700 hover:bg-green-100" : ""}`}
                               >
                                 <Grid3X3 className="w-3 h-3 mr-1" />
                                 Pilih Preview
@@ -1626,7 +1643,6 @@ export default function AddWorkOrderPage() {
           <Button
             type="button"
             variant="outline"
-            type="button"
             onClick={() => navigate('/work-order')}
             disabled={loading}
           >

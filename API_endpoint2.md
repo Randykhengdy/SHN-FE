@@ -123,6 +123,7 @@ Ringkasan endpoint baru, dengan contoh singkat request/response.
           "wo_item_unique_id": "WOITEM-001",
           "sales_order_item_id": 1001,
           "qty": 2,
+          "berat": 10.5,
           "satuan": "PCS"
         }
       ]

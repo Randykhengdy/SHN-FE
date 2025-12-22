@@ -875,8 +875,23 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
 
     // Display box size only
     ctx.font = `${Math.max(10, Math.min(width, height) * 0.22)}px Arial`;
-    ctx.fillText(`${box.width}×${box.height}`, centerX, centerY);
 
+    // Check if it is 1D based on heuristic: if platLebar is missing (defaults to platPanjang/10)
+    let is1D = false;
+    
+    // Logic: If platLebar is not explicitly provided in the source data, it's considered 1D
+    const hasPlatLebar = workOrderData?.selectedItem?.platLebar || workOrderData?.platLebar;
+    if (!hasPlatLebar) {
+        is1D = true;
+    }
+
+    if (is1D) {
+      ctx.fillText(`${box.width}`, centerX, centerY);
+    } else {
+      ctx.fillText(`${box.width}×${box.height}`, centerX, centerY);
+    }
+    
+   
     // Draw selection indicator
     if (isSelected) {
       ctx.fillStyle = '#ef4444';
@@ -901,7 +916,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     // Restore context
     ctx.restore();
     ctx.restore(); // Restore pan offset
-  }, [gridSize, zoom, panOffset, isDraggingContainer]);
+  }, [gridSize, zoom, panOffset, isDraggingContainer, workOrderData]);
 
   // Removed preview system for better performance
 
@@ -1727,6 +1742,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       const woItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId || 'unknown';
       const workOrderId = workOrderData?.workOrderId || 'unknown';
       const saranId = workOrderData?.selectedItem?.id || 'unknown';
+      const bentukBarang = workOrderData?.workOrderItem?.bentuk_barang || workOrderData?.selectedItem?.bentuk_barang || null;
+
       const newBox = {
         id: newId,
         x: chosen.x,
@@ -1739,6 +1756,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         woItemId,
         workOrderId,
         saranId,
+        bentukBarang,
         isSave: false
       };
       const totalBoxes = clusterBoxes.length + 1;
