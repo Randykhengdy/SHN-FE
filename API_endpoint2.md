@@ -130,6 +130,62 @@ Ringkasan endpoint baru, dengan contoh singkat request/response.
     }
     ```
 
+## Work Order Actual
+- Save Actual: `POST /api/work-order-actual`
+  - Catatan format:
+    - `tanggal`: `YYYY-MM-DD`
+    - `jamMulai` dan `jamSelesai`: `HH:mm:ss`
+    - `items.*.timestamp`: optional, `date` (boleh ISO-8601)
+    - `foto_bukti` dan `items.*.foto_bukti`: base64 image string
+  - Request:
+    ```json
+    {
+      "foto_bukti": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAA...",
+      "actualWorkOrderId": null,
+      "planningWorkOrderId": 123,
+      "items": {
+        "1001": {
+          "qtyActual": 2,
+          "berat": 10.5,
+          "foto_bukti": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAA...",
+          "assignments": [
+            {
+              "pelaksana_id": 7,
+              "qty": 2,
+              "weight": 10.5,
+              "tanggal": "2025-12-22",
+              "jamMulai": "08:00:00",
+              "jamSelesai": "10:00:00",
+              "catatan": "Shift pagi"
+            }
+          ],
+          "timestamp": "2025-12-22T08:00:00.000000Z"
+        },
+        "1002": {
+          "qtyActual": 1,
+          "berat": 5.0,
+          "assignments": [
+            {
+              "pelaksana_id": 8,
+              "qty": 1,
+              "berat": 5.0,
+              "tanggal": "2025-12-22",
+              "jamMulai": "13:00:00",
+              "jamSelesai": "14:00:00"
+            }
+          ]
+        }
+      }
+    }
+    ```
+  - Response (201):
+    ```json
+    {
+      "success": true,
+      "message": "Data WorkOrderActual berhasil disimpan"
+    }
+    ```
+
 ## Pelanggan
 Fields (data): `kode`, `nama_pelanggan`, `kota`, `telepon_hp`, `contact_person`, `id`
 

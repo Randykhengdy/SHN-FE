@@ -19,6 +19,7 @@ import { Switch } from '@/components/ui/switch';
 import PelaksanaActualModal from '@/components/modals/PelaksanaActualModal';
 import { getPelaksanaOptions } from '@/services/masterDataService';
 import { Label } from '@/components/ui/label';
+import { format } from 'date-fns';
 
 export default function AddWOActualPage() {
   const navigate = useNavigate();
@@ -138,6 +139,7 @@ export default function AddWOActualPage() {
           jenis_barang: item.jenis_barang || item.jenisBarang || {},
           bentuk_barang: item.bentuk_barang || item.bentukBarang || {},
           grade_barang: item.grade_barang || item.gradeBarang || {},
+          jenis_potongan: item.jenis_potongan || item.potongan_jenis || item.jenisPotongan || null,
           jumlah: parseFloat(item.qty || item.quantity || item.jumlah || 0),
           berat: parseFloat(item.berat || 0),
           pelaksana: normalizedPelaksana
@@ -167,8 +169,9 @@ export default function AddWOActualPage() {
             id: null,
             pelaksana_id: p?.pelaksana_info?.id || p?.pelaksana?.id || p?.id || null,
             pelaksana: p?.pelaksana_info?.nama_pelaksana || p?.pelaksana?.nama || p?.nama || p?.name || '-',
-            qty: 0,
-            berat: 0,
+            qty: p.qty || (it.pelaksana.length === 1 ? it.jumlah : 0),
+            weight: '',
+            berat: '',
             tanggal: p?.tanggal || null,
             jamMulai: p?.jam_mulai || p?.jamMulai || null,
             jamSelesai: p?.jam_selesai || p?.jamSelesai || null,
@@ -177,7 +180,7 @@ export default function AddWOActualPage() {
           }));
 
           initialItems[it.id] = {
-            timestamp: new Date().toISOString(),
+            timestamp: format(new Date(), 'yyyy-MM-dd HH:mm:ss'),
             status: 'PENDING',
             assignments: prefilledAssignments
           };
@@ -207,7 +210,7 @@ export default function AddWOActualPage() {
       [itemId]: {
         ...prev[itemId],
         [field]: value,
-        timestamp: new Date().toISOString() // Update timestamp on any change
+        timestamp: format(new Date(), 'yyyy-MM-dd HH:mm:ss') // Update timestamp on any change
       }
     }));
   };
@@ -396,8 +399,8 @@ export default function AddWOActualPage() {
             weight: a.berat ?? a.weight ?? 0,
             pelaksana_id: a.pelaksana_id || null,
             tanggal: a.tanggal || new Date().toISOString().split('T')[0],
-            jamMulai: a.jamMulai || '08:00:00',
-            jamSelesai: a.jamSelesai || '17:00:00',
+            jamMulai: a.jamMulai,
+            jamSelesai: a.jamSelesai,
             catatan: a.catatan || '',
             status: a.status || null
           }))
@@ -410,6 +413,7 @@ export default function AddWOActualPage() {
 
       const saveData = {
         // Jangan kirim actualWorkOrderId saat create; BE minta integer jika ada
+        actualWorkOrderId: null,
         planningWorkOrderId: parseInt(formData.planningWorkOrderId, 10),
         foto_bukti: typeof formData.foto_bukti === 'string' ? formData.foto_bukti : '',
         items: itemsForSave
@@ -438,7 +442,7 @@ export default function AddWOActualPage() {
               nama_pelaksana: r.pelaksana || r.pelaksana_name || r.pelaksanaInfo?.nama || r.pelaksana_info?.nama_pelaksana || '-'
             }
           }));
-          const beratPlanningComputed = (planningItem.pelaksana || []).reduce((a, p) => a + (parseFloat(p.weight ?? p.berat) || 0), 0);
+          const beratPlanningComputed = parseFloat(planningItem.berat || 0);
           const qtyActualComputed = assignments.reduce((a, r) => a + (parseInt(r.qty) || 0), 0);
           const beratActualComputed = assignments.reduce((a, r) => a + (parseFloat(r.berat ?? r.weight) || 0), 0);
 
@@ -810,6 +814,7 @@ export default function AddWOActualPage() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Item</TableHead>
+                          <TableHead className="text-center">Jenis Potongan</TableHead>
                           <TableHead className="text-center">Qty Planning</TableHead>
                           <TableHead className="text-center">Berat Planning (kg)</TableHead>
                           <TableHead className="text-center">Qty Actual</TableHead>
@@ -823,7 +828,7 @@ export default function AddWOActualPage() {
                         {selectedWOPlanning.items.map((planningItem) => {
                           const actualItem = actualItems[planningItem.id] || {};
                           const assignments = actualItem.assignments || [];
-                          const beratPlanningComputed = (planningItem.pelaksana || []).reduce((a, p) => a + (parseFloat(p.weight ?? p.berat) || 0), 0);
+                          const beratPlanningComputed = parseFloat(planningItem.berat || 0);
                           const qtyActualComputed = assignments.reduce((a, r) => a + (parseInt(r.qty) || 0), 0);
                           const beratActualComputed = assignments.reduce((a, r) => a + (parseFloat(r.berat ?? r.weight) || 0), 0);
                           return (
@@ -836,6 +841,7 @@ export default function AddWOActualPage() {
                                   {(planningItem.bentuk_barang?.nama || planningItem.bentuk_barang?.nama_bentuk_barang || 'Bentuk')} - {(planningItem.grade_barang?.nama || planningItem.grade_barang?.nama_grade_barang || 'Grade')}
                                 </div>
                               </TableCell>
+                              <TableCell className="text-center">{planningItem.jenis_potongan || '-'}</TableCell>
                               <TableCell className="text-center">{planningItem.jumlah ?? 0}</TableCell>
                               <TableCell className="text-center">{Math.round(beratPlanningComputed)}</TableCell>
                               <TableCell className="text-center">{qtyActualComputed}</TableCell>
@@ -975,14 +981,23 @@ export default function AddWOActualPage() {
 
       {/* Footer Action: Simpan di bawah kanan */}
       <div className="flex justify-end mt-6">
-        <Button
-          onClick={handleSave}
-          disabled={saving || loading}
-          className="flex items-center gap-2"
-        >
-          <Save className="h-4 w-4" />
-          {saving ? 'Menyimpan...' : 'Simpan'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => navigate('/wo-actual')}
+            disabled={saving || loading}
+          >
+            Batal
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={saving || loading}
+            className="flex items-center gap-2"
+          >
+            <Save className="h-4 w-4" />
+            {saving ? 'Menyimpan...' : 'Simpan'}
+          </Button>
+        </div>
       </div>
 
       {/* Modal pelaksana khusus WO Actual: planning view + input actual */}

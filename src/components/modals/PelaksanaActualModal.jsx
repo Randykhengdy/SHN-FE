@@ -46,7 +46,7 @@ const PelaksanaActualModal = ({
           pelaksana_id: prev.pelaksana_id ?? id,
           nama,
           qty: prev.qty ?? 0,
-          berat: prev.berat ?? prev.weight ?? 0,
+          berat: (prev.berat ?? prev.weight ?? ''),
           catatan: prev.catatan || (p?.catatan || ""),
         };
       });
@@ -58,7 +58,7 @@ const PelaksanaActualModal = ({
       pelaksana_id: r.pelaksana_id ?? r.pelaksana?.id ?? null,
       nama: r.pelaksana?.nama_pelaksana || r.pelaksana?.nama || r.nama || "-",
       qty: r.qty ?? 0,
-      berat: r.berat ?? r.weight ?? 0,
+      berat: (r.berat ?? r.weight ?? ''),
       catatan: r.catatan || "",
     }));
     setRows(computedFromActual);
@@ -127,7 +127,7 @@ const PelaksanaActualModal = ({
             <Input
               type="number"
               step="0.01"
-              value={row.berat ?? 0}
+              value={(row.berat === undefined || row.berat === null) ? '' : row.berat}
               onChange={(e) => updateRow(idx, "berat", e.target.value)}
               className={`w-28 mx-auto text-center ${readOnly ? 'bg-gray-50' : ''}`}
               min={0}

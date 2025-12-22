@@ -286,50 +286,7 @@ export const getPelangganOptions = async () => {
 };
 
 // Fetch Pelanggan options from sales order header
-export const getPelangganFromSOHeader = async () => {
-  checkMemoryUsage();
-  return await safeApiCall(async () => {
-    const response = await request('/api/sales-order/header?per_page=1000', { method: 'GET' });
 
-    // Extract unique pelanggan from sales order header
-    const uniquePelanggan = [];
-    const seenIds = new Set();
-
-    response.data.forEach(so => {
-      if (so.pelanggan && !seenIds.has(so.pelanggan.id)) {
-        seenIds.add(so.pelanggan.id);
-        uniquePelanggan.push({
-          value: so.pelanggan.id.toString(),
-          label: so.pelanggan.nama_pelanggan,
-          searchKey: so.pelanggan.nama_pelanggan
-        });
-      }
-    });
-
-    return uniquePelanggan;
-  }, 'PelangganFromSOHeaderService');
-};
-
-// Fetch Sales Order options from header endpoint
-export const getSalesOrderOptions = async () => {
-  checkMemoryUsage();
-  return await safeApiCall(async () => {
-    const params = new URLSearchParams({ per_page: '1000', status: 'active' });
-    const response = await request(`/sales-order/header?${params.toString()}`, { method: 'GET' });
-    const rows = Array.isArray(response?.data) ? response.data : (Array.isArray(response) ? response : []);
-    return rows.map(so => ({
-      value: so.id?.toString(),
-      label: `${so.nomor_so} - ${so.pelanggan?.nama_pelanggan || 'Unknown'} (${so.tanggal_so})`,
-      searchKey: `${so.nomor_so} ${so.pelanggan?.nama_pelanggan || ''}`,
-      nomor_so: so.nomor_so,
-      tanggal_so: so.tanggal_so,
-      pelanggan_id: so.pelanggan_id,
-      pelanggan_nama: so.pelanggan?.nama_pelanggan,
-      gudang_id: so.gudang_id,
-      gudang_nama: so.gudang?.nama_gudang
-    }));
-  }, 'SalesOrderOptionsService');
-};
 
 // Fetch Item Barang options
 export const getItemBarangOptions = async (gudangId = null) => {
