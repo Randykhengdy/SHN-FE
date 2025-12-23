@@ -16,7 +16,7 @@ export default function Dashboard() {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  
+
   const formatDateForInput = (date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -125,7 +125,7 @@ export default function Dashboard() {
       monthlyPurchaseChart.destroy();
     };
   }, [monthlyPurchaseData]);
-    // Chart.js setup
+  // Chart.js setup
   useEffect(() => {
     // Monthly Sales Chart
     const monthlySalesChart = new Chart(monthlySalesRef.current, {
@@ -159,7 +159,7 @@ export default function Dashboard() {
       monthlySalesChart.destroy();
     };
   }, [monthlySalesData]);
-    // Chart.js setup
+  // Chart.js setup
   useEffect(() => {
     // Monthly Work Order Planning Chart
     const monthlyWorkPlanningChart = new Chart(monthlyWorkPlanningRef.current, {
@@ -193,7 +193,7 @@ export default function Dashboard() {
       monthlyWorkPlanningChart.destroy();
     };
   }, [monthlyWorkPlanningData]);
-    // Chart.js setup
+  // Chart.js setup
   useEffect(() => {
     // Monthly Work Order Actual Chart
     const monthlyWorkActualChart = new Chart(monthlyWorkActualRef.current, {
@@ -357,39 +357,39 @@ export default function Dashboard() {
   const formatDateRange = (dateFromStr, dateToStr) => {
     const fromDate = new Date(dateFromStr);
     const toDate = new Date(dateToStr);
-    
+
     const formatDate = (date) => {
-      return date.toLocaleDateString('id-ID', { 
-        day: 'numeric', 
-        month: 'long', 
-        year: 'numeric' 
+      return date.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
       });
     };
-    
+
     // Check if same month and year
-    if (fromDate.getMonth() === toDate.getMonth() && 
-        fromDate.getFullYear() === toDate.getFullYear()) {
+    if (fromDate.getMonth() === toDate.getMonth() &&
+      fromDate.getFullYear() === toDate.getFullYear()) {
       return `${fromDate.getDate()} - ${toDate.getDate()} ${toDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`;
     }
-    
+
     return `${formatDate(fromDate)} - ${formatDate(toDate)}`;
   };
 
   const explodeDataToDaysInMonth = (data, setData, dateFromStr, dateToStr) => {
     const fromDate = new Date(dateFromStr);
     const toDate = new Date(dateToStr);
-    
+
     // Check if range spans multiple months
-    const isMultiMonth = fromDate.getMonth() !== toDate.getMonth() || 
-                         fromDate.getFullYear() !== toDate.getFullYear();
-    
+    const isMultiMonth = fromDate.getMonth() !== toDate.getMonth() ||
+      fromDate.getFullYear() !== toDate.getFullYear();
+
     // Ensure data is an array
     if (!Array.isArray(data)) {
       console.warn("explodeDataToDaysInMonth: data is not an array", data);
       setData([]);
       return;
     }
-    
+
     // Create a map using date string as key (YYYY-MM-DD format)
     const map = {};
     data.forEach(item => {
@@ -403,27 +403,27 @@ export default function Dashboard() {
         map[dateKey] = item.total;
       }
     });
-    
+
     // Generate chart data for all days in the range
     const chartData = [];
     const currentDate = new Date(fromDate);
-    
+
     while (currentDate <= toDate) {
       const dateKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
       const dayNum = currentDate.getDate();
-      
+
       // Create label: show day only for single month, or DD/MM for multi-month
-      const label = isMultiMonth 
+      const label = isMultiMonth
         ? `${String(dayNum).padStart(2, '0')}/${String(currentDate.getMonth() + 1).padStart(2, '0')}`
         : dayNum;
-      
+
       chartData.push({
         day: label,
         total: map[dateKey] ?? 0
       });
       currentDate.setDate(currentDate.getDate() + 1);
     }
-    
+
     setData(chartData);
   }
 
@@ -450,7 +450,7 @@ export default function Dashboard() {
           <div className="mb-4 text-lg font-semibold text-gray-700">
             Selamat datang di Sistem Inventory & Workshop SURYA LOGAM JAYA
           </div>
-          
+
           {/* Date Range Filter */}
           <div className="flex items-end gap-3 mb-6">
             <div>
@@ -523,7 +523,7 @@ export default function Dashboard() {
                 <canvas ref={monthlyWorkActualRef}></canvas>
               </div>
             </div>
-            <div className="bg-white p-5 rounded-xl shadow-sm">
+            {/* <div className="bg-white p-5 rounded-xl shadow-sm">
               <h3 className="text-lg font-semibold text-gray-700 mb-3">Distribusi Material</h3>
               <div className="relative h-56">
                 <canvas ref={materialDistRef}></canvas>
@@ -555,11 +555,11 @@ export default function Dashboard() {
               <div className="relative h-56">
                 <canvas ref={inventoryStatusRef}></canvas>
               </div>
-            </div>
+            </div> */}
           </div>
 
           {/* Low Stock Alerts */}
-          <div className="mb-8">
+          {/* <div className="mb-8">
             <div className="bg-white p-5 rounded-xl shadow-sm">
               <div className="flex items-center mb-4 text-lg font-semibold text-gray-700">
                 <span className="text-red-500 mr-2">⚠️</span>
@@ -580,10 +580,10 @@ export default function Dashboard() {
                 ))}
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Recent Activity */}
-          <div>
+          {/* <div>
             <div className="bg-white p-5 rounded-xl shadow-sm">
               <div className="text-lg font-semibold text-gray-700 mb-4">
                 Aktivitas Terbaru
@@ -602,7 +602,7 @@ export default function Dashboard() {
                 )}
               </ul>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
 
