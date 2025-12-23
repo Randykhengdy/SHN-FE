@@ -4,7 +4,7 @@
   "description": "SHN React Application",
   "author": "SHN",
   "private": true,
-  "version": "1.0.4",
+  "version": "0.0.1",
   "type": "module",
   "scripts": {
     "dev:vite": "vite",
@@ -131,8 +131,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "Randykhengdy",
-        "repo": "SHN-FE",
+        "owner": "divinecoid",
+        "repo": "SHN-BE",
         "releaseType": "release"
       }
     ]
