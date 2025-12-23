@@ -229,6 +229,24 @@ function createWindow() {
     }
     return 0;
   };
+
+  // Helper function to get authorization header based on token type
+  const getAuthHeader = (token) => {
+    if (!token) return null;
+    // Classic tokens start with 'ghp_' or 'gho_' or 'ghu_' or 'ghs_' or 'ghr_'
+    // Fine-grained tokens start with 'github_pat_'
+    if (token.startsWith('github_pat_')) {
+      console.log('[Auth] Using Bearer format for fine-grained token');
+      return `Bearer ${token}`;
+    } else if (token.startsWith('ghp_') || token.startsWith('gho_') || token.startsWith('ghu_') || token.startsWith('ghs_') || token.startsWith('ghr_')) {
+      console.log('[Auth] Using token format for classic token');
+      return `token ${token}`;
+    } else {
+      // Default to token format for unknown types
+      console.log('[Auth] Unknown token type, using token format');
+      return `token ${token}`;
+    }
+  };
   const checkForUpdatesFallback = async () => {
     const repo = getPublishRepo();
     if (!repo) throw new Error('Publish repo tidak terkonfigurasi');
@@ -237,28 +255,43 @@ function createWindow() {
     // Prepare headers with GitHub token if available
     const headers = { 'User-Agent': 'SHNUpdater' };
     if (process.env.GH_TOKEN) {
-      headers['Authorization'] = `token ${process.env.GH_TOKEN}`;
+      console.log('[checkForUpdatesFallback] GH_TOKEN ditemukan, panjang:', process.env.GH_TOKEN.length);
+      console.log('[checkForUpdatesFallback] Token preview:', process.env.GH_TOKEN.substring(0, 10) + '...');
+      const authHeader = getAuthHeader(process.env.GH_TOKEN);
+      if (authHeader) headers['Authorization'] = authHeader;
+    } else {
+      console.warn('[checkForUpdatesFallback] GH_TOKEN tidak ditemukan di environment variables');
     }
 
-    const res = await axios.get(url, { headers });
-    const latest = res.data;
-    let latestVersion = latest.tag_name || latest.name || latest.id;
-    const ymlAsset = (latest.assets || []).find(a => /latest\.yml$/i.test(a.name));
-    if (ymlAsset && ymlAsset.browser_download_url) {
-      try {
-        const yml = await axios.get(ymlAsset.browser_download_url, { headers });
-        const m = /version:\s*([^\s]+)/.exec(String(yml.data || ''));
-        if (m && m[1]) latestVersion = m[1];
-      } catch (_) { }
-    }
-    const current = app.getVersion();
-    const cmp = compareSemver(latestVersion, current);
-    if (cmp > 0) {
-      if (mainWindow) mainWindow.webContents.send('update-event', { type: 'available', info: { version: latestVersion } });
-      if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Update Tersedia', message: `Versi ${latestVersion} tersedia.`, type: 'info' });
-    } else {
-      if (mainWindow) mainWindow.webContents.send('update-event', { type: 'none', info: { version: latestVersion } });
-      if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Up-to-date', message: `Anda sudah di versi ${current}.`, type: 'info' });
+    console.log('[checkForUpdatesFallback] Request URL:', url);
+    console.log('[checkForUpdatesFallback] Headers:', { ...headers, Authorization: headers.Authorization ? '[REDACTED]' : undefined });
+
+    try {
+      const res = await axios.get(url, { headers });
+      const latest = res.data;
+      let latestVersion = latest.tag_name || latest.name || latest.id;
+      const ymlAsset = (latest.assets || []).find(a => /latest\.yml$/i.test(a.name));
+      if (ymlAsset && ymlAsset.browser_download_url) {
+        try {
+          const yml = await axios.get(ymlAsset.browser_download_url, { headers });
+          const m = /version:\s*([^\s]+)/.exec(String(yml.data || ''));
+          if (m && m[1]) latestVersion = m[1];
+        } catch (_) { }
+      }
+      const current = app.getVersion();
+      const cmp = compareSemver(latestVersion, current);
+      if (cmp > 0) {
+        if (mainWindow) mainWindow.webContents.send('update-event', { type: 'available', info: { version: latestVersion } });
+        if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Update Tersedia', message: `Versi ${latestVersion} tersedia.`, type: 'info' });
+      } else {
+        if (mainWindow) mainWindow.webContents.send('update-event', { type: 'none', info: { version: latestVersion } });
+        if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Up-to-date', message: `Anda sudah di versi ${current}.`, type: 'info' });
+      }
+    } catch (error) {
+      console.error('[checkForUpdatesFallback] Error:', error.message);
+      console.error('[checkForUpdatesFallback] Status:', error.response?.status);
+      console.error('[checkForUpdatesFallback] Response data:', error.response?.data);
+      throw error;
     }
   };
   const downloadUpdateFallback = async () => {
@@ -269,57 +302,86 @@ function createWindow() {
     // Prepare headers with GitHub token if available
     const headers = { 'User-Agent': 'SHNUpdater' };
     if (process.env.GH_TOKEN) {
-      headers['Authorization'] = `token ${process.env.GH_TOKEN}`;
+      console.log('[downloadUpdateFallback] GH_TOKEN ditemukan, panjang:', process.env.GH_TOKEN.length);
+      console.log('[downloadUpdateFallback] Token preview:', process.env.GH_TOKEN.substring(0, 10) + '...');
+      const authHeader = getAuthHeader(process.env.GH_TOKEN);
+      if (authHeader) headers['Authorization'] = authHeader;
+    } else {
+      console.warn('[downloadUpdateFallback] GH_TOKEN tidak ditemukan di environment variables');
     }
 
-    const res = await axios.get(url, { headers });
-    const latest = res.data;
-    let latestVersion = latest.tag_name || latest.name || latest.id;
-    const ymlAsset = (latest.assets || []).find(a => /latest\.yml$/i.test(a.name));
-    if (ymlAsset && ymlAsset.browser_download_url) {
-      try {
-        const yml = await axios.get(ymlAsset.browser_download_url, { headers });
-        const m = /version:\s*([^\s]+)/.exec(String(yml.data || ''));
-        if (m && m[1]) latestVersion = m[1];
-      } catch (_) { }
-    }
-    const current = app.getVersion();
-    const cmp = compareSemver(latestVersion, current);
-    if (cmp <= 0) {
-      if (mainWindow) mainWindow.webContents.send('update-event', { type: 'none', info: { version: latestVersion } });
-      if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Up-to-date', message: `Versi rilis (${latestVersion}) sama/lebih rendah dari app (${current}). Tidak mengunduh.`, type: 'info' });
-      return;
-    }
-    const asset = (latest.assets || []).find(a => /\.exe$/i.test(a.name));
-    if (!asset) throw new Error('Asset installer .exe tidak ditemukan di Release');
-    const controller = new AbortController();
-    const dl = await axios.get(asset.browser_download_url, { responseType: 'stream', headers, signal: controller.signal });
-    const saveDir = app.getPath('downloads');
-    const savePath = path.join(saveDir, asset.name);
-    await new Promise((resolve, reject) => {
-      const ws = fs.createWriteStream(savePath);
-      const total = Number(dl.headers && dl.headers['content-length'] ? dl.headers['content-length'] : 0);
-      let received = 0;
-      let lastEmit = 0;
-      currentDownload = { controller, total, received };
-      dl.data.on('data', chunk => {
-        received += chunk.length;
-        currentDownload.received = received;
-        const now = Date.now();
-        if (now - lastEmit > 200) {
-          const percent = total > 0 ? Math.round((received / total) * 100) : null;
-          if (mainWindow) mainWindow.webContents.send('update-event', { type: 'progress', progress: { transferred: received, total, percent } });
-          lastEmit = now;
-        }
+    console.log('[downloadUpdateFallback] Request URL:', url);
+    console.log('[downloadUpdateFallback] Headers:', { ...headers, Authorization: headers.Authorization ? '[REDACTED]' : undefined });
+
+    try {
+      const res = await axios.get(url, { headers });
+      console.log('[downloadUpdateFallback] Successfully fetched release info');
+      const latest = res.data;
+      let latestVersion = latest.tag_name || latest.name || latest.id;
+      const ymlAsset = (latest.assets || []).find(a => /latest\.yml$/i.test(a.name));
+      if (ymlAsset && ymlAsset.browser_download_url) {
+        try {
+          const yml = await axios.get(ymlAsset.browser_download_url, { headers });
+          const m = /version:\s*([^\s]+)/.exec(String(yml.data || ''));
+          if (m && m[1]) latestVersion = m[1];
+        } catch (_) { }
+      }
+      const current = app.getVersion();
+      const cmp = compareSemver(latestVersion, current);
+      if (cmp <= 0) {
+        if (mainWindow) mainWindow.webContents.send('update-event', { type: 'none', info: { version: latestVersion } });
+        if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Up-to-date', message: `Versi rilis (${latestVersion}) sama/lebih rendah dari app (${current}). Tidak mengunduh.`, type: 'info' });
+        return;
+      }
+      const asset = (latest.assets || []).find(a => /\.exe$/i.test(a.name));
+      if (!asset) throw new Error('Asset installer .exe tidak ditemukan di Release');
+      console.log('[downloadUpdateFallback] Downloading asset:', asset.name);
+      console.log('[downloadUpdateFallback] Asset URL:', asset.url);
+      console.log('[downloadUpdateFallback] Browser download URL:', asset.browser_download_url);
+
+      // For private repos, use API URL with Accept header instead of browser_download_url
+      const downloadUrl = asset.url; // Use API endpoint for private repos
+      const downloadHeaders = {
+        ...headers,
+        'Accept': 'application/octet-stream' // Required for downloading assets via API
+      };
+      console.log('[downloadUpdateFallback] Using API URL for private repo download');
+
+      const controller = new AbortController();
+      const dl = await axios.get(downloadUrl, { responseType: 'stream', headers: downloadHeaders, signal: controller.signal });
+      const saveDir = app.getPath('downloads');
+      const savePath = path.join(saveDir, asset.name);
+      await new Promise((resolve, reject) => {
+        const ws = fs.createWriteStream(savePath);
+        const total = Number(dl.headers && dl.headers['content-length'] ? dl.headers['content-length'] : 0);
+        let received = 0;
+        let lastEmit = 0;
+        currentDownload = { controller, total, received };
+        dl.data.on('data', chunk => {
+          received += chunk.length;
+          currentDownload.received = received;
+          const now = Date.now();
+          if (now - lastEmit > 200) {
+            const percent = total > 0 ? Math.round((received / total) * 100) : null;
+            if (mainWindow) mainWindow.webContents.send('update-event', { type: 'progress', progress: { transferred: received, total, percent } });
+            lastEmit = now;
+          }
+        });
+        dl.data.pipe(ws);
+        ws.on('finish', resolve);
+        ws.on('error', reject);
       });
-      dl.data.pipe(ws);
-      ws.on('finish', resolve);
-      ws.on('error', reject);
-    });
-    if (mainWindow) mainWindow.webContents.send('update-event', { type: 'downloaded', info: { file: savePath } });
-    if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Update Diunduh', message: `File disimpan: ${savePath}`, type: 'success' });
-    lastDownloadedInstallerPath = savePath;
-    try { await shell.openPath(savePath); } catch (_) { }
+      if (mainWindow) mainWindow.webContents.send('update-event', { type: 'downloaded', info: { file: savePath } });
+      if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Update Diunduh', message: `File disimpan: ${savePath}`, type: 'success' });
+      lastDownloadedInstallerPath = savePath;
+      try { await shell.openPath(savePath); } catch (_) { }
+    } catch (error) {
+      console.error('[downloadUpdateFallback] Error:', error.message);
+      console.error('[downloadUpdateFallback] Status:', error.response?.status);
+      console.error('[downloadUpdateFallback] Response data:', error.response?.data);
+      console.error('[downloadUpdateFallback] Response headers:', error.response?.headers);
+      throw error;
+    }
   };
 
   // Add keyboard shortcuts for all environments
