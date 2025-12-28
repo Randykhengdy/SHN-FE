@@ -218,7 +218,7 @@ function createWindow() {
         return { owner: pub.owner, repo: pub.repo };
       }
     } catch (_) { }
-    return { owner: 'Randykhengdy', repo: 'SHN-FE' };
+    return { owner: 'divinecoid', repo: 'SHN-BE' };
   };
   const compareSemver = (a, b) => {
     const pa = String(a).replace(/^v/, '').split('.').map(n => parseInt(n || '0', 10));

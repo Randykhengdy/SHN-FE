@@ -4,7 +4,7 @@
   "description": "SHN React Application",
   "author": "SHN",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.0.3",
   "type": "module",
   "scripts": {
     "dev:vite": "vite",
@@ -91,7 +91,11 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
-      "package.json"
+      "package.json",
+      "!node_modules/@tailwindcss/oxide-*",
+      "!node_modules/@emnapi/**",
+      "!node_modules/**/oxide-*",
+      "!node_modules/**/emnapi*"
     ],
     "extraResources": [
       {
