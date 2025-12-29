@@ -1,8 +1,14 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog, shell } = require('electron');
 const axios = require('axios');
+const path = require('path');
+const fs = require('fs');
 
-// Load environment variables from .env file
-require('dotenv').config();
+// Load environment variables from .env file with explicit path
+const envPath = path.join(__dirname, '..', '.env');
+console.log('[DOTENV] Loading .env from:', envPath);
+console.log('[DOTENV] .env exists:', fs.existsSync(envPath));
+require('dotenv').config({ path: envPath });
+console.log('[DOTENV] GH_TOKEN loaded:', process.env.GH_TOKEN ? `Yes (length: ${process.env.GH_TOKEN.length})` : 'No');
 
 let autoUpdater;
 try {
@@ -10,8 +16,6 @@ try {
 } catch (_) {
   autoUpdater = null;
 }
-const path = require('path');
-const fs = require('fs');
 
 // Keep a global reference of the window object
 // If you don't, the window will be closed automatically when the JavaScript object is garbage collected
