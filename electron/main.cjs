@@ -1,13 +1,21 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog, shell } = require('electron');
 const axios = require('axios');
+const path = require('path');
+const fs = require('fs');
+
+// Load environment variables from .env file with explicit path
+const envPath = path.join(__dirname, '..', '.env');
+console.log('[DOTENV] Loading .env from:', envPath);
+console.log('[DOTENV] .env exists:', fs.existsSync(envPath));
+require('dotenv').config({ path: envPath });
+console.log('[DOTENV] GH_TOKEN loaded:', process.env.GH_TOKEN ? `Yes (length: ${process.env.GH_TOKEN.length})` : 'No');
+
 let autoUpdater;
 try {
   ({ autoUpdater } = require('electron-updater'));
 } catch (_) {
   autoUpdater = null;
 }
-const path = require('path');
-const fs = require('fs');
 
 // Keep a global reference of the window object
 // If you don't, the window will be closed automatically when the JavaScript object is garbage collected
@@ -69,11 +77,11 @@ function createWindow() {
   } else {
     // Production mode
     console.log('Production mode - loading local file');
-    
+
     // Check if we're in a packaged app
     const isPackaged = app.isPackaged;
     console.log('Is packaged:', isPackaged);
-    
+
     let indexPath;
     if (isPackaged) {
       // In packaged app, resources are in app.asar
@@ -85,10 +93,10 @@ function createWindow() {
       // In development, use relative path
       indexPath = path.join(__dirname, '..', 'dist', 'index.html');
     }
-    
+
     console.log('Trying to load:', indexPath);
     console.log('File exists:', fs.existsSync(indexPath));
-    
+
     if (fs.existsSync(indexPath)) {
       mainWindow.loadFile(indexPath).catch(err => {
         console.error('Failed to load index.html:', err);
@@ -96,14 +104,14 @@ function createWindow() {
       });
     } else {
       console.error('index.html not found at:', indexPath);
-      
+
       // Try alternative paths
       const alternativePaths = [
         path.join(process.cwd(), 'dist', 'index.html'),
         path.join(__dirname, 'dist', 'index.html'),
         path.join(app.getAppPath(), 'dist', 'index.html')
       ];
-      
+
       let found = false;
       for (const altPath of alternativePaths) {
         if (fs.existsSync(altPath)) {
@@ -116,7 +124,7 @@ function createWindow() {
           break;
         }
       }
-      
+
       if (!found) {
         const errorMsg = `Application files not found.\n\nSearched paths:\n- ${indexPath}\n- ${alternativePaths.join('\n- ')}\n\nPlease reinstall the application.`;
         console.error(errorMsg);
@@ -131,17 +139,17 @@ function createWindow() {
     mainWindow.webContents.setZoomLevel(0);
     mainWindow.webContents.setVisualZoomLevelLimits(1, 1);
     mainWindow.webContents.setZoomFactor(1);
-    
-         // Simple memory management
-     setInterval(() => {
-       try {
-         if (global.gc) {
-           global.gc();
-         }
-       } catch (error) {
-         // Silent fail - don't log to avoid spam
-       }
-     }, 120000); // Every 2 minutes
+
+    // Simple memory management
+    setInterval(() => {
+      try {
+        if (global.gc) {
+          global.gc();
+        }
+      } catch (error) {
+        // Silent fail - don't log to avoid spam
+      }
+    }, 120000); // Every 2 minutes
   });
 
   mainWindow.webContents.on('before-input-event', (event, input) => {
@@ -180,9 +188,9 @@ function createWindow() {
       autoUpdater.on('update-downloaded', (info) => {
         if (mainWindow) mainWindow.webContents.send('update-event', { type: 'downloaded', info });
         if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Update Siap', message: 'Pembaruan sudah diunduh. Aplikasi akan restart untuk menginstall.', type: 'success' });
-        try { autoUpdater.quitAndInstall(); } catch (_) {}
+        try { autoUpdater.quitAndInstall(); } catch (_) { }
       });
-    } catch (_) {}
+    } catch (_) { }
   }
 
   const askRendererConfirm = (options = {}) => {
@@ -213,95 +221,171 @@ function createWindow() {
       if (pub && pub.provider === 'github' && pub.owner && pub.repo) {
         return { owner: pub.owner, repo: pub.repo };
       }
-    } catch (_) {}
-    return { owner: 'Randykhengdy', repo: 'SHN-FE' };
+    } catch (_) { }
+    return { owner: 'divinecoid', repo: 'SHN-BE' };
   };
   const compareSemver = (a, b) => {
     const pa = String(a).replace(/^v/, '').split('.').map(n => parseInt(n || '0', 10));
     const pb = String(b).replace(/^v/, '').split('.').map(n => parseInt(n || '0', 10));
     for (let i = 0; i < 3; i++) {
-      if ((pa[i]||0) > (pb[i]||0)) return 1;
-      if ((pa[i]||0) < (pb[i]||0)) return -1;
+      if ((pa[i] || 0) > (pb[i] || 0)) return 1;
+      if ((pa[i] || 0) < (pb[i] || 0)) return -1;
     }
     return 0;
+  };
+
+  // Helper function to get authorization header based on token type
+  const getAuthHeader = (token) => {
+    if (!token) return null;
+    // Classic tokens start with 'ghp_' or 'gho_' or 'ghu_' or 'ghs_' or 'ghr_'
+    // Fine-grained tokens start with 'github_pat_'
+    if (token.startsWith('github_pat_')) {
+      console.log('[Auth] Using Bearer format for fine-grained token');
+      return `Bearer ${token}`;
+    } else if (token.startsWith('ghp_') || token.startsWith('gho_') || token.startsWith('ghu_') || token.startsWith('ghs_') || token.startsWith('ghr_')) {
+      console.log('[Auth] Using token format for classic token');
+      return `token ${token}`;
+    } else {
+      // Default to token format for unknown types
+      console.log('[Auth] Unknown token type, using token format');
+      return `token ${token}`;
+    }
   };
   const checkForUpdatesFallback = async () => {
     const repo = getPublishRepo();
     if (!repo) throw new Error('Publish repo tidak terkonfigurasi');
     const url = `https://api.github.com/repos/${repo.owner}/${repo.repo}/releases/latest`;
-    const res = await axios.get(url, { headers: { 'User-Agent': 'SHNUpdater' } });
-    const latest = res.data;
-    let latestVersion = latest.tag_name || latest.name || latest.id;
-    const ymlAsset = (latest.assets || []).find(a => /latest\.yml$/i.test(a.name));
-    if (ymlAsset && ymlAsset.browser_download_url) {
-      try {
-        const yml = await axios.get(ymlAsset.browser_download_url, { headers: { 'User-Agent': 'SHNUpdater' } });
-        const m = /version:\s*([^\s]+)/.exec(String(yml.data || ''));
-        if (m && m[1]) latestVersion = m[1];
-      } catch (_) {}
-    }
-    const current = app.getVersion();
-    const cmp = compareSemver(latestVersion, current);
-    if (cmp > 0) {
-      if (mainWindow) mainWindow.webContents.send('update-event', { type: 'available', info: { version: latestVersion } });
-      if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Update Tersedia', message: `Versi ${latestVersion} tersedia.`, type: 'info' });
+
+    // Prepare headers with GitHub token if available
+    const headers = { 'User-Agent': 'SHNUpdater' };
+    if (process.env.GH_TOKEN) {
+      console.log('[checkForUpdatesFallback] GH_TOKEN ditemukan, panjang:', process.env.GH_TOKEN.length);
+      console.log('[checkForUpdatesFallback] Token preview:', process.env.GH_TOKEN.substring(0, 10) + '...');
+      const authHeader = getAuthHeader(process.env.GH_TOKEN);
+      if (authHeader) headers['Authorization'] = authHeader;
     } else {
-      if (mainWindow) mainWindow.webContents.send('update-event', { type: 'none', info: { version: latestVersion } });
-      if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Up-to-date', message: `Anda sudah di versi ${current}.`, type: 'info' });
+      console.warn('[checkForUpdatesFallback] GH_TOKEN tidak ditemukan di environment variables');
+    }
+
+    console.log('[checkForUpdatesFallback] Request URL:', url);
+    console.log('[checkForUpdatesFallback] Headers:', { ...headers, Authorization: headers.Authorization ? '[REDACTED]' : undefined });
+
+    try {
+      const res = await axios.get(url, { headers });
+      const latest = res.data;
+      let latestVersion = latest.tag_name || latest.name || latest.id;
+      const ymlAsset = (latest.assets || []).find(a => /latest\.yml$/i.test(a.name));
+      if (ymlAsset && ymlAsset.browser_download_url) {
+        try {
+          const yml = await axios.get(ymlAsset.browser_download_url, { headers });
+          const m = /version:\s*([^\s]+)/.exec(String(yml.data || ''));
+          if (m && m[1]) latestVersion = m[1];
+        } catch (_) { }
+      }
+      const current = app.getVersion();
+      const cmp = compareSemver(latestVersion, current);
+      if (cmp > 0) {
+        if (mainWindow) mainWindow.webContents.send('update-event', { type: 'available', info: { version: latestVersion } });
+        if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Update Tersedia', message: `Versi ${latestVersion} tersedia.`, type: 'info' });
+      } else {
+        if (mainWindow) mainWindow.webContents.send('update-event', { type: 'none', info: { version: latestVersion } });
+        if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Up-to-date', message: `Anda sudah di versi ${current}.`, type: 'info' });
+      }
+    } catch (error) {
+      console.error('[checkForUpdatesFallback] Error:', error.message);
+      console.error('[checkForUpdatesFallback] Status:', error.response?.status);
+      console.error('[checkForUpdatesFallback] Response data:', error.response?.data);
+      throw error;
     }
   };
   const downloadUpdateFallback = async () => {
     const repo = getPublishRepo();
     if (!repo) throw new Error('Publish repo tidak terkonfigurasi');
     const url = `https://api.github.com/repos/${repo.owner}/${repo.repo}/releases/latest`;
-    const res = await axios.get(url, { headers: { 'User-Agent': 'SHNUpdater' } });
-    const latest = res.data;
-    let latestVersion = latest.tag_name || latest.name || latest.id;
-    const ymlAsset = (latest.assets || []).find(a => /latest\.yml$/i.test(a.name));
-    if (ymlAsset && ymlAsset.browser_download_url) {
-      try {
-        const yml = await axios.get(ymlAsset.browser_download_url, { headers: { 'User-Agent': 'SHNUpdater' } });
-        const m = /version:\s*([^\s]+)/.exec(String(yml.data || ''));
-        if (m && m[1]) latestVersion = m[1];
-      } catch (_) {}
+
+    // Prepare headers with GitHub token if available
+    const headers = { 'User-Agent': 'SHNUpdater' };
+    if (process.env.GH_TOKEN) {
+      console.log('[downloadUpdateFallback] GH_TOKEN ditemukan, panjang:', process.env.GH_TOKEN.length);
+      console.log('[downloadUpdateFallback] Token preview:', process.env.GH_TOKEN.substring(0, 10) + '...');
+      const authHeader = getAuthHeader(process.env.GH_TOKEN);
+      if (authHeader) headers['Authorization'] = authHeader;
+    } else {
+      console.warn('[downloadUpdateFallback] GH_TOKEN tidak ditemukan di environment variables');
     }
-    const current = app.getVersion();
-    const cmp = compareSemver(latestVersion, current);
-    if (cmp <= 0) {
-      if (mainWindow) mainWindow.webContents.send('update-event', { type: 'none', info: { version: latestVersion } });
-      if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Up-to-date', message: `Versi rilis (${latestVersion}) sama/lebih rendah dari app (${current}). Tidak mengunduh.`, type: 'info' });
-      return;
-    }
-    const asset = (latest.assets || []).find(a => /\.exe$/i.test(a.name));
-    if (!asset) throw new Error('Asset installer .exe tidak ditemukan di Release');
-    const controller = new AbortController();
-    const dl = await axios.get(asset.browser_download_url, { responseType: 'stream', signal: controller.signal });
-    const saveDir = app.getPath('downloads');
-    const savePath = path.join(saveDir, asset.name);
-    await new Promise((resolve, reject) => {
-      const ws = fs.createWriteStream(savePath);
-      const total = Number(dl.headers && dl.headers['content-length'] ? dl.headers['content-length'] : 0);
-      let received = 0;
-      let lastEmit = 0;
-      currentDownload = { controller, total, received };
-      dl.data.on('data', chunk => {
-        received += chunk.length;
-        currentDownload.received = received;
-        const now = Date.now();
-        if (now - lastEmit > 200) {
-          const percent = total > 0 ? Math.round((received / total) * 100) : null;
-          if (mainWindow) mainWindow.webContents.send('update-event', { type: 'progress', progress: { transferred: received, total, percent } });
-          lastEmit = now;
-        }
+
+    console.log('[downloadUpdateFallback] Request URL:', url);
+    console.log('[downloadUpdateFallback] Headers:', { ...headers, Authorization: headers.Authorization ? '[REDACTED]' : undefined });
+
+    try {
+      const res = await axios.get(url, { headers });
+      console.log('[downloadUpdateFallback] Successfully fetched release info');
+      const latest = res.data;
+      let latestVersion = latest.tag_name || latest.name || latest.id;
+      const ymlAsset = (latest.assets || []).find(a => /latest\.yml$/i.test(a.name));
+      if (ymlAsset && ymlAsset.browser_download_url) {
+        try {
+          const yml = await axios.get(ymlAsset.browser_download_url, { headers });
+          const m = /version:\s*([^\s]+)/.exec(String(yml.data || ''));
+          if (m && m[1]) latestVersion = m[1];
+        } catch (_) { }
+      }
+      const current = app.getVersion();
+      const cmp = compareSemver(latestVersion, current);
+      if (cmp <= 0) {
+        if (mainWindow) mainWindow.webContents.send('update-event', { type: 'none', info: { version: latestVersion } });
+        if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Up-to-date', message: `Versi rilis (${latestVersion}) sama/lebih rendah dari app (${current}). Tidak mengunduh.`, type: 'info' });
+        return;
+      }
+      const asset = (latest.assets || []).find(a => /\.exe$/i.test(a.name));
+      if (!asset) throw new Error('Asset installer .exe tidak ditemukan di Release');
+      console.log('[downloadUpdateFallback] Downloading asset:', asset.name);
+      console.log('[downloadUpdateFallback] Asset URL:', asset.url);
+      console.log('[downloadUpdateFallback] Browser download URL:', asset.browser_download_url);
+
+      // For private repos, use API URL with Accept header instead of browser_download_url
+      const downloadUrl = asset.url; // Use API endpoint for private repos
+      const downloadHeaders = {
+        ...headers,
+        'Accept': 'application/octet-stream' // Required for downloading assets via API
+      };
+      console.log('[downloadUpdateFallback] Using API URL for private repo download');
+
+      const controller = new AbortController();
+      const dl = await axios.get(downloadUrl, { responseType: 'stream', headers: downloadHeaders, signal: controller.signal });
+      const saveDir = app.getPath('downloads');
+      const savePath = path.join(saveDir, asset.name);
+      await new Promise((resolve, reject) => {
+        const ws = fs.createWriteStream(savePath);
+        const total = Number(dl.headers && dl.headers['content-length'] ? dl.headers['content-length'] : 0);
+        let received = 0;
+        let lastEmit = 0;
+        currentDownload = { controller, total, received };
+        dl.data.on('data', chunk => {
+          received += chunk.length;
+          currentDownload.received = received;
+          const now = Date.now();
+          if (now - lastEmit > 200) {
+            const percent = total > 0 ? Math.round((received / total) * 100) : null;
+            if (mainWindow) mainWindow.webContents.send('update-event', { type: 'progress', progress: { transferred: received, total, percent } });
+            lastEmit = now;
+          }
+        });
+        dl.data.pipe(ws);
+        ws.on('finish', resolve);
+        ws.on('error', reject);
       });
-      dl.data.pipe(ws);
-      ws.on('finish', resolve);
-      ws.on('error', reject);
-    });
-    if (mainWindow) mainWindow.webContents.send('update-event', { type: 'downloaded', info: { file: savePath } });
-    if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Update Diunduh', message: `File disimpan: ${savePath}`, type: 'success' });
-    lastDownloadedInstallerPath = savePath;
-    try { await shell.openPath(savePath); } catch (_) {}
+      if (mainWindow) mainWindow.webContents.send('update-event', { type: 'downloaded', info: { file: savePath } });
+      if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Update Diunduh', message: `File disimpan: ${savePath}`, type: 'success' });
+      lastDownloadedInstallerPath = savePath;
+      try { await shell.openPath(savePath); } catch (_) { }
+    } catch (error) {
+      console.error('[downloadUpdateFallback] Error:', error.message);
+      console.error('[downloadUpdateFallback] Status:', error.response?.status);
+      console.error('[downloadUpdateFallback] Response data:', error.response?.data);
+      console.error('[downloadUpdateFallback] Response headers:', error.response?.headers);
+      throw error;
+    }
   };
 
   // Add keyboard shortcuts for all environments
@@ -315,7 +399,7 @@ function createWindow() {
         mainWindow.webContents.openDevTools();
       }
     }
-    
+
     // Ctrl+R to reload
     if (input.control && input.key === 'r') {
       event.preventDefault();
@@ -325,7 +409,7 @@ function createWindow() {
         mainWindow.reload();
       }
     }
-    
+
     // Ctrl+Shift+R to hard reload
     if (input.control && input.shift && input.key === 'R') {
       event.preventDefault();
@@ -402,9 +486,9 @@ function createWindow() {
         { label: 'Item Barang Request', accelerator: 'CmdOrCtrl+I', click: () => mainWindow.webContents.send('navigate-to', '/item-barang-request') },
         { label: 'Approval', accelerator: 'CmdOrCtrl+Shift+A', click: () => mainWindow.webContents.send('navigate-to', '/approval') },
         { type: 'separator' },
-        { label: 'Konversi Barang', accelerator: 'CmdOrCtrl+K', click: () => mainWindow.webContents.send('navigate-to', '/konversi-barang')},
-        { label: 'Split Barang', accelerator: 'CmdOrCtrl+Shift+S', click: () => mainWindow.webContents.send('navigate-to', '/split-barang')},
-        { label: 'Merge Barang', accelerator: 'CmdOrCtrl+Shift+M', click: () => mainWindow.webContents.send('navigate-to', '/merge-barang')}
+        { label: 'Konversi Barang', accelerator: 'CmdOrCtrl+K', click: () => mainWindow.webContents.send('navigate-to', '/konversi-barang') },
+        { label: 'Split Barang', accelerator: 'CmdOrCtrl+Shift+S', click: () => mainWindow.webContents.send('navigate-to', '/split-barang') },
+        { label: 'Merge Barang', accelerator: 'CmdOrCtrl+Shift+M', click: () => mainWindow.webContents.send('navigate-to', '/merge-barang') }
       ]
     },
     {
@@ -457,7 +541,6 @@ function createWindow() {
             }
           }
         },
-        
         {
           label: 'Toggle DevTools',
           accelerator: 'F12',
@@ -496,7 +579,7 @@ function createWindow() {
     rolePermissionsDataCache = data;
     try {
       Menu.setApplicationMenu(Menu.buildFromTemplate(buildMenuTemplate()));
-    } catch (e) {}
+    } catch (e) { }
   });
 
   // Emitted when the window is closed
@@ -512,17 +595,17 @@ function createWindow() {
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error.message);
   console.error('Stack:', error.stack);
-  
+
   // Log to file
   try {
     const fs = require('fs');
     const logPath = path.join(__dirname, '../logs/electron-crash.log');
     const logDir = path.dirname(logPath);
-    
+
     if (!fs.existsSync(logDir)) {
       fs.mkdirSync(logDir, { recursive: true });
     }
-    
+
     const logEntry = `[${new Date().toISOString()}] Uncaught Exception: ${error.message}\nStack: ${error.stack}\n\n`;
     fs.appendFileSync(logPath, logEntry);
   } catch (logError) {
@@ -532,17 +615,17 @@ process.on('uncaughtException', (error) => {
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection:', reason);
-  
+
   // Log to file
   try {
     const fs = require('fs');
     const logPath = path.join(__dirname, '../logs/electron-crash.log');
     const logDir = path.dirname(logPath);
-    
+
     if (!fs.existsSync(logDir)) {
       fs.mkdirSync(logDir, { recursive: true });
     }
-    
+
     const logEntry = `[${new Date().toISOString()}] Unhandled Rejection: ${reason}\n\n`;
     fs.appendFileSync(logPath, logEntry);
   } catch (logError) {
@@ -606,40 +689,40 @@ ipcMain.handle('save-canvas-file', async (event, { dataUrl, filename }) => {
     console.log('=== SAVE CANVAS FILE DEBUG ===');
     console.log('Received filename:', filename);
     console.log('DataURL length:', dataUrl ? dataUrl.length : 'null');
-    
+
     // Create canvas-previews directory in public folder
     const publicDir = path.join(__dirname, '..', 'public');
     const canvasPreviewsDir = path.join(publicDir, 'canvas-previews');
-    
+
     console.log('Public dir:', publicDir);
     console.log('Canvas previews dir:', canvasPreviewsDir);
     console.log('Canvas previews dir exists:', fs.existsSync(canvasPreviewsDir));
-    
+
     // Ensure directory exists
     if (!fs.existsSync(canvasPreviewsDir)) {
       console.log('Creating canvas-previews directory...');
       fs.mkdirSync(canvasPreviewsDir, { recursive: true });
       console.log('Directory created successfully');
     }
-    
+
     // Convert dataURL to buffer
     const base64Data = dataUrl.replace(/^data:image\/[a-z]+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
-    
+
     console.log('Buffer size:', buffer.length);
-    
+
     // Save file
     const filePath = path.join(canvasPreviewsDir, filename);
     console.log('Saving to file path:', filePath);
-    
+
     fs.writeFileSync(filePath, buffer);
-    
+
     console.log(`✅ CANVAS PREVIEW SAVED SUCCESSFULLY!`);
     console.log(`📁 Full file path: ${filePath}`);
     console.log(`📄 Filename: ${filename}`);
     console.log(`📊 File size: ${buffer.length} bytes`);
     console.log(`🔍 File exists after save: ${fs.existsSync(filePath)}`);
-    
+
     // Get file stats for verification
     try {
       const stats = fs.statSync(filePath);
@@ -648,7 +731,7 @@ ipcMain.handle('save-canvas-file', async (event, { dataUrl, filename }) => {
     } catch (statError) {
       console.error('Error getting file stats:', statError);
     }
-    
+
     return {
       success: true,
       message: 'File saved successfully',
@@ -656,7 +739,7 @@ ipcMain.handle('save-canvas-file', async (event, { dataUrl, filename }) => {
       fullPath: filePath,
       fileSize: buffer.length
     };
-    
+
   } catch (error) {
     console.error('Error saving canvas preview:', error);
     console.error('Error stack:', error.stack);
@@ -672,14 +755,14 @@ ipcMain.handle('save-canvas-file', async (event, { dataUrl, filename }) => {
 ipcMain.handle('clear-canvas-previews', async () => {
   try {
     console.log('=== CLEAR CANVAS PREVIEWS DEBUG ===');
-    
+
     // Get canvas-previews directory path
     const publicDir = path.join(__dirname, '..', 'public');
     const canvasPreviewsDir = path.join(publicDir, 'canvas-previews');
-    
+
     console.log('Canvas previews dir:', canvasPreviewsDir);
     console.log('Canvas previews dir exists:', fs.existsSync(canvasPreviewsDir));
-    
+
     if (!fs.existsSync(canvasPreviewsDir)) {
       console.log('Canvas previews directory does not exist, nothing to clear');
       return {
@@ -688,20 +771,20 @@ ipcMain.handle('clear-canvas-previews', async () => {
         filesDeleted: 0
       };
     }
-    
+
     // Read directory contents
     const files = fs.readdirSync(canvasPreviewsDir);
     console.log('Files in canvas-previews:', files);
-    
+
     let deletedCount = 0;
     const errors = [];
-    
+
     // Delete each file
     for (const file of files) {
       try {
         const filePath = path.join(canvasPreviewsDir, file);
         const stats = fs.statSync(filePath);
-        
+
         if (stats.isFile()) {
           fs.unlinkSync(filePath);
           deletedCount++;
@@ -714,18 +797,18 @@ ipcMain.handle('clear-canvas-previews', async () => {
         errors.push(`${file}: ${fileError.message}`);
       }
     }
-    
+
     console.log(`✅ CANVAS PREVIEWS CLEARED SUCCESSFULLY!`);
     console.log(`📊 Files deleted: ${deletedCount}`);
     console.log(`❌ Errors: ${errors.length}`);
-    
+
     return {
       success: true,
       message: `Cleared ${deletedCount} files from canvas-previews`,
       filesDeleted: deletedCount,
       errors: errors.length > 0 ? errors : undefined
     };
-    
+
   } catch (error) {
     console.error('Error clearing canvas previews:', error);
     console.error('Error stack:', error.stack);
@@ -738,15 +821,15 @@ ipcMain.handle('clear-canvas-previews', async () => {
 });
 let lastDownloadedInstallerPath = null;
 let currentDownload = { controller: null, total: 0, received: 0 };
-  ipcMain.handle('cancel-download-update', async () => {
-    try {
-      if (currentDownload && currentDownload.controller) {
-        currentDownload.controller.abort();
-        currentDownload.controller = null;
-        if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Download Update', message: 'Unduhan dibatalkan.', type: 'info' });
-      }
-      return { ok: true };
-    } catch (e) {
-      return { ok: false, error: e?.message || String(e) };
+ipcMain.handle('cancel-download-update', async () => {
+  try {
+    if (currentDownload && currentDownload.controller) {
+      currentDownload.controller.abort();
+      currentDownload.controller = null;
+      if (mainWindow) mainWindow.webContents.send('show-alert', { title: 'Download Update', message: 'Unduhan dibatalkan.', type: 'info' });
     }
-  });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e?.message || String(e) };
+  }
+});
