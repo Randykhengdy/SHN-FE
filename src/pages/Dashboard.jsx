@@ -16,7 +16,7 @@ export default function Dashboard() {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  
+
   const formatDateForInput = (date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -71,13 +71,23 @@ export default function Dashboard() {
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 10);
 
-  // Chart refs
+  // Canvas refs
   const monthlyPurchaseRef = useRef(null);
   const monthlySalesRef = useRef(null);
   const monthlyWorkPlanningRef = useRef(null);
   const monthlyWorkActualRef = useRef(null);
   const materialDistRef = useRef(null);
   const inventoryStatusRef = useRef(null);
+
+  // Chart instance refs
+  const monthlyPurchaseChartRef = useRef(null);
+  const monthlySalesChartRef = useRef(null);
+  const monthlyWorkPlanningChartRef = useRef(null);
+  const monthlyWorkActualChartRef = useRef(null);
+  const materialDistChartRef = useRef(null);
+  const inventoryStatusChartRef = useRef(null);
+
+  // Data state
   const [monthlyPurchaseData, setMonthlyPurchaseData] = useState(null);
   const [monthlySalesData, setMonthlySalesData] = useState(null);
   const [monthlyWorkPlanningData, setMonthlyWorkPlanningData] = useState(null);
@@ -91,16 +101,23 @@ export default function Dashboard() {
     initWorkOrderActualDashboard();
   }, [dateFrom, dateTo]);
 
-  // Chart.js setup
+  // Monthly Purchase Chart
   useEffect(() => {
-    // Monthly Purchase Chart
-    const monthlyPurchaseChart = new Chart(monthlyPurchaseRef.current, {
+    if (!monthlyPurchaseData || !monthlyPurchaseRef.current) return;
+
+    // Destroy existing chart if it exists
+    if (monthlyPurchaseChartRef.current) {
+      monthlyPurchaseChartRef.current.destroy();
+    }
+
+    // Create new chart
+    monthlyPurchaseChartRef.current = new Chart(monthlyPurchaseRef.current, {
       type: "bar",
       data: {
-        labels: monthlyPurchaseData?.map(item => item.day),
+        labels: monthlyPurchaseData.map(item => item.day),
         datasets: [{
-          label: "Penjualan (Juta Rupiah)",
-          data: monthlyPurchaseData?.map(item => item.total),
+          label: "Pembelian (Juta Rupiah)",
+          data: monthlyPurchaseData.map(item => item.total),
           backgroundColor: "rgba(44, 62, 80, 0.8)",
           borderColor: "rgba(44, 62, 80, 1)",
           borderWidth: 1
@@ -120,21 +137,33 @@ export default function Dashboard() {
         plugins: { legend: { display: false } }
       }
     });
+
     // Cleanup
     return () => {
-      monthlyPurchaseChart.destroy();
+      if (monthlyPurchaseChartRef.current) {
+        monthlyPurchaseChartRef.current.destroy();
+        monthlyPurchaseChartRef.current = null;
+      }
     };
   }, [monthlyPurchaseData]);
-    // Chart.js setup
+
+  // Monthly Sales Chart
   useEffect(() => {
-    // Monthly Sales Chart
-    const monthlySalesChart = new Chart(monthlySalesRef.current, {
+    if (!monthlySalesData || !monthlySalesRef.current) return;
+
+    // Destroy existing chart if it exists
+    if (monthlySalesChartRef.current) {
+      monthlySalesChartRef.current.destroy();
+    }
+
+    // Create new chart
+    monthlySalesChartRef.current = new Chart(monthlySalesRef.current, {
       type: "bar",
       data: {
-        labels: monthlySalesData?.map(item => item.day),
+        labels: monthlySalesData.map(item => item.day),
         datasets: [{
           label: "Penjualan (Juta Rupiah)",
-          data: monthlySalesData?.map(item => item.total),
+          data: monthlySalesData.map(item => item.total),
           backgroundColor: "rgba(44, 62, 80, 0.8)",
           borderColor: "rgba(44, 62, 80, 1)",
           borderWidth: 1
@@ -154,21 +183,33 @@ export default function Dashboard() {
         plugins: { legend: { display: false } }
       }
     });
+
     // Cleanup
     return () => {
-      monthlySalesChart.destroy();
+      if (monthlySalesChartRef.current) {
+        monthlySalesChartRef.current.destroy();
+        monthlySalesChartRef.current = null;
+      }
     };
   }, [monthlySalesData]);
-    // Chart.js setup
+
+  // Monthly Work Order Planning Chart
   useEffect(() => {
-    // Monthly Work Order Planning Chart
-    const monthlyWorkPlanningChart = new Chart(monthlyWorkPlanningRef.current, {
+    if (!monthlyWorkPlanningData || !monthlyWorkPlanningRef.current) return;
+
+    // Destroy existing chart if it exists
+    if (monthlyWorkPlanningChartRef.current) {
+      monthlyWorkPlanningChartRef.current.destroy();
+    }
+
+    // Create new chart
+    monthlyWorkPlanningChartRef.current = new Chart(monthlyWorkPlanningRef.current, {
       type: "bar",
       data: {
-        labels: monthlyWorkPlanningData?.map(item => item.day),
+        labels: monthlyWorkPlanningData.map(item => item.day),
         datasets: [{
-          label: "Penjualan (Juta Rupiah)",
-          data: monthlyWorkPlanningData?.map(item => item.total),
+          label: "Pengerjaan Planning (Juta Rupiah)",
+          data: monthlyWorkPlanningData.map(item => item.total),
           backgroundColor: "rgba(44, 62, 80, 0.8)",
           borderColor: "rgba(44, 62, 80, 1)",
           borderWidth: 1
@@ -188,21 +229,33 @@ export default function Dashboard() {
         plugins: { legend: { display: false } }
       }
     });
+
     // Cleanup
     return () => {
-      monthlyWorkPlanningChart.destroy();
+      if (monthlyWorkPlanningChartRef.current) {
+        monthlyWorkPlanningChartRef.current.destroy();
+        monthlyWorkPlanningChartRef.current = null;
+      }
     };
   }, [monthlyWorkPlanningData]);
-    // Chart.js setup
+
+  // Monthly Work Order Actual Chart
   useEffect(() => {
-    // Monthly Work Order Actual Chart
-    const monthlyWorkActualChart = new Chart(monthlyWorkActualRef.current, {
+    if (!monthlyWorkActualData || !monthlyWorkActualRef.current) return;
+
+    // Destroy existing chart if it exists
+    if (monthlyWorkActualChartRef.current) {
+      monthlyWorkActualChartRef.current.destroy();
+    }
+
+    // Create new chart
+    monthlyWorkActualChartRef.current = new Chart(monthlyWorkActualRef.current, {
       type: "bar",
       data: {
-        labels: monthlyWorkActualData?.map(item => item.day),
+        labels: monthlyWorkActualData.map(item => item.day),
         datasets: [{
-          label: "Penjualan (Juta Rupiah)",
-          data: monthlyWorkActualData?.map(item => item.total),
+          label: "Pengerjaan Actual (Juta Rupiah)",
+          data: monthlyWorkActualData.map(item => item.total),
           backgroundColor: "rgba(44, 62, 80, 0.8)",
           borderColor: "rgba(44, 62, 80, 1)",
           borderWidth: 1
@@ -222,59 +275,13 @@ export default function Dashboard() {
         plugins: { legend: { display: false } }
       }
     });
-    // Material Distribution Chart
-    const materialDistChart = new Chart(materialDistRef.current, {
-      type: "pie",
-      data: {
-        labels: ["Aluminium", "Copper", "Bronze", "Steel", "Other"],
-        datasets: [{
-          data: [35, 25, 20, 15, 5],
-          backgroundColor: [
-            "rgba(44, 62, 80, 0.8)",
-            "rgba(231, 76, 60, 0.8)",
-            "rgba(241, 196, 15, 0.8)",
-            "rgba(46, 204, 113, 0.8)",
-            "rgba(155, 89, 182, 0.8)"
-          ],
-          borderWidth: 2,
-          borderColor: "#fff"
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: "bottom" } }
-      }
-    });
-
-    // Inventory Status Chart
-    const inventoryStatusChart = new Chart(inventoryStatusRef.current, {
-      type: "doughnut",
-      data: {
-        labels: ["Tersedia", "Low Stock", "Habis"],
-        datasets: [{
-          data: [65, 25, 10],
-          backgroundColor: [
-            "rgba(46, 204, 113, 0.8)",
-            "rgba(241, 196, 15, 0.8)",
-            "rgba(231, 76, 60, 0.8)"
-          ],
-          borderWidth: 2,
-          borderColor: "#fff"
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: "bottom" } }
-      }
-    });
 
     // Cleanup
     return () => {
-      monthlyWorkActualChart.destroy();
-      materialDistChart.destroy();
-      inventoryStatusChart.destroy();
+      if (monthlyWorkActualChartRef.current) {
+        monthlyWorkActualChartRef.current.destroy();
+        monthlyWorkActualChartRef.current = null;
+      }
     };
   }, [monthlyWorkActualData]);
 
@@ -357,39 +364,39 @@ export default function Dashboard() {
   const formatDateRange = (dateFromStr, dateToStr) => {
     const fromDate = new Date(dateFromStr);
     const toDate = new Date(dateToStr);
-    
+
     const formatDate = (date) => {
-      return date.toLocaleDateString('id-ID', { 
-        day: 'numeric', 
-        month: 'long', 
-        year: 'numeric' 
+      return date.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
       });
     };
-    
+
     // Check if same month and year
-    if (fromDate.getMonth() === toDate.getMonth() && 
-        fromDate.getFullYear() === toDate.getFullYear()) {
+    if (fromDate.getMonth() === toDate.getMonth() &&
+      fromDate.getFullYear() === toDate.getFullYear()) {
       return `${fromDate.getDate()} - ${toDate.getDate()} ${toDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`;
     }
-    
+
     return `${formatDate(fromDate)} - ${formatDate(toDate)}`;
   };
 
   const explodeDataToDaysInMonth = (data, setData, dateFromStr, dateToStr) => {
     const fromDate = new Date(dateFromStr);
     const toDate = new Date(dateToStr);
-    
+
     // Check if range spans multiple months
-    const isMultiMonth = fromDate.getMonth() !== toDate.getMonth() || 
-                         fromDate.getFullYear() !== toDate.getFullYear();
-    
+    const isMultiMonth = fromDate.getMonth() !== toDate.getMonth() ||
+      fromDate.getFullYear() !== toDate.getFullYear();
+
     // Ensure data is an array
     if (!Array.isArray(data)) {
       console.warn("explodeDataToDaysInMonth: data is not an array", data);
       setData([]);
       return;
     }
-    
+
     // Create a map using date string as key (YYYY-MM-DD format)
     const map = {};
     data.forEach(item => {
@@ -403,27 +410,27 @@ export default function Dashboard() {
         map[dateKey] = item.total;
       }
     });
-    
+
     // Generate chart data for all days in the range
     const chartData = [];
     const currentDate = new Date(fromDate);
-    
+
     while (currentDate <= toDate) {
       const dateKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
       const dayNum = currentDate.getDate();
-      
+
       // Create label: show day only for single month, or DD/MM for multi-month
-      const label = isMultiMonth 
+      const label = isMultiMonth
         ? `${String(dayNum).padStart(2, '0')}/${String(currentDate.getMonth() + 1).padStart(2, '0')}`
         : dayNum;
-      
+
       chartData.push({
         day: label,
         total: map[dateKey] ?? 0
       });
       currentDate.setDate(currentDate.getDate() + 1);
     }
-    
+
     setData(chartData);
   }
 
@@ -450,7 +457,7 @@ export default function Dashboard() {
           <div className="mb-4 text-lg font-semibold text-gray-700">
             Selamat datang di Sistem Inventory & Workshop SURYA LOGAM JAYA
           </div>
-          
+
           {/* Date Range Filter */}
           <div className="flex items-end gap-3 mb-6">
             <div>
@@ -523,7 +530,7 @@ export default function Dashboard() {
                 <canvas ref={monthlyWorkActualRef}></canvas>
               </div>
             </div>
-            <div className="bg-white p-5 rounded-xl shadow-sm">
+            {/* <div className="bg-white p-5 rounded-xl shadow-sm">
               <h3 className="text-lg font-semibold text-gray-700 mb-3">Distribusi Material</h3>
               <div className="relative h-56">
                 <canvas ref={materialDistRef}></canvas>
@@ -555,11 +562,11 @@ export default function Dashboard() {
               <div className="relative h-56">
                 <canvas ref={inventoryStatusRef}></canvas>
               </div>
-            </div>
+            </div> */}
           </div>
 
           {/* Low Stock Alerts */}
-          <div className="mb-8">
+          {/* <div className="mb-8">
             <div className="bg-white p-5 rounded-xl shadow-sm">
               <div className="flex items-center mb-4 text-lg font-semibold text-gray-700">
                 <span className="text-red-500 mr-2">⚠️</span>
@@ -580,10 +587,10 @@ export default function Dashboard() {
                 ))}
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Recent Activity */}
-          <div>
+          {/* <div>
             <div className="bg-white p-5 rounded-xl shadow-sm">
               <div className="text-lg font-semibold text-gray-700 mb-4">
                 Aktivitas Terbaru
@@ -602,7 +609,7 @@ export default function Dashboard() {
                 )}
               </ul>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
 

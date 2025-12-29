@@ -4,7 +4,7 @@
   "description": "SHN React Application",
   "author": "SHN",
   "private": true,
-  "version": "1.0.4",
+  "version": "0.0.3",
   "type": "module",
   "scripts": {
     "dev:vite": "vite",
@@ -17,6 +17,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "dist": "npm run build && node scripts/fix-dependencies.js && electron-builder",
+    "make": "npm run build && node scripts/fix-dependencies.js && electron-builder --win",
     "dist:win": "npm run build && node scripts/fix-dependencies.js && electron-builder --win",
     "dist:mac": "npm run build && node scripts/fix-dependencies.js && electron-builder --mac",
     "dist:linux": "npm run build && node scripts/fix-dependencies.js && electron-builder --linux"
@@ -44,6 +45,7 @@
     "crypto-js": "^4.2.0",
     "date-fns": "^4.1.0",
     "dom-to-image": "^2.6.0",
+    "dotenv": "^17.2.3",
     "fabric": "^6.4.3",
     "gridstack": "^12.3.3",
     "html2canvas": "^1.4.1",
@@ -89,7 +91,11 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
-      "package.json"
+      "package.json",
+      "!node_modules/@tailwindcss/oxide-*",
+      "!node_modules/@emnapi/**",
+      "!node_modules/**/oxide-*",
+      "!node_modules/**/emnapi*"
     ],
     "extraResources": [
       {
@@ -131,8 +137,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "Randykhengdy",
-        "repo": "SHN-FE",
+        "owner": "divinecoid",
+        "repo": "SHN-BE",
         "releaseType": "release"
       }
     ]
