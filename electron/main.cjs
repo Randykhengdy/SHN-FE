@@ -3,11 +3,26 @@ const axios = require('axios');
 const path = require('path');
 const fs = require('fs');
 
-// Load environment variables from .env file with explicit path
-const envPath = path.join(__dirname, '..', '.env');
-console.log('[DOTENV] Loading .env from:', envPath);
-console.log('[DOTENV] .env exists:', fs.existsSync(envPath));
-require('dotenv').config({ path: envPath });
+// Load environment variables from .env file
+const loadEnv = () => {
+  const possiblePaths = [
+    path.join(__dirname, '..', '.env'), // Dev
+    path.join(process.resourcesPath, '.env'), // Prod (resources)
+    path.join(path.dirname(process.execPath), '.env'), // Prod (next to exe)
+    path.join(process.cwd(), '.env') // Fallback
+  ];
+
+  for (const envPath of possiblePaths) {
+    if (fs.existsSync(envPath)) {
+      console.log('[DOTENV] Loading .env from:', envPath);
+      require('dotenv').config({ path: envPath });
+      return;
+    }
+  }
+  console.log('[DOTENV] No .env file found in checked paths');
+};
+
+loadEnv();
 console.log('[DOTENV] GH_TOKEN loaded:', process.env.GH_TOKEN ? `Yes (length: ${process.env.GH_TOKEN.length})` : 'No');
 
 let autoUpdater;
@@ -37,6 +52,58 @@ function canShow(menuCode) {
   if (!rolePermissionsDataCache) return true;
   return hasAnyPermission(menuCode);
 }
+
+// Fallback updater helpers
+const getPublishRepo = () => {
+  try {
+    const pkgPathCandidates = [
+      path.join(__dirname, '..', 'package.json'),
+      path.join(app.getAppPath(), 'package.json'),
+      path.join(process.resourcesPath, 'app.asar', 'package.json')
+    ];
+    let pkg;
+    for (const p of pkgPathCandidates) {
+      if (fs.existsSync(p)) { 
+        try {
+          pkg = require(p); 
+          const pub = Array.isArray(pkg.build && pkg.build.publish) ? pkg.build.publish[0] : null;
+          if (pub && pub.provider === 'github') {
+             return { owner: pub.owner, repo: pub.repo, token: pub.token };
+          }
+        } catch (err) {
+          console.error('[getPublishRepo] Error reading package.json at', p, err);
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[getPublishRepo] Global error:', e);
+  }
+  return { owner: 'divinecoid', repo: 'SHN-BE' };
+};
+
+const compareSemver = (a, b) => {
+  const pa = String(a).replace(/^v/, '').split('.').map(n => parseInt(n || '0', 10));
+  const pb = String(b).replace(/^v/, '').split('.').map(n => parseInt(n || '0', 10));
+  for (let i = 0; i < 3; i++) {
+    if ((pa[i] || 0) > (pb[i] || 0)) return 1;
+    if ((pa[i] || 0) < (pb[i] || 0)) return -1;
+  }
+  return 0;
+};
+
+const getAuthHeader = (token) => {
+  if (!token) return null;
+  if (token.startsWith('github_pat_')) {
+    console.log('[Auth] Using Bearer format for fine-grained token');
+    return `Bearer ${token}`;
+  } else if (token.startsWith('ghp_') || token.startsWith('gho_') || token.startsWith('ghu_') || token.startsWith('ghs_') || token.startsWith('ghr_')) {
+    console.log('[Auth] Using token format for classic token');
+    return `token ${token}`;
+  } else {
+    console.log('[Auth] Unknown token type, using token format');
+    return `token ${token}`;
+  }
+};
 
 function createWindow() {
   // Create the browser window
@@ -206,51 +273,7 @@ function createWindow() {
     });
   };
 
-  // Fallback updater (GitHub releases) when electron-updater unavailable
-  const getPublishRepo = () => {
-    try {
-      const pkgPathCandidates = [
-        path.join(__dirname, '..', 'package.json'),
-        path.join(app.getAppPath(), 'package.json')
-      ];
-      let pkg;
-      for (const p of pkgPathCandidates) {
-        if (fs.existsSync(p)) { pkg = require(p); break; }
-      }
-      const pub = Array.isArray(pkg && pkg.build && pkg.build.publish) ? pkg.build.publish[0] : null;
-      if (pub && pub.provider === 'github' && pub.owner && pub.repo) {
-        return { owner: pub.owner, repo: pub.repo };
-      }
-    } catch (_) { }
-    return { owner: 'divinecoid', repo: 'SHN-BE' };
-  };
-  const compareSemver = (a, b) => {
-    const pa = String(a).replace(/^v/, '').split('.').map(n => parseInt(n || '0', 10));
-    const pb = String(b).replace(/^v/, '').split('.').map(n => parseInt(n || '0', 10));
-    for (let i = 0; i < 3; i++) {
-      if ((pa[i] || 0) > (pb[i] || 0)) return 1;
-      if ((pa[i] || 0) < (pb[i] || 0)) return -1;
-    }
-    return 0;
-  };
 
-  // Helper function to get authorization header based on token type
-  const getAuthHeader = (token) => {
-    if (!token) return null;
-    // Classic tokens start with 'ghp_' or 'gho_' or 'ghu_' or 'ghs_' or 'ghr_'
-    // Fine-grained tokens start with 'github_pat_'
-    if (token.startsWith('github_pat_')) {
-      console.log('[Auth] Using Bearer format for fine-grained token');
-      return `Bearer ${token}`;
-    } else if (token.startsWith('ghp_') || token.startsWith('gho_') || token.startsWith('ghu_') || token.startsWith('ghs_') || token.startsWith('ghr_')) {
-      console.log('[Auth] Using token format for classic token');
-      return `token ${token}`;
-    } else {
-      // Default to token format for unknown types
-      console.log('[Auth] Unknown token type, using token format');
-      return `token ${token}`;
-    }
-  };
   const checkForUpdatesFallback = async () => {
     const repo = getPublishRepo();
     if (!repo) throw new Error('Publish repo tidak terkonfigurasi');
@@ -258,13 +281,14 @@ function createWindow() {
 
     // Prepare headers with GitHub token if available
     const headers = { 'User-Agent': 'SHNUpdater' };
-    if (process.env.GH_TOKEN) {
-      console.log('[checkForUpdatesFallback] GH_TOKEN ditemukan, panjang:', process.env.GH_TOKEN.length);
-      console.log('[checkForUpdatesFallback] Token preview:', process.env.GH_TOKEN.substring(0, 10) + '...');
-      const authHeader = getAuthHeader(process.env.GH_TOKEN);
+    const token = process.env.GH_TOKEN || repo.token;
+    if (token) {
+      console.log('[checkForUpdatesFallback] Token ditemukan, panjang:', token.length);
+      console.log('[checkForUpdatesFallback] Token preview:', token.substring(0, 10) + '...');
+      const authHeader = getAuthHeader(token);
       if (authHeader) headers['Authorization'] = authHeader;
     } else {
-      console.warn('[checkForUpdatesFallback] GH_TOKEN tidak ditemukan di environment variables');
+      console.warn('[checkForUpdatesFallback] Token tidak ditemukan di environment variables atau package.json');
     }
 
     console.log('[checkForUpdatesFallback] Request URL:', url);
@@ -305,13 +329,14 @@ function createWindow() {
 
     // Prepare headers with GitHub token if available
     const headers = { 'User-Agent': 'SHNUpdater' };
-    if (process.env.GH_TOKEN) {
-      console.log('[downloadUpdateFallback] GH_TOKEN ditemukan, panjang:', process.env.GH_TOKEN.length);
-      console.log('[downloadUpdateFallback] Token preview:', process.env.GH_TOKEN.substring(0, 10) + '...');
-      const authHeader = getAuthHeader(process.env.GH_TOKEN);
+    const token = process.env.GH_TOKEN || repo.token;
+    if (token) {
+      console.log('[downloadUpdateFallback] Token ditemukan, panjang:', token.length);
+      console.log('[downloadUpdateFallback] Token preview:', token.substring(0, 10) + '...');
+      const authHeader = getAuthHeader(token);
       if (authHeader) headers['Authorization'] = authHeader;
     } else {
-      console.warn('[downloadUpdateFallback] GH_TOKEN tidak ditemukan di environment variables');
+      console.warn('[downloadUpdateFallback] Token tidak ditemukan di environment variables atau package.json');
     }
 
     console.log('[downloadUpdateFallback] Request URL:', url);
