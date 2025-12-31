@@ -1,6 +1,7 @@
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { gudangService } from "@/services/master-data";
+import { LOGO_BASE64 } from './logoConstants';
 
 export async function generatePDF(canvasElementId = "canvas") {
   const canvas = document.getElementById(canvasElementId);
@@ -24,14 +25,8 @@ export async function generatePDF(canvasElementId = "canvas") {
 // Generate Sales Order PDF
 export const generateSalesOrderPDF = async (salesOrderData) => {
   try {
-    // Convert logo to base64
-    const logoResponse = await fetch('/src/assets/logo.png');
-    const logoBlob = await logoResponse.blob();
-    const logoBase64 = await new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.readAsDataURL(logoBlob);
-    });
+    // Use pre-loaded base64 logo
+    const logoBase64 = LOGO_BASE64;
 
     // Create an isolated iframe to avoid CSS conflicts
     const iframe = document.createElement('iframe');
@@ -301,14 +296,8 @@ export const generateWorkOrderPDF = async (workOrderData) => {
   try {
     console.log('🔄 Generating Work Order PDF...', workOrderData);
 
-    // Convert logo to base64
-    const logoResponse = await fetch('/src/assets/logo.png');
-    const logoBlob = await logoResponse.blob();
-    const logoBase64 = await new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.readAsDataURL(logoBlob);
-    });
+    // Use pre-loaded base64 logo
+    const logoBase64 = LOGO_BASE64;
 
     // Create iframe for rendering
     const iframe = document.createElement('iframe');

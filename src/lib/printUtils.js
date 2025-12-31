@@ -1,3 +1,5 @@
+import { LOGO_BASE64 } from './logoConstants';
+
 // Utility functions for generating print content
 
 export const generatePodPrintContent = (podData) => {
@@ -39,7 +41,7 @@ export const generatePodPrintContent = (podData) => {
     </head>
     <body>
       <div class="header">
-        <img src="/src/assets/logo.png" alt="PT. SHN Logo" class="logo" />
+        <img src="${LOGO_BASE64}" alt="PT. SHN Logo" class="logo" />
         <div class="header-content">
           <div class="company-name">PT. SURYA HARSA NAGARA</div>
           <div class="document-title">SURAT JALAN</div>
@@ -153,7 +155,7 @@ export const generateInvoicePrintContent = (invoiceData) => {
     </head>
     <body>
       <div class="header">
-        <img src="/src/assets/logo.png" alt="PT. SHN Logo" class="logo" />
+        <img src="${LOGO_BASE64}" alt="PT. SHN Logo" class="logo" />
         <div class="header-content">
           <div class="company-name">PT. SURYA HARSA NAGARA</div>
           <div class="document-title">INVOICE</div>
@@ -317,7 +319,7 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
     </head>
     <body>
       <div class="header">
-        <img src="/src/assets/logo.png" alt="PT. SHN Logo" class="logo" />
+        <img src="${LOGO_BASE64}" alt="PT. SHN Logo" class="logo" />
         <div class="header-content">
           <div class="company-name">PT. SURYA HARSA NAGARA</div>
           <div class="document-title">SALES ORDER</div>
@@ -564,7 +566,7 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
     </head>
     <body>
       <div class="header">
-        <img src="/src/assets/logo.png" alt="PT. SHN Logo" class="logo" />
+        <img src="${LOGO_BASE64}" alt="PT. SHN Logo" class="logo" />
         <div class="header-content">
           <div class="company-name">PT. SURYA HARSA NAGARA</div>
           <div class="document-title">WORK ORDER ACTUAL</div>
@@ -772,7 +774,7 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
     </head>
     <body>
       <div class="header">
-        <img src="/src/assets/logo.png" alt="PT. SHN Logo" class="logo" />
+        <img src="${LOGO_BASE64}" alt="PT. SHN Logo" class="logo" />
         <div class="header-content">
           <div class="company-name">PT. SURYA HARSA NAGARA</div>
           <div class="document-title">WORK ORDER PLANNING</div>
@@ -950,7 +952,7 @@ export const generatePaymentReceiptPrintContent = (receiptData) => {
     </head>
     <body>
       <div class="header">
-        <img src="/src/assets/logo.png" alt="PT. SHN Logo" class="logo" />
+        <img src="${LOGO_BASE64}" alt="PT. SHN Logo" class="logo" />
         <div class="header-content">
           <div class="company-name">PT. SURYA HARSA NAGARA</div>
           <div class="document-title">KWITANSI PEMBAYARAN</div>
@@ -1094,7 +1096,7 @@ export const generateItemRequestPrintContent = (req) => {
     </head>
     <body>
       <div class="header">
-        <img src="/src/assets/logo.png" alt="PT. SHN Logo" class="logo" />
+        <img src="${LOGO_BASE64}" alt="PT. SHN Logo" class="logo" />
         <div class="header-content">
           <div class="company-name">PT. SURYA HARSA NAGARA</div>
           <div class="document-title">BUKTI KONVERSI</div>
