@@ -4,7 +4,7 @@
   "description": "SHN React Application",
   "author": "SHN",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.0.3",
   "type": "module",
   "scripts": {
     "dev:vite": "vite",
@@ -105,7 +105,9 @@
       {
         "from": ".env",
         "to": ".",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "win": {
