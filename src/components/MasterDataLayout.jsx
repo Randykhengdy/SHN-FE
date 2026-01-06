@@ -25,7 +25,7 @@ export default function MasterDataLayout({
   selection,
   menuCode = 'MASTER_DATA',
 }) {
-  const { showConfirm, AlertComponent } = useAlert();
+  const { showConfirm, showAlert, AlertComponent } = useAlert();
   const { hasPermission } = useAppContext();
   const [data, setData] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -59,20 +59,15 @@ export default function MasterDataLayout({
     try {
       const filters = {};
       if (filterConfig && filterValue && String(filterValue).toLowerCase() !== 'semua') {
-        const cap = String(filterValue).charAt(0).toUpperCase() + String(filterValue).slice(1).toLowerCase();
-        filters[filterConfig.param || 'tipe_gudang'] = cap;
+        filters[filterConfig.param || 'tipe_gudang'] = filterValue;
       }
       const response = showTrashed 
         ? await service.getTrashedPaginated(currentPage, itemsPerPage, debouncedSearchTerm, sortState.col, sortState.dir)
         : await service.getPaginated(currentPage, itemsPerPage, debouncedSearchTerm, sortState.col, sortState.dir, filters);
-      const rawRows = response.data || [];
-      const capFilter = (filterConfig && filterValue && String(filterValue).toLowerCase() !== 'semua')
-        ? String(filterValue).charAt(0).toUpperCase() + String(filterValue).slice(1).toLowerCase()
-        : null;
-      const rows = capFilter ? rawRows.filter(r => String(r.tipe_gudang || '').trim() === capFilter) : rawRows;
+      const rows = response.data || [];
       setData(rows);
       const serverTotal = response.pagination?.total || response.meta?.total || response.total || response.data?.length || 0;
-      setTotalItems(capFilter ? rows.length : serverTotal);
+      setTotalItems(serverTotal);
       
       if (response.pagination?.last_page) {
         setLastPageFromAPI(response.pagination.last_page);
@@ -195,8 +190,13 @@ export default function MasterDataLayout({
       "Konfirmasi Hapus Permanen",
       "Yakin ingin menghapus permanen data ini? Tindakan ini tidak dapat dibatalkan.",
       async () => {
-        await service.forceDelete(id);
-        fetchData();
+        try {
+          await service.forceDelete(id);
+          fetchData();
+        } catch (error) {
+          console.error("Force delete error:", error);
+          showAlert("Gagal Menghapus", error.message || "Data tidak dapat dihapus karena terkait dengan data lain.", "error");
+        }
       }
     );
   };

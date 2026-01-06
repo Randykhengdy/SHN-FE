@@ -520,6 +520,10 @@ function createWindow() {
       label: 'Help',
       submenu: [
         {
+          label: 'Change Password',
+          click: () => mainWindow.webContents.send('change-password-modal')
+        },
+        {
           label: 'About',
           click: () => {
             const name = app.getName();

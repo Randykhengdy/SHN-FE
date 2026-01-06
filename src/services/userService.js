@@ -37,6 +37,13 @@ export const userService = {
     });
   },
 
+  async changePassword(id, password, password_confirmation) {
+    return request(`/users/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ password, password_confirmation }),
+    });
+  },
+
   async softDelete(id) {
     if (process.env.NODE_ENV === 'development') {
       console.log(`🗑️ User service - Soft deleting user ID: ${id}`);

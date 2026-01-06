@@ -12,8 +12,7 @@ import {
   Wrench,
   ClipboardList,
   Edit3,
-  Activity,
-  TrendingUp
+  Activity
 } from "lucide-react";
 
 export default function NavigationMenu() {

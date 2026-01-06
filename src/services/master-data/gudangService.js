@@ -20,7 +20,6 @@ export const gudangService = {
     Object.entries(filters || {}).forEach(([k, v]) => {
       if (v !== undefined && v !== null && String(v).trim() !== "") {
         params.append(k, v);
-        if (k === 'tipe_gudang') params.append('tipe', v);
       }
     });
     return request(`/gudang?${params}`, { method: "GET" });
