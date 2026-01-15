@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sendMessage: (message) => ipcRenderer.send('message-from-renderer', message),
   onMessage: (callback) => ipcRenderer.on('message-from-main', (event, data) => callback(data)),
   onNavigate: (callback) => ipcRenderer.on('navigate-to', callback),
+  onChangePassword: (callback) => ipcRenderer.on('change-password-modal', callback),
   showMenu: () => ipcRenderer.send('show-menu'),
   hideMenu: () => ipcRenderer.send('hide-menu'),
   saveCanvasFile: (dataUrl, filename) => ipcRenderer.invoke('save-canvas-file', { dataUrl, filename }),

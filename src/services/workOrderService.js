@@ -43,7 +43,7 @@ export const workOrderService = {
     
     // Sorting
     if (params.sort_by) queryParams.append('sort_by', params.sort_by);
-    if (params.sort_order) queryParams.append('sort_order', params.sort_order);
+    if (params.sort_order || params.order) queryParams.append('order', params.sort_order || params.order);
     
     const url = `${BASE_URL}?${queryParams.toString()}`;
     return request(url, { method: 'GET' });

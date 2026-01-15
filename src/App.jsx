@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import AppRouter from "@/router/AppRouter";
 import useElectronNavigation from "@/hooks/useElectronNavigation";
 import TokenInterceptor from "@/components/TokenInterceptor";
@@ -7,11 +7,13 @@ import { useAlert } from "@/hooks/useAlert";
 import "@/lib/tokenDebug"; // Import debug utilities
 import "@/lib/debugUtils"; // Import debug utilities
 import { AppProvider } from "@/context/AppContext";
+import ChangePasswordModal from "@/components/ChangePasswordModal";
 
 function App() {
   // Gunakan hook untuk menangani navigasi dari Electron
   useElectronNavigation();
   const { showAlert, AlertComponent } = useAlert();
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
   // Listen for global alert events from utility functions (like tokenUtils)
   useEffect(() => {
@@ -38,6 +40,13 @@ function App() {
 
     window.electronAPI.onShowAlert(handleElectronAlert);
 
+    // Listen for Change Password Modal event
+    if (window.electronAPI.onChangePassword) {
+      window.electronAPI.onChangePassword(() => {
+        setIsChangePasswordOpen(true);
+      });
+    }
+
     return () => {
       // Note: IPC listeners are automatically cleaned up when component unmounts
     };
@@ -53,6 +62,12 @@ function App() {
           {/* Global Alert Component */}
           <AlertComponent />
           
+          {/* Global Change Password Modal */}
+          <ChangePasswordModal 
+            isOpen={isChangePasswordOpen} 
+            onClose={() => setIsChangePasswordOpen(false)} 
+          />
+
           {/* Main content - Full width without sidebar */}
           <main className="w-full h-full overflow-auto">
             <AppRouter />

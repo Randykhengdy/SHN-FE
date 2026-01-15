@@ -1,5 +1,72 @@
 # API Endpoint Tambahan (Ringkas)
 
+## Authentication
+- Change Password: `POST /api/auth/change-password`
+  - Request:
+    ```json
+    {
+      "user_id": 123,
+      "password": "password_baru_anda",
+      "password_confirmation": "password_baru_anda"
+    }
+    ```
+    atau menggunakan username:
+    ```json
+    {
+      "username": "john_doe",
+      "password": "password_baru_anda",
+      "password_confirmation": "password_baru_anda"
+    }
+    ```
+  - Response (Success):
+    ```json
+    {
+      "success": true,
+      "message": "Password berhasil diubah"
+    }
+    ```
+  - Response (Error - Validation):
+    ```json
+    {
+      "success": false,
+      "message": "Konfirmasi password tidak cocok"
+    }
+    ```
+  - Response (Error - Server):
+    ```json
+    {
+      "success": false,
+      "message": "Gagal mengubah password. Silakan coba lagi nanti."
+    }
+    ```
+  - Validasi:
+    - `user_id` atau `username`: wajib salah satu, harus ada di database (jika belum login/token)
+    - `password`: wajib, minimal 8 karakter
+    - `password_confirmation`: wajib, harus sama dengan `password`
+
+## Master Data - Gudang
+- List Gudang: `GET /api/gudang`
+  - Filter `tipe_gudang`: `GET /api/gudang?tipe_gudang=gudang` atau `GET /api/gudang?tipe_gudang=rak` (case-insensitive)
+- Create Gudang: `POST /api/gudang`
+  - Request:
+    ```json
+    {
+      "kode": "GDG-001",
+      "nama_gudang": "Gudang Utama",
+      "tipe_gudang": "gudang",
+      "parent_id": null,
+      "telepon_hp": "08123456789",
+      "kapasitas": 1000
+    }
+    ```
+  - Validasi:
+    - `tipe_gudang`: hanya menerima nilai `gudang` atau `rak` (case-insensitive, akan otomatis dikonversi ke lowercase)
+- Update Gudang: `PUT /api/gudang/{id}`
+  - Request: sama dengan create
+  - Validasi: sama dengan create
+
+## Item Barang Request
+
 Ringkasan endpoint baru, dengan contoh singkat request/response.
 
 ## Item Barang Request
@@ -136,6 +203,7 @@ Ringkasan endpoint baru, dengan contoh singkat request/response.
     - `tanggal`: `YYYY-MM-DD`
     - `jamMulai` dan `jamSelesai`: `HH:mm:ss`
     - `items.*.timestamp`: optional, `date` (boleh ISO-8601)
+    - `jenis_potongan` disimpan per item actual mengikuti item planning
     - `foto_bukti` dan `items.*.foto_bukti`: base64 image string
   - Request:
     ```json

@@ -14,8 +14,8 @@ export default function GudangPage() {
   const [selectedRaks, setSelectedRaks] = useState([]);
 
   const openChildren = async (item) => {
-    const tipe = String(item.tipe_gudang || "");
-    if (tipe === "Gudang") {
+    const tipe = String(item.tipe_gudang || item.tipe || "").trim().toLowerCase();
+    if (tipe === "gudang") {
       setChildTitle(`Rak di ${item.nama_gudang || item.nama_rak || item.nama}`);
       setChildOpen(true);
       setChildLoading(true);
@@ -35,7 +35,10 @@ export default function GudangPage() {
       subtitle="Master Data"
       service={gudangService}
       selection={{
-        visible: (item) => String(item.tipe_gudang || "") === "Rak",
+        visible: (item) => {
+          const t = String(item.tipe_gudang || item.tipe || "").trim().toLowerCase();
+          return t === "rak";
+        },
         isSelected: (item) => !!selectedRaks.find(r => r.id === item.id),
         onToggle: (item) => {
           setSelectedRaks(prev => {
@@ -133,7 +136,10 @@ export default function GudangPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" />
             </svg>
           ),
-          visible: (item) => String(item.tipe_gudang || "") === "Gudang",
+          visible: (item) => {
+            const t = String(item.tipe_gudang || item.tipe || "").trim().toLowerCase();
+            return t === "gudang";
+          },
           className: "bg-blue-500 hover:bg-blue-600 text-white border-blue-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-blue-300 focus:ring-offset-1",
           onClick: async (item) => {
             try {
@@ -154,7 +160,10 @@ export default function GudangPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 4h3v3h-3v-3zM14 14h7v7h-7v-7z" />
             </svg>
           ),
-          visible: (item) => String(item.tipe_gudang || "") === "Rak",
+          visible: (item) => {
+            const t = String(item.tipe_gudang || item.tipe || "").trim().toLowerCase();
+            return t === "rak";
+          },
           className: "bg-indigo-500 hover:bg-indigo-600 text-white border-indigo-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-indigo-300 focus:ring-offset-1",
           onClick: async (item) => {
             try {
