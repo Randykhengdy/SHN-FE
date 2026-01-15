@@ -1,10 +1,10 @@
 {
   "main": "electron/main.cjs",
-  "name": "SHNReactApp",
-  "description": "SHN React Application",
+  "name": "SHN Desktop",
+  "description": "SHN Desktop Application",
   "author": "SHN",
   "private": true,
-  "version": "0.0.4",
+  "version": "0.0.6",
   "type": "module",
   "scripts": {
     "dev:vite": "vite",
