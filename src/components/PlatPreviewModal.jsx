@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { X, Package, Eye, Loader2 } from 'lucide-react';
-import { getCanvasPreviewByItemId, getPreviewImageUrl, previewImageExists } from '@/lib/canvasUtils';
+import { getCanvasPreviewByItemId } from '@/lib/canvasUtils';
 import PlatShaftCanvas from '@/components/PlatShaftCanvas';
 
 const PlatPreviewModal = ({
@@ -21,7 +21,6 @@ const PlatPreviewModal = ({
   const [previewImages, setPreviewImages] = useState({});
   const [showCanvas, setShowCanvas] = useState(false);
   const [selectedCanvasItem, setSelectedCanvasItem] = useState(null);
-  const [loadedImages, setLoadedImages] = useState({});
 
   useEffect(() => {
     const handler = (e) => {
@@ -60,19 +59,6 @@ const PlatPreviewModal = ({
     }
   };
 
-  const waitForPreview = async (itemId, attempts = 6, delayMs = 500) => {
-    let delay = delayMs;
-    for (let i = 0; i < attempts; i++) {
-      const exists = await previewImageExists(itemId);
-      if (exists) {
-        return getPreviewImageUrl(itemId);
-      }
-      await new Promise((r) => setTimeout(r, delay));
-      delay = Math.min(Math.floor(delay * 1.5), 2000);
-    }
-    return null;
-  };
-
   const generatePreviewForItem = async (itemId) => {
     if (generatingPreviews[itemId]) {
       return;
@@ -81,35 +67,16 @@ const PlatPreviewModal = ({
     setGeneratingPreviews(prev => ({ ...prev, [itemId]: true }));
     
     try {
-      // Check if preview file exists locally first
-      console.log(`🔍 Checking if preview file exists locally for item ${itemId}`);
-      const exists = await previewImageExists(itemId);
-      console.log(`📁 Local preview file exists for item ${itemId}: ${exists}`);
-      if (exists) {
-        setPreviewImages(prev => ({ ...prev, [itemId]: getPreviewImageUrl(itemId) }));
-        setLoadedImages(prev => ({ ...prev, [itemId]: false }));
-        console.log(`✅ Using existing local preview file for item ${itemId} (no API call)`);
-        return;
-      }
-
-      // Only call API if local file doesn't exist
-      console.log(`🚀 Local preview file not found, calling API for item ${itemId}`);
+      console.log(`🚀 Fetching preview for item ${itemId} (localStorage first)`);
       console.log(`📞 Calling getCanvasPreviewByItemId(${itemId})...`);
       const previewPath = await getCanvasPreviewByItemId(itemId);
       console.log(`📞 getCanvasPreviewByItemId returned:`, previewPath);
       
       if (previewPath) {
         setPreviewImages(prev => ({ ...prev, [itemId]: previewPath }));
-        setLoadedImages(prev => ({ ...prev, [itemId]: false }));
-        console.log(`✅ Generated new preview from API for item ${itemId}`);
-      }
-      const refreshedUrl = await waitForPreview(itemId);
-      if (refreshedUrl) {
-        setPreviewImages(prev => ({ ...prev, [itemId]: refreshedUrl }));
-        setLoadedImages(prev => ({ ...prev, [itemId]: false }));
-        console.log(`✅ Confirmed preview file exists, updated URL for item ${itemId}`);
+        console.log(`✅ Preview ready for item ${itemId}`);
       } else {
-        console.log(`❌ Preview file still not detected after retries for item ${itemId}`);
+        console.log(`❌ No preview path returned for item ${itemId}`);
       }
     } catch (error) {
       console.error(`❌ Error generating preview for item ${itemId}:`, error);
@@ -134,10 +101,7 @@ const PlatPreviewModal = ({
 
   const refreshPreviewForItem = async (itemId) => {
     console.log(`🔄 Refreshing preview for item ${itemId}...`);
-    setGeneratingPreviews(prev => ({ ...prev, [itemId]: true }));
-    const url = await waitForPreview(itemId) || getPreviewImageUrl(itemId);
-    setPreviewImages(prev => ({ ...prev, [itemId]: url }));
-    setGeneratingPreviews(prev => ({ ...prev, [itemId]: false }));
+    await generatePreviewForItem(itemId);
   };
 
   if (!isOpen || !currentItemData) {
@@ -212,20 +176,11 @@ const PlatPreviewModal = ({
                                 const previewPath = await getCanvasPreviewByItemId(item.id);
                                 if (previewPath) {
                                   setPreviewImages(prev => ({ ...prev, [item.id]: previewPath }));
-                                  setLoadedImages(prev => ({ ...prev, [item.id]: false }));
                                   console.log(`✅ Generated new preview after image load failure for item ${item.id}`);
                                 }
                               } catch (error) {
                                 console.error(`❌ Failed to generate new preview for item ${item.id}:`, error);
                               }
-                            }}
-                            onLoad={(e) => {
-                              console.log(`📐 Preview loaded for item ${item.id}:`, {
-                                naturalWidth: e.target.naturalWidth,
-                                naturalHeight: e.target.naturalHeight,
-                                aspectRatio: e.target.naturalWidth / e.target.naturalHeight
-                              });
-                              setLoadedImages(prev => ({ ...prev, [item.id]: true }));
                             }}
                           />
                         ) : null}
@@ -233,7 +188,7 @@ const PlatPreviewModal = ({
                         {/* Fallback placeholder */}
                         <div 
                           className="text-center absolute inset-0 flex items-center justify-center"
-                          style={{ display: (previewImages[item.id] && loadedImages[item.id]) ? 'none' : 'flex' }}
+                          style={{ display: previewImages[item.id] ? 'none' : 'flex' }}
                         >
                           <div className="text-center">
                             <Package className="w-8 h-8 text-gray-400 mx-auto mb-2" />

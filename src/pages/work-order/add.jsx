@@ -11,7 +11,7 @@ import { useAlert } from '@/hooks/useAlert';
 import PageLayout from '@/components/PageLayout';
 import { workOrderService } from '@/services/workOrderService';
 import { openPrintDialog, generateWOPlanningPrintContent } from '@/lib/printUtils';
-import { clearCanvasPreviews } from '@/lib/canvasUtils';
+import { clearCanvasPreviews, getStoredPreviewDataUrl } from '@/lib/canvasUtils';
 import { workOrderPlanningService } from '@/services/workOrderPlanningService';
 import { request } from '@/lib/request';
 import { Table, TableHead, TableBody, TableRow, TableCell, TableHeader } from '@/components/Table';
@@ -849,30 +849,20 @@ export default function AddWorkOrderPage() {
           }
         }
         
-        // Only add saran plat data if there's canvas data from current work order
+        // Only add saran plat data jika ada canvas data dari WO saat ini
         if (processedCanvasData) {
-          // Try to get canvas image from file
+          // Ambil canvas image dari localStorage (hasil save canvas preview)
           let canvasImageBase64 = null;
           try {
-            const imageFileName = `canvas-preview-ItemId-${saranItemId}.jpg`;
-            const imagePath = `/canvas-previews/${imageFileName}`;
-            
-            // Check if file exists by trying to fetch it
-            const response = await fetch(imagePath);
-            if (response.ok) {
-              const blob = await response.blob();
-              const base64 = await new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result);
-                reader.readAsDataURL(blob);
-              });
-              canvasImageBase64 = base64;
-              console.log(`✅ Canvas image loaded for item ${saranItemId}: ${imageFileName}`);
+            const dataUrl = getStoredPreviewDataUrl(saranItemId);
+            if (dataUrl) {
+              canvasImageBase64 = dataUrl;
+              console.log(`✅ Canvas image loaded from localStorage for item ${saranItemId}`);
             } else {
-              console.log(`📷 No canvas image file found for item ${saranItemId}: ${imageFileName}`);
+              console.log(`📷 No canvas image in localStorage for item ${saranItemId}`);
             }
           } catch (error) {
-            console.warn(`⚠️ Failed to load canvas image for item ${saranItemId}:`, error);
+            console.warn(`⚠️ Failed to load canvas image from localStorage for item ${saranItemId}:`, error);
           }
 
           const saranData = {
@@ -1124,9 +1114,22 @@ export default function AddWorkOrderPage() {
             const used = JSON.parse(localStorage.getItem('WO_used_saran_plats') || '[]');
             const images = [];
             used.forEach(id => {
-              const fileName = `canvas-preview-ItemId-${id}.jpg`;
-              const src = `/canvas-previews/${fileName}`;
-              images.push({ item_id: parseInt(id), src });
+              const itemId = parseInt(id);
+              if (!itemId) {
+                return;
+              }
+
+              let src = null;
+              try {
+                src = getStoredPreviewDataUrl(itemId);
+              } catch (_) {}
+
+              if (!src) {
+                const fileName = `canvas-preview-ItemId-${id}.jpg`;
+                src = `/canvas-previews/${fileName}`;
+              }
+
+              images.push({ item_id: itemId, src });
             });
             return images;
           } catch (e) {
