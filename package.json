@@ -1,6 +1,6 @@
 {
   "main": "electron/main.cjs",
-  "name": "SHN Desktop",
+  "name": "SHNReactApp",
   "description": "SHN Desktop Application",
   "author": "SHN",
   "private": true,

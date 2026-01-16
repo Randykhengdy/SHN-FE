@@ -18,10 +18,10 @@ import {
 } from "@/components/ui/dialog";
 import SearchSelect from "@/components/ui/search-select";
 import AsyncSearchSelect from "@/components/ui/async-search-select";
-import { 
-  getTermOptions, 
-  getBentukBarangOptions, 
-  getUnitOptions 
+import {
+  getTermOptions,
+  getBentukBarangOptions,
+  getUnitOptions
 } from "@/services/masterDataService";
 import { useAlert } from "@/hooks/useAlert";
 import { useRole } from "@/hooks/useRole";
@@ -39,7 +39,7 @@ export default function AddSalesOrderPage() {
   const navigate = useNavigate();
   const { showAlert, AlertComponent } = useAlert();
   const { isUserAdmin, hasRole } = useRole();
-  
+
   // Master data state
   const [termOptions, setTermOptions] = useState([]);
   const [warehouseOptions, setWarehouseOptions] = useState([]);
@@ -78,7 +78,7 @@ export default function AddSalesOrderPage() {
         setLoadingWarehouse(true);
         setLoadingItemType(true);
         setLoadingItemShape(true);
-        
+
         setLoadingUnit(true);
 
         const [
@@ -94,7 +94,7 @@ export default function AddSalesOrderPage() {
         setTermOptions(terms);
         setItemShapeOptions(bentukBarang);
         // Unit options akan dimuat oleh useEffect berdasarkan itemCutType
-        
+
         // Set generated SO number
         setSoNumber(soNumber);
         console.log('Generated SO number:', soNumber);
@@ -106,7 +106,7 @@ export default function AddSalesOrderPage() {
         setLoadingWarehouse(false);
         setLoadingItemType(false);
         setLoadingItemShape(false);
-        
+
         // loadingUnit akan dihandle oleh useEffect untuk unit options
       }
     };
@@ -148,12 +148,12 @@ export default function AddSalesOrderPage() {
   useEffect(() => {
     const loadUnitOptions = async () => {
       if (!itemCutType) return; // Skip if itemCutType is not set yet
-      
+
       try {
         setLoadingUnit(true);
         const units = await getUnitOptions(itemCutType);
         setUnitOptions(units);
-        
+
         // Reset itemUnit jika satuan yang dipilih tidak ada dalam options baru
         const currentUnitExists = units.some(opt => opt.value === itemUnit);
         if (!currentUnitExists) {
@@ -195,12 +195,12 @@ export default function AddSalesOrderPage() {
 
     // Check if all required fields are filled with valid numeric values
     // For "utuh", dimensions should be filled from group item selection
-    const hasRequiredFields = 
-      itemType && 
-      selectedShape?.id && 
-      itemGrade && 
-      itemLength && 
-      !isNaN(panjang) && 
+    const hasRequiredFields =
+      itemType &&
+      selectedShape?.id &&
+      itemGrade &&
+      itemLength &&
+      !isNaN(panjang) &&
       panjang > 0 &&
       itemDiameter &&
       !isNaN(tebal) &&
@@ -208,7 +208,7 @@ export default function AddSalesOrderPage() {
 
     // For 2D items, also need width with valid value
     // For "utuh" items, dimensions come from group item, so we need to check them too
-    const hasAllFields = selectedShape?.dimensi === "1D" 
+    const hasAllFields = selectedShape?.dimensi === "1D"
       ? hasRequiredFields
       : hasRequiredFields && itemWidth && !isNaN(lebar) && lebar > 0;
 
@@ -224,10 +224,10 @@ export default function AddSalesOrderPage() {
     const timeoutId = setTimeout(async () => {
       try {
         setLoadingWeight(true);
-        
+
         const panjangCm = panjang / 10; // Convert mm to cm
-        const lebarCm = selectedShape.dimensi === "1D" 
-          ? null 
+        const lebarCm = selectedShape.dimensi === "1D"
+          ? null
           : (lebar / 10); // Convert mm to cm
         const tebalCm = tebal / 10; // Convert mm to cm
 
@@ -241,11 +241,11 @@ export default function AddSalesOrderPage() {
         };
 
         const response = await beratJenisService.calculateWeight(requestData);
-        
+
         if (response.success && response.data) {
           const calculatedWeight = response.data.berat_kg || 0;
           setItemWeight(calculatedWeight.toFixed(4));
-          
+
           // Optionally show a success message if weight was found
           if (response.data.berat_jenis_found && calculatedWeight > 0) {
             console.log('Berat timbangan berhasil dihitung:', calculatedWeight, 'kg');
@@ -273,7 +273,7 @@ export default function AddSalesOrderPage() {
   const [groupItemModalOpen, setGroupItemModalOpen] = useState(false);
   const [groupItemOptions, setGroupItemOptions] = useState([]);
   const [loadingGroupItem, setLoadingGroupItem] = useState(false);
-  
+
   // Filter state for group i tem
   const [groupItemFilters, setGroupItemFilters] = useState({
     panjang: "",
@@ -284,7 +284,7 @@ export default function AddSalesOrderPage() {
     min_quantity_potongan: "",
     max_quantity_potongan: ""
   });
-  
+
   // Pagination state for group item
   const [groupItemPagination, setGroupItemPagination] = useState({
     current_page: 1,
@@ -292,7 +292,7 @@ export default function AddSalesOrderPage() {
     total: 0,
     last_page: 1
   });
-  
+
   const [showGroupItemFilters, setShowGroupItemFilters] = useState(false);
 
   // Calculated values
@@ -309,14 +309,14 @@ export default function AddSalesOrderPage() {
     const panjangM = panjang / 1000; // Convert mm to m
     const lebarM = lebar / 1000; // Convert mm to m
     const tebalM = tebal / 1000; // Convert mm to m
-    
+
     switch (satuan?.toLowerCase()) {
       case 'utuh':
       case 'per unit':
       case 'per pcs':
         // Harga X quantity
         return pricePerUnit * qty;
-        
+
       case 'kilogram':
       case 'kg':
         // Harga X kg (berat)
@@ -327,7 +327,7 @@ export default function AddSalesOrderPage() {
           return pricePerUnit * estimatedWeight;
         }
         return pricePerUnit * berat;
-        
+
       case 'dimensi':
       case 'per dimensi':
       case 'per m²':
@@ -340,13 +340,13 @@ export default function AddSalesOrderPage() {
           // Untuk 2D (plat): harga X panjang X lebar saja (tanpa tebal)
           return pricePerUnit * panjangM * lebarM;
         }
-        
+
       case 'per m³':
       case 'm³':
         // Harga X volume
         const volumeM3 = panjangM * lebarM * tebalM;
         return pricePerUnit * volumeM3;
-        
+
       default:
         // Default: harga X quantity
         return pricePerUnit * qty;
@@ -387,7 +387,7 @@ export default function AddSalesOrderPage() {
 
         // Get current satuan
         const currentSatuan = unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit;
-        
+
         // Hitung harga berdasarkan satuan
         let priceDisplay = "Rp 0";
         if (pricePerUnit > 0) {
@@ -420,17 +420,17 @@ export default function AddSalesOrderPage() {
         // Hitung total item berdasarkan satuan (termasuk diskon)
         let totalBeforeDiscount = 0;
         let totalAfterDiscount = 0;
-        
+
         if (pricePerUnit > 0) {
           const unitPrice = calculatePriceBySatuan(currentSatuan, length, width, thickness, qty, pricePerUnit, parseFloat(itemWeight) || 0, selectedShape);
-          
+
           // Untuk satuan "utuh", tidak perlu dikalikan quantity lagi
           if (currentSatuan?.toLowerCase() === 'utuh' || currentSatuan?.toLowerCase() === 'per unit' || currentSatuan?.toLowerCase() === 'per pcs') {
             totalBeforeDiscount = unitPrice; // Sudah termasuk quantity di dalamnya
           } else {
             totalBeforeDiscount = unitPrice * qty; // Kalikan dengan quantity untuk satuan lain
           }
-          
+
           const discountAmount = totalBeforeDiscount * (discount / 100);
           totalAfterDiscount = totalBeforeDiscount - discountAmount;
         }
@@ -467,7 +467,7 @@ export default function AddSalesOrderPage() {
   const getPriceLabel = () => {
     const currentSatuan = unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit;
     const satuanLower = currentSatuan?.toLowerCase() || '';
-    
+
     switch (satuanLower) {
       case 'utuh':
       case 'per unit':
@@ -497,7 +497,7 @@ export default function AddSalesOrderPage() {
   const getPriceSummaryLabel = () => {
     const currentSatuan = unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit;
     const satuanLower = currentSatuan?.toLowerCase() || '';
-    
+
     switch (satuanLower) {
       case 'utuh':
       case 'per unit':
@@ -525,7 +525,7 @@ export default function AddSalesOrderPage() {
 
   const handleCustomerSelect = (customer) => {
     if (!customer) return;
-    
+
     setSelectedCustomer(customer);
     // Update customer form state with proper field names
     setCustomerName(customer.nama_pelanggan || customer.nama || "");
@@ -580,16 +580,16 @@ export default function AddSalesOrderPage() {
       // Calculate total using satuan-based pricing
       const currentSatuan = unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit;
       const unitPrice = calculatePriceBySatuan(
-        currentSatuan, 
-        parseFloat(itemLength) || 0, 
-        parseFloat(itemWidth) || 0, 
-        parseFloat(itemDiameter) || 0, 
-        parseInt(itemQty), 
-        parseFloat(itemPrice) || 0, 
+        currentSatuan,
+        parseFloat(itemLength) || 0,
+        parseFloat(itemWidth) || 0,
+        parseFloat(itemDiameter) || 0,
+        parseInt(itemQty),
+        parseFloat(itemPrice) || 0,
         parseFloat(itemWeight) || 0,
         selectedShape
       );
-      
+
       // Untuk satuan "utuh", tidak perlu dikalikan quantity lagi
       let calculatedTotal;
       if (currentSatuan?.toLowerCase() === 'utuh' || currentSatuan?.toLowerCase() === 'per unit' || currentSatuan?.toLowerCase() === 'per pcs') {
@@ -597,7 +597,7 @@ export default function AddSalesOrderPage() {
       } else {
         calculatedTotal = unitPrice * parseInt(itemQty); // Kalikan dengan quantity untuk satuan lain
       }
-      
+
       const discountAmount = calculatedTotal * (parseFloat(itemDiscount) || 0) / 100;
       const finalTotal = calculatedTotal - discountAmount;
 
@@ -655,7 +655,7 @@ export default function AddSalesOrderPage() {
 
   const handleTestSimpanSO = async () => {
     console.log("Testing save SO...");
-    
+
     try {
       const salesOrderData = {
         nomor_so: soNumber,
@@ -685,22 +685,22 @@ export default function AddSalesOrderPage() {
           catatan: item.catatan || ""
         }))
       };
-      
+
       console.log("Data yang akan dikirim ke API:", salesOrderData);
 
-      
+
       const result = await request(API_ENDPOINTS.salesOrder, {
         method: 'POST',
         body: JSON.stringify(salesOrderData)
       });
-      
+
       console.log("✅ Sales Order berhasil disimpan:", result);
       showAlert("Sukses", "Sales Order berhasil disimpan!", "success");
       try {
         // Get term label and warehouse name
         const termLabel = termOptions.find(opt => opt.value === termOfPayment)?.label || termOfPayment;
         const warehouseName = warehouseOptions.find(opt => opt.value === originWarehouse)?.label || originWarehouse;
-        
+
         // Use selectedCustomer data if available, otherwise use form state
         const customerData = selectedCustomer ? {
           nama: selectedCustomer.nama_pelanggan || selectedCustomer.nama || customerName || 'N/A',
@@ -713,7 +713,7 @@ export default function AddSalesOrderPage() {
           contact_person: 'N/A',
           alamat: customerAddress || 'N/A'
         };
-        
+
         // Langsung buka dialog cetak menggunakan data yang baru saja disimpan (data lokal)
         const printDataOnSave = {
           nomor_so: soNumber,
@@ -743,11 +743,11 @@ export default function AddSalesOrderPage() {
       } catch (e) {
         console.error('Gagal membuka dialog cetak setelah simpan SO:', e);
       }
-      
+
       setTimeout(() => {
         window.history.back();
       }, 2000);
-      
+
     } catch (error) {
       console.error("❌ Error saving Sales Order:", error);
       showAlert("Error", "Terjadi kesalahan saat menyimpan Sales Order", "error");
@@ -762,7 +762,7 @@ export default function AddSalesOrderPage() {
   const handlePrintSalesOrder = async () => {
     try {
       setPrintLoading(true);
-      
+
       if (!soNumber || items.length === 0) {
         showAlert("Error", "Pastikan nomor SO dan items sudah terisi", "error");
         return;
@@ -771,7 +771,7 @@ export default function AddSalesOrderPage() {
       // Get term label and warehouse name
       const termLabel = termOptions.find(opt => opt.value === termOfPayment)?.label || termOfPayment;
       const warehouseName = warehouseOptions.find(opt => opt.value === originWarehouse)?.label || originWarehouse;
-      
+
       // Use selectedCustomer data if available, otherwise use form state
       const customerData = selectedCustomer ? {
         nama: selectedCustomer.nama_pelanggan || selectedCustomer.nama || customerName || 'N/A',
@@ -784,7 +784,7 @@ export default function AddSalesOrderPage() {
         contact_person: 'N/A',
         alamat: customerAddress || 'N/A'
       };
-      
+
       // Prepare print data (use existing local state, no refetch)
       const printData = {
         nomor_so: soNumber,
@@ -825,11 +825,11 @@ export default function AddSalesOrderPage() {
 
   const handleAutoFill = () => {
     // Note: SO number is now auto-generated from API, no need to set it manually
-    
+
     setCustomerName("PT Jaya Makmur Sejahtera");
     setCustomerPhone("08123456789");
     setCustomerAddress("Jl. Raya Jakarta No. 123, Jakarta Selatan");
-    
+
     setSelectedCustomer({
       id: 1,
       nama: "PT Jaya Makmur Sejahtera",
@@ -889,12 +889,12 @@ export default function AddSalesOrderPage() {
     // Calculate totals using satuan-based pricing
     const firstSatuan = unitOptions.length > 0 ? unitOptions[0].label : "Per Dimensi";
     const firstUnitPrice = calculatePriceBySatuan(
-      firstSatuan, 
-      firstItemDims.panjang, 
-      firstItemDims.lebar, 
-      firstItemDims.tebal, 
-      3, 
-      75000, 
+      firstSatuan,
+      firstItemDims.panjang,
+      firstItemDims.lebar,
+      firstItemDims.tebal,
+      3,
+      75000,
       0,
       firstShape
     );
@@ -974,7 +974,7 @@ export default function AddSalesOrderPage() {
 
   const handleShapeSelect = (shape) => {
     setSelectedShape(shape);
-    
+
     // Reset field lebar saat bentuk barang berubah
     if (shape?.dimensi === "1D") {
       setItemWidth("");
@@ -1000,11 +1000,11 @@ export default function AddSalesOrderPage() {
         per_page: groupItemPagination.per_page,
         page: page
       });
-      
+
       // Set min_quantity_utuh default to 1, or use filter value if provided
       const minQtyUtuh = groupItemFilters.min_quantity_utuh || '1';
       queryParams.append('min_quantity_utuh', minQtyUtuh);
-      
+
       // Add filters if they have values
       if (groupItemFilters.panjang) queryParams.append('panjang', groupItemFilters.panjang);
       if (groupItemFilters.lebar) queryParams.append('lebar', groupItemFilters.lebar);
@@ -1012,13 +1012,13 @@ export default function AddSalesOrderPage() {
       if (groupItemFilters.max_quantity_utuh) queryParams.append('max_quantity_utuh', groupItemFilters.max_quantity_utuh);
       if (groupItemFilters.min_quantity_potongan) queryParams.append('min_quantity_potongan', groupItemFilters.min_quantity_potongan);
       if (groupItemFilters.max_quantity_potongan) queryParams.append('max_quantity_potongan', groupItemFilters.max_quantity_potongan);
-      
+
       const response = await request(`/item-barang/group?${queryParams.toString()}`, { method: 'GET' });
       console.log('Group item response:', response);
       const groupItems = Array.isArray(response.data) ? response.data : [];
       console.log('Group items to set:', groupItems);
       setGroupItemOptions(groupItems);
-      
+
       // Update pagination
       if (response.pagination) {
         setGroupItemPagination({
@@ -1055,11 +1055,11 @@ export default function AddSalesOrderPage() {
       last_page: 1
     });
     setShowGroupItemFilters(false);
-    
+
     await loadGroupItemData(1, true);
     setGroupItemModalOpen(true);
   };
-  
+
   // Handle filter change
   const handleFilterChange = (key, value) => {
     setGroupItemFilters(prev => ({
@@ -1067,12 +1067,12 @@ export default function AddSalesOrderPage() {
       [key]: value
     }));
   };
-  
+
   // Handle apply filters
   const handleApplyFilters = () => {
     loadGroupItemData(1, true);
   };
-  
+
   // Handle reset filters
   const handleResetFilters = () => {
     setGroupItemFilters({
@@ -1086,7 +1086,7 @@ export default function AddSalesOrderPage() {
     });
     loadGroupItemData(1, true);
   };
-  
+
   // Handle pagination
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= groupItemPagination.last_page) {
@@ -1107,8 +1107,8 @@ export default function AddSalesOrderPage() {
     { key: 'id', label: 'ID' },
     { key: 'kode', label: 'Kode' },
     { key: 'nama', label: 'Nama' },
-    { 
-      key: 'dimensi', 
+    {
+      key: 'dimensi',
       label: 'Dimensi',
       type: 'badge',
       badgeColor: (value) => value === '1D' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
@@ -1167,7 +1167,7 @@ export default function AddSalesOrderPage() {
 
         <CardContent className="section-content space-md">
           {/* Customer Information */}
-          <CustomerInfoTabs 
+          <CustomerInfoTabs
             onCustomerSelect={handleCustomerSelect}
             selectedCustomer={selectedCustomer}
           />
@@ -1241,22 +1241,22 @@ export default function AddSalesOrderPage() {
                 />
               </div>
               <div>
-              <AsyncSearchSelect
-                label="Asal Gudang"
-                placeholder="Pilih Gudang"
-                searchPlaceholder="Cari gudang..."
-                value={originWarehouse}
-                onValueChange={setOriginWarehouse}
-                required
-                fetchOptions={async (q, page) => {
-                  const resp = await gudangService.getPaginated(page || 1, 50, q || "", "", "asc", { tipe_gudang: "gudang" });
-                  const rows = Array.isArray(resp?.data) ? resp.data : (Array.isArray(resp) ? resp : []);
-                  return rows.map((item) => ({
-                    value: item.id?.toString(),
-                    label: item.nama_gudang || item.nama || "Unknown",
-                  }));
-                }}
-              />
+                <AsyncSearchSelect
+                  label="Asal Gudang"
+                  placeholder="Pilih Gudang"
+                  searchPlaceholder="Cari gudang..."
+                  value={originWarehouse}
+                  onValueChange={setOriginWarehouse}
+                  required
+                  fetchOptions={async (q, page) => {
+                    const resp = await gudangService.getPaginated(page || 1, 50, q || "", "", "asc", { tipe_gudang: "gudang" });
+                    const rows = Array.isArray(resp?.data) ? resp.data : (Array.isArray(resp) ? resp : []);
+                    return rows.map((item) => ({
+                      value: item.id?.toString(),
+                      label: item.nama_gudang || item.nama || "Unknown",
+                    }));
+                  }}
+                />
               </div>
               <div>
                 <SearchSelect
@@ -1273,7 +1273,7 @@ export default function AddSalesOrderPage() {
           </div>
         </CardContent>
       </Card>
-      
+
 
       {/* Item Input Form */}
       <Card className="section-card">
@@ -1354,17 +1354,17 @@ export default function AddSalesOrderPage() {
             </div>
 
             {/* Row 2: Jenis Potongan, Qty, Satuan */}
-          <div>
-            <SearchSelect
-              label="Jenis Potongan"
-              placeholder="Pilih Jenis Potongan"
-              searchPlaceholder="Cari jenis potongan..."
-              value={itemCutType}
-              onValueChange={setItemCutType}
-              options={cutTypeOptions}
-              required
-            />
-          </div>
+            <div>
+              <SearchSelect
+                label="Jenis Potongan"
+                placeholder="Pilih Jenis Potongan"
+                searchPlaceholder="Cari jenis potongan..."
+                value={itemCutType}
+                onValueChange={setItemCutType}
+                options={cutTypeOptions}
+                required
+              />
+            </div>
             <div>
               <Label htmlFor="itemQty">Qty</Label>
               <Input
@@ -1376,41 +1376,41 @@ export default function AddSalesOrderPage() {
                 required
               />
             </div>
-          <div>
-            <Label htmlFor="itemUnit">Satuan</Label>
-            <div className="flex gap-2 items-end">
-              <div className={itemCutType === "utuh" ? "flex-[4]" : "flex-1"}>
-                <SearchSelect
-                  label=""
-                  placeholder="Pilih Satuan"
-                  searchPlaceholder="Cari satuan..."
-                  value={itemUnit}
-                  onValueChange={setItemUnit}
-                  options={unitOptions}
-                  loading={loadingUnit}
-                  required
-                />
-              </div>
-              {itemCutType === "utuh" && (
-                <div className="flex-[1]">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleOpenGroupItemModal}
-                    disabled={loadingGroupItem || !itemType || !selectedShape || !itemGrade}
-                    className="w-full h-10"
-                    title="Pilih Group Item Barang"
-                  >
-                    {loadingGroupItem ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
-                    ) : (
-                      <Package className="w-4 h-4" />
-                    )}
-                  </Button>
+            <div>
+              <Label htmlFor="itemUnit">Satuan</Label>
+              <div className="flex gap-2 items-end">
+                <div className={itemCutType === "utuh" ? "flex-[4]" : "flex-1"}>
+                  <SearchSelect
+                    label=""
+                    placeholder="Pilih Satuan"
+                    searchPlaceholder="Cari satuan..."
+                    value={itemUnit}
+                    onValueChange={setItemUnit}
+                    options={unitOptions}
+                    loading={loadingUnit}
+                    required
+                  />
                 </div>
-              )}
+                {itemCutType === "utuh" && (
+                  <div className="flex-[1]">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleOpenGroupItemModal}
+                      disabled={loadingGroupItem || !itemType || !selectedShape || !itemGrade}
+                      className="w-full h-10"
+                      title="Pilih Group Item Barang"
+                    >
+                      {loadingGroupItem ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                      ) : (
+                        <Package className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
             {/* Row 3: Panjang, Lebar, Tebal */}
             <div>
@@ -1654,9 +1654,9 @@ export default function AddSalesOrderPage() {
       {/* Action Buttons: only Cetak */}
       <div className="flex justify-center gap-4">
         {hasRole(['admin', 'manager', 'supervisor']) && (
-          <Button 
-            size="lg" 
-            variant="outline" 
+          <Button
+            size="lg"
+            variant="outline"
             className="border-blue-600 text-blue-600 hover:bg-blue-50"
             onClick={handlePrintSalesOrder}
             disabled={printLoading}
@@ -1799,9 +1799,9 @@ export default function AddSalesOrderPage() {
             <Card className="card-standard flex-1 min-h-0 flex flex-col border">
               <CardContent className="p-0 flex-1 min-h-0 overflow-hidden flex flex-col">
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                  <div 
+                  <div
                     className="flex-1 overflow-y-auto overflow-x-auto relative"
-                    style={{ 
+                    style={{
                       scrollbarWidth: 'auto',
                       scrollbarColor: '#cbd5e1 #f1f5f9'
                     }}
