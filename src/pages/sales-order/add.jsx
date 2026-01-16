@@ -425,7 +425,7 @@ export default function AddSalesOrderPage() {
           const unitPrice = calculatePriceBySatuan(currentSatuan, length, width, thickness, qty, pricePerUnit, parseFloat(itemWeight) || 0, selectedShape);
 
           // Untuk satuan "utuh", tidak perlu dikalikan quantity lagi
-          if (currentSatuan?.toLowerCase() === 'utuh' || currentSatuan?.toLowerCase() === 'per unit' || currentSatuan?.toLowerCase() === 'per pcs') {
+          if (currentSatuan?.toLowerCase() === 'utuh' || currentSatuan?.toLowerCase() === 'pcs' || currentSatuan?.toLowerCase() === 'pieces' || currentSatuan?.toLowerCase() === 'per unit' || currentSatuan?.toLowerCase() === 'per pcs') {
             totalBeforeDiscount = unitPrice; // Sudah termasuk quantity di dalamnya
           } else {
             totalBeforeDiscount = unitPrice * qty; // Kalikan dengan quantity untuk satuan lain
@@ -591,11 +591,10 @@ export default function AddSalesOrderPage() {
       );
 
       // Untuk satuan "utuh", tidak perlu dikalikan quantity lagi
-      let calculatedTotal;
-      if (currentSatuan?.toLowerCase() === 'utuh' || currentSatuan?.toLowerCase() === 'per unit' || currentSatuan?.toLowerCase() === 'per pcs') {
-        calculatedTotal = unitPrice; // Sudah termasuk quantity di dalamnya
+      if (currentSatuan?.toLowerCase() === 'utuh' || currentSatuan?.toLowerCase() === 'pcs' || currentSatuan?.toLowerCase() === 'pieces' || currentSatuan?.toLowerCase() === 'per unit' || currentSatuan?.toLowerCase() === 'per pcs') {
+        totalBeforeDiscount = unitPrice; // Sudah termasuk quantity di dalamnya
       } else {
-        calculatedTotal = unitPrice * parseInt(itemQty); // Kalikan dengan quantity untuk satuan lain
+        totalBeforeDiscount = unitPrice * qty; // Kalikan dengan quantity untuk satuan lain
       }
 
       const discountAmount = calculatedTotal * (parseFloat(itemDiscount) || 0) / 100;
@@ -900,7 +899,7 @@ export default function AddSalesOrderPage() {
     );
     // Untuk satuan "utuh", tidak perlu dikalikan quantity lagi
     let firstTotal;
-    if (firstSatuan?.toLowerCase() === 'utuh' || firstSatuan?.toLowerCase() === 'per unit' || firstSatuan?.toLowerCase() === 'per pcs') {
+    if (firstSatuan?.toLowerCase() === 'utuh' || currentSatuan?.toLowerCase() === 'pcs' || currentSatuan?.toLowerCase() === 'pieces' || firstSatuan?.toLowerCase() === 'per unit' || firstSatuan?.toLowerCase() === 'per pcs') {
       firstTotal = firstUnitPrice; // Sudah termasuk quantity di dalamnya
     } else {
       firstTotal = firstUnitPrice * 3; // Kalikan dengan quantity untuk satuan lain
