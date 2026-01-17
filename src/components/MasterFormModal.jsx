@@ -496,6 +496,7 @@ export default function MasterFormModal({
                   className="w-full"
                   required={isHidden ? false : (editData && field.hideOnEdit ? false : field.required)}
                   maxLength={field.maxLength}
+                  disabled={!!(editData && field.disabledOnEdit)}
                 />
               )}
             </div>

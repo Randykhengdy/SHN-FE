@@ -676,6 +676,7 @@ export const openItemQRPDFPreview = async (item) => {
 };
 
 export const openRackQRPDFPreview = async (rakItem, parentGudang) => {
+  const parent = parentGudang || rakItem.gudang || null;
   const pdf = new jsPDF("p", "mm", "a5");
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
@@ -687,7 +688,7 @@ export const openRackQRPDFPreview = async (rakItem, parentGudang) => {
   const payload = encodeURIComponent(
     JSON.stringify({
       kode_rak: rakItem.kode || rakItem.kode_barang || "",
-      kode_gudang: parentGudang?.kode || parentGudang?.kode_barang || "",
+      kode_gudang: parent?.kode || parent?.kode_barang || "",
       id: rakItem.id,
       parent_id: rakItem.parent_id,
     })
@@ -725,7 +726,7 @@ export const openRackQRPDFPreview = async (rakItem, parentGudang) => {
     y += 9;
   };
 
-  addKV("Kode Gudang", parentGudang?.kode || parentGudang?.kode_barang);
+  addKV("Kode Gudang", parent?.kode || parent?.kode_barang);
   addKV("Kode Rak", rakItem.kode || rakItem.kode_barang);
 
   pdf.setDrawColor(180);
@@ -771,11 +772,14 @@ export const openRackQRPDFBatch = async (rakItems) => {
     const qrX = (pageW - qrSize) / 2;
     const qrY = margin + 4;
 
-    let parentGudang = null;
+    let parentGudang = rakItem.gudang || null;
     try {
-      if (rakItem.parent_id) {
-        const resp = await gudangService.getById(rakItem.parent_id);
-        parentGudang = resp?.data || resp;
+      if (!parentGudang) {
+        const parentId = rakItem.gudang_id || rakItem.parent_id;
+        if (parentId) {
+          const resp = await gudangService.getById(parentId);
+          parentGudang = resp?.data || resp;
+        }
       }
     } catch (_) {}
 

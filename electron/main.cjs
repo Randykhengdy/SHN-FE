@@ -482,6 +482,7 @@ function createWindow() {
           { label: 'Suppliers', accelerator: 'CmdOrCtrl+6', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/supplier') },
           { label: 'Pelanggan', accelerator: 'CmdOrCtrl+7', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/pelanggan') },
           { label: 'Gudang', accelerator: 'CmdOrCtrl+8', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/gudang') },
+          { label: 'Rak', accelerator: 'CmdOrCtrl+Shift+8', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/rak') },
           { label: 'Pelaksana', accelerator: 'CmdOrCtrl+9', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/pelaksana') },
           { label: 'Jenis Transaksi Kas', accelerator: 'CmdOrCtrl+0', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/jenis-transaksi-kas') },
         ]

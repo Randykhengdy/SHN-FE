@@ -9,7 +9,7 @@ export default function BentukBarangPage() {
       subtitle="Master Data"
       service={bentukBarangService}
       fields={[
-        { name: "kode", label: "Kode", maxLength: 8 },
+        { name: "kode", label: "Kode", maxLength: 8, disabledOnEdit: true },
         { name: "nama_bentuk", label: "Nama Bentuk", maxLength: 32 },
       ]}
       columns={[
