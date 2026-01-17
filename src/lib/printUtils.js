@@ -104,6 +104,139 @@ export const generatePodPrintContent = (podData) => {
   `;
 };
 
+export const generatePurchaseOrderPrintContent = (purchaseOrderData) => {
+  const formatDate = (value) => {
+    if (!value) return '-';
+    try {
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return String(value);
+      return d.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch {
+      return String(value);
+    }
+  };
+
+  const itemsHtml = (purchaseOrderData.items || []).map((item, index) => `
+    <tr>
+      <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${index + 1}</td>
+      <td style="border: 1px solid #ddd; padding: 8px;">
+        ${item.bentuk_barang || '-'} ${item.jenis_barang || ''}
+        <div style="font-size: 11px; color: #555; margin-top: 2px;">
+          Grade: ${item.grade_barang || '-'}
+        </div>
+      </td>
+      <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.dimensi || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.qty || 0}</td>
+      <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${item.harga_display || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${item.diskon_display || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${item.total_display || '-'}</td>
+    </tr>
+  `).join('') || `
+    <tr>
+      <td colspan="7" style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #777;">
+        Tidak ada item
+      </td>
+    </tr>
+  `;
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Purchase Order - ${purchaseOrderData.nomor_po || ''}</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 20px; font-size: 12px; }
+        .header { display: flex; align-items: flex-start; margin-bottom: 24px; position: relative; min-height: 80px; padding-top: 8px; }
+        .logo { width: 70px; height: auto; margin-right: 16px; object-fit: contain; }
+        .header-content { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; top: 8px; }
+        .company-name { font-size: 20px; font-weight: bold; margin-bottom: 4px; line-height: 1.2; }
+        .company-address { font-size: 11px; color: #555; }
+        .document-title { font-size: 16px; font-weight: bold; margin-top: 12px; }
+        .info-section { margin-bottom: 16px; display: flex; justify-content: space-between; }
+        .info-column { width: 48%; }
+        .info-row { display: flex; margin-bottom: 4px; }
+        .info-label { font-weight: bold; min-width: 110px; }
+        .info-value { flex: 1; }
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 11px; }
+        td { border: 1px solid #ddd; padding: 6px; font-size: 11px; vertical-align: top; }
+        .footer { margin-top: 20px; text-align: right; font-size: 11px; color: #666; }
+        @media print {
+          body { margin: 0; }
+          .no-print { display: none; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <img src="${LOGO_BASE64}" alt="PT. SHN Logo" class="logo" />
+        <div class="header-content">
+          <div class="company-name">PT. SURYA HARSA NAGARA</div>
+          <div class="company-address">Kawasan Industri / alamat perusahaan</div>
+          <div class="document-title">PURCHASE ORDER</div>
+        </div>
+      </div>
+
+      <div class="info-section">
+        <div class="info-column">
+          <div class="info-row">
+            <span class="info-label">Nomor PO</span>
+            <span class="info-value">${purchaseOrderData.nomor_po || '-'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Tanggal PO</span>
+            <span class="info-value">${formatDate(purchaseOrderData.tanggal_po)}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Status</span>
+            <span class="info-value">${purchaseOrderData.status || '-'}</span>
+          </div>
+        </div>
+        <div class="info-column">
+          <div class="info-row">
+            <span class="info-label">Supplier</span>
+            <span class="info-value">${purchaseOrderData.supplier_name || '-'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Telepon</span>
+            <span class="info-value">${purchaseOrderData.supplier_phone || '-'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Alamat</span>
+            <span class="info-value">${purchaseOrderData.supplier_address || '-'}</span>
+          </div>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 40px; text-align: center;">#</th>
+            <th>Item</th>
+            <th style="width: 120px; text-align: center;">Dimensi</th>
+            <th style="width: 70px; text-align: center;">Qty</th>
+            <th style="width: 110px; text-align: right;">Harga</th>
+            <th style="width: 70px; text-align: right;">Diskon</th>
+            <th style="width: 120px; text-align: right;">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsHtml}
+        </tbody>
+      </table>
+
+      <div class="footer">
+        Dicetak pada: ${new Date().toLocaleString('id-ID')}
+      </div>
+    </body>
+    </html>
+  `;
+};
+
 export const generateInvoicePrintContent = (invoiceData) => {
   const itemsHtml = invoiceData.invoice_pod_items.map(item => `
     <tr>

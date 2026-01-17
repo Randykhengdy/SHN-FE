@@ -9,7 +9,7 @@ export default function SupplierPage() {
       subtitle="Master Data"
       service={supplierService}
       fields={[
-        { name: "kode", label: "Kode", maxLength: 16 },
+        { name: "kode", label: "Kode", maxLength: 16, disabledOnEdit: true },
         { name: "nama_supplier", label: "Nama Supplier", maxLength: 64 },
         { name: "kota", label: "Kota", maxLength: 32 },
         { name: "telepon_hp", label: "Telepon/HP", maxLength: 32 },

@@ -47,14 +47,6 @@ export default function GudangPage() {
         title="Gudang"
         subtitle="Master Data"
         service={gudangService}
-        filterConfig={{
-          param: "tipe_gudang",
-          defaultValue: "gudang",
-          options: [
-            { value: "semua", label: "Semua" },
-            { value: "gudang", label: "Gudang" }
-          ]
-        }}
         validate={(form) => {
           const errs = [];
           if (errs.length) return `Field wajib: ${errs.join(", ")}`;
@@ -77,7 +69,6 @@ export default function GudangPage() {
           { key: "id", label: "ID", align: "center", headerAlign: "center", width: "5rem", maxWidth: "5rem" },
           { key: "kode", label: "Kode", align: "center", headerAlign: "center", width: "8rem", maxWidth: "8rem" },
           { key: "nama_gudang", label: "Nama Gudang", align: "left", minWidth: "15rem", maxWidth: "20rem" },
-          { key: "tipe_gudang", label: "Tipe", align: "center", headerAlign: "center", width: "8rem", maxWidth: "8rem" },
           { key: "telepon_hp", label: "Telepon/HP", align: "center", headerAlign: "center", width: "12rem", maxWidth: "12rem" }
         ]}
         customActions={[
