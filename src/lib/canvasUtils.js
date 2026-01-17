@@ -1,66 +1,72 @@
 import { request } from './request';
 
+const PREVIEW_STORAGE_PREFIX = 'WO_canvas_preview_item_';
+
+function getPreviewStorageKey(itemId) {
+  return `${PREVIEW_STORAGE_PREFIX}${itemId}`;
+}
+
+function normalizeToDataUrl(base64Image) {
+  let data = base64Image || '';
+  if (!/^data:image\/[a-zA-Z0-9+]+;base64,/.test(data)) {
+    data = `data:image/jpeg;base64,${data}`;
+  }
+  return data;
+}
+
+export function getStoredPreviewDataUrl(itemId) {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return null;
+    const storageKey = getPreviewStorageKey(itemId);
+    const value = window.localStorage.getItem(storageKey);
+    if (!value || typeof value !== 'string') return null;
+    return value;
+  } catch (_) {
+    return null;
+  }
+}
+
+export function setStoredPreviewDataUrl(itemId, dataUrl) {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    const storageKey = getPreviewStorageKey(itemId);
+    const normalized = normalizeToDataUrl(dataUrl);
+    window.localStorage.setItem(storageKey, normalized);
+  } catch (_) {}
+}
+
 /**
  * Get canvas image by item ID and convert to preview image
- * @param {number} itemId - The item barang ID
- * @returns {Promise<string|null>} - Returns the preview image path or null if failed
+ * Strategy:
+ * 1. Cek localStorage dulu; kalau ada langsung pakai (hasil screenshot save canvas)
+ * 2. Kalau belum ada, call API dan hanya dipakai untuk display (tidak disimpan)
  */
 export async function getCanvasPreviewByItemId(itemId) {
   try {
+    const cached = getStoredPreviewDataUrl(itemId);
+    if (cached) {
+      return cached;
+    }
+  } catch (_) {}
+
+  try {
     const response = await request(`/item-barang/${itemId}/canvas-image`, { method: 'GET' });
     if (!response || !response.canvas_image) return null;
-    const previewImagePath = await convertBase64ToPreview(itemId, response.canvas_image);
-    return previewImagePath;
-  } catch (error) {
+    const dataURL = normalizeToDataUrl(response.canvas_image);
+    return dataURL;
+  } catch (_) {
     return null;
   }
 }
 
 /**
  * Convert base64 canvas image to preview image
- * @param {number} itemId - The item barang ID
- * @param {string} base64Image - The base64 encoded canvas image
- * @returns {Promise<string>} - Returns the preview image path
+ * Digunakan untuk jalur lama / util umum, tanpa menyentuh localStorage
  */
 export async function convertBase64ToPreview(itemId, base64Image) {
   try {
-    const blob = await base64ToBlob(base64Image);
-    const fileName = `canvas-preview-ItemId-${itemId}.jpg`;
-    if (window.electronAPI && window.electronAPI.saveCanvasFile) {
-      try {
-        const reader = new FileReader();
-        const dataURL = await new Promise((resolve, reject) => {
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-        const result = await window.electronAPI.saveCanvasFile(dataURL, fileName);
-        if (result.success && typeof window !== 'undefined') {
-          window.canvasPreviewCacheBuster = Date.now();
-          try {
-            window.dispatchEvent(new CustomEvent('canvasPreviewSaved', { detail: { itemId } }));
-          } catch (_) {}
-        }
-      } catch (_) {}
-    } else {
-      try {
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = fileName;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        if (typeof window !== 'undefined') {
-          window.canvasPreviewCacheBuster = Date.now();
-          try {
-            window.dispatchEvent(new CustomEvent('canvasPreviewSaved', { detail: { itemId } }));
-          } catch (_) {}
-        }
-      } catch (_) {}
-    }
-    const previewUrl = URL.createObjectURL(blob);
-    return previewUrl;
+    const dataURL = normalizeToDataUrl(base64Image);
+    return dataURL;
   } catch (_) {
     return null;
   }

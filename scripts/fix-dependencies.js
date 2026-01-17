@@ -131,15 +131,32 @@ async function fixDependencies(context = {}) {
     }
   }
   
-  // Check @emnapi/core
   const emnapiCorePath = path.join(nodeModulesPath, '@emnapi', 'core');
-  if (fs.existsSync(emnapiCorePath)) {
+  if (!fs.existsSync(emnapiCorePath)) {
+    try {
+      fs.mkdirSync(emnapiCorePath, { recursive: true });
+      const stubPackageJson = {
+        name: '@emnapi/core',
+        version: '1.0.0',
+        description: 'Optional stub package',
+        optional: true,
+        dependencies: {}
+      };
+      fs.writeFileSync(
+        path.join(emnapiCorePath, 'package.json'),
+        JSON.stringify(stubPackageJson, null, 2)
+      );
+      console.log('✅ Created stub package for @emnapi/core');
+    } catch (error) {
+      console.warn('⚠️  Could not create stub package for @emnapi/core:', error.message);
+    }
+  } else {
     const packageJsonPath = path.join(emnapiCorePath, 'package.json');
     if (fs.existsSync(packageJsonPath)) {
       try {
         const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
         let hasChanges = false;
-        
+
         if (!packageJson.name) {
           packageJson.name = '@emnapi/core';
           hasChanges = true;
@@ -148,7 +165,7 @@ async function fixDependencies(context = {}) {
           packageJson.version = '1.0.0';
           hasChanges = true;
         }
-        
+
         if (hasChanges) {
           fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
           console.log('✅ Fixed @emnapi/core package.json');
