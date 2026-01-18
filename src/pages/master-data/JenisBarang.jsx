@@ -9,7 +9,7 @@ export default function JenisBarangPage() {
       subtitle="Master Data"
       service={jenisBarangService}
       fields={[
-        { name: "kode", label: "Kode", maxLength: 8 },
+        { name: "kode", label: "Kode", maxLength: 8, disabledOnEdit: true },
         { name: "nama_jenis", label: "Nama Jenis", maxLength: 32 },
       ]}
       columns={[

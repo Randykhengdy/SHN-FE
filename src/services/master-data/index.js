@@ -3,6 +3,7 @@ export { gudangService } from './gudangService';
 export { jenisBarangService } from './jenisBarangService';
 export { bentukBarangService } from './bentukBarangService';
 export { gradeBarangService } from './gradeBarangService';
+export { rakService } from './rakService';
 export { itemBarangService } from './itemBarangService';
 export { jenisBiayaService } from './jenisBiayaService';
 export { jenisMutasiStockService } from './jenisMutasiStockService';

@@ -9,7 +9,7 @@ export default function JenisMutasiStockPage() {
       subtitle="Master Data"
       service={jenisMutasiStockService}
       fields={[
-        { name: "kode", label: "Kode", maxLength: 16 },
+        { name: "kode", label: "Kode", maxLength: 16, disabledOnEdit: true },
         { name: "mutasi_stock", label: "Mutasi Stock", maxLength: 64 },
         {
           name: "jenis",

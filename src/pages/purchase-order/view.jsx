@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { purchaseOrderService } from "@/services/purchaseOrderService";
 import { useAlert } from "@/hooks/useAlert";
 import PageLayout from "@/components/PageLayout";
+import { generatePurchaseOrderPrintContent, openPrintDialog } from "@/lib/printUtils";
 
 export default function ViewPurchaseOrderPage() {
   const { id } = useParams();
@@ -69,6 +70,43 @@ export default function ViewPurchaseOrderPage() {
     navigate('/purchase-order');
   };
 
+  const handlePrint = () => {
+    if (!purchaseOrder) return;
+
+    try {
+      const items = (purchaseOrder.purchase_order_items || []).map(item => ({
+        bentuk_barang: item.bentuk_barang?.nama_bentuk || "",
+        jenis_barang: item.jenis_barang?.nama_jenis || "",
+        grade_barang: item.grade_barang?.nama || "",
+        dimensi: item.panjang && item.lebar
+          ? `${item.panjang} x ${item.lebar} x ${item.tebal || 0}`
+          : "-",
+        qty: item.qty || 0,
+        harga_display: formatCurrency(parseFloat(item.harga || 0)),
+        diskon_display: `${item.diskon || 0}%`,
+        total_display: formatCurrency((item.qty || 0) * (parseFloat(item.harga || 0)))
+      }));
+
+      const sup = purchaseOrder.supplier || {};
+
+      const data = {
+        nomor_po: purchaseOrder.nomor_po,
+        tanggal_po: purchaseOrder.tanggal_po,
+        status: purchaseOrder.status,
+        supplier_name: sup.nama_supplier || sup.nama || "",
+        supplier_phone: sup.telepon || "",
+        supplier_address: sup.alamat || "",
+        items
+      };
+
+      const html = generatePurchaseOrderPrintContent(data);
+      openPrintDialog(html);
+    } catch (e) {
+      console.error("Error printing Purchase Order:", e);
+      showAlert("Error", "Gagal mencetak Purchase Order", "error");
+    }
+  };
+
   if (loading) {
     return (
       <PageLayout title="Purchase Order (PO)" category="TRANSAKSI">
@@ -102,10 +140,16 @@ export default function ViewPurchaseOrderPage() {
             Detail Purchase Order - {purchaseOrder.nomor_po}
           </h2>
         </div>
-        <Button onClick={handleBackToList} variant="outline">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Kembali ke List
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleBackToList} variant="outline">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Kembali ke List
+          </Button>
+          <Button variant="outline" onClick={handlePrint}>
+            <FileText className="w-4 h-4 mr-2" />
+            Print PO
+          </Button>
+        </div>
       </div>
 
       {/* Purchase Order Information */}
@@ -235,18 +279,6 @@ export default function ViewPurchaseOrderPage() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Action Buttons */}
-      <div className="flex justify-center gap-4">
-        <Button variant="outline">
-          <FileText className="w-4 h-4 mr-2" />
-          Print PO
-        </Button>
-        <Button variant="outline">
-          <Download className="w-4 h-4 mr-2" />
-          Download PDF
-        </Button>
-      </div>
 
       {/* Alert Component */}
       <AlertComponent />

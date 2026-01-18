@@ -9,7 +9,6 @@ import { Plus, Trash2, Save, ArrowLeft, Users, Package, Grid3X3, X } from 'lucid
 import SelectPlatShaftDasar from './select-platshaftdasar';
 import { useAlert } from '@/hooks/useAlert';
 import PageLayout from '@/components/PageLayout';
-import { workOrderService } from '@/services/workOrderService';
 import { openPrintDialog, generateWOPlanningPrintContent } from '@/lib/printUtils';
 import { clearCanvasPreviews, getStoredPreviewDataUrl } from '@/lib/canvasUtils';
 import { workOrderPlanningService } from '@/services/workOrderPlanningService';
@@ -720,13 +719,10 @@ export default function AddWorkOrderPage() {
 
    
 
-  // Function to save saran plat dasar
-  const saveSaranPlatDasar = async (workOrderId, workOrderItemsResponse) => {
+  const buildSaranPlatCanvasData = () => {
     try {
-      console.log('=== SAVING SARAN PLAT DASAR ===');
-      console.log('Work Order ID:', workOrderId);
-      console.log('Work Order Items Response:', workOrderItemsResponse);
-      
+      console.log('=== BUILDING SARAN PLAT CANVAS DATA ===');
+
       // Get used saran plats from localStorage
       const usedSaranPlats = JSON.parse(localStorage.getItem('WO_used_saran_plats') || '[]');
       console.log('Used saran plats:', usedSaranPlats);
@@ -737,13 +733,11 @@ export default function AddWorkOrderPage() {
         return;
       }
       
-      // Get canvas layouts for each saran plat
       const saranPlatData = [];
       
       for (const saranItemId of usedSaranPlats) {
         console.log(`Processing saran plat ${saranItemId}...`);
         
-        // Check which WO items use this saran plat
         const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
         const woItemsUsingThisSaranPlat = totalQuantityData.filter(woItem => 
           woItem.WOQuantity && woItem.WOQuantity.some(saranItem => 
@@ -758,7 +752,6 @@ export default function AddWorkOrderPage() {
           continue;
         }
         
-        // Get all woItemUniqueIds from localStorage
         const woItemUniqueIds = JSON.parse(localStorage.getItem('WO_item_unique_ids') || '[]');
         
         if (woItemUniqueIds.length === 0) {
@@ -770,7 +763,6 @@ export default function AddWorkOrderPage() {
         console.log(`woItemUniqueIds:`, woItemUniqueIds);
         console.log(`WO items using this saran plat:`, woItemsUsingThisSaranPlat.map(item => item.WoItemID));
         
-        // Get canvas data from localStorage
         const workOrderUniqueId = localStorage.getItem('WO_current_work_order_id');
         const canvasLayoutKey = `WO_canvas_layout_${saranItemId}_${workOrderUniqueId}`;
         const canvasLayoutData = localStorage.getItem(canvasLayoutKey);
@@ -782,10 +774,8 @@ export default function AddWorkOrderPage() {
         if (canvasLayoutData) {
           const canvasLayout = JSON.parse(canvasLayoutData);
           
-          // Check if there are any boxes from current work order items
           const currentWoItemIds = JSON.parse(localStorage.getItem('WO_item_unique_ids') || '[]');
           const currentWOBoxes = canvasLayout.boxes ? canvasLayout.boxes.filter(box => {
-            // Check if box.woItemId is in current WO item IDs array (handle both string and number)
             const boxWoItemId = box.woItemId;
             return currentWoItemIds.includes(boxWoItemId) || 
                    currentWoItemIds.includes(String(boxWoItemId)) || 
@@ -808,17 +798,13 @@ export default function AddWorkOrderPage() {
           
           // Only process canvas data if there are boxes from current work order
           if (currentWOBoxes.length > 0) {
-            // Change box colors to red before saving, but preserve yellow boxes from other WO items
             if (canvasLayout.boxes && Array.isArray(canvasLayout.boxes)) {
               canvasLayout.boxes = canvasLayout.boxes.map(box => {
-                // Check if this box belongs to current work order items or different work order
                 const boxWoItemId = box.woItemId;
                 const isFromCurrentWO = currentWoItemIds.includes(boxWoItemId) || 
                                         currentWoItemIds.includes(String(boxWoItemId)) || 
                                         currentWoItemIds.includes(parseInt(boxWoItemId));
                 
-                // Only change color to red if it's from current work order
-                // Preserve yellow color for boxes from other work orders
               if (isFromCurrentWO) {
                 return {
                   ...box,
@@ -826,14 +812,10 @@ export default function AddWorkOrderPage() {
                   isDisabled: true, // Mark as disabled/saved
                   isSave: true, // Mark as saved to database
                   workOrderId: workOrderUniqueId
-                  // workItemUniqueId: boxWoItemId
                 };
               } else {
-                // Keep original color for boxes from other work orders (preserve yellow)
                 return {
                   ...box,
-                  // Don't change color, isDisabled, or isSave for boxes from other WO
-                  // workItemUniqueId: boxWoItemId
                 };
               }
               });
@@ -843,15 +825,12 @@ export default function AddWorkOrderPage() {
             
             processedCanvasData = JSON.stringify(canvasLayout);
           } else {
-            // No boxes from current work order - don't save canvas data to preserve existing data
             console.log(`No boxes from current WO for saran item ${saranItemId} - skipping canvas save to preserve existing data`);
             processedCanvasData = null;
           }
         }
         
-        // Only add saran plat data jika ada canvas data dari WO saat ini
         if (processedCanvasData) {
-          // Ambil canvas image dari localStorage (hasil save canvas preview)
           let canvasImageBase64 = null;
           try {
             const dataUrl = getStoredPreviewDataUrl(saranItemId);
@@ -890,33 +869,7 @@ export default function AddWorkOrderPage() {
       }
       
       console.log('Saran plat data to save:', saranPlatData);
-      
-      if (saranPlatData.length === 0) {
-        console.log('❌ No saran plat data to save - saranPlatData is empty');
-        return;
-      }
-      
-      // Save each saran plat dasar
-      for (const saranData of saranPlatData) {
-        try {
-          console.log('🚀 Calling API for saran data:', saranData);
-          const response = await workOrderService.saveSaranPlatDasar(
-            saranData.wo_planning_item_id,
-            saranData.item_barang_id,
-            saranData.is_selected,
-            saranData.canvas_data,
-            saranData.canvas_image
-          );
-          console.log('✅ Saved saran plat dasar:', saranData.item_barang_id, response);
-        } catch (error) {
-          console.error('❌ Error saving saran plat dasar for item:', saranData.item_barang_id, error);
-          console.error('Error details:', error.response?.data || error.message);
-          // Continue with other items even if one fails
-        }
-      }
-      
-      console.log('✅ All saran plat dasar saved successfully');
-      
+      return saranPlatData;
     } catch (error) {
       console.error('❌ Error saving saran plat dasar:', error);
       throw error;
@@ -1010,7 +963,21 @@ export default function AddWorkOrderPage() {
       const woUniqueId = existingWoUniqueId || `WO-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
       const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
       const existingWoItemIds = totalQuantityData.map(item => item.WoItemID.toString());
+      localStorage.setItem('WO_item_unique_ids', JSON.stringify(existingWoItemIds));
+      const saranPlatCanvasData = buildSaranPlatCanvasData() || [];
+      const saranPlatCanvasMap = {};
+      saranPlatCanvasData.forEach(entry => {
+        if (entry && entry.item_barang_id) {
+          saranPlatCanvasMap[String(entry.item_barang_id)] = entry;
+        }
+      });
+      const firstCanvasEntry = saranPlatCanvasData.length > 0 ? saranPlatCanvasData[0] : null;
       const transformedData = {
+        ...(firstCanvasEntry ? {
+          item_barang_id: firstCanvasEntry.item_barang_id,
+          canvas_data: firstCanvasEntry.canvas_data,
+          canvas_image: firstCanvasEntry.canvas_image
+        } : {}),
         wo_unique_id: woUniqueId,
         tanggal_wo: workOrderData.tanggal_wo,
         tanggal_target: workOrderData.tanggal_target,
@@ -1053,14 +1020,24 @@ export default function AddWorkOrderPage() {
           diskon: 0,
           catatan: item.catatan,
           saran_plat_dasar: (() => {
-            const tq = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
+            const tq = totalQuantityData;
             const woItemData = tq.find(wo => wo.WoItemID === item.id);
             if (!woItemData || !woItemData.WOQuantity) return [];
-            return woItemData.WOQuantity.map(woq => ({
-              item_barang_id: woq.ItemId,
-              quantity: woq.Quantity,
-              is_selected: true
-            }));
+            return woItemData.WOQuantity.map(woq => {
+              const entry = saranPlatCanvasMap[String(woq.ItemId)] || saranPlatCanvasMap[String(parseInt(woq.ItemId))];
+              const base = {
+                item_barang_id: woq.ItemId,
+                quantity: woq.Quantity,
+                is_selected: true
+              };
+              if (entry && entry.canvas_image) {
+                base.canvas_image = entry.canvas_image;
+              }
+              if (entry && entry.canvas_data) {
+                base.canvas_layout = entry.canvas_data;
+              }
+              return base;
+            });
           })(),
           pelaksana: item.pelaksana.map(p => ({
             pelaksana_id: p.pelaksana_id,
@@ -1073,14 +1050,12 @@ export default function AddWorkOrderPage() {
           }))
         }))
       };
-      const response = await workOrderService.createWorkOrder(transformedData);
+      const response = await request('/work-order-planning/with-saran-plat-dasar', {
+        method: 'POST',
+        body: JSON.stringify(transformedData)
+      });
       const createdId = response.data?.id || response.id;
       const workOrderNumber = response.data?.nomor_wo || workOrderData.nomor_wo;
-      const workOrderItemsResponse = response.data?.items || [];
-      localStorage.setItem('WO_item_unique_ids', JSON.stringify(existingWoItemIds));
-      try {
-        await saveSaranPlatDasar(createdId, workOrderItemsResponse);
-      } catch (_) {}
       const mapLabel = (list, value) => {
         const found = list.find(opt => String(opt.value) === String(value));
         return found ? (found.label || found.nama || found.text || String(value)) : String(value || 'N/A');

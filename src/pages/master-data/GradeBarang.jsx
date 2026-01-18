@@ -9,7 +9,7 @@ export default function GradeBarangPage() {
       subtitle="Master Data"
       service={gradeBarangService}
       fields={[
-        { name: "kode", label: "Kode", maxLength: 8, required: true },
+        { name: "kode", label: "Kode", maxLength: 8, required: true, disabledOnEdit: true },
         { name: "nama", label: "Nama", maxLength: 32, required: true },
       ]}
       columns={[

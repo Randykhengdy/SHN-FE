@@ -9,7 +9,7 @@ export default function PelangganPage() {
       subtitle="Master Data"
       service={pelangganService}
       fields={[
-        { name: "kode", label: "Kode", maxLength: 8 },
+        { name: "kode", label: "Kode", maxLength: 8, disabledOnEdit: true },
         { name: "nama_pelanggan", label: "Nama Pelanggan", maxLength: 64 },
         { name: "kota", label: "Kota", maxLength: 32 },
         { name: "telepon_hp", label: "Telepon/HP", maxLength: 16 },

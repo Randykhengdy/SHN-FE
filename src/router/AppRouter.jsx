@@ -14,6 +14,7 @@ import PelaksanaPage from "@/pages/master-data/Pelaksana";
 import SupplierPage from "@/pages/master-data/Supplier";
 import PelangganPage from "@/pages/master-data/Pelanggan";
 import GudangPage from "@/pages/master-data/Gudang";
+import RakPage from "@/pages/master-data/Rak";
 import RolePage from "@/pages/master-data/Role";
 import TermPage from "@/pages/master-data/Term";
 import UnitPage from "@/pages/master-data/Unit";
@@ -70,6 +71,7 @@ const AppRouter = () => {
         <Route path="/masterdata/supplier" element={<SupplierPage />} />
         <Route path="/masterdata/pelanggan" element={<PelangganPage />} />
         <Route path="/masterdata/gudang" element={<GudangPage />} />
+        <Route path="/masterdata/rak" element={<RakPage />} />
         <Route path="/masterdata/pelaksana" element={<PelaksanaPage />} />
         <Route path="/masterdata/jenis-transaksi-kas" element={<JenisTransaksiKasPage />} />
         <Route path="/masterdata/role" element={<RolePage />} />

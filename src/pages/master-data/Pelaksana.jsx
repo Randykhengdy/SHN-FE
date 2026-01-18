@@ -9,7 +9,7 @@ export default function PelaksanaPage() {
       subtitle="Master Data"
       service={pelaksanaService}
       fields={[
-        { name: "kode", label: "Kode", maxLength: 8 },
+        { name: "kode", label: "Kode", maxLength: 8, disabledOnEdit: true },
         { name: "nama_pelaksana", label: "Nama Pelaksana", maxLength: 64 },
         { name: "level", label: "Level", maxLength: 16 },
       ]}

@@ -27,6 +27,7 @@ import { request } from "@/lib/request";
 import { API_ENDPOINTS } from "@/config/api";
 import SalesOrderLayout from "@/components/SalesOrderLayout";
 import PageHeader from "@/components/PageHeader";
+import { generatePurchaseOrderPrintContent, openPrintDialog } from "@/lib/printUtils";
 
 export default function AddPurchaseOrderPage() {
   const { showAlert, AlertComponent } = useAlert();
@@ -54,27 +55,36 @@ export default function AddPurchaseOrderPage() {
   const [supplierEmail, setSupplierEmail] = useState("");
   const [supplierAddress, setSupplierAddress] = useState("");
 
-  // Load master data on component mount
   useEffect(() => {
     const loadMasterData = async () => {
       try {
+        setLoadingItemType(true);
         setLoadingItemShape(true);
+        setLoadingItemGrade(true);
         setLoadingUnit(true);
 
         const [
+          jenisBarang,
           bentukBarang,
+          gradeBarang,
           units
         ] = await Promise.all([
+          getJenisBarangOptions(),
           getBentukBarangOptions(),
+          getGradeBarangOptions(),
           getUnitOptions()
         ]);
 
+        setItemTypeOptions(jenisBarang);
         setItemShapeOptions(bentukBarang);
+        setItemGradeOptions(gradeBarang);
         setUnitOptions(units);
       } catch (error) {
         console.error('Error loading master data:', error);
       } finally {
+        setLoadingItemType(false);
         setLoadingItemShape(false);
+        setLoadingItemGrade(false);
         setLoadingUnit(false);
       }
     };
@@ -408,7 +418,33 @@ export default function AddPurchaseOrderPage() {
       
       console.log("✅ Purchase Order berhasil disimpan:", result);
       showAlert("Sukses", "Purchase Order berhasil disimpan!", "success");
-      
+
+      try {
+        const sup = selectedSupplier || {};
+        const printData = {
+          nomor_po: result.data?.nomor_po || poNumber,
+          tanggal_po: result.data?.tanggal_po || poDate,
+          status: result.data?.status || status,
+          supplier_name: sup.nama_supplier || sup.nama || supplierName || "",
+          supplier_phone: sup.telepon || supplierPhone || "",
+          supplier_address: sup.alamat || supplierAddress || "",
+          items: items.map(item => ({
+            bentuk_barang: item.bentuk,
+            jenis_barang: item.jenisBarang,
+            grade_barang: item.grade,
+            dimensi: item.dimensi,
+            qty: item.qty,
+            harga_display: item.hargaDisplay,
+            diskon_display: item.diskonDisplay,
+            total_display: item.total
+          }))
+        };
+        const html = generatePurchaseOrderPrintContent(printData);
+        openPrintDialog(html);
+      } catch (e) {
+        console.error("❌ Error generating PO print content:", e);
+      }
+
       setTimeout(() => {
         window.history.back();
       }, 2000);
@@ -416,6 +452,45 @@ export default function AddPurchaseOrderPage() {
     } catch (error) {
       console.error("❌ Error saving Purchase Order:", error);
       showAlert("Error", "Terjadi kesalahan saat menyimpan Purchase Order", "error");
+    }
+  };
+
+  const handlePrintPO = () => {
+    if (!selectedSupplier) {
+      showAlert("Peringatan", "Supplier harus dipilih sebelum print PO", "warning");
+      return;
+    }
+
+    if (items.length === 0) {
+      showAlert("Peringatan", "Minimal harus ada 1 item sebelum print PO", "warning");
+      return;
+    }
+
+    try {
+      const sup = selectedSupplier || {};
+      const printData = {
+        nomor_po: poNumber,
+        tanggal_po: poDate,
+        status: status,
+        supplier_name: sup.nama_supplier || sup.nama || supplierName || "",
+        supplier_phone: sup.telepon || supplierPhone || "",
+        supplier_address: sup.alamat || supplierAddress || "",
+        items: items.map(item => ({
+          bentuk_barang: item.bentuk,
+          jenis_barang: item.jenisBarang,
+          grade_barang: item.grade,
+          dimensi: item.dimensi,
+          qty: item.qty,
+          harga_display: item.hargaDisplay,
+          diskon_display: item.diskonDisplay,
+          total_display: item.total
+        }))
+      };
+      const html = generatePurchaseOrderPrintContent(printData);
+      openPrintDialog(html);
+    } catch (error) {
+      console.error("Error printing Purchase Order from add page:", error);
+      showAlert("Error", "Gagal mencetak Purchase Order", "error");
     }
   };
 
@@ -1048,7 +1123,12 @@ export default function AddPurchaseOrderPage() {
       {/* Action Buttons: only Print */}
       <div className="flex justify-center gap-4">
         {hasRole(['admin', 'manager', 'supervisor']) && (
-          <Button size="lg" variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
+          <Button
+            size="lg"
+            variant="outline"
+            className="border-blue-600 text-blue-600 hover:bg-blue-50"
+            onClick={handlePrintPO}
+          >
             Print PO
           </Button>
         )}
