@@ -235,6 +235,35 @@ export const generatePurchaseOrderPrintContent = (purchaseOrderData) => {
         </tbody>
       </table>
 
+      ${purchaseOrderData.subtotal !== undefined ? `
+      <div style="margin-top: 20px;">
+        <table style="width: 50%; margin-left: auto; border-collapse: collapse;">
+          <tbody>
+            <tr>
+              <td style="padding: 6px; font-weight: bold; font-size: 11px;">Subtotal:</td>
+              <td style="padding: 6px; text-align: right; font-size: 11px;">Rp ${parseFloat(purchaseOrderData.subtotal || 0).toLocaleString('id-ID')}</td>
+            </tr>
+            ${purchaseOrderData.total_discount > 0 ? `
+            <tr>
+              <td style="padding: 6px; font-weight: bold; font-size: 11px;">Total Diskon:</td>
+              <td style="padding: 6px; text-align: right; font-size: 11px;">- Rp ${parseFloat(purchaseOrderData.total_discount || 0).toLocaleString('id-ID')}</td>
+            </tr>
+            ` : ''}
+            ${purchaseOrderData.ppn > 0 ? `
+            <tr>
+              <td style="padding: 6px; font-weight: bold; font-size: 11px;">PPN (11%):</td>
+              <td style="padding: 6px; text-align: right; font-size: 11px;">Rp ${parseFloat(purchaseOrderData.ppn || 0).toLocaleString('id-ID')}</td>
+            </tr>
+            ` : ''}
+            <tr style="border-top: 2px solid #333;">
+              <td style="padding: 8px; font-weight: bold; font-size: 13px;">Grand Total:</td>
+              <td style="padding: 8px; text-align: right; font-weight: bold; font-size: 13px;">Rp ${parseFloat(purchaseOrderData.grand_total || 0).toLocaleString('id-ID')}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      ` : ''}
+
       <div class="footer">
         Dicetak pada: ${new Date().toLocaleString('id-ID')}
       </div>

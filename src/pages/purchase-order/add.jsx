@@ -233,10 +233,10 @@ export default function AddPurchaseOrderPage() {
     if (!supplier) return;
 
     setSelectedSupplier(supplier);
-    setSupplierName(supplier.nama || "");
-    setSupplierPhone(supplier.telepon || "");
+    setSupplierName(supplier.nama_supplier || supplier.nama || "");
+    setSupplierPhone(supplier.telepon_hp || supplier.telepon || "");
     setSupplierEmail(supplier.email || "");
-    setSupplierAddress(supplier.alamat || "");
+    setSupplierAddress(supplier.kota || supplier.alamat || "");
   };
 
   const handleAddItem = () => {
@@ -436,8 +436,8 @@ export default function AddPurchaseOrderPage() {
           tanggal_po: result.data?.tanggal_po || poDate,
           status: result.data?.status || status,
           supplier_name: sup.nama_supplier || sup.nama || supplierName || "",
-          supplier_phone: sup.telepon || supplierPhone || "",
-          supplier_address: sup.alamat || supplierAddress || "",
+          supplier_phone: sup.telepon_hp || sup.telepon || supplierPhone || "",
+          supplier_address: sup.kota || sup.alamat || supplierAddress || "",
           items: items.map(item => ({
             bentuk_barang: item.bentuk,
             jenis_barang: item.jenisBarang,
@@ -447,7 +447,11 @@ export default function AddPurchaseOrderPage() {
             harga_display: item.hargaDisplay,
             diskon_display: item.diskonDisplay,
             total_display: item.total
-          }))
+          })),
+          subtotal: subtotal,
+          total_discount: totalDiscount,
+          ppn: ppn,
+          grand_total: totalHargaSO
         };
         const html = generatePurchaseOrderPrintContent(printData);
         openPrintDialog(html);
@@ -483,8 +487,8 @@ export default function AddPurchaseOrderPage() {
         tanggal_po: poDate,
         status: status,
         supplier_name: sup.nama_supplier || sup.nama || supplierName || "",
-        supplier_phone: sup.telepon || supplierPhone || "",
-        supplier_address: sup.alamat || supplierAddress || "",
+        supplier_phone: sup.telepon_hp || sup.telepon || supplierPhone || "",
+        supplier_address: sup.kota || sup.alamat || supplierAddress || "",
         items: items.map(item => ({
           bentuk_barang: item.bentuk,
           jenis_barang: item.jenisBarang,
@@ -494,7 +498,11 @@ export default function AddPurchaseOrderPage() {
           harga_display: item.hargaDisplay,
           diskon_display: item.diskonDisplay,
           total_display: item.total
-        }))
+        })),
+        subtotal: subtotal,
+        total_discount: totalDiscount,
+        ppn: ppn,
+        grand_total: totalHargaSO
       };
       const html = generatePurchaseOrderPrintContent(printData);
       openPrintDialog(html);
@@ -625,7 +633,6 @@ export default function AddPurchaseOrderPage() {
       const width = item.lebar || 0;
       const qty = item.qty || 0;
       const harga = item.harga || 0;
-      const diskon = item.diskon || 0;
 
       // Konversi mm ke m/m²
       let areaInM = 0;
@@ -638,10 +645,8 @@ export default function AddPurchaseOrderPage() {
       }
 
       const subtotalBeforeDiscount = areaInM * harga * qty;
-      const discountAmount = subtotalBeforeDiscount * (diskon / 100);
-      const subtotal = subtotalBeforeDiscount - discountAmount;
 
-      return sum + subtotal;
+      return sum + subtotalBeforeDiscount;
     } catch (error) {
       console.error('Error calculating subtotal:', error);
       return sum;
@@ -676,8 +681,8 @@ export default function AddPurchaseOrderPage() {
     }
   }, 0);
 
-  const ppn = includePPN ? subtotal * 0.11 : 0;
-  const totalHargaSO = subtotal + ppn;
+  const ppn = includePPN ? (subtotal - totalDiscount) * 0.11 : 0;
+  const totalHargaSO = subtotal - totalDiscount + ppn;
 
   return (
     <SalesOrderLayout title="Purchase Order (PO)" subtitle="TRANSAKSI">
@@ -733,11 +738,11 @@ export default function AddPurchaseOrderPage() {
                 Data Supplier yang Dipilih:
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><strong>Nama:</strong> {selectedSupplier.nama}</div>
-                <div><strong>Kode:</strong> {selectedSupplier.kode}</div>
-                <div><strong>Telepon:</strong> {selectedSupplier.telepon}</div>
-                <div><strong>Email:</strong> {selectedSupplier.email}</div>
-                <div className="col-span-2"><strong>Alamat:</strong> {selectedSupplier.alamat}</div>
+                <div><strong>Nama:</strong> {selectedSupplier.nama_supplier || selectedSupplier.nama}</div>
+                <div><strong>Kode:</strong> {selectedSupplier.kode || selectedSupplier.kode_supplier}</div>
+                <div><strong>Telepon:</strong> {selectedSupplier.telepon_hp || selectedSupplier.telepon}</div>
+                <div><strong>Email:</strong> {selectedSupplier.email || '-'}</div>
+                <div className="col-span-2"><strong>Alamat:</strong> {selectedSupplier.kota || selectedSupplier.alamat}</div>
               </div>
             </div>
           )}
