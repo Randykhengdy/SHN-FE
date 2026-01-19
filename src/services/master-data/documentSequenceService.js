@@ -62,5 +62,26 @@ export const documentSequenceService = {
       console.error('Error generating PO number:', error);
       throw error;
     }
+  },
+
+  /**
+   * Generate sequence number for Stock Mutation
+   * @returns {Promise<string>} Generated Mutasi number
+   */
+  generateMutasiNumber: async () => {
+    try {
+      const response = await request('/document-sequence/generate-sequence/mutasi', {
+        method: 'GET'
+      });
+
+      if (response.success && response.data) {
+        return response.data;
+      } else {
+        throw new Error(response.message || 'Failed to generate Mutasi number');
+      }
+    } catch (error) {
+      console.error('Error generating Mutasi number:', error);
+      throw error;
+    }
   }
 };

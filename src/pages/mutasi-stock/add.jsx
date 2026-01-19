@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, ArrowLeft, Minus, Pencil } from "lucide-react";
+import { Plus, ArrowLeft, Minus, Pencil, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -11,6 +11,8 @@ import { API_ENDPOINTS } from "@/config/api";
 import PageLayout from "@/components/PageLayout";
 import MutationModal from "@/components/modals/ItemMutationModal";
 import { getGudangOptions } from "@/services/masterDataService";
+import { documentSequenceService } from "@/services/master-data/documentSequenceService";
+import { generateStockMutationPrintContent } from "@/lib/printUtils";
 
 export default function AddMutasiStockPage() {
     const { showAlert, AlertComponent } = useAlert();
@@ -36,6 +38,9 @@ export default function AddMutasiStockPage() {
         stock_mutation: []
     });
 
+    // Mutation number state
+    const [mutasiNumber, setMutasiNumber] = useState("");
+
     // Load master data on component mount
     useEffect(() => {
         const loadMasterData = async () => {
@@ -43,9 +48,19 @@ export default function AddMutasiStockPage() {
                 setLoadingStockItem(true);
                 setLoadingWarehouse(true);
 
+                // Generate mutation number
+                const mutasiNum = await documentSequenceService.generateMutasiNumber();
+                setMutasiNumber(mutasiNum);
+                console.log('Generated Mutasi number:', mutasiNum);
+
+                // Load warehouse options for print
+                const gudangOpts = await getGudangOptions();
+                setWarehouseOptions(gudangOpts);
+
                 // Item barang tidak di-prefetch; dropdown modal akan fetch on demand
             } catch (error) {
                 console.error('Error loading master data:', error);
+                showAlert('Error', 'Gagal memuat data master atau generate nomor mutasi', 'error');
             } finally {
                 setLoadingWarehouse(false);
             }
@@ -112,6 +127,27 @@ export default function AddMutasiStockPage() {
         window.history.back();
     };
 
+    const handlePrint = () => {
+        // Prepare data for printing
+        const printData = {
+            nomor_mutasi: mutasiNumber,
+            tanggal_mutasi: new Date(),
+            gudang_asal: warehouseOptions.find(w => w.value === mutasiStockData.gudang_asal_id?.toString())?.label || '-',
+            gudang_tujuan: warehouseOptions.find(w => w.value === mutasiStockData.gudang_tujuan_id?.toString())?.label || '-',
+            items: mutasiStockData.stock_mutation
+        };
+
+        // Generate print content
+        const printContent = generateStockMutationPrintContent(printData);
+
+        // Open print window
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(printContent);
+            printWindow.document.close();
+        }
+    };
+
     const saveStockForMutation = (rows) => {
         const data = { ...rows, barang: rows.barang || undefined };
         setMutasiStockData(prev => {
@@ -133,7 +169,7 @@ export default function AddMutasiStockPage() {
         setItemMutationModalOpen(true);
     }
 
-  return (
+    return (
         <PageLayout title="Mutasi Stock" subtitle="TRANSAKSI">
             {/* Main Content Card */}
             <Card className="section-card">
@@ -144,6 +180,10 @@ export default function AddMutasiStockPage() {
                             <Button variant="default" size="sm" onClick={handleSimpanMutasi} className="btn-primary">
                                 Simpan Mutasi Stock
                             </Button>
+                            <Button variant="outline" size="sm" onClick={handlePrint} className="btn-secondary">
+                                <Printer className="w-4 h-4 mr-2" />
+                                Print
+                            </Button>
                             <Button variant="secondary" size="sm" onClick={handleBackToList} className="btn-secondary">
                                 <ArrowLeft className="w-4 h-4 mr-2" />
                                 Kembali ke List
@@ -153,9 +193,24 @@ export default function AddMutasiStockPage() {
                 </CardHeader>
 
                 <CardContent className="section-content space-md">
+                    {/* Mutation Number Preview */}
+                    <div className="grid-form m-lg">
+                        <div>
+                            <label htmlFor="mutasiNumber" className="block text-sm font-medium text-gray-700 mb-1">
+                                Nomor Mutasi
+                            </label>
+                            <input
+                                id="mutasiNumber"
+                                type="text"
+                                value={mutasiNumber}
+                                disabled
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600 cursor-not-allowed"
+                                placeholder="Nomor Mutasi akan otomatis terisi"
+                            />
+                        </div>
+                    </div>
 
-
-                    <div className=" pt-6">
+                    <div className="border-t pt-6">
                         {/* Pilih Gudang Asal */}
                         <div className="grid-form m-lg">
                             <div className="col-span-2">
@@ -165,10 +220,10 @@ export default function AddMutasiStockPage() {
                                     searchPlaceholder="Cari gudang..."
                                     value={mutasiStockData.gudang_asal_id ? mutasiStockData.gudang_asal_id.toString() : ''}
                                     onValueChange={(value) => {
-                                        setMutasiStockData({ 
-                                            ...mutasiStockData, 
+                                        setMutasiStockData({
+                                            ...mutasiStockData,
                                             gudang_asal_id: parseInt(value),
-                                            stock_mutation: [] 
+                                            stock_mutation: []
                                         });
                                     }}
                                     fetchOptions={async (q, page) => {
@@ -235,22 +290,22 @@ export default function AddMutasiStockPage() {
                     <Table className="table-standard">
                         <TableHeader className="table-header-standard">
                             <TableRow>
-                                <TableHead className="table-header-cell-standard">#</TableHead>
+                                <TableHead className="table-header-cell-standard w-16">#</TableHead>
                                 <TableHead className="table-header-cell-standard">Item Barang</TableHead>
-                                <TableHead className="table-header-cell-standard">Satuan</TableHead>
-                                <TableHead className="table-header-cell-standard">Qty</TableHead>
-                                <TableHead className="table-header-cell-standard">Aksi</TableHead>
+                                <TableHead className="table-header-cell-standard w-32">Satuan</TableHead>
+                                <TableHead className="table-header-cell-standard w-24">Qty</TableHead>
+                                <TableHead className="table-header-cell-standard w-32">Aksi</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {mutasiStockData.stock_mutation.map((item, index) => (
                                 <TableRow key={index}>
-                                    <TableCell className="table-cell-standard">{index + 1}</TableCell>
+                                    <TableCell className="table-cell-standard w-16">{index + 1}</TableCell>
                                     <TableCell className="table-cell-standard">{item.barang}</TableCell>
-                                    <TableCell className="table-cell-standard">{item.unit}</TableCell>
-                                    <TableCell className="table-cell-standard">{item.quantity}</TableCell>
-                                    <TableCell className="table-cell-standard">
-                                        <div className="flex w-0 flex-0 gap-2">
+                                    <TableCell className="table-cell-standard w-32">{item.unit}</TableCell>
+                                    <TableCell className="table-cell-standard w-24">{item.quantity}</TableCell>
+                                    <TableCell className="table-cell-standard w-32">
+                                        <div className="flex gap-2">
                                             <Button
                                                 variant="destructive"
                                                 size="sm"
@@ -273,7 +328,7 @@ export default function AddMutasiStockPage() {
                             ))}
                             {mutasiStockData.stock_mutation.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={12} className="table-cell-standard text-center text-gray-500 py-8">
+                                    <TableCell colSpan={5} className="table-cell-standard text-center text-gray-500 py-8">
                                         Belum ada item yang ditambahkan
                                     </TableCell>
                                 </TableRow>

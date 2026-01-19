@@ -1376,3 +1376,140 @@ export const generateItemQRPrintContent = async (item) => {
     </html>
   `;
 };
+
+export const generateStockMutationPrintContent = (mutationData) => {
+  const formatDate = (value) => {
+    if (!value) return '-';
+    try {
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return String(value);
+      return d.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch {
+      return String(value);
+    }
+  };
+
+  const itemsHtml = (mutationData.items || []).map((item, index) => `
+    <tr>
+      <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${index + 1}</td>
+      <td style="border: 1px solid #ddd; padding: 8px;">${item.barang || item.nama_barang || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.unit || item.satuan || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.quantity || item.qty || 0}</td>
+    </tr>
+  `).join('') || `
+    <tr>
+      <td colspan="4" style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #777;">
+        Tidak ada item
+      </td>
+    </tr>
+  `;
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Mutasi Stock - ${mutationData.nomor_mutasi || ''}</title>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 20px; font-size: 12px; }
+        .header { display: flex; align-items: flex-start; margin-bottom: 24px; position: relative; min-height: 80px; padding-top: 8px; }
+        .logo { width: 70px; height: auto; margin-right: 16px; object-fit: contain; }
+        .qr-code-container { position: absolute; right: 50px; top: 8px; }
+        .qr-code-container canvas { border: 2px solid #4CAF50; border-radius: 4px; }
+        .header-content { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; top: 8px; }
+        .company-name { font-size: 20px; font-weight: bold; margin-bottom: 4px; line-height: 1.2; }
+        .company-address { font-size: 11px; color: #555; }
+        .document-title { font-size: 16px; font-weight: bold; margin-top: 12px; }
+        .info-section { margin-bottom: 16px; display: flex; justify-content: space-between; }
+        .info-column { width: 48%; }
+        .info-row { display: flex; margin-bottom: 4px; }
+        .info-label { font-weight: bold; min-width: 110px; }
+        .info-value { flex: 1; }
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 11px; }
+        td { border: 1px solid #ddd; padding: 6px; font-size: 11px; vertical-align: top; }
+        .footer { margin-top: 20px; text-align: right; font-size: 11px; color: #666; }
+        @media print {
+          body { margin: 0; }
+          .no-print { display: none; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <img src="${LOGO_BASE64}" alt="PT. SHN Logo" class="logo" />
+        <div class="header-content">
+          <div class="company-name">PT. SURYA HARSA NAGARA</div>
+          <div class="company-address"></div>
+          <div class="document-title">MUTASI STOCK</div>
+        </div>
+        <div class="qr-code-container">
+          <div id="qrcode"></div>
+        </div>
+      </div>
+
+      <div class="info-section">
+        <div class="info-column">
+          <div class="info-row">
+            <span class="info-label">Nomor Mutasi</span>
+            <span class="info-value">${mutationData.nomor_mutasi || '-'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Tanggal Mutasi</span>
+            <span class="info-value">${formatDate(mutationData.tanggal_mutasi || new Date())}</span>
+          </div>
+        </div>
+        <div class="info-column">
+          <div class="info-row">
+            <span class="info-label">Gudang Asal</span>
+            <span class="info-value">${mutationData.gudang_asal || '-'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Gudang Tujuan</span>
+            <span class="info-value">${mutationData.gudang_tujuan || '-'}</span>
+          </div>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 40px; text-align: center;">#</th>
+            <th>Item Barang</th>
+            <th style="width: 100px; text-align: center;">Satuan</th>
+            <th style="width: 80px; text-align: center;">Qty</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsHtml}
+        </tbody>
+      </table>
+
+      <div class="footer">
+        Dicetak pada: ${new Date().toLocaleString('id-ID')}
+      </div>
+
+      <script>
+        // Generate QR code when page loads
+        window.addEventListener('load', function() {
+          const mutasiNumber = '${mutationData.nomor_mutasi || 'N/A'}';
+          if (mutasiNumber && mutasiNumber !== 'N/A') {
+            new QRCode(document.getElementById('qrcode'), {
+              text: mutasiNumber,
+              width: 75,
+              height: 75,
+              colorDark: '#000000',
+              colorLight: '#ffffff',
+              correctLevel: QRCode.CorrectLevel.H
+            });
+          }
+        });
+      </script>
+    </body>
+    </html>
+  `;
+};
