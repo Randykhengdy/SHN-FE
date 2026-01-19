@@ -5,11 +5,14 @@ import {
   jenisBarangService,
   bentukBarangService,
   gradeBarangService,
-  gudangService
+  gudangService,
+  rakService
 } from "@/services/master-data";
 
 // Module-level variable untuk menyimpan mapping dimensi bentuk barang
 let bentukBarangDimensiMap = {};
+// Module-level cache untuk rak options per gudang
+let rakOptionsCache = {};
 
 export default function ItemBarangPage() {
   return (
@@ -125,7 +128,75 @@ export default function ItemBarangPage() {
           },
           displayKey: "label",
           valueKey: "value",
-          required: true
+          required: true,
+          onChangeForm: (form, val) => {
+            // Reset rak when gudang changes and pre-fetch rak options
+            if (val && !rakOptionsCache[val]) {
+              // Fetch and cache rak options for this gudang
+              const params = { gudang_id: val };
+              rakService.getAll(params)
+                .then(res => {
+                  const rakList = res?.data || [];
+                  rakOptionsCache[val] = rakList.map(it => ({
+                    value: String(it.id),
+                    label: `${it.kode_rak || ''} - ${it.nama_rak || it.nama || String(it.id)}`
+                  }));
+                })
+                .catch(error => {
+                  console.error('Error fetching rak options:', error);
+                  rakOptionsCache[val] = [];
+                });
+            }
+            return { ...form, id_rak: null };
+          }
+        },
+        {
+          name: "id_rak",
+          label: "Rak (Opsional)",
+          type: "asyncSelect",
+          fetchOptions: async (q, page, form) => {
+            const gudangId = form?.gudang_id;
+
+            // If no warehouse selected, return empty
+            if (!gudangId) {
+              return [];
+            }
+
+            // Check if we have cached options
+            if (!rakOptionsCache[gudangId]) {
+              // Fetch from API
+              try {
+                const params = { gudang_id: gudangId };
+                const res = await rakService.getAll(params);
+                const rakList = res?.data || [];
+                rakOptionsCache[gudangId] = rakList.map(it => ({
+                  value: String(it.id),
+                  label: `${it.kode_rak || ''} - ${it.nama_rak || it.nama || String(it.id)}`
+                }));
+              } catch (error) {
+                console.error('Error fetching rak options:', error);
+                rakOptionsCache[gudangId] = [];
+              }
+            }
+
+            const options = rakOptionsCache[gudangId] || [];
+
+            // Filter by search query if provided
+            if (q && q.trim()) {
+              const searchTerm = q.toLowerCase();
+              return options.filter(opt =>
+                opt.label.toLowerCase().includes(searchTerm) ||
+                opt.value.includes(searchTerm)
+              );
+            }
+
+            return options;
+          },
+          displayKey: "label",
+          valueKey: "value",
+          required: false,
+          disabled: (form) => !form?.gudang_id,
+          helperText: (form) => !form?.gudang_id ? "Pilih gudang terlebih dahulu" : "Pilih rak untuk item ini"
         },
       ]}
       columns={[
@@ -139,6 +210,7 @@ export default function ItemBarangPage() {
         { key: "sisa_luas", label: "Sisa Luas", align: "center", width: "10rem", maxWidth: "10rem", format: "number" },
         { key: "jenis_potongan", label: "Jenis Potongan", align: "center", width: "12rem", maxWidth: "12rem" },
         { key: "gudang.nama_gudang", label: "Gudang", align: "center", width: "12rem", maxWidth: "12rem" },
+        { key: "rak.nama_rak", label: "Rak", align: "center", width: "12rem", maxWidth: "12rem" },
         // { key: "is_edit", label: "Is Edit", align: "center", width: "8rem", maxWidth: "8rem", format: "boolean" },
         { key: "jenis_barang.nama_jenis", label: "Jenis Barang", align: "center", width: "12rem", maxWidth: "12rem" },
         { key: "bentuk_barang.nama_bentuk", label: "Bentuk Barang", align: "center", width: "12rem", maxWidth: "12rem" },
