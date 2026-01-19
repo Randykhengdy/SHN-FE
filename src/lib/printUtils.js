@@ -68,12 +68,12 @@ export const generatePodPrintContent = (podData) => {
         <div class="info-row">
           <span class="info-label">Tanggal Cetak Pertama</span>
           <span class="info-value">${new Date(podData.tanggal_cetak_pod).toLocaleDateString('id-ID', {
-            day: '2-digit',
-            month: '2-digit', 
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          })}</span>
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })}</span>
         </div>
         <div class="info-row">
           <span class="info-label">Metode Handover</span>
@@ -148,10 +148,13 @@ export const generatePurchaseOrderPrintContent = (purchaseOrderData) => {
     <html>
     <head>
       <title>Purchase Order - ${purchaseOrderData.nomor_po || ''}</title>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
       <style>
         body { font-family: Arial, sans-serif; margin: 20px; font-size: 12px; }
         .header { display: flex; align-items: flex-start; margin-bottom: 24px; position: relative; min-height: 80px; padding-top: 8px; }
         .logo { width: 70px; height: auto; margin-right: 16px; object-fit: contain; }
+        .qr-code-container { position: absolute; right: 50px; top: 8px; }
+        .qr-code-container canvas { border: 2px solid #4CAF50; border-radius: 4px; }
         .header-content { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; top: 8px; }
         .company-name { font-size: 20px; font-weight: bold; margin-bottom: 4px; line-height: 1.2; }
         .company-address { font-size: 11px; color: #555; }
@@ -176,8 +179,11 @@ export const generatePurchaseOrderPrintContent = (purchaseOrderData) => {
         <img src="${LOGO_BASE64}" alt="PT. SHN Logo" class="logo" />
         <div class="header-content">
           <div class="company-name">PT. SURYA HARSA NAGARA</div>
-          <div class="company-address">Kawasan Industri / alamat perusahaan</div>
+          <div class="company-address"></div>
           <div class="document-title">PURCHASE ORDER</div>
+        </div>
+        <div class="qr-code-container">
+          <div id="qrcode"></div>
         </div>
       </div>
 
@@ -232,6 +238,23 @@ export const generatePurchaseOrderPrintContent = (purchaseOrderData) => {
       <div class="footer">
         Dicetak pada: ${new Date().toLocaleString('id-ID')}
       </div>
+
+      <script>
+        // Generate QR code when page loads
+        window.addEventListener('load', function() {
+          const poNumber = '${purchaseOrderData.nomor_po || 'N/A'}';
+          if (poNumber && poNumber !== 'N/A') {
+            new QRCode(document.getElementById('qrcode'), {
+              text: poNumber,
+              width: 75,
+              height: 75,
+              colorDark: '#000000',
+              colorLight: '#ffffff',
+              correctLevel: QRCode.CorrectLevel.H
+            });
+          }
+        });
+      </script>
     </body>
     </html>
   `;
@@ -315,12 +338,12 @@ export const generateInvoicePrintContent = (invoiceData) => {
         <div class="info-row">
           <span class="info-label">Tanggal Cetak</span>
           <span class="info-value">${new Date(invoiceData.tanggal_cetak_invoice).toLocaleDateString('id-ID', {
-            day: '2-digit',
-            month: '2-digit', 
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          })}</span>
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })}</span>
         </div>
         <div class="info-row">
           <span class="info-label">Metode Handover</span>
@@ -411,7 +434,7 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
     if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString('id-ID', {
       day: '2-digit',
-      month: '2-digit', 
+      month: '2-digit',
       year: 'numeric'
     });
   };
@@ -621,17 +644,17 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
   // Render Before/After images per item (Planning vs Actual) using mapped arrays
   const beforeAfterSectionHtml = includeImages && (woActualData.items || []).length > 0
     ? (() => {
-        const itemSections = (woActualData.items || []).map((it) => {
-          const beforeImages = Array.isArray(it.beforeImages) ? it.beforeImages : [];
-          const afterImages = Array.isArray(it.afterImages) ? it.afterImages : [];
+      const itemSections = (woActualData.items || []).map((it) => {
+        const beforeImages = Array.isArray(it.beforeImages) ? it.beforeImages : [];
+        const afterImages = Array.isArray(it.afterImages) ? it.afterImages : [];
 
-          const renderImages = (images, label) => {
-            if (!images || images.length === 0) {
-              return `<div style="padding: 16px; color: #666; font-style: italic;">Tidak ada gambar ${label}</div>`;
-            }
-            const tiles = images.map((img, idx) => {
-              const src = img.canvas_image_base64 || img.image_base64 || img.image_url || img.src || img.url || '';
-              return `
+        const renderImages = (images, label) => {
+          if (!images || images.length === 0) {
+            return `<div style="padding: 16px; color: #666; font-style: italic;">Tidak ada gambar ${label}</div>`;
+          }
+          const tiles = images.map((img, idx) => {
+            const src = img.canvas_image_base64 || img.image_base64 || img.image_url || img.src || img.url || '';
+            return `
                 <div style="margin-bottom: 10px;">
                   <div style="font-size: 11px; color: #666; margin-bottom: 4px;">${label} #${idx + 1}</div>
                   <div style="border: 1px solid #ddd; background-color: #fafafa; padding: 8px; text-align: center;">
@@ -644,11 +667,11 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
                   </div>
                 </div>
               `;
-            }).join('');
-            return tiles;
-          };
+          }).join('');
+          return tiles;
+        };
 
-          return `
+        return `
             <div class="section" style="margin-top: 16px; page-break-inside: avoid;">
               <div style="font-weight: bold; margin-bottom: 8px;">Item ${it.no || '-'}</div>
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
@@ -663,15 +686,15 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
               </div>
             </div>
           `;
-        }).join('');
+      }).join('');
 
-        return `
+      return `
           <div class="section" style="margin-top: 16px;">
             <div style="font-weight: bold; margin-bottom: 8px;">Foto Before/After per Item</div>
             ${itemSections}
           </div>
         `;
-      })()
+    })()
     : '';
 
   return `
@@ -790,61 +813,61 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
   // Render canvas images with robust item-based grouping and naming
   const canvasImagesHtml = includeImages && (woPlanningData.canvasImages || []).length > 0
     ? (() => {
-        // Build map from item IDs to index and display name
-        const itemsArr = woPlanningData.items || [];
-        const itemMap = new Map();
-        itemsArr.forEach((item, index) => {
-          const name = item.nama_item || item.jenisBarang?.nama_jenis_barang || item.jenisBarang?.nama || `Item ${index + 1}`;
-          const idCandidates = [
-            item.wo_item_unique_id,
-            item.id,
-            item.wo_item_id,
-            item.item_id
-          ].filter(Boolean);
-          idCandidates.forEach(id => {
-            itemMap.set(String(id), { index: index + 1, name });
-          });
+      // Build map from item IDs to index and display name
+      const itemsArr = woPlanningData.items || [];
+      const itemMap = new Map();
+      itemsArr.forEach((item, index) => {
+        const name = item.nama_item || item.jenisBarang?.nama_jenis_barang || item.jenisBarang?.nama || `Item ${index + 1}`;
+        const idCandidates = [
+          item.wo_item_unique_id,
+          item.id,
+          item.wo_item_id,
+          item.item_id
+        ].filter(Boolean);
+        idCandidates.forEach(id => {
+          itemMap.set(String(id), { index: index + 1, name });
         });
+      });
 
-        const groupedMap = new Map();
-        let unknownCounter = 1;
-        const unknownStartIndex = itemsArr.length + 1;
+      const groupedMap = new Map();
+      let unknownCounter = 1;
+      const unknownStartIndex = itemsArr.length + 1;
 
-        (woPlanningData.canvasImages || []).forEach((img, idx) => {
-          const idCandidates = [
-            img.work_order_planning_item_id,
-            img.wo_item_id,
-            img.wo_plan_item_id,
-            img.item_id,
-            img.wo_item_unique_id
-          ].filter(Boolean);
+      (woPlanningData.canvasImages || []).forEach((img, idx) => {
+        const idCandidates = [
+          img.work_order_planning_item_id,
+          img.wo_item_id,
+          img.wo_plan_item_id,
+          img.item_id,
+          img.wo_item_unique_id
+        ].filter(Boolean);
 
-          let key = null;
-          let info = null;
-          for (const id of idCandidates) {
-            const found = itemMap.get(String(id));
-            if (found) { key = String(id); info = found; break; }
-          }
+        let key = null;
+        let info = null;
+        for (const id of idCandidates) {
+          const found = itemMap.get(String(id));
+          if (found) { key = String(id); info = found; break; }
+        }
 
-          if (!key) {
-            key = `unknown_${unknownCounter}`;
-            info = { index: unknownStartIndex + unknownCounter - 1, name: `Item ${unknownStartIndex + unknownCounter - 1}` };
-            unknownCounter++;
-          }
+        if (!key) {
+          key = `unknown_${unknownCounter}`;
+          info = { index: unknownStartIndex + unknownCounter - 1, name: `Item ${unknownStartIndex + unknownCounter - 1}` };
+          unknownCounter++;
+        }
 
-          if (!groupedMap.has(key)) {
-            groupedMap.set(key, { itemNumber: info.index, itemName: info.name, images: [] });
-          }
-          groupedMap.get(key).images.push({ ...img, originalIndex: idx });
-        });
+        if (!groupedMap.has(key)) {
+          groupedMap.set(key, { itemNumber: info.index, itemName: info.name, images: [] });
+        }
+        groupedMap.get(key).images.push({ ...img, originalIndex: idx });
+      });
 
-        // Sort sections by item number (ascending) for consistent ordering
-        const sections = Array.from(groupedMap.values())
-          .sort((a, b) => a.itemNumber - b.itemNumber)
-          .map(group => {
-            const items = group.images.map((image, imageIndex) => {
-              const src = image.canvas_image_base64 || image.image_base64 || image.image_url || image.src || '';
-              return `
+      // Sort sections by item number (ascending) for consistent ordering
+      const sections = Array.from(groupedMap.values())
+        .sort((a, b) => a.itemNumber - b.itemNumber)
+        .map(group => {
+          const items = group.images.map((image, imageIndex) => {
+            const src = image.canvas_image_base64 || image.image_base64 || image.image_url || image.src || '';
+            return `
                 <div style="margin-bottom: 16px; page-break-inside: avoid;">
                   <div style="font-weight: bold; margin-bottom: 6px; font-size: 12px; color: #555;">WO Item ${group.itemNumber} - Image ${imageIndex + 1}</div>
                   <div style="text-align: center; border: 1px solid #ddd; padding: 8px; background-color: #f9f9f9;">
@@ -864,22 +887,22 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
                   ` : ''}
                 </div>
               `;
-            }).join('');
+          }).join('');
 
-            return `
+          return `
               <div style="margin-bottom: 20px;">
                 <div style="font-weight: bold; margin-bottom: 8px;">Canvas Layout - Item ${group.itemNumber}</div>
                 ${items}
               </div>
             `;
-          }).join('');
+        }).join('');
 
-        return `
+      return `
           <div class="section" style="margin-top: 16px;">
             ${sections}
           </div>
         `;
-      })()
+    })()
     : '';
 
   return `
@@ -972,9 +995,9 @@ export const generatePaymentReceiptPrintContent = (receiptData) => {
   // Convert number to Indonesian terbilang (spelled out)
   const terbilang = (angka) => {
     if (angka === 0) return 'nol';
-    
+
     const bilangan = ['', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan', 'sepuluh', 'sebelas'];
-    
+
     const convert = (num) => {
       if (num < 12) {
         return bilangan[num];
@@ -1194,7 +1217,7 @@ export const openPrintDialog = (printContent) => {
   printWindow.document.write(printContent);
   printWindow.document.close();
   printWindow.focus();
-  
+
   // Wait for content to load then trigger print
   setTimeout(() => {
     printWindow.print();
@@ -1288,7 +1311,7 @@ export const generateItemQRPrintContent = async (item) => {
       reader.onload = () => resolve(reader.result);
       reader.readAsDataURL(blob);
     });
-  } catch (_) {}
+  } catch (_) { }
 
   return `
     <!DOCTYPE html>
