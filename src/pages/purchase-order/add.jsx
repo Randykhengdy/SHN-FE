@@ -30,6 +30,7 @@ import SalesOrderLayout from "@/components/SalesOrderLayout";
 import PageHeader from "@/components/PageHeader";
 import { generatePurchaseOrderPrintContent, openPrintDialog } from "@/lib/printUtils";
 import { documentSequenceService } from "@/services/master-data/documentSequenceService";
+import { beratJenisService } from "@/services/master-data/beratJenisService";
 
 export default function AddPurchaseOrderPage() {
   const { showAlert, AlertComponent } = useAlert();
@@ -49,6 +50,7 @@ export default function AddPurchaseOrderPage() {
   const [loadingItemShape, setLoadingItemShape] = useState(false);
   const [loadingItemGrade, setLoadingItemGrade] = useState(false);
   const [loadingUnit, setLoadingUnit] = useState(false);
+  const [loadingWeight, setLoadingWeight] = useState(false);
 
   // Supplier Information
   const [selectedSupplier, setSelectedSupplier] = useState(null);
@@ -221,6 +223,86 @@ export default function AddPurchaseOrderPage() {
     return () => clearTimeout(timeoutId);
   }, [itemLength, itemWidth, itemDiameter, selectedShape, itemQty, itemDiscount, itemPrice]);
 
+  // Auto-calculate berat timbangan when required fields are filled
+  useEffect(() => {
+    // Validate and parse numeric values
+    const panjang = parseFloat(itemLength);
+    const lebar = parseFloat(itemWidth);
+    const tebal = parseFloat(itemDiameter);
+
+    // Check if all required fields are filled with valid numeric values
+    const hasRequiredFields =
+      itemType &&
+      selectedShape?.id &&
+      itemGrade &&
+      itemLength &&
+      !isNaN(panjang) &&
+      panjang > 0 &&
+      itemDiameter &&
+      !isNaN(tebal) &&
+      tebal >= 0;
+
+    // For 2D items, also need width with valid value
+    const hasAllFields = selectedShape?.dimensi === "1D"
+      ? hasRequiredFields
+      : hasRequiredFields && itemWidth && !isNaN(lebar) && lebar > 0;
+
+    if (!hasAllFields) {
+      // Reset weight if required fields are missing
+      if (itemWeight && itemWeight !== "0") {
+        setItemWeight("");
+      }
+      return;
+    }
+
+    // Debounce the API call
+    const timeoutId = setTimeout(async () => {
+      try {
+        setLoadingWeight(true);
+
+        const panjangCm = panjang / 10; // Convert mm to cm
+        const lebarCm = selectedShape.dimensi === "1D"
+          ? null
+          : (lebar / 10); // Convert mm to cm
+        const tebalCm = tebal / 10; // Convert mm to cm
+
+        const requestData = {
+          jenis_barang_id: parseInt(itemType),
+          bentuk_barang_id: parseInt(selectedShape.id),
+          grade_barang_id: parseInt(itemGrade),
+          panjang: panjangCm,
+          lebar: lebarCm,
+          tebal: tebalCm
+        };
+
+        const response = await beratJenisService.calculateWeight(requestData);
+
+        if (response.success && response.data) {
+          const calculatedWeight = response.data.berat_kg || 0;
+          setItemWeight(calculatedWeight.toFixed(4));
+
+          // Optionally show a success message if weight was found
+          if (response.data.berat_jenis_found && calculatedWeight > 0) {
+            console.log('Berat timbangan berhasil dihitung:', calculatedWeight, 'kg');
+          } else if (calculatedWeight === 0) {
+            console.log('Data berat jenis tidak ditemukan, berat di-set ke 0');
+          }
+        } else {
+          console.error('Error calculating weight:', response.message);
+          setItemWeight("0.0000");
+        }
+      } catch (error) {
+        console.error('Error calculating weight:', error);
+        // Don't show error alert to avoid annoying user, just log it
+        // The weight field will remain empty or previous value
+      } finally {
+        setLoadingWeight(false);
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [itemType, selectedShape, itemGrade, itemLength, itemWidth, itemDiameter]);
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -325,6 +407,7 @@ export default function AddPurchaseOrderPage() {
         panjang: length,
         lebar: width,
         tebal: parseFloat(itemDiameter) || 0,
+        berat: parseFloat(itemWeight) || 0,
         harga: hargaSatuan, // harga per satuan
         satuan: itemUnit, // satuan
         diskon: parseFloat(itemDiscount) || 0, // persentase diskon (backend value)
@@ -344,6 +427,7 @@ export default function AddPurchaseOrderPage() {
       setItemGrade("");
       setItemDiscount("0");
       setItemNotes("");
+      setItemWeight("");
     } catch (error) {
       console.error('Error adding item:', error);
       showAlert("Error", "Terjadi kesalahan saat menambahkan item", "error");
