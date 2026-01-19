@@ -38,23 +38,29 @@ export default function ItemBarangPage() {
         {
           name: "jenis_barang_id",
           label: "Jenis Barang",
-          type: "asyncSelect",
-          fetchOptions: async (q, page) => {
-            const res = await jenisBarangService.getPaginated(page, 50, q || "", "nama_jenis", "asc");
+          type: "select",
+          required: true,
+          optionLabel: "label",
+          optionsLoader: async () => {
+            const res = await jenisBarangService.getAll();
             const list = res?.data || [];
-            return list.map(it => ({ value: String(it.id), label: it.nama_jenis || it.nama || it.kode || String(it.id) }));
-          },
-          displayKey: "label",
-          valueKey: "value",
-          required: true
+            return list.map(it => ({
+              id: it.id,
+              value: String(it.id),
+              label: it.nama_jenis || it.nama || it.kode || String(it.id)
+            }));
+          }
         },
         {
           name: "bentuk_barang_id",
           label: "Bentuk Barang",
-          type: "asyncSelect",
-          fetchOptions: async (q, page) => {
-            const res = await bentukBarangService.getPaginated(page, 50, q || "", "nama_bentuk", "asc");
-            const options = (res.data || []).map(item => ({
+          type: "select",
+          required: true,
+          optionLabel: "label",
+          optionsLoader: async () => {
+            const res = await bentukBarangService.getAll();
+            const options = (res?.data || []).map(item => ({
+              id: item.id,
               value: String(item.id),
               label: (item.nama_bentuk || item.nama || 'Unknown') + ` (${item.dimensi || 'N/A'})`,
               dimensi: item.dimensi
@@ -63,29 +69,28 @@ export default function ItemBarangPage() {
             options.forEach(opt => { if (opt.value && opt.dimensi) bentukBarangDimensiMap[opt.value] = opt.dimensi; });
             return options;
           },
-          displayKey: "label",
-          valueKey: "value",
-          required: true,
           onChangeForm: (form, val) => {
             const dimensi = bentukBarangDimensiMap[val] || null;
             const updatedForm = { ...form, _bentuk_barang_dimensi: dimensi };
             if (dimensi === "1D") { updatedForm.lebar = null; }
             return updatedForm;
-          },
-          prefetchById: async (id) => bentukBarangService.getById(id)
+          }
         },
         {
           name: "grade_barang_id",
           label: "Grade Barang",
-          type: "asyncSelect",
-          fetchOptions: async (q, page) => {
-            const res = await gradeBarangService.getPaginated(page, 50, q || "", "nama", "asc");
+          type: "select",
+          required: true,
+          optionLabel: "label",
+          optionsLoader: async () => {
+            const res = await gradeBarangService.getAll();
             const list = res?.data || [];
-            return list.map(it => ({ value: String(it.id), label: it.nama || it.kode || String(it.id) }));
-          },
-          displayKey: "label",
-          valueKey: "value",
-          required: true
+            return list.map(it => ({
+              id: it.id,
+              value: String(it.id),
+              label: it.nama || it.kode || String(it.id)
+            }));
+          }
         },
         { name: "panjang", label: "Panjang (mm)", type: "number", step: 0.01, required: true },
         {
@@ -104,31 +109,29 @@ export default function ItemBarangPage() {
         {
           name: "jenis_potongan",
           label: "Jenis Potongan",
-          type: "asyncSelect",
-          fetchOptions: async (q) => {
-            const base = [
-              { value: "utuh", label: "Utuh" },
-              { value: "potongan", label: "Potongan" }
-            ];
-            const term = String(q || "").toLowerCase();
-            return term ? base.filter(x => x.label.toLowerCase().includes(term) || x.value.includes(term)) : base;
-          },
-          displayKey: "label",
-          valueKey: "value",
-          required: true
+          type: "select",
+          required: true,
+          optionLabel: "label",
+          optionsLoader: async () => [
+            { id: "utuh", value: "utuh", label: "Utuh" },
+            { id: "potongan", value: "potongan", label: "Potongan" }
+          ]
         },
         {
           name: "gudang_id",
           label: "Gudang",
-          type: "asyncSelect",
-          fetchOptions: async (q, page) => {
-            const res = await gudangService.getPaginated(page, 50, q || "", "nama_gudang", "asc");
-            const list = res?.data || [];
-            return list.map(it => ({ value: String(it.id), label: it.nama_gudang || it.nama || String(it.id) }));
-          },
-          displayKey: "label",
-          valueKey: "value",
+          type: "select",
           required: true,
+          optionLabel: "label",
+          optionsLoader: async () => {
+            const res = await gudangService.getAll();
+            const list = res?.data || [];
+            return list.map(it => ({
+              id: it.id,
+              value: String(it.id),
+              label: it.nama_gudang || it.nama || String(it.id)
+            }));
+          },
           onChangeForm: (form, val) => {
             // Reset rak when gudang changes and pre-fetch rak options
             if (val && !rakOptionsCache[val]) {
