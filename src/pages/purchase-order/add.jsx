@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 // import CustomerInfoTabs from "@/components/CustomerInfoTabs"; // Commented out - akan diganti dengan supplier selection
 import DataTableModal from "@/components/modals/DataTableModal";
 import SearchSelect from "@/components/ui/search-select";
@@ -108,6 +109,7 @@ export default function AddPurchaseOrderPage() {
   const [tanggalPembayaran, setTanggalPembayaran] = useState("");
   const [status, setStatus] = useState("draft");
   const [catatan, setCatatan] = useState("");
+  const [includePPN, setIncludePPN] = useState(true);
 
   // Item Input Form
   const [itemLength, setItemLength] = useState("");
@@ -674,7 +676,7 @@ export default function AddPurchaseOrderPage() {
     }
   }, 0);
 
-  const ppn = subtotal * 0.11;
+  const ppn = includePPN ? subtotal * 0.11 : 0;
   const totalHargaSO = subtotal + ppn;
 
   return (
@@ -1107,6 +1109,18 @@ export default function AddPurchaseOrderPage() {
       {/* Financial Summary */}
       <Card className="mb-6 bg-green-50 border-green-200">
         <CardContent className="pt-6">
+          <div className="mb-4 flex items-center justify-between pb-4 border-b">
+            <div className="flex items-center gap-3">
+              <Label htmlFor="includePPN" className="text-sm font-medium text-gray-700 cursor-pointer">
+                Sertakan PPN (11%)
+              </Label>
+              <Switch
+                id="includePPN"
+                checked={includePPN}
+                onCheckedChange={setIncludePPN}
+              />
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <Label className="text-sm text-gray-700 font-semibold">Subtotal</Label>
