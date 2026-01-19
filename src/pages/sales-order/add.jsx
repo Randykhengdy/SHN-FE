@@ -118,7 +118,7 @@ export default function AddSalesOrderPage() {
   const [soNumber, setSoNumber] = useState("");
   const [soDate, setSoDate] = useState(new Date().toISOString().split('T')[0]);
   const [deliveryDate, setDeliveryDate] = useState(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-  const [termOfPayment, setTermOfPayment] = useState("cash");
+  const [termOfPayment, setTermOfPayment] = useState("");
   const [originWarehouse, setOriginWarehouse] = useState("");
   const [handoverMethod, setHandoverMethod] = useState("pickup");
   const [includePPN, setIncludePPN] = useState(true);
@@ -655,6 +655,24 @@ export default function AddSalesOrderPage() {
 
   const handleTestSimpanSO = async () => {
     console.log("Testing save SO...");
+
+    // Validation
+    const errors = [];
+    // if (!soNumber) errors.push("Nomor SO belum terisi"); // SO Number is auto-generated
+    if (items.length === 0) errors.push("Belum ada item yang ditambahkan");
+    
+    // Check customer (either selected or manually input)
+    const hasCustomer = selectedCustomer || (customerName && customerPhone && customerAddress);
+    if (!hasCustomer) errors.push("Data pelanggan belum lengkap");
+    
+    if (!originWarehouse) errors.push("Gudang asal belum dipilih");
+    if (!deliveryDate) errors.push("Tanggal pengiriman belum dipilih");
+    if (!termOfPayment) errors.push("Term of Payment belum dipilih");
+    
+    if (errors.length > 0) {
+      showAlert("Validasi Gagal", "Mohon lengkapi data berikut:\n" + errors.map(e => "- " + e).join("\n"), "warning");
+      return;
+    }
     
     try {
       const salesOrderData = {
@@ -763,8 +781,21 @@ export default function AddSalesOrderPage() {
     try {
       setPrintLoading(true);
       
-      if (!soNumber || items.length === 0) {
-        showAlert("Error", "Pastikan nomor SO dan items sudah terisi", "error");
+      // Validation
+      const errors = [];
+      if (!soNumber) errors.push("Nomor SO belum terisi");
+      if (items.length === 0) errors.push("Belum ada item yang ditambahkan");
+      
+      // Check customer (either selected or manually input)
+      const hasCustomer = selectedCustomer || (customerName && customerPhone && customerAddress);
+      if (!hasCustomer) errors.push("Data pelanggan belum lengkap");
+      
+      if (!originWarehouse) errors.push("Gudang asal belum dipilih");
+      if (!deliveryDate) errors.push("Tanggal pengiriman belum dipilih");
+      if (!termOfPayment) errors.push("Term of Payment belum dipilih");
+      
+      if (errors.length > 0) {
+        showAlert("Validasi Gagal", "Mohon lengkapi data berikut:\n" + errors.map(e => "- " + e).join("\n"), "error");
         return;
       }
 
@@ -1284,7 +1315,7 @@ export default function AddSalesOrderPage() {
           <div className="grid-form m-lg">
             {/* Row 1: Bentuk Barang, Jenis Barang, Grade Barang */}
             <div>
-              <Label htmlFor="itemShape">Bentuk Barang</Label>
+              <Label htmlFor="itemShape">Bentuk Barang <span className="text-red-500">*</span></Label>
               <div className="flex gap-2">
                 <Input
                   value={selectedShape ? `${selectedShape.nama} (${selectedShape.dimensi})` : ""}
@@ -1366,7 +1397,7 @@ export default function AddSalesOrderPage() {
             />
           </div>
             <div>
-              <Label htmlFor="itemQty">Qty</Label>
+              <Label htmlFor="itemQty">Qty <span className="text-red-500">*</span></Label>
               <Input
                 id="itemQty"
                 type="number"
@@ -1377,7 +1408,7 @@ export default function AddSalesOrderPage() {
               />
             </div>
           <div>
-            <Label htmlFor="itemUnit">Satuan</Label>
+            <Label htmlFor="itemUnit">Satuan <span className="text-red-500">*</span></Label>
             <div className="flex gap-2 items-end">
               <div className={itemCutType === "utuh" ? "flex-[4]" : "flex-1"}>
                 <SearchSelect
@@ -1414,7 +1445,9 @@ export default function AddSalesOrderPage() {
 
             {/* Row 3: Panjang, Lebar, Tebal */}
             <div>
-              <Label htmlFor="itemLength">Panjang (mm)</Label>
+              <Label htmlFor="itemLength">
+                Panjang (mm) {itemCutType !== "utuh" && <span className="text-red-500">*</span>}
+              </Label>
               <Input
                 id="itemLength"
                 type="number"
@@ -1427,7 +1460,9 @@ export default function AddSalesOrderPage() {
               />
             </div>
             <div>
-              <Label htmlFor="itemWidth">Lebar (mm)</Label>
+              <Label htmlFor="itemWidth">
+                Lebar (mm) {itemCutType !== "utuh" && selectedShape?.dimensi === "2D" && <span className="text-red-500">*</span>}
+              </Label>
               <Input
                 id="itemWidth"
                 type="number"
@@ -1441,7 +1476,7 @@ export default function AddSalesOrderPage() {
             </div>
             <div>
               <Label htmlFor="itemDiameter">
-                {selectedShape?.dimensi === "1D" ? "Tebal/Diameter/dan lain-lain (mm)" : "Tebal (mm)"} {itemCutType !== "utuh" && (selectedShape?.dimensi === "2D" || selectedShape?.dimensi === "1D") ? "*" : ""}
+                {selectedShape?.dimensi === "1D" ? "Tebal/Diameter/dan lain-lain (mm)" : "Tebal (mm)"} {itemCutType !== "utuh" && (selectedShape?.dimensi === "2D" || selectedShape?.dimensi === "1D") && <span className="text-red-500">*</span>}
               </Label>
               <Input
                 id="itemDiameter"
@@ -1485,7 +1520,7 @@ export default function AddSalesOrderPage() {
               </p>
             </div>
             <div>
-              <Label htmlFor="itemPrice">{getPriceLabel()}</Label>
+              <Label htmlFor="itemPrice">{getPriceLabel()} <span className="text-red-500">*</span></Label>
               <Input
                 id="itemPrice"
                 type="number"

@@ -181,7 +181,7 @@ export default function WorkOrderPage() {
         customer: wo.nama_pelanggan || wo.sales_order?.pelanggan?.nama_pelanggan || 'N/A',
         warehouse: wo.nama_gudang || wo.sales_order?.gudang?.nama_gudang || 'N/A',
         itemCount: wo.count || wo.workOrderItems?.length || 0,
-        status: wo.status || "Pending",
+        status: wo.status || "On Progress",
         woDateRaw: wo.tanggal_wo || wo.created_at || null,
         createdAt: formatDate(wo.tanggal_wo || wo.created_at),
         deleteRequestStatus: wo.delete_requested_by ? 'delete_requested' : null,
