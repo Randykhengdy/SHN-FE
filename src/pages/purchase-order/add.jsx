@@ -11,12 +11,12 @@ import { Textarea } from "@/components/ui/textarea";
 import DataTableModal from "@/components/modals/DataTableModal";
 import SearchSelect from "@/components/ui/search-select";
 import AsyncSearchSelect from "@/components/ui/async-search-select";
-import { 
+import {
   getSupplierOptions,
-  getJenisBarangOptions, 
-  getBentukBarangOptions, 
-  getGradeBarangOptions, 
-  getUnitOptions 
+  getJenisBarangOptions,
+  getBentukBarangOptions,
+  getGradeBarangOptions,
+  getUnitOptions
 } from "@/services/masterDataService";
 import { supplierService } from "@/services/master-data/supplierService";
 import { jenisBarangService } from "@/services/master-data/jenisBarangService";
@@ -28,12 +28,13 @@ import { API_ENDPOINTS } from "@/config/api";
 import SalesOrderLayout from "@/components/SalesOrderLayout";
 import PageHeader from "@/components/PageHeader";
 import { generatePurchaseOrderPrintContent, openPrintDialog } from "@/lib/printUtils";
+import { documentSequenceService } from "@/services/master-data/documentSequenceService";
 
 export default function AddPurchaseOrderPage() {
   const { showAlert, AlertComponent } = useAlert();
   const navigate = useNavigate();
   const { isUserAdmin, hasRole } = useRole();
-  
+
   // Master data state
   const [supplierOptions, setSupplierOptions] = useState([]);
   const [itemTypeOptions, setItemTypeOptions] = useState([]);
@@ -67,20 +68,27 @@ export default function AddPurchaseOrderPage() {
           jenisBarang,
           bentukBarang,
           gradeBarang,
-          units
+          units,
+          poNumber
         ] = await Promise.all([
           getJenisBarangOptions(),
           getBentukBarangOptions(),
           getGradeBarangOptions(),
-          getUnitOptions()
+          getUnitOptions(),
+          documentSequenceService.generatePONumber()
         ]);
 
         setItemTypeOptions(jenisBarang);
         setItemShapeOptions(bentukBarang);
         setItemGradeOptions(gradeBarang);
         setUnitOptions(units);
+
+        // Set generated PO number
+        setPoNumber(poNumber);
+        console.log('Generated PO number:', poNumber);
       } catch (error) {
         console.error('Error loading master data:', error);
+        showAlert('Error', 'Gagal memuat data master atau generate nomor PO', 'error');
       } finally {
         setLoadingItemType(false);
         setLoadingItemShape(false);
@@ -174,7 +182,7 @@ export default function AddPurchaseOrderPage() {
         // Menggunakan area dalam m/m² untuk perhitungan
         let totalBeforeDiscount = 0;
         let totalAfterDiscount = 0;
-        
+
         if (pricePerUnit > 0) {
           let areaInM = 0;
           if (selectedShape?.dimensi === "1D") {
@@ -186,7 +194,7 @@ export default function AddPurchaseOrderPage() {
             areaInM = (length * width) / 10000;
             totalBeforeDiscount = areaInM * pricePerUnit * qty;
           }
-          
+
           const discountAmount = totalBeforeDiscount * (discount / 100);
           totalAfterDiscount = totalBeforeDiscount - discountAmount;
         }
@@ -221,7 +229,7 @@ export default function AddPurchaseOrderPage() {
 
   const handleSupplierSelect = (supplier) => {
     if (!supplier) return;
-    
+
     setSelectedSupplier(supplier);
     setSupplierName(supplier.nama || "");
     setSupplierPhone(supplier.telepon || "");
@@ -278,10 +286,10 @@ export default function AddPurchaseOrderPage() {
       const width = parseFloat(itemWidth) || 0;
       const qty = parseInt(itemQty);
       const hargaSatuan = parseFloat(itemPrice) || 0;
-      
+
       let areaInM = 0;
       let subtotalBeforeDiscount = 0;
-      
+
       if (selectedShape?.dimensi === "1D") {
         // 1D: panjang dalam m
         areaInM = length / 1000;
@@ -291,7 +299,7 @@ export default function AddPurchaseOrderPage() {
         areaInM = (length * width) / 10000;
         subtotalBeforeDiscount = areaInM * hargaSatuan * qty;
       }
-      
+
       const discountAmount = subtotalBeforeDiscount * (parseFloat(itemDiscount) || 0) / 100;
       const subtotal = subtotalBeforeDiscount - discountAmount;
 
@@ -346,17 +354,17 @@ export default function AddPurchaseOrderPage() {
 
   const handleTestSimpanPO = async () => {
     console.log("Testing save PO...");
-    
+
     if (!selectedSupplier) {
       showAlert("Peringatan", "Supplier harus dipilih", "warning");
       return;
     }
-    
+
     if (items.length === 0) {
       showAlert("Peringatan", "Minimal harus ada 1 item", "warning");
       return;
     }
-    
+
     try {
       // Calculate total amount dari semua items
       // Konversi mm ke m/m² untuk perhitungan
@@ -366,7 +374,7 @@ export default function AddPurchaseOrderPage() {
         const qty = item.qty || 0;
         const harga = item.harga || 0;
         const diskon = item.diskon || 0;
-        
+
         // Konversi mm ke m/m²
         let areaInM = 0;
         if (width > 0) {
@@ -376,14 +384,14 @@ export default function AddPurchaseOrderPage() {
           // 1D: panjang dalam m
           areaInM = length / 1000;
         }
-        
+
         const subtotalBeforeDiscount = areaInM * harga * qty;
         const discountAmount = subtotalBeforeDiscount * (diskon / 100);
         const subtotal = subtotalBeforeDiscount - discountAmount;
-        
+
         return sum + subtotal;
       }, 0);
-      
+
       const purchaseOrderData = {
         nomor_po: poNumber,
         tanggal_po: poDate,
@@ -408,14 +416,14 @@ export default function AddPurchaseOrderPage() {
           catatan: item.catatan
         }))
       };
-      
+
       console.log("Data yang akan dikirim ke API:", purchaseOrderData);
-      
+
       const result = await request(API_ENDPOINTS.purchaseOrder, {
         method: 'POST',
         body: JSON.stringify(purchaseOrderData)
       });
-      
+
       console.log("✅ Purchase Order berhasil disimpan:", result);
       showAlert("Sukses", "Purchase Order berhasil disimpan!", "success");
 
@@ -448,7 +456,7 @@ export default function AddPurchaseOrderPage() {
       setTimeout(() => {
         window.history.back();
       }, 2000);
-      
+
     } catch (error) {
       console.error("❌ Error saving Purchase Order:", error);
       showAlert("Error", "Terjadi kesalahan saat menyimpan Purchase Order", "error");
@@ -505,12 +513,12 @@ export default function AddPurchaseOrderPage() {
     const day = String(today.getDate()).padStart(2, '0');
     const timestamp = Date.now().toString().slice(-3);
     setPoNumber(`PO-${year}${month}${day}-${timestamp}`);
-    
+
     setSupplierName("PT Supplier Baja Sejahtera");
     setSupplierPhone("08123456789");
     setSupplierEmail("info@supplier-baja.com");
     setSupplierAddress("Jl. Industri Baja No. 456, Bekasi");
-    
+
     if (supplierOptions.length > 0) {
       const firstSupplier = supplierOptions[0];
       setSelectedSupplier(firstSupplier);
@@ -586,7 +594,7 @@ export default function AddPurchaseOrderPage() {
 
   const handleShapeSelect = (shape) => {
     setSelectedShape(shape);
-    
+
     // Reset field lebar saat bentuk barang berubah
     if (shape?.dimensi === "1D") {
       setItemWidth("");
@@ -597,8 +605,8 @@ export default function AddPurchaseOrderPage() {
     { key: 'id', label: 'ID' },
     { key: 'kode', label: 'Kode' },
     { key: 'nama', label: 'Nama' },
-    { 
-      key: 'dimensi', 
+    {
+      key: 'dimensi',
       label: 'Dimensi',
       type: 'badge',
       badgeColor: (value) => value === '1D' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
@@ -616,7 +624,7 @@ export default function AddPurchaseOrderPage() {
       const qty = item.qty || 0;
       const harga = item.harga || 0;
       const diskon = item.diskon || 0;
-      
+
       // Konversi mm ke m/m²
       let areaInM = 0;
       if (width > 0) {
@@ -626,11 +634,11 @@ export default function AddPurchaseOrderPage() {
         // 1D: panjang dalam m
         areaInM = length / 1000;
       }
-      
+
       const subtotalBeforeDiscount = areaInM * harga * qty;
       const discountAmount = subtotalBeforeDiscount * (diskon / 100);
       const subtotal = subtotalBeforeDiscount - discountAmount;
-      
+
       return sum + subtotal;
     } catch (error) {
       console.error('Error calculating subtotal:', error);
@@ -645,7 +653,7 @@ export default function AddPurchaseOrderPage() {
       const qty = item.qty || 0;
       const harga = item.harga || 0;
       const diskon = item.diskon || 0;
-      
+
       // Konversi mm ke m/m²
       let areaInM = 0;
       if (width > 0) {
@@ -655,10 +663,10 @@ export default function AddPurchaseOrderPage() {
         // 1D: panjang dalam m
         areaInM = length / 1000;
       }
-      
+
       const subtotalBeforeDiscount = areaInM * harga * qty;
       const discountAmount = subtotalBeforeDiscount * (diskon / 100);
-      
+
       return sum + discountAmount;
     } catch (error) {
       console.error('Error calculating total discount:', error);
@@ -673,13 +681,13 @@ export default function AddPurchaseOrderPage() {
     <SalesOrderLayout title="Purchase Order (PO)" subtitle="TRANSAKSI">
       {/* Main Content Card */}
       <Card className="section-card">
-            <CardHeader className="section-header">
-              <div className="flex justify-between items-center">
-                <CardTitle className="page-title text-xl md:text-2xl font-bold">Input Purchase Order</CardTitle>
-                <div className="flex gap-2">
-                  <Button variant="default" size="sm" onClick={handleTestSimpanPO} className="btn-primary">
-                    Simpan Purchase Order
-                  </Button>
+        <CardHeader className="section-header">
+          <div className="flex justify-between items-center">
+            <CardTitle className="page-title text-xl md:text-2xl font-bold">Input Purchase Order</CardTitle>
+            <div className="flex gap-2">
+              <Button variant="default" size="sm" onClick={handleTestSimpanPO} className="btn-primary">
+                Simpan Purchase Order
+              </Button>
               <Button variant="secondary" size="sm" onClick={handleBackToList} className="btn-secondary">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Kembali ke List
@@ -702,7 +710,7 @@ export default function AddPurchaseOrderPage() {
                     const resp = await supplierService.getById(value);
                     const sup = resp?.data || resp;
                     if (sup) handleSupplierSelect(sup);
-                  } catch (_) {}
+                  } catch (_) { }
                 }}
                 fetchOptions={async (q, page) => {
                   const resp = await supplierService.getPaginated(page || 1, 50, q || "", "nama_supplier", "asc");
@@ -813,7 +821,7 @@ export default function AddPurchaseOrderPage() {
                 />
               </div>
             </div>
-            
+
             {/* Catatan */}
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
               <Label htmlFor="catatan">Catatan</Label>
@@ -835,11 +843,11 @@ export default function AddPurchaseOrderPage() {
 
       {/* Item Input Form */}
       <Card className="section-card">
-            <CardHeader className="section-header">
-              <CardTitle className="page-title">Input Item</CardTitle>
-            </CardHeader>
-            <CardContent className="section-content">
-              <div className="grid-form m-lg grid grid-cols-1 md:grid-cols-3 gap-4">
+        <CardHeader className="section-header">
+          <CardTitle className="page-title">Input Item</CardTitle>
+        </CardHeader>
+        <CardContent className="section-content">
+          <div className="grid-form m-lg grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Row 1: Bentuk Barang, Qty, Jenis Barang */}
             <div>
               <Label htmlFor="itemShape">Bentuk Barang</Label>
@@ -1040,11 +1048,11 @@ export default function AddPurchaseOrderPage() {
 
       {/* Item List Table */}
       <Card className="section-card">
-            <CardHeader className="section-header">
-              <div className="flex justify-between items-center">
-                <CardTitle className="page-title text-xl md:text-2xl font-bold">Daftar Item dalam PO</CardTitle>
-              </div>
-            </CardHeader>
+        <CardHeader className="section-header">
+          <div className="flex justify-between items-center">
+            <CardTitle className="page-title text-xl md:text-2xl font-bold">Daftar Item dalam PO</CardTitle>
+          </div>
+        </CardHeader>
         <CardContent className="section-content">
           <Table className="table-standard">
             <TableHeader className="table-header-standard">
