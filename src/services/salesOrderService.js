@@ -9,8 +9,14 @@ export const salesOrderService = {
     if (params.page) queryParams.append('page', params.page);
     if (params.per_page) queryParams.append('per_page', params.per_page);
     if (params.search) queryParams.append('search', params.search);
-    if (params.process_status && params.process_status !== 'all') queryParams.append('process_status', params.process_status);
-    if (params.status && params.status !== 'all') queryParams.append('status', params.status); // Keep for backward compatibility
+    if (params.process_status && params.process_status !== 'all') {
+      const statusParam = Array.isArray(params.process_status) 
+        ? params.process_status.join(',') 
+        : params.process_status;
+      queryParams.append('process_status', statusParam);
+    }
+    if (params.partial_wo_status && params.partial_wo_status !== 'all') queryParams.append('partial_wo_status', params.partial_wo_status);
+    // status filter removed as per update log
     if (params.date_start) queryParams.append('date_start', params.date_start);
     if (params.date_end) queryParams.append('date_end', params.date_end);
     if (params.sort_by) queryParams.append('sort_by', params.sort_by);

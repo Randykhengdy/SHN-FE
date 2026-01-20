@@ -8,15 +8,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Package, FileText, User } from 'lucide-react';
+import { ArrowLeft, Package, FileText, User, Printer, Calendar, Clock } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import CustomAlert from '@/components/modals/CustomAlert';
 import PelaksanaActualModal from '@/components/modals/PelaksanaActualModal';
 import { useAlert } from '@/hooks/useAlert';
 import apiConfig from '@/config/api';
 import { woActualService } from '@/services/woActualService';
-import { workOrderService } from '@/services/workOrderService';
 import { generateWOActualPrintContent, openPrintDialog } from '@/lib/printUtils';
+import RoleGuard from "@/components/RoleGuard";
 
 export default function ViewWOActualPage() {
   const navigate = useNavigate();
@@ -37,6 +37,7 @@ export default function ViewWOActualPage() {
   const [pelaksanaModalData, setPelaksanaModalData] = useState([]);
   const [pelaksanaPlanningData, setPelaksanaPlanningData] = useState([]);
   const [printOptionsOpen, setPrintOptionsOpen] = useState(false);
+  const [printLoading, setPrintLoading] = useState(false);
   const [includeImages, setIncludeImages] = useState(true);
 
   // Helper: build storage URL from file path
@@ -45,8 +46,6 @@ export default function ViewWOActualPage() {
     try {
       const base = apiConfig.baseUrl.replace(/\/api$/, '');
       let normalized = path.replace(/^\/+/, '');
-      // Normalize: remove actual ID segment from item path
-      // e.g. work-order-actual/10/items/4/foto_bukti.jpg -> work-order-actual/items/4/foto_bukti.jpg
       normalized = normalized.replace(/^work-order-actual\/\d+\/items\//, 'work-order-actual/items/');
       const hasStoragePrefix = /^storage\//.test(normalized);
       return hasStoragePrefix ? `${base}/${normalized}` : `${base}/storage/${normalized}`;
@@ -60,15 +59,12 @@ export default function ViewWOActualPage() {
     if (!input) return null;
     if (typeof input !== 'string') return null;
     const trimmed = input.trim();
-    // Blob URLs from authenticated fetch should be used as-is
     if (trimmed.startsWith('blob:')) return trimmed;
-    if (/^data:image\//i.test(trimmed)) return trimmed; // already data URL
-    if (/^https?:\/\//i.test(trimmed)) return trimmed; // absolute URL
-    // if looks like base64 without prefix
+    if (/^data:image\//i.test(trimmed)) return trimmed;
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
     if (/^[A-Za-z0-9+/=]+$/i.test(trimmed) && trimmed.length > 100) {
       return `data:image/jpeg;base64,${trimmed}`;
     }
-    // otherwise treat as storage path
     return buildStorageUrl(trimmed);
   };
 
@@ -80,7 +76,6 @@ export default function ViewWOActualPage() {
         const data = response?.data || response || null;
 
         if (!data) {
-          // title, message, type
           showAlert('WO Actual tidak ditemukan', 'Data tidak tersedia', 'error');
           return;
         }
@@ -94,7 +89,6 @@ export default function ViewWOActualPage() {
         setItems(actualItems);
       } catch (e) {
         console.error('Error memuat WO Actual:', e);
-        // title, message, type
         showAlert('Gagal memuat data WO Actual', e?.message || 'Terjadi kesalahan saat memuat', 'error');
       } finally {
         setLoading(false);
@@ -110,7 +104,6 @@ export default function ViewWOActualPage() {
       if (!id) return;
       try {
         setImagesLoading(true);
-        // Header image (binary stream)
         try {
           const blob = await woActualService.getWOActualHeaderImageBlob(id);
           const url = URL.createObjectURL(blob);
@@ -118,15 +111,12 @@ export default function ViewWOActualPage() {
         } catch (e) {
           console.warn('Gagal mengambil header image WO Actual:', e?.message || e);
         }
-
-        // Item images: no bulk endpoint, load on demand per item click
         setItemImagesMap({});
       } finally {
         setImagesLoading(false);
       }
     };
     loadImages();
-    // Cleanup object URLs on id change/unmount
     return () => {
       try {
         if (headerImageBase64 && headerImageBase64.startsWith('blob:')) {
@@ -136,9 +126,49 @@ export default function ViewWOActualPage() {
     };
   }, [id]);
 
+  // Load item images separately when items change
+  useEffect(() => {
+    const loadItemImages = async () => {
+      if (!items || items.length === 0) return;
+
+      const updates = {};
+      let hasUpdates = false;
+
+      await Promise.all(items.map(async (item) => {
+        if (!item.foto_bukti) return;
+        if (itemImagesMap[item.id]) return;
+
+        try {
+          const blob = await woActualService.getWOActualItemImageBlob(item.id);
+          const url = URL.createObjectURL(blob);
+          updates[item.id] = url;
+          hasUpdates = true;
+        } catch (e) {
+          console.warn(`Gagal load image item ${item.id}:`, e);
+        }
+      }));
+
+      if (hasUpdates) {
+        setItemImagesMap(prev => ({ ...prev, ...updates }));
+      }
+    };
+
+    loadItemImages();
+  }, [items, itemImagesMap]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(itemImagesMap).forEach(url => {
+        if (url && typeof url === 'string' && url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+    };
+  }, []);
+
+
   const totals = useMemo(() => {
     const totalQtyActual = (items || []).reduce((sum, it) => sum + (parseFloat(it.qty_actual || 0) || 0), 0);
-    // Hindari mixing ?? dengan || tanpa kurung: gunakan ?? berantai
     const totalBeratActual = (items || []).reduce((sum, it) => sum + (parseFloat(it.berat ?? it.berat_actual ?? 0) || 0), 0);
     const totalQtyPlanning = (items || []).reduce((sum, it) => {
       const qtyPlan = it.qty_planning ?? it.work_order_planning_item?.qty ?? 0;
@@ -156,11 +186,70 @@ export default function ViewWOActualPage() {
     return { totalQtyActual, totalBeratActual, totalQtyPlanning, totalBeratPlanning };
   }, [items]);
 
+  const handlePrint = async () => {
+    try {
+      setPrintLoading(true);
+      
+      const printData = {
+        nomor_wo: planning?.nomor_wo || 'N/A',
+        tanggal_wo: planning?.tanggal_wo || 'N/A',
+        status_planning: planning?.status || 'N/A',
+        pelanggan: planning?.pelanggan,
+        gudang: planning?.gudang,
+        
+        tanggal_actual: woActual?.tanggal_actual,
+        jam_mulai: woActual?.jam_mulai,
+        jam_selesai: woActual?.jam_selesai,
+        status_actual: woActual?.status,
+        prioritas: woActual?.prioritas,
+        catatan: woActual?.catatan,
+        
+        items: items.map(item => {
+           const planningItem = item.work_order_planning_item || {};
+           const pelaksanaArr = Array.isArray(planningItem.pelaksana)
+              ? planningItem.pelaksana
+              : (Array.isArray(planningItem.work_order_item_pelaksanas)
+                  ? planningItem.work_order_item_pelaksanas
+                  : []);
+           const beratPlanning = item.berat_planning ?? pelaksanaArr
+              .reduce((a, p) => a + (parseFloat(p.weight ?? p.berat) || 0), 0);
+
+           return {
+            jenis_barang: item.jenis_barang?.nama_jenis || item.jenis_barang_nama || planningItem.jenis_barang?.nama_jenis_barang || planningItem.jenis_barang?.nama,
+            bentuk_barang: item.bentuk_barang?.nama_bentuk || item.bentuk_barang_nama || planningItem.bentuk_barang?.nama_bentuk_barang || planningItem.bentuk_barang?.nama,
+            grade_barang: item.grade_barang?.nama || item.grade_barang_nama || planningItem.grade_barang?.nama_grade_barang || planningItem.grade_barang?.nama,
+            jenis_potongan: planningItem.jenis_potongan || item.jenis_potongan || 'N/A',
+            
+            qty_planning: item.qty_planning ?? planningItem.qty ?? 0,
+            berat_planning: Math.round(beratPlanning),
+            
+            qty_actual: item.qty_actual ?? 0,
+            berat_actual: Math.round(item.berat ?? item.berat_actual ?? 0),
+            
+            status: item.status || woActual?.status || 'PENDING'
+          };
+        }),
+        
+        headerImage: headerImageBase64
+      };
+
+      const html = generateWOActualPrintContent(printData, { includeImages });
+      openPrintDialog(html);
+      setPrintOptionsOpen(false);
+    } catch (error) {
+      console.error('❌ Error saat mencetak WO Actual:', error);
+      showAlert('Gagal mencetak WO Actual. Silakan coba lagi.', 'error');
+    } finally {
+      setPrintLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-600">Memuat data WO Actual...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Memuat data WO Actual...</p>
         </div>
       </div>
     );
@@ -168,7 +257,7 @@ export default function ViewWOActualPage() {
 
   if (!woActual) {
     return (
-      <PageLayout>
+      <PageLayout title="Detail WO Actual" subtitle="PRODUKSI">
         <div className="space-y-6">
           <AlertComponent />
           <div className="flex items-center gap-4 mb-6">
@@ -193,183 +282,149 @@ export default function ViewWOActualPage() {
 
   return (
     <>
-    <PageLayout>
+    <PageLayout title="Detail WO Actual" subtitle="PRODUKSI">
       <div className="space-y-6">
         <AlertComponent />
 
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              size="sm"
+        {/* Header - Aligned with Work Order View */}
+        <div className="flex items-center gap-4 mb-6">
+            <Button 
+              variant="outline" 
               onClick={() => navigate('/wo-actual')}
               className="flex items-center gap-2"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="w-4 h-4" />
               Kembali
             </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Lihat WO Actual</h1>
-              <p className="text-gray-600">Halaman view (read-only) WO Actual</p>
-            </div>
-          </div>
-          {/* Tombol Print dipindahkan ke bagian bawah halaman */}
         </div>
 
-        {/* Main Content */}
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column - Basic Info */}
-            <div className="lg:col-span-2 space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    Informasi Dasar
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label>WO Planning</Label>
-                      <Input value={planning?.nomor_wo || 'N/A'} disabled className="bg-gray-50" />
-                    </div>
-                    <div>
-                      <Label>Tanggal Actual</Label>
-                      <Input value={(woActual.tanggal_actual || woActual.created_at || '').toString().substring(0,10)} disabled className="bg-gray-50" />
-                    </div>
-                    <div>
-                      <Label>Jam Mulai</Label>
-                      <Input value={woActual.jam_mulai || ''} disabled className="bg-gray-50" />
-                    </div>
-                    <div>
-                      <Label>Jam Selesai</Label>
-                      <Input value={woActual.jam_selesai || ''} disabled className="bg-gray-50" />
-                    </div>
-                    <div>
-                      <Label>Status</Label>
-                      <div>
-                        <Badge variant="outline" className="text-xs">
-                          {woActual.status || 'N/A'}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div>
-                      <Label>Prioritas</Label>
-                      <div>
-                        <Badge variant="outline" className="text-xs">
-                          {woActual.prioritas || 'MEDIUM'}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label>Catatan</Label>
-                    <Textarea value={woActual.catatan || ''} disabled rows={3} />
-                  </div>
-
-                  {/* Foto Bukti */}
-                  <div>
-                    <Label>Foto Bukti</Label>
-                    {(() => {
-                      const hdrSrc = resolveImageSrc(headerImageBase64 || woActual.foto_bukti);
-                      return hdrSrc ? (
-                        <div className="space-y-2">
-                          <img
-                            src={hdrSrc}
-                            alt="Foto Bukti"
-                            className="w-32 h-32 object-cover rounded-lg border cursor-pointer"
-                            onClick={() => { setPreviewSrc(hdrSrc); setPreviewTitle('Foto Bukti WO Actual'); setPreviewOpen(true); }}
-                          />
-                          <div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => { setPreviewSrc(hdrSrc); setPreviewTitle('Foto Bukti WO Actual'); setPreviewOpen(true); }}
-                            >
-                              Lihat
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-gray-500">Tidak ada foto bukti</p>
-                      );
-                    })()}
-                  </div>
-                </CardContent>
-              </Card>
+        {/* Informasi WO Planning & Pelanggan */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Informasi WO Planning
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <Label>WO Planning</Label>
+                <Input value={planning?.nomor_wo || 'N/A'} disabled className="bg-gray-50" />
+              </div>
+              <div>
+                <Label>Tanggal WO Planning</Label>
+                <Input value={planning?.tanggal_wo || 'N/A'} disabled className="bg-gray-50" />
+              </div>
+              <div>
+                <Label>Status Planning</Label>
+                <Input value={planning?.status || 'N/A'} disabled className="bg-gray-50" />
+              </div>
+              <div>
+                <Label>Pelanggan</Label>
+                <Input value={planning?.pelanggan?.nama || planning?.pelanggan?.nama_pelanggan || 'N/A'} disabled className="bg-gray-50" />
+              </div>
+              <div>
+                <Label>Gudang</Label>
+                <Input value={planning?.gudang?.nama || planning?.gudang?.nama_gudang || 'N/A'} disabled className="bg-gray-50" />
+              </div>
             </div>
+          </CardContent>
+        </Card>
 
-            {/* Right Column - Planning Info & Summary */}
-            <div className="space-y-6">
-              {planning && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <User className="h-5 w-5" />
-                      Info WO Planning
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">No. WO</Label>
-                      <p className="text-sm">{planning.nomor_wo}</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">Pelanggan</Label>
-                      <p className="text-sm">{planning.pelanggan?.nama || planning.pelanggan?.nama_pelanggan || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">Gudang</Label>
-                      <p className="text-sm">{planning.gudang?.nama || planning.gudang?.nama_gudang || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">Tanggal WO</Label>
-                      <p className="text-sm">{planning.tanggal_wo || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">Status</Label>
-                      <Badge variant="outline" className="text-xs">{planning.status || 'N/A'}</Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+        {/* Informasi WO Actual */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Informasi Produksi (Actual)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <Label>Tanggal Actual</Label>
+                <Input value={(woActual.tanggal_actual || woActual.created_at || '').toString().substring(0,10)} disabled className="bg-gray-50" />
+              </div>
+              <div>
+                <Label>Jam Mulai</Label>
+                <Input value={woActual.jam_mulai || ''} disabled className="bg-gray-50" />
+              </div>
+              <div>
+                <Label>Jam Selesai</Label>
+                <Input value={woActual.jam_selesai || ''} disabled className="bg-gray-50" />
+              </div>
+              <div>
+                <Label>Status Actual</Label>
+                <Input value={woActual.status || 'N/A'} disabled className="bg-gray-50" />
+              </div>
+              <div>
+                <Label>Prioritas</Label>
+                <Input value={woActual.prioritas || 'MEDIUM'} disabled className="bg-gray-50" />
+              </div>
+             </div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Package className="h-5 w-5" />
-                    Ringkasan
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Total Item:</span>
-                    <span className="text-sm font-medium">{items.length}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Total Qty Planning:</span>
-                    <span className="text-sm font-medium">{totals.totalQtyPlanning}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Total Berat Planning:</span>
-                    <span className="text-sm font-medium">{Math.round(totals.totalBeratPlanning)} kg</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Total Qty Actual:</span>
-                    <span className="text-sm font-medium">{totals.totalQtyActual}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Total Berat Actual:</span>
-                    <span className="text-sm font-medium text-blue-600">{Math.round(totals.totalBeratActual)} kg</span>
-                  </div>
-                </CardContent>
-              </Card>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+              <div>
+                <Label>Catatan</Label>
+                <Textarea value={woActual.catatan || ''} disabled rows={4} className="bg-gray-50 mt-1.5" />
+              </div>
+              <div>
+                <Label>Foto Bukti</Label>
+                <div className="mt-1.5">
+                  {(() => {
+                    const hdrSrc = resolveImageSrc(headerImageBase64 || woActual.foto_bukti);
+                    return hdrSrc ? (
+                      <div className="space-y-2">
+                        <img
+                          src={hdrSrc}
+                          alt="Foto Bukti"
+                          className="w-32 h-32 object-cover rounded-lg border cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => { setPreviewSrc(hdrSrc); setPreviewTitle('Foto Bukti WO Actual'); setPreviewOpen(true); }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center w-32 h-32 bg-gray-100 rounded-lg border border-dashed border-gray-300">
+                        <span className="text-xs text-gray-500">Tidak ada foto</span>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
+
+        {/* Ringkasan Produksi */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Ringkasan Produksi
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="bg-gray-50 p-3 rounded-md border">
+                <span className="text-sm text-gray-600 block mb-1">Total Item</span>
+                <span className="text-xl font-semibold text-gray-900">{items.length}</span>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-md border">
+                <span className="text-sm text-gray-600 block mb-1">Total Qty (Plan / Act)</span>
+                <span className="text-xl font-semibold text-gray-900">{totals.totalQtyPlanning} / {totals.totalQtyActual}</span>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-md border">
+                <span className="text-sm text-gray-600 block mb-1">Total Berat (Plan / Act)</span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-xl font-semibold text-gray-900">{Math.round(totals.totalBeratPlanning)}</span>
+                  <span className="text-sm text-gray-500">/</span>
+                  <span className="text-xl font-semibold text-blue-600">{Math.round(totals.totalBeratActual)}</span>
+                  <span className="text-sm text-gray-600">kg</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Items Table (Read-only) */}
         <Card>
@@ -415,21 +470,30 @@ export default function ViewWOActualPage() {
                               : []);
                         const beratPlanning = actualItem.berat_planning ?? pelaksanaArr
                           .reduce((a, p) => a + (parseFloat(p.weight ?? p.berat) || 0), 0);
+                        
                         const qtyActual = actualItem.qty_actual ?? 0;
                         const beratActual = actualItem.berat ?? actualItem.berat_actual ?? 0;
-                        const status = actualItem.status || woActual.status || 'PENDING';
-                        const pelaksanas = actualItem.work_order_actual_pelaksanas || actualItem.has_many_pelaksana || [];
+                        const status = actualItem.status || woActual?.status || 'PENDING';
+
+                        const pelaksanas = Array.isArray(actualItem.pelaksana) 
+                          ? actualItem.pelaksana 
+                          : (Array.isArray(planningItem.pelaksana) 
+                              ? planningItem.pelaksana 
+                              : []);
+
                         const bentukNama = actualItem.bentuk_barang?.nama_bentuk || actualItem.bentuk_barang_nama || planningItem.bentuk_barang?.nama_bentuk_barang || planningItem.bentuk_barang?.nama;
                         const gradeNama = actualItem.grade_barang?.nama || actualItem.grade_barang_nama || planningItem.grade_barang?.nama_grade_barang || planningItem.grade_barang?.nama;
                         const jenisPotongan = planningItem.jenis_potongan || actualItem.jenis_potongan || 'N/A';
+                        
                         const openPelaksanaModal = () => {
                           setPelaksanaModalData(pelaksanas);
-                          setPelaksanaPlanningData(pelaksanaArr);
+                          setPelaksanaPlanningData(pelaksanas);
                           setPelaksanaModalOpen(true);
                         };
+
                         return (
                           <TableRow key={actualItem.id}>
-                            <TableCell className="text-center">{jenisNama || 'N/A'}</TableCell>
+                            <TableCell className="text-center font-medium">{jenisNama || 'N/A'}</TableCell>
                             <TableCell className="text-center">{bentukNama || 'N/A'}</TableCell>
                             <TableCell className="text-center">{gradeNama || 'N/A'}</TableCell>
                             <TableCell className="text-center">{jenisPotongan}</TableCell>
@@ -459,34 +523,19 @@ export default function ViewWOActualPage() {
                               {(() => {
                                 const cachedBlobSrc = resolveImageSrc(itemImagesMap[actualItem.id]);
                                 const rawPathSrc = resolveImageSrc(actualItem.foto_bukti);
-                                const handleOpenItemPreview = async () => {
-                                  let src = cachedBlobSrc;
-                                  // Selalu prioritaskan fetch terautentikasi; hindari langsung pakai URL storage yang 403
-                                  if (!src) {
-                                    try {
-                                      const blob = await woActualService.getWOActualItemImageBlob(actualItem.id);
-                                      src = URL.createObjectURL(blob);
-                                      setItemImagesMap(prev => ({ ...prev, [actualItem.id]: src }));
-                                    } catch (e) {
-                                      console.warn('Gagal load image item:', e);
-                                      // Fallback hanya jika sudah berupa data URL/Blob
-                                      if (rawPathSrc && (rawPathSrc.startsWith('data:image') || rawPathSrc.startsWith('blob:'))) {
-                                        src = rawPathSrc;
-                                      }
-                                    }
-                                  }
-                                  if (src) { setPreviewSrc(src); setPreviewTitle(`Foto Bukti Item #${actualItem.id}`); setPreviewOpen(true); }
-                                };
-                                return (cachedBlobSrc || rawPathSrc) ? (
-                                  <button
-                                    type="button"
-                                    className="text-xs text-blue-600 hover:underline"
-                                    onClick={handleOpenItemPreview}
-                                  >
-                                    Lihat
-                                  </button>
+                                const displaySrc = cachedBlobSrc || rawPathSrc;
+
+                                return displaySrc ? (
+                                  <div className="flex flex-col items-center gap-1">
+                                    <img
+                                      src={displaySrc}
+                                      alt="Foto Item"
+                                      className="w-10 h-10 object-cover rounded border cursor-pointer"
+                                      onClick={() => { setPreviewSrc(displaySrc); setPreviewTitle(`Foto Item: ${jenisNama}`); setPreviewOpen(true); }}
+                                    />
+                                  </div>
                                 ) : (
-                                  <span className="text-xs text-gray-500">Belum ada</span>
+                                  <span className="text-xs text-gray-400">-</span>
                                 );
                               })()}
                             </TableCell>
@@ -496,171 +545,80 @@ export default function ViewWOActualPage() {
                     </TableBody>
                   </Table>
                 </div>
-                {/* Totals Bar removed per request: ringkasan sudah tersedia di atas */}
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Pelaksana Modal (Read-only style sama seperti Add) */}
-        <PelaksanaActualModal
-          open={pelaksanaModalOpen}
-          onOpenChange={setPelaksanaModalOpen}
-          title="Pelaksana (View)"
-          planningPelaksana={pelaksanaPlanningData}
-          value={pelaksanaModalData}
-          readOnly={true}
-        />
-
-        {/* Action Buttons (Bottom) */}
+        {/* Action Buttons */}
         <div className="flex justify-center gap-4 mt-6">
           <Button size="lg" variant="outline" onClick={() => navigate('/wo-actual')}>
             Kembali ke List
           </Button>
-          <Button
-            size="lg"
-            className="border-blue-600 text-blue-600 hover:bg-blue-50"
-            variant="outline"
-            onClick={() => setPrintOptionsOpen(true)}
-          >
-            Print
-          </Button>
+
+          <RoleGuard roles={['admin', 'manager', 'supervisor']}>
+            <Button 
+              size="lg"
+              className="border-blue-600 text-blue-600 hover:bg-blue-50"
+              variant="outline"
+              onClick={() => setPrintOptionsOpen(true)}
+              disabled={printLoading}
+            >
+              {printLoading ? 'Menyiapkan cetak...' : 'Print'}
+            </Button>
+          </RoleGuard>
         </div>
+
+        {/* Pelaksana Modal */}
+        <PelaksanaActualModal
+          open={pelaksanaModalOpen}
+          onOpenChange={setPelaksanaModalOpen}
+          value={pelaksanaModalData}
+          planningPelaksana={pelaksanaPlanningData}
+          readOnly={true}
+        />
+
+        {/* Image Preview Modal */}
+        {previewOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setPreviewOpen(false)}>
+            <div className="relative max-w-4xl w-full max-h-[90vh] bg-white rounded-lg p-2" onClick={e => e.stopPropagation()}>
+              <div className="flex justify-between items-center mb-2 px-2">
+                <h3 className="font-semibold">{previewTitle}</h3>
+                <Button variant="ghost" size="sm" onClick={() => setPreviewOpen(false)}>
+                  <span className="text-xl">&times;</span>
+                </Button>
+              </div>
+              <div className="flex justify-center bg-gray-100 rounded overflow-hidden" style={{ maxHeight: 'calc(90vh - 60px)' }}>
+                <img src={previewSrc} alt="Preview" className="max-w-full max-h-full object-contain" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Print Options Dialog */}
+        <CustomAlert
+          open={printOptionsOpen}
+          onOpenChange={setPrintOptionsOpen}
+          title="Opsi Cetak WO Actual"
+          message={null}
+          type="info"
+          showCancel={true}
+          confirmText="Cetak"
+          cancelText="Batal"
+          onConfirm={handlePrint}
+          extraContent={(
+            <div className="w-full flex items-center justify-between gap-4 bg-gray-50 rounded-md px-3 py-2 border">
+              <span className="text-sm text-gray-800">Sertakan gambar untuk print</span>
+              <Switch
+                checked={includeImages}
+                onCheckedChange={setIncludeImages}
+                aria-label="Sertakan gambar untuk print"
+              />
+            </div>
+          )}
+        />
       </div>
     </PageLayout>
-    <CustomAlert
-      open={printOptionsOpen}
-      onOpenChange={setPrintOptionsOpen}
-      title="Opsi Cetak WO Actual"
-      message={null}
-      type="info"
-      showCancel={true}
-      confirmText="Cetak"
-      cancelText="Batal"
-      onConfirm={async () => {
-        try {
-            const printItems = (items || []).map((actualItem, index) => {
-              const planningItem = actualItem.work_order_planning_item || {};
-              const itemBarang = planningItem.item_barang || {};
-              const pelaksanas = actualItem.work_order_actual_pelaksanas || actualItem.has_many_pelaksana || [];
-              return {
-                id: actualItem.id,
-                woPlanItemId: actualItem.work_order_planning_item_id || actualItem.wo_plan_item_id || planningItem.id,
-                no: index + 1,
-                itemName: actualItem.item_barang_nama || itemBarang.nama_item_barang || itemBarang.nama || 'N/A',
-                jenisBarang: actualItem.jenis_barang?.nama_jenis
-                  || actualItem.jenis_barang_nama
-                  || planningItem.jenis_barang?.nama_jenis_barang
-                  || planningItem.jenis_barang?.nama
-                  || 'N/A',
-                bentukBarang: actualItem.bentuk_barang?.nama_bentuk
-                  || actualItem.bentuk_barang_nama
-                  || planningItem.bentuk_barang?.nama_bentuk_barang
-                  || planningItem.bentuk_barang?.nama
-                  || 'N/A',
-                gradeBarang: actualItem.grade_barang?.nama
-                  || actualItem.grade_barang_nama
-                  || planningItem.grade_barang?.nama_grade_barang
-                  || planningItem.grade_barang?.nama
-                  || 'N/A',
-                dimensi: `${planningItem.panjang || 0} x ${planningItem.lebar || 0} mm`,
-                qtyPlanning: planningItem.qty || actualItem.qty_planning || 0,
-                qtyActual: actualItem.qty_actual || 0,
-                beratActual: (actualItem.berat ?? actualItem.berat_actual ?? 0),
-                jenisPotongan: planningItem.jenis_potongan || 'N/A',
-                pelaksanas
-              };
-            });
-          let planningCanvasImages = [];
-          try {
-            if (planning?.id) {
-              const imagesResp = await workOrderService.getWorkOrderImages(planning.id);
-              planningCanvasImages = imagesResp?.data?.images || imagesResp?.images || [];
-            }
-          } catch (imgErr) {
-            console.warn('Gagal mengambil gambar WO Planning untuk print:', imgErr);
-          }
-          const printItemsWithImages = await Promise.all(
-            printItems.map(async (pi) => {
-              const beforeImages = (planningCanvasImages || []).filter((img) => {
-                const candidateIds = [
-                  img.work_order_planning_item_id,
-                  img.wo_plan_item_id,
-                  img.wo_item_id,
-                  img.work_order_item_id,
-                  img.item_id
-                ].filter(Boolean);
-                return candidateIds.includes(pi.woPlanItemId);
-              });
-              let afterImages = [];
-              try {
-                const blob = await woActualService.getWOActualItemImageBlob(pi.id);
-                const url = URL.createObjectURL(blob);
-                if (url) {
-                  afterImages = [{ src: url, work_order_actual_item_id: pi.id }];
-                }
-              } catch (aImgErr) {
-                console.warn(`Gagal mengambil gambar WO Actual item ${pi.id} untuk print:`, aImgErr);
-              }
-              return { ...pi, beforeImages, afterImages };
-            })
-          );
-          const printData = {
-            workOrderPlanning: planning,
-            woActual,
-            customer: planning?.pelanggan || planning?.customer || null,
-            warehouse: planning?.gudang || planning?.warehouse || null,
-            items: printItemsWithImages,
-            planningCanvasImages,
-            parentImages: (() => {
-              try {
-                const parentSrc = resolveImageSrc(headerImageBase64 || woActual.foto_bukti);
-                return parentSrc ? [{ src: parentSrc }] : [];
-              } catch (_) {
-                return [];
-              }
-            })()
-          };
-          const html = generateWOActualPrintContent(printData, { includeImages });
-          openPrintDialog(html);
-        } catch (e) {
-          console.error('Gagal membuka dialog print WO Actual (view):', e);
-          showAlert('Error', 'Gagal membuka dialog print WO Actual', 'error');
-        }
-      }}
-      extraContent={(
-        <div className="w-full flex items-center justify-between gap-4 bg-gray-50 rounded-md px-3 py-2 border">
-          <span className="text-sm text-gray-800">Sertakan gambar untuk print</span>
-          <Switch
-            checked={includeImages}
-            onCheckedChange={setIncludeImages}
-            aria-label="Sertakan gambar untuk print"
-          />
-        </div>
-      )}
-    />
-    {previewOpen && (
-      <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center" onClick={() => setPreviewOpen(false)}>
-        <div className="bg-white rounded-lg shadow-xl max-w-4xl w-[90%] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center justify-between px-4 py-3 border-b">
-            <h3 className="text-sm font-medium text-gray-800">{previewTitle || 'Preview Gambar'}</h3>
-            <button
-              className="text-gray-500 hover:text-gray-700 text-sm"
-              onClick={() => setPreviewOpen(false)}
-            >
-              Tutup
-            </button>
-          </div>
-          <div className="p-4 bg-gray-50">
-            {previewSrc ? (
-              <img src={previewSrc} alt={previewTitle || 'Preview'} className="w-full max-h-[70vh] object-contain" />
-            ) : (
-              <div className="text-center text-gray-500 py-10">Gambar tidak tersedia</div>
-            )}
-          </div>
-        </div>
-      </div>
-    )}
     </>
   );
 }

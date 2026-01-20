@@ -21,11 +21,11 @@ import { useAppContext } from "@/context/AppContext";
 const statusOptions = [
   { value: "all", label: "Semua Status" },
   { value: "submit", label: "Submit" },
-  { value: "in_progress", label: "In Progress" },
   { value: "partial_wo", label: "Partial WO" },
+  { value: "submit,partial_wo", label: "On Process (Submit & Partial WO)" },
   { value: "complete", label: "Complete" },
-  { value: "pending", label: "Pending" },
-  { value: "cancel", label: "Cancel" }
+  { value: "delete_requested", label: "Delete Requested" },
+  { value: "deleted", label: "Deleted" }
 ];
 
 // Periode filter dihapus sesuai permintaan
@@ -41,6 +41,7 @@ export default function SalesOrderListPage() {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [partialStatusFilter, setPartialStatusFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
@@ -107,6 +108,7 @@ export default function SalesOrderListPage() {
         per_page: itemsPerPage,
         search: searchTerm || undefined,
         process_status: statusFilter !== 'all' ? statusFilter : undefined,
+        partial_wo_status: partialStatusFilter !== 'all' ? partialStatusFilter : undefined,
         date_start: dateFrom || undefined,
         date_end: dateTo || undefined,
         sort_by: sortBy && sortBy !== 'none' ? sortBy : undefined,
@@ -135,8 +137,9 @@ export default function SalesOrderListPage() {
         ppnAmount: parseFloat(so.ppn_amount) || 0,
         syaratPembayaran: so.syarat_pembayaran,
         processStatus: so.process_status || "submit",
-        status: so.status || "active", // This is for delete status (active, delete_requested, deleted)
-        deleteRequestStatus: so.delete_requested_by ? 'delete_requested' : null,
+        partialWoStatus: so.partial_wo_status || null,
+        // status field removed from API
+        deleteRequestStatus: so.process_status === 'delete_requested' ? 'delete_requested' : null,
         deleteRequestedAt: so.delete_requested_at || null,
         deleteReason: so.delete_reason || null,
         deleteRequestedBy: so.delete_requested_by?.name || null,
@@ -151,7 +154,7 @@ export default function SalesOrderListPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, itemsPerPage, searchTerm, statusFilter, dateFrom, dateTo, sortBy, sortOrder]);
+  }, [currentPage, itemsPerPage, searchTerm, statusFilter, partialStatusFilter, dateFrom, dateTo, sortBy, sortOrder]);
 
   // Load sales orders from API
   useEffect(() => {
@@ -178,20 +181,21 @@ export default function SalesOrderListPage() {
   // Calculate status breakdown based on process_status (only current page)
   const statusBreakdown = {
     submit: salesOrders.filter(so => so.processStatus === "submit").length,
-    in_progress: salesOrders.filter(so => so.processStatus === "in_progress").length,
     partial_wo: salesOrders.filter(so => so.processStatus === "partial_wo").length,
-    complete: salesOrders.filter(so => so.processStatus === "complete").length
+    complete: salesOrders.filter(so => so.processStatus === "complete").length,
+    delete_requested: salesOrders.filter(so => so.processStatus === "delete_requested").length,
+    deleted: salesOrders.filter(so => so.processStatus === "deleted").length
   };
 
   const getStatusColor = (processStatus) => {
     const s = String(processStatus || '').toLowerCase();
     switch (s) {
       case "submit": return "bg-orange-100 text-orange-800";
-      case "in_progress": return "bg-yellow-100 text-yellow-800";
       case "partial_wo": return "bg-purple-100 text-purple-800";
       case "complete": return "bg-green-100 text-green-800";
-      case "pending": return "bg-yellow-100 text-yellow-800";
       case "cancel": return "bg-red-100 text-red-800";
+      case "delete_requested": return "bg-red-50 text-red-600";
+      case "deleted": return "bg-gray-200 text-gray-500";
       default: return "bg-gray-100 text-gray-800";
     }
   };
@@ -200,11 +204,11 @@ export default function SalesOrderListPage() {
     const s = String(processStatus || '').toLowerCase();
     switch (s) {
       case "submit": return "Submit";
-      case "in_progress": return "In Progress";
       case "partial_wo": return "Partial WO";
       case "complete": return "Complete";
-      case "pending": return "Pending";
       case "cancel": return "Cancel";
+      case "delete_requested": return "Delete Requested";
+      case "deleted": return "Deleted";
       default: return processStatus || "Submit";
     }
   };
@@ -315,6 +319,7 @@ export default function SalesOrderListPage() {
   const handleClearFilter = () => {
     setSearchTerm("");
     setStatusFilter("all");
+    setPartialStatusFilter("all");
     setDateFrom("");
     setDateTo("");
     setSortBy('none');
@@ -539,6 +544,24 @@ export default function SalesOrderListPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status Partial:
+                </label>
+                <Select value={partialStatusFilter} onValueChange={(value) => {
+                  setPartialStatusFilter(value);
+                  setCurrentPage(1);
+                }}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua</SelectItem>
+                    <SelectItem value="partial_wo">Partial WO</SelectItem>
+                    <SelectItem value="cancel">Cancel</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               
             </div>
             <div className="flex justify-end flex-wrap gap-2">
@@ -579,13 +602,14 @@ export default function SalesOrderListPage() {
                     <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('ppnAmount')}>PPN</TableHead>
                     <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('totalHarga')}>Total Harga</TableHead>
                     <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('process_status')}>Status</TableHead>
+                    <TableHead className="font-semibold text-center">Partial WO</TableHead>
                     <TableHead className="font-semibold text-center">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={12} className="text-center py-8">
+                      <TableCell colSpan={13} className="text-center py-8">
                         <div className="flex items-center justify-center">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                           <span className="ml-2">Loading data...</span>
@@ -594,7 +618,7 @@ export default function SalesOrderListPage() {
                     </TableRow>
                   ) : salesOrders.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={12} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={13} className="text-center py-8 text-gray-500">
                         Tidak ada data Sales Order
                       </TableCell>
                     </TableRow>
@@ -620,6 +644,19 @@ export default function SalesOrderListPage() {
                             <Badge className={getStatusColor(so.processStatus)}>
                               {formatProcessStatus(so.processStatus)}
                             </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {so.partialWoStatus === 'partial_wo' ? (
+                            <Badge className="bg-purple-100 text-purple-800">
+                              Partial WO
+                            </Badge>
+                          ) : so.partialWoStatus === 'cancel' ? (
+                            <Badge className="bg-red-100 text-red-800">
+                              Cancel
+                            </Badge>
+                          ) : (
+                            "-"
                           )}
                         </TableCell>
                         <TableCell>

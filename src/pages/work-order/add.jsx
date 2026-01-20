@@ -115,10 +115,7 @@ export default function AddWorkOrderPage() {
   const [catatanError, setCatatanError] = useState(false);
   const [catatanRequiredOpen, setCatatanRequiredOpen] = useState(false);
 
-  const getSOItemOrderNumber = (soItemId) => {
-    const idx = workOrderItems.findIndex(i => String(i.sales_order_item_id) === String(soItemId));
-    return idx !== -1 ? (idx + 1) : soItemId;
-  };
+
 
   const runWOCleansing = () => {
     try {
@@ -988,7 +985,9 @@ export default function AddWorkOrderPage() {
         status: String(workOrderData.status || '').toLowerCase(),
         typeWO: (() => {
           const t = String(typeWO || '').toLowerCase();
-          return t === 'batal' ? 'cancel' : t || 'normal';
+          if (t === 'batal') return 'cancel';
+          if (t === 'pending') return 'partial_wo';
+          return undefined;
         })(),
         handover_method: workOrderData.handover_method,
         estimate_done: workOrderData.estimate_done || null,
@@ -1293,16 +1292,21 @@ export default function AddWorkOrderPage() {
                     params.set('per_page', '50');
                     const resp = await request(`/sales-order/header?${params.toString()}`, { method: 'GET' });
                     const rows = Array.isArray(resp?.data) ? resp.data : [];
-                    return rows.map(so => ({
-                      value: String(so.id),
-                      label: `${so.nomor_so} - ${so.pelanggan?.nama_pelanggan || 'Unknown'} (${so.tanggal_so})`,
-                      nomor_so: so.nomor_so,
-                      tanggal_so: so.tanggal_so,
-                      pelanggan_id: so.pelanggan_id,
-                      pelanggan_nama: so.pelanggan?.nama_pelanggan,
-                      gudang_id: so.gudang_id,
-                      gudang_nama: so.gudang?.nama_gudang
-                    }));
+                    return rows.map(so => {
+                      const formattedDate = so.tanggal_so 
+                        ? new Date(so.tanggal_so).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+                        : '';
+                      return {
+                        value: String(so.id),
+                        label: `${so.nomor_so} - ${so.pelanggan?.nama_pelanggan || 'Unknown'} (${formattedDate})`,
+                        nomor_so: so.nomor_so,
+                        tanggal_so: so.tanggal_so,
+                        pelanggan_id: so.pelanggan_id,
+                        pelanggan_nama: so.pelanggan?.nama_pelanggan,
+                        gudang_id: so.gudang_id,
+                        gudang_nama: so.gudang?.nama_gudang
+                      };
+                    });
                   }}
                   displayKey="label"
                   valueKey="value"
@@ -1975,11 +1979,25 @@ export default function AddWorkOrderPage() {
               <div className="text-sm text-gray-600">Tidak ada detail mismatch</div>
             ) : (
               <ul className="list-disc list-inside space-y-1 text-sm text-gray-800">
-                {validationMismatches.map((m, idx) => (
-                  <li key={idx}>
-                    {`SO item nomor ${getSOItemOrderNumber(m.sales_order_item_id)} membutuhkan ${m.expected_qty}, sekarang ${m.combined_qty}${(m.existing_planned_qty && Number(m.existing_planned_qty) > 0) ? `, sebelumnya ${m.existing_planned_qty}` : ''}`}
-                  </li>
-                ))}
+                {validationMismatches.map((m, idx) => {
+                  const soItem = selectedSalesOrder?.sales_order_items?.find(i => String(i.id) === String(m.sales_order_item_id));
+                  const itemIndex = selectedSalesOrder?.sales_order_items?.findIndex(i => String(i.id) === String(m.sales_order_item_id));
+                  const itemNumber = itemIndex !== -1 ? itemIndex + 1 : m.sales_order_item_id;
+                  
+                  let itemName = '';
+                  if (soItem) {
+                     const jb = soItem.jenis_barang?.nama_jenis_barang || soItem.jenis_barang?.nama || '';
+                     const bb = soItem.bentuk_barang?.nama_bentuk_barang || soItem.bentuk_barang?.nama || '';
+                     const dim = `${parseFloat(soItem.panjang || 0)}x${parseFloat(soItem.lebar || 0)}x${parseFloat(soItem.tebal || 0)}`;
+                     itemName = `${jb} ${bb} ${dim}`.trim();
+                  }
+                  
+                  return (
+                    <li key={idx}>
+                      {`Item #${itemNumber}${itemName ? ` (${itemName})` : ''} membutuhkan ${m.expected_qty}, sekarang ${m.combined_qty}${(m.existing_planned_qty && Number(m.existing_planned_qty) > 0) ? `, sebelumnya ${m.existing_planned_qty}` : ''}`}
+                    </li>
+                  );
+                })}
               </ul>
             )}
             <div className="mt-4 flex justify-end gap-2">

@@ -50,7 +50,33 @@ export default function ViewSalesOrderPage() {
   // Item List
   const [items, setItems] = useState([]);
   
+  const getStatusColor = (processStatus) => {
+    const s = String(processStatus || '').toLowerCase();
+    switch (s) {
+      case "submit": return "bg-orange-100 text-orange-800";
+      case "pending": return "bg-yellow-100 text-yellow-800";
+      case "partial_wo": return "bg-purple-100 text-purple-800";
+      case "complete": return "bg-green-100 text-green-800";
+      case "cancel": return "bg-red-100 text-red-800";
+      case "delete_requested": return "bg-red-50 text-red-600";
+      case "deleted": return "bg-gray-200 text-gray-500";
+      default: return "bg-gray-100 text-gray-800";
+    }
+  };
 
+  const formatProcessStatus = (processStatus) => {
+    const s = String(processStatus || '').toLowerCase();
+    switch (s) {
+      case "submit": return "Submit";
+      case "pending": return "Pending";
+      case "partial_wo": return "Partial WO";
+      case "complete": return "Complete";
+      case "cancel": return "Cancel";
+      case "delete_requested": return "Delete Requested";
+      case "deleted": return "Deleted";
+      default: return processStatus || "Submit";
+    }
+  };
 
   // Load sales order data (includes all master data)
   useEffect(() => {
@@ -657,7 +683,9 @@ export default function ViewSalesOrderPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Status:</span>
-                  <span className="font-semibold text-blue-600">Draft</span>
+                  <span className={`font-semibold px-2 py-0.5 rounded text-sm ${getStatusColor(salesOrder.process_status)}`}>
+                    {formatProcessStatus(salesOrder.process_status)}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Tanggal SO:</span>

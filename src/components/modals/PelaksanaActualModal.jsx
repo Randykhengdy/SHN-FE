@@ -19,13 +19,15 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import SearchSelect from "@/components/ui/search-select";
 
+const DEFAULT_ARRAY = [];
+
 const PelaksanaActualModal = ({
   open,
   onOpenChange,
   title = "Pelaksana Planning & Input Actual",
-  pelaksanaOptions = [],
-  planningPelaksana = [],
-  value = [],
+  pelaksanaOptions = DEFAULT_ARRAY,
+  planningPelaksana = DEFAULT_ARRAY,
+  value = DEFAULT_ARRAY,
   onSave,
   loadingOptions = false,
   readOnly = false,
