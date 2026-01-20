@@ -81,12 +81,8 @@ export const woActualService = {
     if (params.per_page) queryParams.append('per_page', params.per_page);
     if (params.search) queryParams.append('search', params.search);
     
-    const excludeRaw = params.exclude_status || 'Selesai';
-    if (excludeRaw) {
-      const mapped = excludeRaw; // backend expects literal "Selesai"
-      queryParams.append('exclude_status', mapped);
-      queryParams.append('filter[exclude_status]', mapped);
-    }
+    // Filter by status=Pending as requested
+    queryParams.append('status', 'Pending');
     
     const url = `${API_ENDPOINTS.workOrderPlanning}?${queryParams.toString()}`;
     return request(url, { method: 'GET' });

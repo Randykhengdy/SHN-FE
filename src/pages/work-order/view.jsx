@@ -313,7 +313,7 @@ export default function ViewWorkOrderPage() {
             console.log('🔍 Mapping item:', item);
             
             // Calculate total if not provided
-            const qty = parseFloat(item.qty || item.quantity || item.jumlah || 0);
+            const qty = parseFloat(item.qty_planning || item.qty || item.quantity || item.jumlah || 0);
             const harga = parseFloat(item.harga || item.price || 0);
             const diskon = parseFloat(item.diskon || item.discount || 0);
             const subtotal = qty * harga;
@@ -342,6 +342,7 @@ export default function ViewWorkOrderPage() {
               ketebalan: item.ketebalan || item.thickness || 0,
               berat: item.berat || item.weight || 0,
               qty: qty,
+              qty_planning: item.qty_planning,
               harga: harga,
               diskon: diskon,
               satuan: item.satuan || 'N/A',
@@ -692,6 +693,7 @@ export default function ViewWorkOrderPage() {
                     <TableHead className="table-header-cell-standard">Grade</TableHead>
                     <TableHead className="table-header-cell-standard">Dimensi</TableHead>
                     <TableHead className="table-header-cell-standard">Qty</TableHead>
+                    <TableHead className="table-header-cell-standard">Qty Planning</TableHead>
                     <TableHead className="table-header-cell-standard">Luas/item</TableHead>
                     <TableHead className="table-header-cell-standard">Harga</TableHead>
                     <TableHead className="table-header-cell-standard">Satuan</TableHead>
@@ -705,7 +707,7 @@ export default function ViewWorkOrderPage() {
                 <TableBody>
                   {items.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={14} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={15} className="text-center py-8 text-gray-500">
                         Tidak ada item
                       </TableCell>
                     </TableRow>
@@ -743,6 +745,7 @@ export default function ViewWorkOrderPage() {
                           <TableCell>{item.gradeBarang?.nama_grade_barang || item.gradeBarang?.nama_grade || item.gradeBarang?.nama || 'N/A'}</TableCell>
                           <TableCell>{dimensi}</TableCell>
                           <TableCell>{item.qty}</TableCell>
+                          <TableCell>{item.qty_planning || item.qty}</TableCell>
                           <TableCell>{luasPerItem.toFixed(2)} mm²</TableCell>
                           <TableCell>{formatCurrency(item.harga)}</TableCell>
                           <TableCell>{item.satuan}</TableCell>

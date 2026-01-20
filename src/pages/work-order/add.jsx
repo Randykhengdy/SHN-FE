@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import AsyncSearchSelect from '@/components/ui/async-search-select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Save, ArrowLeft, Users, Package, Grid3X3, X } from 'lucide-react';
+import { Plus, Trash2, Save, ArrowLeft, Users, Package, Grid3X3, X, Info } from 'lucide-react';
 import SelectPlatShaftDasar from './select-platshaftdasar';
 import { useAlert } from '@/hooks/useAlert';
 import PageLayout from '@/components/PageLayout';
@@ -17,6 +17,12 @@ import { Table, TableHead, TableBody, TableRow, TableCell, TableHeader } from '@
 import PelaksanaModal from '@/components/modals/PelaksanaModal';
 import WorkOrderItemEditModal from '@/components/modals/WorkOrderItemEditModal';
 import PlatPreviewModal from '@/components/PlatPreviewModal';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 // Import test utilities for development
 import '@/lib/canvasPreviewTest';
 import '@/lib/canvasPreviewDemo';
@@ -52,6 +58,10 @@ export default function AddWorkOrderPage() {
     handover_method: 'pickup'
   });
   const [typeWO, setTypeWO] = useState('Normal');
+
+  // Qty Log Modal State
+  const [qtyLogModalOpen, setQtyLogModalOpen] = useState(false);
+  const [selectedQtyLog, setSelectedQtyLog] = useState([]);
 
   // Work Order Items State
   const [workOrderItems, setWorkOrderItems] = useState([]);
@@ -172,6 +182,34 @@ export default function AddWorkOrderPage() {
     const savedData = localStorage.getItem('WO_total_quantity');
     return savedData ? JSON.parse(savedData) : [];
   });
+
+  // Update qty_planning in workOrderItems whenever woTotalQuantity changes
+  useEffect(() => {
+    if (!woTotalQuantity || woTotalQuantity.length === 0) return;
+
+    setWorkOrderItems(prevItems => {
+      let isChanged = false;
+      const newItems = prevItems.map(item => {
+        // Find matching entry in woTotalQuantity
+        // woTotalQuantity stores WoItemID which matches item.id
+        const entry = woTotalQuantity.find(e => e.WoItemID === item.id || e.WoItemID === parseInt(item.id));
+        
+        if (entry && entry.WOQuantity) {
+          // Calculate sum of Quantity in WOQuantity array
+          const plannedQty = entry.WOQuantity.reduce((sum, q) => sum + (parseInt(q.Quantity) || 0), 0);
+          
+          // Only update if different to avoid infinite loop
+          if (item.qty_planning !== plannedQty) {
+            isChanged = true;
+            return { ...item, qty_planning: plannedQty };
+          }
+        }
+        return item;
+      });
+      
+      return isChanged ? newItems : prevItems;
+    });
+  }, [woTotalQuantity]);
 
   const openPelaksanaModal = (itemId) => {
     setPelaksanaModalItemId(itemId);
@@ -485,6 +523,8 @@ export default function AddWorkOrderPage() {
             tebal: (item.tebal  ?? 0),
             berat: (item.berat ?? item.weight ?? 0),
             qty: (item.sisa_qty ?? item.remaining_qty ?? item.available_qty ?? item.qty ?? item.qty_so ?? 1),
+            qty_planning: 0,
+            qty_planning_log: item.qty_planning_log || [],
             jenis_barang_id: (item.jenis_barang_id || item.jenis_barang?.id || item.item_jenis_id)?.toString?.() || '',
             bentuk_barang_id: (item.bentuk_barang_id || item.bentuk_barang?.id || item.item_bentuk_id)?.toString?.() || '',
             grade_barang_id: (item.grade_barang_id || item.grade_barang?.id || item.item_grade_id)?.toString?.() || '',
@@ -982,7 +1022,6 @@ export default function AddWorkOrderPage() {
         id_pelanggan: workOrderData.pelanggan_id,
         id_gudang: workOrderData.gudang_id,
         prioritas: workOrderData.prioritas,
-        status: String(workOrderData.status || '').toLowerCase(),
         typeWO: (() => {
           const t = String(typeWO || '').toLowerCase();
           if (t === 'batal') return 'cancel';
@@ -1006,7 +1045,8 @@ export default function AddWorkOrderPage() {
         items: workOrderItems.map((item, index) => ({
           wo_item_unique_id: existingWoItemIds[index] || `WOI-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
           sales_order_item_id: item.sales_order_item_id,
-          qty: item.qty,
+          qty: parseInt(item.qty) || 0,
+          qty_planning: parseInt(item.qty_planning) || 0,
           panjang: parseFloat(item.panjang) || 0,
           lebar: parseFloat(item.lebar) || 0,
           tebal: parseFloat(item.tebal) || 0,
@@ -1151,7 +1191,7 @@ export default function AddWorkOrderPage() {
     const pelaksanaValidationErrors = [];
     workOrderItems.forEach((item, index) => {
       const itemNumber = index + 1;
-      const itemQty = parseInt(item.qty) || 0;
+      const itemQty = parseInt(item.qty_planning) || 0;
       const pelaksanaCount = item.pelaksana ? item.pelaksana.length : 0;
       
       // Cek apakah ada pelaksana
@@ -1168,7 +1208,7 @@ export default function AddWorkOrderPage() {
       // Cek apakah total quantity pelaksana sesuai dengan quantity item
       if (totalPelaksanaQty !== itemQty) {
         pelaksanaValidationErrors.push(
-          `Item ${itemNumber}: Total quantity pelaksana (${totalPelaksanaQty}) harus sama dengan quantity item (${itemQty})`
+          `Item ${itemNumber}: Total quantity pelaksana (${totalPelaksanaQty}) harus sama dengan quantity planning (${itemQty})`
         );
       }
       
@@ -1190,7 +1230,7 @@ export default function AddWorkOrderPage() {
     if (pelaksanaValidationErrors.length > 0) {
       showAlert(
         'Validasi Pelaksana', 
-        `Terdapat kesalahan dalam data pelaksana:\n\n${pelaksanaValidationErrors.join('\n')}\n\nTotal quantity pelaksana harus sama dengan quantity item.`, 
+        `Terdapat kesalahan dalam data pelaksana:\n\n${pelaksanaValidationErrors.join('\n')}\n\nTotal quantity pelaksana harus sama dengan quantity planning.`, 
         'warning'
       );
       return;
@@ -1210,7 +1250,7 @@ export default function AddWorkOrderPage() {
         id_sales_order: parseInt(workOrderData.sales_order_id),
         items: workOrderItems.map(item => ({
           sales_order_item_id: item.sales_order_item_id,
-          quantity: parseInt(item.qty) || 0
+          quantity: parseInt(item.qty_planning) || 0
         }))
       };
       const validateResp = await workOrderPlanningService.validateSoCoverage(validatePayload);
@@ -1287,7 +1327,7 @@ export default function AddWorkOrderPage() {
                     loadSalesOrderDetail(id);
                   }}
                   fetchOptions={async (q, page) => {
-                    const params = new URLSearchParams({ per_page: '10', page: String(page || 1), status: 'active' });
+                    const params = new URLSearchParams({ per_page: '10', page: String(page || 1), status: 'submit,partial_wo' });
                     if (q) params.append('search', q);
                     params.set('per_page', '50');
                     const resp = await request(`/sales-order/header?${params.toString()}`, { method: 'GET' });
@@ -1445,6 +1485,7 @@ export default function AddWorkOrderPage() {
                     <TableHeader className="text-left">Lebar (mm)</TableHeader>
                     <TableHeader className="text-left">Tebal (mm)</TableHeader>
                     <TableHeader className="text-left">Qty</TableHeader>
+                    <TableHeader className="text-left">Qty Planning</TableHeader>
                     <TableHeader className="text-left">Berat (kg)</TableHeader>
                     <TableHeader className="text-left">Jenis</TableHeader>
                     <TableHeader className="text-left">Bentuk</TableHeader>
@@ -1484,8 +1525,35 @@ export default function AddWorkOrderPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-left">
-                          <div className="px-3 py-2 bg-gray-50 rounded text-sm">
-                            {item.qty || '0'}
+                          <div className="flex items-center gap-2">
+                            <div className="px-3 py-2 bg-gray-50 rounded text-sm">
+                              {item.qty || '0'}
+                            </div>
+                            {item.qty_planning_log && item.qty_planning_log.length > 0 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => {
+                                  setSelectedQtyLog(item.qty_planning_log);
+                                  setQtyLogModalOpen(true);
+                                }}
+                              >
+                                <Info className="w-4 h-4 text-blue-500" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-left">
+                          <div className={`px-3 py-2 rounded text-sm font-medium ${
+                            (item.qty_planning || 0) === parseInt(item.qty || 0) 
+                              ? 'bg-green-50 text-green-700' 
+                              : (item.qty_planning || 0) > parseInt(item.qty || 0)
+                                ? 'bg-yellow-50 text-yellow-700'
+                                : 'bg-gray-50'
+                          }`}>
+                            {item.qty_planning || '0'}
                           </div>
                         </TableCell>
                         <TableCell className="text-left">
@@ -1686,6 +1754,35 @@ export default function AddWorkOrderPage() {
         loadingPreview={loadingPreview}
         calculateRequiredArea={calculateRequiredArea}
       />
+
+      {/* Qty Log Modal */}
+      <Dialog open={qtyLogModalOpen} onOpenChange={setQtyLogModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Riwayat Penggunaan Qty</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Table>
+              <TableHeader>
+                 <TableRow>
+                   <TableHead>No. WO</TableHead>
+                   <TableHead>Tanggal</TableHead>
+                   <TableHead>Qty</TableHead>
+                 </TableRow>
+              </TableHeader>
+              <TableBody>
+                {selectedQtyLog.map((log, idx) => (
+                  <TableRow key={idx}>
+                    <TableCell>{log.nomor_wo}</TableCell>
+                    <TableCell>{log.created_at ? new Date(log.created_at).toLocaleDateString('id-ID') : (log.tanggal || '-')}</TableCell>
+                    <TableCell>{log.qty_used || log.qty}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Utuh Modal */}
       {utuhModalOpen && selectedUtuhItem && (
@@ -1994,7 +2091,7 @@ export default function AddWorkOrderPage() {
                   
                   return (
                     <li key={idx}>
-                      {`Item #${itemNumber}${itemName ? ` (${itemName})` : ''} membutuhkan ${m.expected_qty}, sekarang ${m.combined_qty}${(m.existing_planned_qty && Number(m.existing_planned_qty) > 0) ? `, sebelumnya ${m.existing_planned_qty}` : ''}`}
+                      {`Item #${itemNumber}${itemName ? ` (${itemName})` : ''} membutuhkan ${m.expected_qty}, sekarang ${m.incoming_qty}${(m.existing_planned_qty && Number(m.existing_planned_qty) > 0) ? `, sebelumnya ${m.existing_planned_qty}` : ''}`}
                     </li>
                   );
                 })}
