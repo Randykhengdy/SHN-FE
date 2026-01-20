@@ -1397,12 +1397,13 @@ export const generateStockMutationPrintContent = (mutationData) => {
     <tr>
       <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${index + 1}</td>
       <td style="border: 1px solid #ddd; padding: 8px;">${item.barang || item.nama_barang || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 8px;">${item.rak_asal || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.unit || item.satuan || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.quantity || item.qty || 0}</td>
     </tr>
   `).join('') || `
     <tr>
-      <td colspan="4" style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #777;">
+      <td colspan="5" style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #777;">
         Tidak ada item
       </td>
     </tr>
@@ -1480,6 +1481,7 @@ export const generateStockMutationPrintContent = (mutationData) => {
           <tr>
             <th style="width: 40px; text-align: center;">#</th>
             <th>Item Barang</th>
+            <th>Rak Asal</th>
             <th style="width: 100px; text-align: center;">Satuan</th>
             <th style="width: 80px; text-align: center;">Qty</th>
           </tr>

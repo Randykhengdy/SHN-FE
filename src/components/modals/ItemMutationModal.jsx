@@ -29,6 +29,7 @@ const MutationModal = ({
     const [quantity, setQuantity] = useState(0);
     const [availableQuantity, setAvailableQuantity] = useState(0);
     const [selectedItemLabel, setSelectedItemLabel] = useState("");
+    const [rakAsal, setRakAsal] = useState("-");
 
     useEffect(() => {
         if (!open) return; // hanya jalan ketika modal dibuka
@@ -40,6 +41,7 @@ const MutationModal = ({
             setQuantity(item.quantity);
             setAvailableQuantity(item.available_quantity || 0);
             setSelectedItemLabel(item.barang || "");
+            setRakAsal(item.rak_asal || "-");
         } else {
             // add mode
             setSelectedItemStock(null);
@@ -47,6 +49,7 @@ const MutationModal = ({
             setQuantity(0);
             setAvailableQuantity(0);
             setSelectedItemLabel("");
+            setRakAsal("-");
         }
     }, [open, item]); // depend ke open & item
 
@@ -92,7 +95,8 @@ const MutationModal = ({
             unit: unit,
             quantity: unit === 'bulk' ? parseInt(quantity) : 1,
             available_quantity: availableQuantity,
-            barang: selectedItemLabel
+            barang: selectedItemLabel,
+            rak_asal: rakAsal
         }
 
         onSave?.(result);
@@ -130,9 +134,11 @@ const MutationModal = ({
                                             setAvailableQuantity(Number(data?.quantity || 0));
                                             const lbl = `${data?.kode_barang || ''} - ${data?.nama_item_barang || 'Unknown'}`.trim();
                                             setSelectedItemLabel(lbl);
+                                            setRakAsal(data?.rak?.nama_rak || data?.rak?.nama || "-");
                                         } catch (_) {
                                             setAvailableQuantity(0);
                                             setSelectedItemLabel("");
+                                            setRakAsal("-");
                                         }
                                     }}
                                     fetchOptions={async (q, page) => {
@@ -152,6 +158,18 @@ const MutationModal = ({
                                     displayKey="label"
                                     valueKey="value"
                                     required
+                                />
+                            </div>
+                        </div>
+                        <div className="grid-form m-lg !mt-0">
+                            <div className="col-span-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Rak Asal:
+                                </label>
+                                <Input
+                                    value={rakAsal}
+                                    disabled
+                                    className="bg-gray-100"
                                 />
                             </div>
                         </div>
@@ -205,8 +223,6 @@ const MutationModal = ({
                                 </div>
                             </div>
                         )}
-
-
                     </div>
 
                     {/* Footer */}

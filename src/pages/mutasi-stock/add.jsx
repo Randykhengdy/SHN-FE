@@ -288,6 +288,7 @@ export default function AddMutasiStockPage() {
                             <TableRow>
                                 <TableHead className="table-header-cell-standard w-16">#</TableHead>
                                 <TableHead className="table-header-cell-standard">Item Barang</TableHead>
+                                <TableHead className="table-header-cell-standard">Rak Asal</TableHead>
                                 <TableHead className="table-header-cell-standard w-32">Satuan</TableHead>
                                 <TableHead className="table-header-cell-standard w-24">Qty</TableHead>
                                 <TableHead className="table-header-cell-standard w-32">Aksi</TableHead>
@@ -298,6 +299,7 @@ export default function AddMutasiStockPage() {
                                 <TableRow key={index}>
                                     <TableCell className="table-cell-standard w-16">{index + 1}</TableCell>
                                     <TableCell className="table-cell-standard">{item.barang}</TableCell>
+                                    <TableCell className="table-cell-standard">{item.rak_asal || '-'}</TableCell>
                                     <TableCell className="table-cell-standard w-32">{item.unit}</TableCell>
                                     <TableCell className="table-cell-standard w-24">{item.quantity}</TableCell>
                                     <TableCell className="table-cell-standard w-32">
@@ -324,7 +326,7 @@ export default function AddMutasiStockPage() {
                             ))}
                             {mutasiStockData.stock_mutation.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="table-cell-standard text-center text-gray-500 py-8">
+                                    <TableCell colSpan={6} className="table-cell-standard text-center text-gray-500 py-8">
                                         Belum ada item yang ditambahkan
                                     </TableCell>
                                 </TableRow>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, ArrowLeft, Minus, Pencil } from "lucide-react";
+import { Plus, ArrowLeft, Minus, Pencil, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,6 +13,7 @@ import MutationModal from "@/components/modals/ItemMutationModal";
 import { gudangService } from "@/services/master-data/gudangService";
 import { useParams } from "react-router-dom";
 import { stockMutationService } from "@/services/mutationStockService";
+import { generateStockMutationPrintContent, openPrintDialog } from "@/lib/printUtils";
 
 export default function ViewMutasiStockPage() {
     const { id } = useParams();
@@ -64,7 +65,7 @@ export default function ViewMutasiStockPage() {
                     const resT = await gudangService.getById(tujuanId);
                     setGudangTujuanName(resT?.data?.nama_gudang || resT?.data?.nama || "");
                 }
-            } catch (_) {}
+            } catch (_) { }
         } catch (error) {
             console.error('Error loading stock mutation:', error);
             showAlert("Error", "Gagal memuat data Mutasi Stock", "error");
@@ -83,6 +84,28 @@ export default function ViewMutasiStockPage() {
             ...prev,
             stock_mutation: prev.stock_mutation.filter((_, i) => i !== indexToRemove)
         }));
+    };
+
+    const handlePrint = () => {
+        // Prepare data for printing
+        const printData = {
+            nomor_mutasi: mutasiStockData.mutation_number || mutasiStockData.nomor_mutasi,
+            tanggal_mutasi: mutasiStockData.mutation_date || mutasiStockData.tanggal_mutasi,
+            gudang_asal: gudangAsalName || '-',
+            gudang_tujuan: gudangTujuanName || '-',
+            items: mutasiStockData.stock_mutation_items.map(item => ({
+                barang: item.item_barang ? `${item.item_barang.kode_barang} - ${item.item_barang.nama_item_barang}` : item.barang,
+                unit: item.unit,
+                quantity: item.quantity,
+                rak_asal: item.rak_asal?.nama_rak || item.rak_asal?.kode || item.rak_asal || '-'
+            }))
+        };
+
+        // Generate print content
+        const printContent = generateStockMutationPrintContent(printData);
+
+        // Open print window
+        openPrintDialog(printContent);
     };
 
     const handleBackToList = () => {
@@ -142,6 +165,10 @@ export default function ViewMutasiStockPage() {
                     <div className="flex justify-between items-center">
                         <CardTitle className="page-title">View Mutasi Stock</CardTitle>
                         <div className="flex space-sm">
+                            <Button variant="outline" size="sm" onClick={handlePrint} className="mr-2">
+                                <Printer className="w-4 h-4 mr-2" />
+                                Print
+                            </Button>
                             <Button variant="secondary" size="sm" onClick={handleBackToList} className="btn-secondary">
                                 <ArrowLeft className="w-4 h-4 mr-2" />
                                 Kembali ke List
@@ -189,6 +216,7 @@ export default function ViewMutasiStockPage() {
                             <TableRow>
                                 <TableHead className="table-header-cell-standard">#</TableHead>
                                 <TableHead className="table-header-cell-standard">Item Barang</TableHead>
+                                <TableHead className="table-header-cell-standard">Rak Asal</TableHead>
                                 <TableHead className="table-header-cell-standard">Satuan</TableHead>
                                 <TableHead className="table-header-cell-standard">Qty</TableHead>
                             </TableRow>
@@ -198,13 +226,14 @@ export default function ViewMutasiStockPage() {
                                 <TableRow key={item.id}>
                                     <TableCell className="table-cell-standard">{index + 1}</TableCell>
                                     <TableCell className="table-cell-standard">{item.item_barang.kode_barang + ' - ' + item.item_barang.nama_item_barang}</TableCell>
+                                    <TableCell className="table-cell-standard">{item.rak_asal?.nama_rak || item.rak_asal?.kode || item.rak_asal || '-'}</TableCell>
                                     <TableCell className="table-cell-standard">{item.unit}</TableCell>
                                     <TableCell className="table-cell-standard">{item.quantity}</TableCell>
                                 </TableRow>
                             ))}
                             {mutasiStockData.stock_mutation_items.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={12} className="table-cell-standard text-center text-gray-500 py-8">
+                                    <TableCell colSpan={5} className="table-cell-standard text-center text-gray-500 py-8">
                                         Belum ada item yang ditambahkan
                                     </TableCell>
                                 </TableRow>
