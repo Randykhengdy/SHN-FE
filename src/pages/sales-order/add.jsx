@@ -579,16 +579,20 @@ export default function AddSalesOrderPage() {
 
       // Calculate total using satuan-based pricing
       const currentSatuan = unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit;
+      const qty = parseInt(itemQty) || 0;
+
       const unitPrice = calculatePriceBySatuan(
         currentSatuan,
         parseFloat(itemLength) || 0,
         parseFloat(itemWidth) || 0,
         parseFloat(itemDiameter) || 0,
-        parseInt(itemQty),
+        qty,
         parseFloat(itemPrice) || 0,
         parseFloat(itemWeight) || 0,
         selectedShape
       );
+
+      let totalBeforeDiscount = 0;
 
       // Untuk satuan "utuh", tidak perlu dikalikan quantity lagi
       if (currentSatuan?.toLowerCase() === 'utuh' || currentSatuan?.toLowerCase() === 'pcs' || currentSatuan?.toLowerCase() === 'pieces' || currentSatuan?.toLowerCase() === 'per unit' || currentSatuan?.toLowerCase() === 'per pcs') {
@@ -597,8 +601,8 @@ export default function AddSalesOrderPage() {
         totalBeforeDiscount = unitPrice * qty; // Kalikan dengan quantity untuk satuan lain
       }
 
-      const discountAmount = calculatedTotal * (parseFloat(itemDiscount) || 0) / 100;
-      const finalTotal = calculatedTotal - discountAmount;
+      const discountAmount = totalBeforeDiscount * (parseFloat(itemDiscount) || 0) / 100;
+      const finalTotal = totalBeforeDiscount - discountAmount;
 
       const newItem = {
         id: Date.now(),
@@ -930,7 +934,7 @@ export default function AddSalesOrderPage() {
     );
     // Untuk satuan "utuh", tidak perlu dikalikan quantity lagi
     let firstTotal;
-    if (firstSatuan?.toLowerCase() === 'utuh' || currentSatuan?.toLowerCase() === 'pcs' || currentSatuan?.toLowerCase() === 'pieces' || firstSatuan?.toLowerCase() === 'per unit' || firstSatuan?.toLowerCase() === 'per pcs') {
+    if (firstSatuan?.toLowerCase() === 'utuh' || firstSatuan?.toLowerCase() === 'pcs' || firstSatuan?.toLowerCase() === 'pieces' || firstSatuan?.toLowerCase() === 'per unit' || firstSatuan?.toLowerCase() === 'per pcs') {
       firstTotal = firstUnitPrice; // Sudah termasuk quantity di dalamnya
     } else {
       firstTotal = firstUnitPrice * 3; // Kalikan dengan quantity untuk satuan lain
