@@ -130,6 +130,7 @@ export default function AddSalesOrderPage() {
   const [itemQty, setItemQty] = useState("1");
   const [itemType, setItemType] = useState("");
   const [itemTypeLabel, setItemTypeLabel] = useState("");
+  const [itemGradeLabel, setItemGradeLabel] = useState("");
   const [itemShape, setItemShape] = useState("");
   const [selectedShape, setSelectedShape] = useState(null);
   const [itemGrade, setItemGrade] = useState("");
@@ -608,7 +609,7 @@ export default function AddSalesOrderPage() {
         id: Date.now(),
         jenisBarang: itemTypeLabel || itemTypeOptions.find(opt => opt.value === itemType)?.label || itemType,
         bentuk: selectedShape.nama,
-        grade: itemGradeOptions.find(opt => opt.value === itemGrade)?.label || itemGrade,
+        grade: itemGradeLabel || itemGrade,
         dimensi: dimensiString,
         qty: parseInt(itemQty),
         luasPerItem: itemArea,
@@ -642,6 +643,7 @@ export default function AddSalesOrderPage() {
       setItemShape("");
       setSelectedShape(null);
       setItemGrade("");
+      setItemGradeLabel("");
       setItemDiscount("0");
       setItemNotes("");
       setItemWeight("");
@@ -947,7 +949,7 @@ export default function AddSalesOrderPage() {
         id: Date.now(),
         jenisBarang: itemTypeOptions.length > 0 ? itemTypeOptions[0].label : "Plat Besi",
         bentuk: firstShape.nama,
-        grade: itemGradeOptions.length > 0 ? itemGradeOptions[0].label : "Grade A",
+        grade: "Grade A",
         dimensi: firstItemDims.dimensiString,
         qty: 3,
         luasPerItem: firstShape.dimensi === "1D" ? `${firstItemArea} m` : `${firstItemArea} m²`,
@@ -957,7 +959,7 @@ export default function AddSalesOrderPage() {
         total: `Rp ${firstFinalTotal.toLocaleString('id-ID')}`,
         jenisBarangId: itemTypeOptions.length > 0 ? itemTypeOptions[0].value : "1",
         bentukBarangId: firstShape.value,
-        gradeBarangId: itemGradeOptions.length > 0 ? itemGradeOptions[0].value : "1",
+        gradeBarangId: "1",
         panjang: firstItemDims.panjang,
         lebar: firstItemDims.lebar,
         tebal: firstItemDims.tebal,
@@ -971,7 +973,7 @@ export default function AddSalesOrderPage() {
         id: Date.now() + 1,
         jenisBarang: itemTypeOptions.length > 1 ? itemTypeOptions[1].label : itemTypeOptions[0]?.label || "Besi Beton",
         bentuk: secondShape.nama,
-        grade: itemGradeOptions.length > 1 ? itemGradeOptions[1].label : itemGradeOptions[0]?.label || "Grade B",
+        grade: "Grade B",
         dimensi: secondItemDims.dimensiString,
         qty: 2,
         luasPerItem: secondShape.dimensi === "1D" ? `${secondItemArea} m` : `${secondItemArea} m²`,
@@ -990,7 +992,7 @@ export default function AddSalesOrderPage() {
         })()}`,
         jenisBarangId: itemTypeOptions.length > 1 ? itemTypeOptions[1].value : itemTypeOptions[0]?.value || "2",
         bentukBarangId: secondShape.value,
-        gradeBarangId: itemGradeOptions.length > 1 ? itemGradeOptions[1].value : itemGradeOptions[0]?.value || "2",
+        gradeBarangId: "2",
         panjang: secondItemDims.panjang,
         lebar: secondItemDims.lebar,
         tebal: secondItemDims.tebal,
@@ -1374,7 +1376,21 @@ export default function AddSalesOrderPage() {
                 placeholder="Pilih Grade"
                 searchPlaceholder="Cari grade..."
                 value={itemGrade}
-                onValueChange={setItemGrade}
+                onValueChange={async (val) => {
+                  setItemGrade(val);
+                  try {
+                    if (!val) {
+                      setItemGradeLabel("");
+                      return;
+                    }
+                    const resp = await gradeBarangService.getById(val);
+                    const data = resp?.data || resp;
+                    const label = data?.nama || data?.nama_grade || data?.label || String(val);
+                    setItemGradeLabel(label);
+                  } catch (e) {
+                    setItemGradeLabel(String(val));
+                  }
+                }}
                 required
                 fetchOptions={async (q, page) => {
                   const resp = await gradeBarangService.getPaginated(page || 1, 50, q || "");
