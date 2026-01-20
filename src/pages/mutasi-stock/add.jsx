@@ -12,7 +12,7 @@ import PageLayout from "@/components/PageLayout";
 import MutationModal from "@/components/modals/ItemMutationModal";
 import { getGudangOptions } from "@/services/masterDataService";
 import { documentSequenceService } from "@/services/master-data/documentSequenceService";
-import { generateStockMutationPrintContent } from "@/lib/printUtils";
+import { generateStockMutationPrintContent, openPrintDialog } from "@/lib/printUtils";
 
 export default function AddMutasiStockPage() {
     const { showAlert, AlertComponent } = useAlert();
@@ -141,11 +141,7 @@ export default function AddMutasiStockPage() {
         const printContent = generateStockMutationPrintContent(printData);
 
         // Open print window
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-            printWindow.document.write(printContent);
-            printWindow.document.close();
-        }
+        openPrintDialog(printContent);
     };
 
     const saveStockForMutation = (rows) => {
