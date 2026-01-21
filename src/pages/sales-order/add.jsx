@@ -1608,6 +1608,11 @@ export default function AddSalesOrderPage() {
                 type="number"
                 value={itemDiscount}
                 onChange={(e) => setItemDiscount(e.target.value)}
+                onBlur={(e) => {
+                  if (e.target.value === '' || e.target.value === null) {
+                    setItemDiscount('0');
+                  }
+                }}
                 min="0"
                 max="100"
                 placeholder="0"
