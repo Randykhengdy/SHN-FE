@@ -146,8 +146,10 @@ const PelaksanaActualModal = ({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[30%] text-left">Pelaksana (Planning)</TableHead>
-                      <TableHead className="w-[30%] text-left">Pelaksana (Actual)</TableHead>
+                      {!readOnly && <TableHead className="w-[30%] text-left">Pelaksana (Planning)</TableHead>}
+                      <TableHead className={`${readOnly ? 'w-[40%]' : 'w-[30%]'} text-left`}>
+                        {readOnly ? 'Pelaksana' : 'Pelaksana (Actual)'}
+                      </TableHead>
                       <TableHead className="text-center w-[20%]">Qty Actual</TableHead>
                       <TableHead className="text-center w-[20%]">Berat Actual</TableHead>
                     </TableRow>
@@ -155,36 +157,44 @@ const PelaksanaActualModal = ({
                   <TableBody>
                     {rows.map((row, idx) => (
                       <TableRow key={idx}>
+                        {!readOnly && (
+                          <TableCell className="text-left">
+                            <div className="text-sm text-gray-600">{row.planning_nama || '-'}</div>
+                          </TableCell>
+                        )}
                         <TableCell className="text-left">
-                          <div className="text-sm text-gray-600">{row.planning_nama || '-'}</div>
-                        </TableCell>
-                        <TableCell className="text-left">
-                          <SearchSelect
-                            options={pelaksanaOptions}
-                            value={row.pelaksana_id ? String(row.pelaksana_id) : ""}
-                            onValueChange={(val) => {
-                              const selectedId = parseInt(val);
-                              const selectedOption = pelaksanaOptions.find(opt => String(opt.value) === String(selectedId));
-                              setRows(prev => prev.map((r, i) => {
-                                if (i === idx) {
-                                  return {
-                                    ...r,
-                                    pelaksana_id: selectedId,
-                                    nama: selectedOption ? selectedOption.label : r.nama
-                                  };
-                                }
-                                return r;
-                              }));
-                            }}
-                            placeholder={row.nama || "Pilih pelaksana"}
-                            searchPlaceholder="Cari pelaksana..."
-                            loading={loadingOptions}
-                            usePortal={true}
-                            portalContainer={containerRef}
-                            dropdownMaxHeight={200}
-                            className="w-full"
-                            disabled={readOnly}
-                          />
+                          {readOnly ? (
+                            <div className="text-sm font-medium text-gray-900 px-3 py-2 border rounded-md bg-gray-50">
+                              {row.nama || '-'}
+                            </div>
+                          ) : (
+                            <SearchSelect
+                              options={pelaksanaOptions}
+                              value={row.pelaksana_id ? String(row.pelaksana_id) : ""}
+                              onValueChange={(val) => {
+                                const selectedId = parseInt(val);
+                                const selectedOption = pelaksanaOptions.find(opt => String(opt.value) === String(selectedId));
+                                setRows(prev => prev.map((r, i) => {
+                                  if (i === idx) {
+                                    return {
+                                      ...r,
+                                      pelaksana_id: selectedId,
+                                      nama: selectedOption ? selectedOption.label : r.nama
+                                    };
+                                  }
+                                  return r;
+                                }));
+                              }}
+                              placeholder={row.nama || "Pilih pelaksana"}
+                              searchPlaceholder="Cari pelaksana..."
+                              loading={loadingOptions}
+                              usePortal={true}
+                              portalContainer={containerRef}
+                              dropdownMaxHeight={200}
+                              className="w-full"
+                              disabled={readOnly}
+                            />
+                          )}
                         </TableCell>
                         <TableCell className="text-center">
                           <Input

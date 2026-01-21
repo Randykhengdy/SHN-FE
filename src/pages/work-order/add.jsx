@@ -11,6 +11,7 @@ import { useAlert } from '@/hooks/useAlert';
 import PageLayout from '@/components/PageLayout';
 import { openPrintDialog, generateWOPlanningPrintContent } from '@/lib/printUtils';
 import { clearCanvasPreviews, getStoredPreviewDataUrl } from '@/lib/canvasUtils';
+import { findCanvasPreviewFile } from '@/lib/canvasPreviewUtils';
 import { workOrderPlanningService } from '@/services/workOrderPlanningService';
 import { request } from '@/lib/request';
 import { Table, TableHead, TableBody, TableRow, TableCell, TableHeader } from '@/components/Table';
@@ -66,16 +67,15 @@ export default function AddWorkOrderPage() {
   // Work Order Items State
   const [workOrderItems, setWorkOrderItems] = useState([]);
 
-  // Work Order ID State - generate new ID every time page is opened
+  // Work Order ID State - generate new ID or retrieve existing
   const [workOrderId, setWorkOrderId] = useState(() => {
-    // Clear all WO_ storage first
-    const keys = Object.keys(localStorage);
-    const woKeys = keys.filter(key => key.startsWith('WO_'));
-    woKeys.forEach(key => {
-      localStorage.removeItem(key);
-    });
+    // Check if we have an active session
+    const storedWorkOrderId = localStorage.getItem('WO_current_work_order_id');
+    if (storedWorkOrderId) {
+      return storedWorkOrderId;
+    }
     
-    // Always generate a new work order ID when opening add WO page
+    // Generate new if none exists
     const timestamp = Date.now();
     const random = Math.random().toString(36).substring(2, 8);
     const newWorkOrderId = `wo_${timestamp}_${random}`;
@@ -509,14 +509,14 @@ export default function AddWorkOrderPage() {
       if (itemsData && itemsData.length > 0) {
         // Transform Sales Order items to Work Order items
         const transformedItems = itemsData.map((item, index) => {
-          // Generate unique workOrderUniqueId for each WO item
+          // Generate unique wo_item_unique_id for each WO item
           const timestamp = Date.now() + index;
           const random = Math.random().toString(36).substring(2, 8);
-          const workOrderUniqueId = `wo_item_${timestamp}_${random}`;
+          const woItemUniqueId = `wo_item_${timestamp}_${random}`;
           
           return {
             id: timestamp,
-            workOrderUniqueId: workOrderUniqueId,
+            wo_item_unique_id: woItemUniqueId,
             sales_order_item_id: item.id || item.sales_order_item_id,
             panjang: (item.panjang ?? item.length ?? item.p ?? 0),
             lebar: (item.lebar ?? item.width ?? item.l ?? 0),
@@ -580,8 +580,13 @@ export default function AddWorkOrderPage() {
 
   // Add new work order item - now opens modal directly
   const addWorkOrderItem = () => {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 8);
+    const woItemUniqueId = `wo_item_${timestamp}_${random}`;
+
     const newItem = {
-      id: Date.now(),
+      id: timestamp,
+      wo_item_unique_id: woItemUniqueId,
       sales_order_item_id: null, // No sales order item ID for manual items
       panjang: '0',
       lebar: '0',
@@ -1069,9 +1074,24 @@ export default function AddWorkOrderPage() {
                 quantity: woq.Quantity,
                 is_selected: true
               };
-              if (entry && entry.canvas_image) {
+              
+              // Try specific image first (WO Item specific)
+              const woItemUniqueId = item.wo_item_unique_id || item.id;
+              let specificImage = null;
+              if (woItemUniqueId) {
+                try {
+                  const specificKey = `WO_canvas_preview_woitem_${woItemUniqueId}_item_${woq.ItemId}`;
+                  specificImage = localStorage.getItem(specificKey);
+                  if (specificImage) console.log('Found specific canvas for payload:', specificKey);
+                } catch (_) {}
+              }
+
+              if (specificImage) {
+                base.canvas_image = specificImage;
+              } else if (entry && entry.canvas_image) {
                 base.canvas_image = entry.canvas_image;
               }
+              
               if (entry && entry.canvas_data) {
                 base.canvas_layout = entry.canvas_data;
               }
@@ -1099,6 +1119,98 @@ export default function AddWorkOrderPage() {
         const found = list.find(opt => String(opt.value) === String(value));
         return found ? (found.label || found.nama || found.text || String(value)) : String(value || 'N/A');
       };
+      // Prepare canvas images with async lookup
+      const prepareCanvasImages = async () => {
+        try {
+          const images = [];
+          // Map items to their selected plat dasar images
+          for (const item of workOrderItems) {
+            // Get used plats from totalQuantityData (Source of Truth for Logic)
+            const itemUsage = totalQuantityData.find(u => u.WoItemID === item.id || u.WoItemID === parseInt(item.id));
+            const usedPlatIds = itemUsage ? itemUsage.WOQuantity.map(q => q.ItemId) : [];
+            
+            // Get used plats from selectedPlatDasar (Source of Truth for UI Selection)
+            const selectedPlats = selectedPlatDasar[item.id] || [];
+            const selectedPlatIds = selectedPlats.map(p => p.id || p.item_barang_id).filter(Boolean);
+            
+            // Merge unique IDs
+            const allPlatIds = [...new Set([...usedPlatIds, ...selectedPlatIds])];
+            
+            for (const itemId of allPlatIds) {
+              if (!itemId) continue;
+
+              let src = null;
+              const woItemUniqueId = item.wo_item_unique_id || item.id;
+              
+              // 0. Try to find specific WoItemId preview in localStorage first (Fastest & Newest)
+              if (woItemUniqueId) {
+                try {
+                  const specificKey = `WO_canvas_preview_woitem_${woItemUniqueId}_item_${itemId}`;
+                  const cachedSpecific = localStorage.getItem(specificKey);
+                  if (cachedSpecific) {
+                    src = cachedSpecific;
+                    console.log('Found specific canvas in localStorage:', specificKey);
+                  }
+                } catch (_) {}
+              }
+
+              // 1. (Removed) Try to find WoItemId specific file first
+              // We removed this because we are now relying solely on localStorage for previews
+              // to avoid file system errors in EXE environment
+              
+              // 2. Fallback to localStorage (Legacy/Cached generic item)
+              if (!src) {
+                try {
+                  src = getStoredPreviewDataUrl(itemId);
+                } catch (_) {}
+              }
+
+              // 3. (Removed) Fallback to generic file on disk
+              // Removed for the same reason as above
+
+              // Add image with explicit link to WO Item ID
+              images.push({ 
+                item_id: itemId, // Inventory Item ID
+                wo_item_id: item.id, // WO Item ID (Client side ID)
+                wo_item_unique_id: item.wo_item_unique_id || item.id,
+                src 
+              });
+            }
+          }
+
+          // Fallback: If no images found via mapping (e.g. legacy data in localStorage), try to load from used list
+          if (images.length === 0) {
+            const used = JSON.parse(localStorage.getItem('WO_used_saran_plats') || '[]');
+            for (const id of used) {
+              const itemId = parseInt(id);
+              if (!itemId) continue;
+              
+              // Check if this image is already added
+              if (images.some(img => img.item_id === itemId)) continue;
+
+              let src = null;
+              try {
+                src = getStoredPreviewDataUrl(itemId);
+              } catch (_) {}
+
+              if (!src) {
+                const fileName = `canvas-preview-ItemId-${itemId}.jpg`;
+                src = `/canvas-previews/${fileName}`;
+              }
+
+              images.push({ item_id: itemId, src });
+            }
+          }
+          
+          return images;
+        } catch (e) {
+          console.error('Error preparing canvas images:', e);
+          return [];
+        }
+      };
+
+      const canvasImages = await prepareCanvasImages();
+
       const printData = {
         nomor_wo: workOrderNumber || workOrderData.nomor_wo,
         tanggal_wo: workOrderData.tanggal_wo,
@@ -1115,41 +1227,17 @@ export default function AddWorkOrderPage() {
           return wh ? { nama_gudang: wh.label } : { nama_gudang: 'N/A' };
         })(),
         items: workOrderItems.map(item => ({
+          id: item.id,
+          wo_item_unique_id: item.wo_item_unique_id || item.id,
           jenisBarang: { nama_jenis_barang: mapLabel(jenisBarangList, item.jenis_barang_id), nama: mapLabel(jenisBarangList, item.jenis_barang_id) },
           bentukBarang: { nama_bentuk_barang: mapLabel(bentukBarangList, item.bentuk_barang_id), nama_bentuk: mapLabel(bentukBarangList, item.bentuk_barang_id), nama: mapLabel(bentukBarangList, item.bentuk_barang_id) },
           gradeBarang: { nama_grade_barang: mapLabel(gradeBarangList, item.grade_barang_id), nama_grade: mapLabel(gradeBarangList, item.grade_barang_id), nama: mapLabel(gradeBarangList, item.grade_barang_id) },
           dimensi: `${item.panjang || 0}x${item.lebar || 0}x${item.tebal || 0}mm`,
           qtyPlanning: item.qty_planning ??  0,
           jenisPotongan: item.jenis_potongan || 'potongan',
-          keterangan: item.catatan || ''
+          keterangan: item.catatan || '-'
         })),
-        canvasImages: (() => {
-          try {
-            const used = JSON.parse(localStorage.getItem('WO_used_saran_plats') || '[]');
-            const images = [];
-            used.forEach(id => {
-              const itemId = parseInt(id);
-              if (!itemId) {
-                return;
-              }
-
-              let src = null;
-              try {
-                src = getStoredPreviewDataUrl(itemId);
-              } catch (_) {}
-
-              if (!src) {
-                const fileName = `canvas-preview-ItemId-${id}.jpg`;
-                src = `/canvas-previews/${fileName}`;
-              }
-
-              images.push({ item_id: itemId, src });
-            });
-            return images;
-          } catch (e) {
-            return [];
-          }
-        })()
+        canvasImages: canvasImages
       };
       const html = generateWOPlanningPrintContent(printData, { includeImages });
       openPrintDialog(html);

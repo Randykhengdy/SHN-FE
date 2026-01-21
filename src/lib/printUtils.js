@@ -678,46 +678,59 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
   // Render Before/After images per item (Planning vs Actual) using mapped arrays
   const beforeAfterSectionHtml = includeImages && (woActualData.items || []).length > 0
     ? (() => {
-      const itemSections = (woActualData.items || []).map((it) => {
+      const itemSections = (woActualData.items || []).map((item, idx) => {
+        const it = { ...item, no: idx + 1 };
         const beforeImages = Array.isArray(it.beforeImages) ? it.beforeImages : [];
         const afterImages = Array.isArray(it.afterImages) ? it.afterImages : [];
 
-        const renderImages = (images, label) => {
-          if (!images || images.length === 0) {
-            return `<div style="padding: 16px; color: #666; font-style: italic;">Tidak ada gambar ${label}</div>`;
-          }
-          const tiles = images.map((img, idx) => {
-            const src = img.canvas_image_base64 || img.image_base64 || img.image_url || img.src || img.url || '';
-            return `
-                <div style="margin-bottom: 10px;">
-                  <div style="font-size: 11px; color: #666; margin-bottom: 4px;">${label} #${idx + 1}</div>
-                  <div style="border: 1px solid #ddd; background-color: #fafafa; padding: 8px; text-align: center;">
-                    ${src ? `
-                      <img src="${src}" alt="${label} #${idx + 1}" style="max-width: 100%; max-height: 280px; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
-                      <div style="display: none; padding: 12px; color: #666; font-style: italic;">Gambar tidak dapat dimuat</div>
-                    ` : `
-                      <div style="padding: 12px; color: #666; font-style: italic;">Gambar tidak tersedia</div>
-                    `}
+        const maxRows = Math.max(beforeImages.length, afterImages.length);
+        
+        let rowsHtml = '';
+        if (maxRows === 0) {
+           rowsHtml = `<div style="padding: 16px; color: #666; font-style: italic; text-align: center;">Tidak ada gambar Before maupun After</div>`;
+        } else {
+           for (let i = 0; i < maxRows; i++) {
+              const beforeImg = beforeImages[i];
+              const afterImg = afterImages[i];
+              
+              const renderImgTile = (img, label, idx) => {
+                  if (!img) return '<div style="height: 100%;"></div>'; // Empty placeholder
+                  
+                  const src = img.canvas_image_base64 || img.image_base64 || img.image_url || img.src || img.url || '';
+                  return `
+                    <div style="margin-bottom: 10px; height: 100%;">
+                      <div style="font-size: 11px; color: #666; margin-bottom: 4px;">${label} #${idx + 1}</div>
+                      <div style="border: 1px solid #ddd; background-color: #fafafa; padding: 8px; text-align: center; height: 280px; display: flex; align-items: center; justify-content: center;">
+                        ${src ? `
+                          <img src="${src}" alt="${label} #${idx + 1}" style="max-width: 100%; max-height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                          <div style="display: none; padding: 12px; color: #666; font-style: italic;">Gambar tidak dapat dimuat</div>
+                        ` : `
+                          <div style="padding: 12px; color: #666; font-style: italic;">Gambar tidak tersedia</div>
+                        `}
+                      </div>
+                    </div>
+                  `;
+              };
+
+              rowsHtml += `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; page-break-inside: avoid;">
+                  <div>
+                    ${i === 0 ? '<div style="font-weight: bold; margin-bottom: 6px;">Before (WO Planning)</div>' : ''}
+                    ${renderImgTile(beforeImg, 'Before', i)}
+                  </div>
+                  <div>
+                    ${i === 0 ? '<div style="font-weight: bold; margin-bottom: 6px;">After (WO Actual)</div>' : ''}
+                    ${renderImgTile(afterImg, 'After', i)}
                   </div>
                 </div>
               `;
-          }).join('');
-          return tiles;
-        };
+           }
+        }
 
         return `
             <div class="section" style="margin-top: 16px; page-break-inside: avoid;">
               <div style="font-weight: bold; margin-bottom: 8px;">Item ${it.no || '-'}</div>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                <div>
-                  <div style="font-weight: bold; margin-bottom: 6px;">Before (WO Planning)</div>
-                  ${renderImages(beforeImages, 'Before')}
-                </div>
-                <div>
-                  <div style="font-weight: bold; margin-bottom: 6px;">After (WO Actual)</div>
-                  ${renderImages(afterImages, 'After')}
-                </div>
-              </div>
+              ${rowsHtml}
             </div>
           `;
       }).join('');
@@ -856,10 +869,15 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
           item.wo_item_unique_id,
           item.id,
           item.wo_item_id,
-          item.item_id
+          // Removed item.item_id to prevent ambiguous mapping when multiple WO items share the same inventory item
         ].filter(Boolean);
-        idCandidates.forEach(id => {
-          itemMap.set(String(id), { index: index + 1, name });
+        
+        // Use Set to ensure unique string keys
+        const uniqueIds = [...new Set(idCandidates.map(String))];
+        uniqueIds.forEach(id => {
+          if (!itemMap.has(id)) {
+             itemMap.set(id, { index: index + 1, name });
+          }
         });
       });
 
@@ -869,15 +887,17 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
 
       (woPlanningData.canvasImages || []).forEach((img, idx) => {
         const idCandidates = [
+          img.wo_item_id, // Prioritize explicit WO Item link
           img.work_order_planning_item_id,
-          img.wo_item_id,
           img.wo_plan_item_id,
-          img.item_id,
-          img.wo_item_unique_id
+          img.wo_item_unique_id,
+          img.item_id
         ].filter(Boolean);
 
         let key = null;
         let info = null;
+        
+        // Try to match with any candidate ID
         for (const id of idCandidates) {
           const found = itemMap.get(String(id));
           if (found) { key = String(id); info = found; break; }

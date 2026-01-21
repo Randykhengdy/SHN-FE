@@ -24,7 +24,7 @@ const PelaksanaModal = ({
   const debounceTimeouts = useRef({});
   
   // Get work order item qty
-  const workOrderItemQty = workOrderItem ? (parseInt(workOrderItem.qty) || 0) : 0;
+  const workOrderItemQty = workOrderItem ? (parseInt(workOrderItem.qty_planning) || 0) : 0;
   
   // Calculate total qty from all rows
   const totalQty = useMemo(() => {
@@ -128,7 +128,7 @@ const PelaksanaModal = ({
   // Validate total qty whenever rows change
   useEffect(() => {
     if (workOrderItemQty > 0 && totalQty > workOrderItemQty) {
-      setQtyError(`Total qty pelaksana (${totalQty}) tidak boleh melebihi qty order (${workOrderItemQty})`);
+      setQtyError(`Total qty pelaksana (${totalQty}) tidak boleh melebihi qty planning (${workOrderItemQty})`);
     } else {
       setQtyError('');
     }
@@ -163,7 +163,7 @@ const PelaksanaModal = ({
       // Re-validate total qty after removal
       const newTotal = filtered.reduce((sum, row) => sum + (parseInt(row.qty) || 0), 0);
       if (workOrderItemQty > 0 && newTotal > workOrderItemQty) {
-        setQtyError(`Total qty pelaksana (${newTotal}) tidak boleh melebihi qty order (${workOrderItemQty})`);
+        setQtyError(`Total qty pelaksana (${newTotal}) tidak boleh melebihi qty planning (${workOrderItemQty})`);
       } else {
         setQtyError('');
       }
@@ -191,7 +191,7 @@ const PelaksanaModal = ({
             
             // Validate total qty doesn't exceed work order item qty
             if (currentTotal > workOrderItemQty) {
-              setQtyError(`Total qty pelaksana (${currentTotal}) tidak boleh melebihi qty order (${workOrderItemQty})`);
+              setQtyError(`Total qty pelaksana (${currentTotal}) tidak boleh melebihi qty planning (${workOrderItemQty})`);
             } else {
               setQtyError('');
             }
@@ -228,7 +228,7 @@ const PelaksanaModal = ({
     
     // Validate total qty doesn't exceed work order item qty
     if (workOrderItemQty > 0 && totalQty > workOrderItemQty) {
-      setQtyError(`Total qty pelaksana (${totalQty}) tidak boleh melebihi qty order (${workOrderItemQty})`);
+      setQtyError(`Total qty pelaksana (${totalQty}) tidak boleh melebihi qty planning (${workOrderItemQty})`);
       return;
     }
     

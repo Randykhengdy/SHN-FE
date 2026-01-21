@@ -13,7 +13,8 @@
 export const findCanvasPreviewFile = async (woItemId, itemId) => {
   try {
     const fileName = `canvas-preview-WoItemId-${woItemId}_ItemId-${itemId}.jpg`;
-    const filePath = `/public/canvas-previews/${fileName}`;
+    // Remove /public prefix as it's served from root
+    const filePath = `/canvas-previews/${fileName}`;
     
     // Check if file exists by trying to fetch it
     const response = await fetch(filePath, { method: 'HEAD' });
@@ -66,18 +67,29 @@ export const imageToBase64 = async (filePath) => {
  */
 export const getCanvasPreviewBase64 = async (woItemId, itemId) => {
   try {
-    const filePath = await findCanvasPreviewFile(woItemId, itemId);
-    if (!filePath) {
-      console.log(`No canvas preview found for WoItemId: ${woItemId}, ItemId: ${itemId}`);
-      return null;
+    // Priority 1: Check LocalStorage for specific WO Item preview
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const specificKey = `WO_canvas_preview_woitem_${woItemId}_item_${itemId}`;
+      const genericKey = `WO_canvas_preview_item_${itemId}`;
+      
+      let cachedData = window.localStorage.getItem(specificKey);
+      
+      // Priority 2: Check LocalStorage for generic Item preview
+      if (!cachedData) {
+        cachedData = window.localStorage.getItem(genericKey);
+      }
+      
+      if (cachedData) {
+        // cachedData is a DataURL (data:image/jpeg;base64,...), we need to strip the prefix
+        // because the consumer (processWorkOrderItemsWithCanvasPreviews) adds it back
+        const base64 = cachedData.replace(/^data:image\/[a-z]+;base64,/, '');
+        console.log(`Canvas preview found in LocalStorage for WoItemId: ${woItemId}, ItemId: ${itemId}`);
+        return base64;
+      }
     }
-    
-    const base64 = await imageToBase64(filePath);
-    if (base64) {
-      console.log(`Canvas preview found and encoded for WoItemId: ${woItemId}, ItemId: ${itemId}`);
-      return base64;
-    }
-    
+
+    // Legacy file lookup removed to prevent EXE errors as per user request
+    console.log(`No canvas preview found in LocalStorage for WoItemId: ${woItemId}, ItemId: ${itemId}`);
     return null;
   } catch (error) {
     console.error('Error getting canvas preview base64:', error);

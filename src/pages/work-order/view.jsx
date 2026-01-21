@@ -126,7 +126,7 @@ export default function ViewWorkOrderPage() {
           dimensi: item.bentukBarang?.dimensi || `${item.panjang || 0}x${item.lebar || 0}x${item.ketebalan || 0}mm`,
           qtyPlanning: item.qty_planning?? 0,
           jenisPotongan: item.jenisPotongan || item.jenis_potongan,
-          keterangan: item.catatan || item.keterangan || 'N/A'
+          keterangan: item.catatan || item.keterangan || '-'
         })),
         canvasImages
       };

@@ -20,10 +20,39 @@ import PelaksanaActualModal from '@/components/modals/PelaksanaActualModal';
 import { getPelaksanaOptions } from '@/services/masterDataService';
 import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
+import apiConfig from '@/config/api';
 
 export default function AddWOActualPage() {
   const navigate = useNavigate();
   const { showAlert, AlertComponent } = useAlert();
+
+  // Helper: build storage URL from file path
+  const buildStorageUrl = (path) => {
+    if (!path) return null;
+    try {
+      const base = apiConfig.baseUrl.replace(/\/api$/, '');
+      let normalized = path.replace(/^\/+/, '');
+      normalized = normalized.replace(/^work-order-actual\/\d+\/items\//, 'work-order-actual/items/');
+      const hasStoragePrefix = /^storage\//.test(normalized);
+      return hasStoragePrefix ? `${base}/${normalized}` : `${base}/storage/${normalized}`;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  // Helper: resolve any input (base64/raw/url/path) to displayable img src
+  const resolveImageSrc = (input) => {
+    if (!input) return null;
+    if (typeof input !== 'string') return null;
+    const trimmed = input.trim();
+    if (trimmed.startsWith('blob:')) return trimmed;
+    if (/^data:image\//i.test(trimmed)) return trimmed;
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    if (/^[A-Za-z0-9+/=]+$/i.test(trimmed) && trimmed.length > 100) {
+      return `data:image/jpeg;base64,${trimmed}`;
+    }
+    return buildStorageUrl(trimmed);
+  };
 
   // Form State - Updated to match new API structure
   const [formData, setFormData] = useState({
@@ -489,16 +518,18 @@ export default function AddWOActualPage() {
           
           // 1. Try from fetched map using planningItem.id
           if (planningItem.id && planningCanvasImagesMap[String(planningItem.id)]) {
-             beforeImages = planningCanvasImagesMap[String(planningItem.id)].map(img => ({
-               src: img.canvas_image_base64 || img.image_base64 || img.image_url || img.src || img.url || ''
-             }));
+             beforeImages = planningCanvasImagesMap[String(planningItem.id)].map(img => {
+               const rawVal = img.canvas_image_base64 || img.image_base64 || img.image_url || img.src || img.url || img.canvas_file_path;
+               return { src: resolveImageSrc(rawVal) || '' };
+             });
           }
           
           // 2. Try from fetched map using wo_item_unique_id
           if (beforeImages.length === 0 && planningItem.wo_item_unique_id && planningCanvasImagesMap[String(planningItem.wo_item_unique_id)]) {
-             beforeImages = planningCanvasImagesMap[String(planningItem.wo_item_unique_id)].map(img => ({
-               src: img.canvas_image_base64 || img.image_base64 || img.image_url || img.src || img.url || ''
-             }));
+             beforeImages = planningCanvasImagesMap[String(planningItem.wo_item_unique_id)].map(img => {
+               const rawVal = img.canvas_image_base64 || img.image_base64 || img.image_url || img.src || img.url || img.canvas_file_path;
+               return { src: resolveImageSrc(rawVal) || '' };
+             });
           }
 
           // 3. Fallback REMOVED as per request - only use API fetched images

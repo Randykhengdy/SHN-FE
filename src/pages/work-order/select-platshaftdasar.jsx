@@ -63,6 +63,11 @@ export default function SelectPlatShaftDasar({
   // Load saran plat/shaft dasar when dependencies change
   useEffect(() => {
     const loadData = async () => {
+      // Only load if jenis_potongan is 'potongan'
+      if (workOrderItem?.jenis_potongan !== 'potongan') {
+        return;
+      }
+
       if (jenisBarangId && bentukBarangId && gradeBarangId && tebal) {
         await loadBentukBarangInfo();
         const usedIds = await loadUsedSaranPlats(); // Load used IDs first
@@ -70,7 +75,7 @@ export default function SelectPlatShaftDasar({
       }
     };
     loadData();
-  }, [jenisBarangId, bentukBarangId, gradeBarangId, tebal]);
+  }, [jenisBarangId, bentukBarangId, gradeBarangId, tebal, workOrderItem?.jenis_potongan]);
 
   // Calculate remaining quantity from work item quantity - placed items in canvas
   const calculateRemainingQuantity = () => {
@@ -244,6 +249,14 @@ export default function SelectPlatShaftDasar({
   };
 
   const loadSaranPlatDasar = async (usedIds = []) => {
+    // Restriction: only load if jenis_potongan is 'potongan'
+    if (workOrderItem?.jenis_potongan !== 'potongan') {
+      console.log('Skipping loadSaranPlatDasar: jenis_potongan is not "potongan"');
+      setSaranItems([]);
+      setAvailableSaranPlats([]);
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await request(`/work-order-planning/get-saran-plat-dasar?per_page=${perPage}&page=1`, {

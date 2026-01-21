@@ -1394,19 +1394,24 @@ export default function AddSalesOrderPage() {
                 placeholder="Pilih Jenis Barang"
                 searchPlaceholder="Cari jenis barang..."
                 value={itemType}
-                onValueChange={async (val) => {
+                onValueChange={(val, option) => {
                   setItemType(val);
-                  try {
+                  if (option && option.label) {
+                    setItemTypeLabel(option.label);
+                  } else {
+                    // Fallback if option not provided (should not happen on selection)
                     if (!val) {
                       setItemTypeLabel("");
                       return;
                     }
-                    const resp = await jenisBarangService.getById(val);
-                    const data = resp?.data || resp;
-                    const label = data?.nama_jenis || data?.nama || data?.label || String(val);
-                    setItemTypeLabel(label);
-                  } catch (e) {
-                    setItemTypeLabel(String(val));
+                    // Try to fetch if no option passed
+                    jenisBarangService.getById(val).then(resp => {
+                        const data = resp?.data || resp;
+                        const label = data?.nama_jenis || data?.nama || data?.label || String(val);
+                        setItemTypeLabel(label);
+                    }).catch(() => {
+                        setItemTypeLabel(String(val));
+                    });
                   }
                 }}
                 required
@@ -1426,19 +1431,22 @@ export default function AddSalesOrderPage() {
                 placeholder="Pilih Grade"
                 searchPlaceholder="Cari grade..."
                 value={itemGrade}
-                onValueChange={async (val) => {
+                onValueChange={(val, option) => {
                   setItemGrade(val);
-                  try {
+                  if (option && option.label) {
+                    setItemGradeLabel(option.label);
+                  } else {
                     if (!val) {
                       setItemGradeLabel("");
                       return;
                     }
-                    const resp = await gradeBarangService.getById(val);
-                    const data = resp?.data || resp;
-                    const label = data?.nama || data?.nama_grade || data?.label || String(val);
-                    setItemGradeLabel(label);
-                  } catch (e) {
-                    setItemGradeLabel(String(val));
+                    gradeBarangService.getById(val).then(resp => {
+                        const data = resp?.data || resp;
+                        const label = data?.nama || data?.nama_grade || data?.label || String(val);
+                        setItemGradeLabel(label);
+                    }).catch(() => {
+                        setItemGradeLabel(String(val));
+                    });
                   }
                 }}
                 required
