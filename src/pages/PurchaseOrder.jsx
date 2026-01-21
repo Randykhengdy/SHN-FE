@@ -16,7 +16,7 @@ export default function PurchaseOrderPage() {
   const [items, setItems] = useState([]);
   const [totalPO, setTotalPO] = useState(0);
   const [poList, setPoList] = useLocalStorage("poList", []);
-  
+
   // State untuk informasi kalkulasi
   const [ketebalan, setKetebalan] = useState("-");
   const [luas, setLuas] = useState(0);
@@ -29,10 +29,10 @@ export default function PurchaseOrderPage() {
     const lebarVal = parseFloat(form.lebar) || 0;
     const qtyVal = parseInt(form.qty) || 1;
     const plat = getPlatData(form.jenisPlat);
-    
+
     const luasVal = panjangVal * lebarVal;
     setLuas(luasVal.toFixed(2));
-    
+
     if (plat) {
       setKetebalan(plat.ketebalan);
       setHarga(plat.harga);
@@ -56,15 +56,15 @@ export default function PurchaseOrderPage() {
     const lebarVal = parseFloat(form.lebar);
     const qtyVal = parseInt(form.qty);
     const plat = getPlatData(form.jenisPlat);
-    
+
     if (!panjangVal || !lebarVal || !qtyVal || !plat) {
       showAlert("Validasi Error", "Lengkapi data item!", "error");
       return;
     }
-    
+
     const luasVal = panjangVal * lebarVal;
     const total = luasVal * plat.harga * qtyVal;
-    
+
     const newItem = {
       jenis: form.jenisPlat,
       panjang: panjangVal,
@@ -75,11 +75,11 @@ export default function PurchaseOrderPage() {
       harga: plat.harga,
       total
     };
-    
+
     const updated = [...items, newItem];
     setItems(updated);
     setTotalPO(updated.reduce((acc, item) => acc + item.total, 0));
-    
+
     // Reset form
     setForm({ panjang: "", lebar: "", qty: 1, jenisPlat: "" });
   };
@@ -97,7 +97,7 @@ export default function PurchaseOrderPage() {
       showAlert("Validasi Error", "Tambahkan minimal 1 item ke PO!", "error");
       return;
     }
-    
+
     const noPO = generateNoPO();
     const po = {
       noPO,
@@ -105,7 +105,7 @@ export default function PurchaseOrderPage() {
       total: totalPO,
       status: "Menunggu Workshop"
     };
-    
+
     setPoList([...poList, po]);
     setItems([]);
     setTotalPO(0);
@@ -115,13 +115,13 @@ export default function PurchaseOrderPage() {
   return (
     <div className="content">
       <h1>Input Purchase Order (PO)</h1>
-      
+
       {/* Form Input */}
       <form id="itemForm">
         {/* Row 1: Input fields */}
         <div className="row-4col">
           <div>
-            <FormInput 
+            <FormInput
               label="Panjang (m):"
               id="panjang"
               type="number"
@@ -133,7 +133,7 @@ export default function PurchaseOrderPage() {
             />
           </div>
           <div>
-            <FormInput 
+            <FormInput
               label="Lebar (m):"
               id="lebar"
               type="number"
@@ -145,7 +145,7 @@ export default function PurchaseOrderPage() {
             />
           </div>
           <div>
-            <FormInput 
+            <FormInput
               label="Qty:"
               id="qty"
               type="number"
@@ -157,7 +157,7 @@ export default function PurchaseOrderPage() {
             />
           </div>
           <div>
-            <FormSelect 
+            <FormSelect
               label="Jenis Plat:"
               id="jenisPlat"
               value={form.jenisPlat}
@@ -180,7 +180,7 @@ export default function PurchaseOrderPage() {
             <InfoBlock label="Total Item" value={`Rp ${parseInt(totalItem).toLocaleString()}`} />
           </div>
           <div>
-            <Button 
+            <Button
               onClick={handleTambahItem}
               type="button"
               className="tambah-item-btn"
@@ -218,8 +218,8 @@ export default function PurchaseOrderPage() {
                 <TableCell>{`Rp ${item.harga.toLocaleString()}`}</TableCell>
                 <TableCell>{`Rp ${item.total.toLocaleString()}`}</TableCell>
                 <TableCell>
-                  <button 
-                    onClick={() => handleDeleteItem(index)} 
+                  <button
+                    onClick={() => handleDeleteItem(index)}
                     className="delete-btn"
                   >
                     Hapus
@@ -233,7 +233,7 @@ export default function PurchaseOrderPage() {
 
       <div className="po-total-actions">
         <span><strong>Total Harga PO:</strong> Rp <span id="totalPO">{totalPO.toLocaleString()}</span></span>
-        <Button 
+        <Button
           onClick={handleSimpanPO}
           className="simpan-po-btn"
         >
@@ -250,7 +250,8 @@ export default function PurchaseOrderPage() {
               <TableHeader>No PO</TableHeader>
               <TableHeader>Jumlah Item</TableHeader>
               <TableHeader>Total Harga</TableHeader>
-              <TableHeader>Status</TableHeader>
+              <TableHeader>Status Terima</TableHeader>
+              <TableHeader>Status Bayar</TableHeader>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -260,6 +261,7 @@ export default function PurchaseOrderPage() {
                 <TableCell>{po.items.length}</TableCell>
                 <TableCell>{`Rp ${po.total.toLocaleString()}`}</TableCell>
                 <TableCell>{po.status}</TableCell>
+                <TableCell>{po.status_bayar || '-'}</TableCell>
               </TableRow>
             ))}
           </TableBody>
