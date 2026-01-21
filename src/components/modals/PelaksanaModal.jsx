@@ -257,7 +257,7 @@ const PelaksanaModal = ({
               </div>
               {workOrderItemQty > 0 && (
                 <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <span>Total Qty: <span className={`font-bold ${totalQty > workOrderItemQty ? 'text-red-600' : 'text-gray-700'}`}>{totalQty}</span> / Qty Order: <span className="font-bold text-gray-700">{workOrderItemQty}</span></span>
+                  <span>Total Qty: <span className={`font-bold ${totalQty > workOrderItemQty ? 'text-red-600' : 'text-gray-700'}`}>{totalQty}</span> / Qty Planning: <span className="font-bold text-gray-700">{workOrderItemQty}</span></span>
                 </div>
               )}
             </div>

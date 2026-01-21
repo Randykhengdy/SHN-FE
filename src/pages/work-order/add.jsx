@@ -1119,7 +1119,7 @@ export default function AddWorkOrderPage() {
           bentukBarang: { nama_bentuk_barang: mapLabel(bentukBarangList, item.bentuk_barang_id), nama_bentuk: mapLabel(bentukBarangList, item.bentuk_barang_id), nama: mapLabel(bentukBarangList, item.bentuk_barang_id) },
           gradeBarang: { nama_grade_barang: mapLabel(gradeBarangList, item.grade_barang_id), nama_grade: mapLabel(gradeBarangList, item.grade_barang_id), nama: mapLabel(gradeBarangList, item.grade_barang_id) },
           dimensi: `${item.panjang || 0}x${item.lebar || 0}x${item.tebal || 0}mm`,
-          qtyPlanning: item.qty || 0,
+          qtyPlanning: item.qty_planning ??  0,
           jenisPotongan: item.jenis_potongan || 'potongan',
           keterangan: item.catatan || ''
         })),
@@ -1877,16 +1877,27 @@ export default function AddWorkOrderPage() {
                               </div>
                             </div>
                             <div className="text-right flex items-center gap-2">
-                              <p className="text-sm font-medium text-green-600">{saran.sisa_luas} m²</p>
+                              <div className="flex flex-col items-end">
+                                <p className="text-sm font-medium text-green-600">{saran.sisa_luas} m²</p>
+                                <p className="text-xs text-gray-500">Sisa: {parseInt(saran.sisa_quantity ?? saran.qty ?? 0)} pcs</p>
+                              </div>
                               {isSelected && (
                                 <div className="flex items-center">
                                   <label className="text-xs text-gray-600 mr-1">Qty:</label>
                                   <input
                                     type="number"
                                     min="1"
+                                    max={Math.min(parseInt(saran.sisa_quantity ?? saran.qty ?? 999999), selectedUtuhItem.qty)}
                                     value={saranUtuhQuantities[saran.id] || 1}
                                     onChange={(e) => {
-                                      const value = parseInt(e.target.value) || 1;
+                                      const sisaQty = parseInt(saran.sisa_quantity ?? saran.qty ?? 999999);
+                                      const requiredQty = selectedUtuhItem.qty;
+                                      const maxQty = Math.min(sisaQty, requiredQty);
+                                      
+                                      let value = parseInt(e.target.value) || 0;
+                                      if (value > maxQty) value = maxQty;
+                                      if (value < 1) value = 1;
+                                      
                                       setSaranUtuhQuantities(prev => ({
                                         ...prev,
                                         [saran.id]: value

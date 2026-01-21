@@ -21,6 +21,7 @@ const SearchSelect = ({
   valueKey = "value",
   searchKey = "label",
   usePortal = false,
+  portalContainer = null,
   dropdownMaxHeight = 288 // 18rem
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -109,13 +110,28 @@ const SearchSelect = ({
             setIsOpen(next);
             if (next && usePortal && triggerRef.current) {
               const rect = triggerRef.current.getBoundingClientRect();
-              setPortalStyle({
-                position: 'fixed',
-                top: `${rect.bottom + 4}px`,
-                left: `${rect.left}px`,
-                width: `${rect.width}px`,
-                zIndex: 1000
-              });
+              let style = {};
+
+              if (portalContainer && portalContainer !== document.body) {
+                 const containerRect = portalContainer.getBoundingClientRect();
+                 style = {
+                   position: 'absolute',
+                   top: `${rect.bottom - containerRect.top + 4}px`,
+                   left: `${rect.left - containerRect.left}px`,
+                   width: `${rect.width}px`,
+                   zIndex: 1000
+                 };
+              } else {
+                 style = {
+                   position: 'fixed',
+                   top: `${rect.bottom + 4}px`,
+                   left: `${rect.left}px`,
+                   width: `${rect.width}px`,
+                   zIndex: 1000
+                 };
+              }
+              
+              setPortalStyle(style);
             }
           }}
           disabled={disabled}
@@ -214,7 +230,7 @@ const SearchSelect = ({
               </div>
             </div>
           </div>,
-          document.body
+          portalContainer || document.body
         )}
       </div>
 

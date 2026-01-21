@@ -143,7 +143,12 @@ export default function AddWOActualPage() {
           jumlah: parseFloat(item.qty || item.quantity || item.jumlah || 0),
           qty_planning: parseFloat(item.qty_planning || 0),
           berat: parseFloat(item.berat || 0),
-          pelaksana: normalizedPelaksana
+          pelaksana: normalizedPelaksana,
+          // Include dimension properties
+          panjang: item.panjang,
+          lebar: item.lebar,
+          tebal: item.tebal || item.ketebalan,
+          dimensi: item.dimensi
         };
       });
 
@@ -426,10 +431,40 @@ export default function AddWOActualPage() {
 
       if (response.success || response.data) {
         // Ambil gambar WO Planning untuk BEFORE
-        let planningCanvasImages = [];
+        let planningCanvasImagesMap = {};
         try {
+          // Add timeout to prevent hanging indefinitely, though axios usually handles this
           const imagesResp = await workOrderService.getWorkOrderImages(parseInt(formData.planningWorkOrderId, 10));
-          planningCanvasImages = imagesResp?.data?.images || imagesResp?.images || [];
+          const imagesData = imagesResp?.data || imagesResp || [];
+          
+          let planningCanvasImages = [];
+          if (Array.isArray(imagesData)) {
+             planningCanvasImages = imagesData;
+          } else if (imagesData.images && Array.isArray(imagesData.images)) {
+             planningCanvasImages = imagesData.images;
+          }
+
+          // Build robust map keyed by item IDs
+          planningCanvasImages.forEach(img => {
+            const itemIds = [
+              img.work_order_planning_item_id,
+              img.wo_plan_item_id,
+              img.wo_item_id,
+              img.work_order_item_id,
+              img.item_id,
+              img.wo_item_unique_id
+            ].filter(Boolean);
+            
+            const uniqueIds = [...new Set(itemIds)];
+            uniqueIds.forEach(id => {
+              const key = String(id);
+              if (!planningCanvasImagesMap[key]) planningCanvasImagesMap[key] = [];
+              // Avoid duplicates
+              if (!planningCanvasImagesMap[key].some(existing => existing.id === img.id)) {
+                planningCanvasImagesMap[key].push(img);
+              }
+            });
+          });
         } catch (imgErr) {
           console.warn('Gagal mengambil gambar WO Planning untuk print:', imgErr);
         }
@@ -439,6 +474,8 @@ export default function AddWOActualPage() {
           const actualItem = actualItems[planningItem.id] || {};
           const assignments = actualItem.assignments || [];
           const pelaksanas = assignments.map((r) => ({
+            qty: r.qty || 0,
+            berat: r.berat ?? r.weight ?? 0,
             pelaksana: {
               nama_pelaksana: r.pelaksana || r.pelaksana_name || r.pelaksanaInfo?.nama || r.pelaksana_info?.nama_pelaksana || '-'
             }
@@ -447,17 +484,26 @@ export default function AddWOActualPage() {
           const qtyActualComputed = assignments.reduce((a, r) => a + (parseInt(r.qty) || 0), 0);
           const beratActualComputed = assignments.reduce((a, r) => a + (parseFloat(r.berat ?? r.weight) || 0), 0);
 
-          // BEFORE: filter planning images dengan id item planning
-          const beforeImages = (planningCanvasImages || []).filter((img) => {
-            const candidateIds = [
-              img.work_order_planning_item_id,
-              img.wo_plan_item_id,
-              img.wo_item_id,
-              img.work_order_item_id,
-              img.item_id
-            ].filter(Boolean);
-            return candidateIds.includes(planningItem.id);
-          });
+          // BEFORE: Get images from map (prioritized) or fallback to item details
+          let beforeImages = [];
+          
+          // 1. Try from fetched map using planningItem.id
+          if (planningItem.id && planningCanvasImagesMap[String(planningItem.id)]) {
+             beforeImages = planningCanvasImagesMap[String(planningItem.id)].map(img => ({
+               src: img.canvas_image_base64 || img.image_base64 || img.image_url || img.src || img.url || ''
+             }));
+          }
+          
+          // 2. Try from fetched map using wo_item_unique_id
+          if (beforeImages.length === 0 && planningItem.wo_item_unique_id && planningCanvasImagesMap[String(planningItem.wo_item_unique_id)]) {
+             beforeImages = planningCanvasImagesMap[String(planningItem.wo_item_unique_id)].map(img => ({
+               src: img.canvas_image_base64 || img.image_base64 || img.image_url || img.src || img.url || ''
+             }));
+          }
+
+          // 3. Fallback REMOVED as per request - only use API fetched images
+          // if (beforeImages.length === 0) { ... }
+
 
           // AFTER: gunakan foto bukti item yang baru diupload (data URL)
           const afterImages = actualItem.foto_bukti ? [{ src: actualItem.foto_bukti }] : [];
@@ -468,7 +514,24 @@ export default function AddWOActualPage() {
             jenisBarang: planningItem.jenis_barang?.nama || planningItem.jenis_barang?.nama_jenis_barang || '-',
             bentukBarang: planningItem.bentuk_barang?.nama || planningItem.bentuk_barang?.nama_bentuk_barang || '-',
             gradeBarang: planningItem.grade_barang?.nama || planningItem.grade_barang?.nama_grade_barang || '-',
-            dimensi: `${planningItem.panjang || 0}x${planningItem.lebar || 0}x${planningItem.ketebalan || 0}mm`,
+            dimensi: (() => {
+               // 1. Try pre-formatted dimension strings
+               let dimString = planningItem.dimensi;
+               
+               // 2. If no string or it looks invalid (0x0x0mm), try to construct from numeric values
+               if (!dimString || dimString === '0x0x0mm') {
+                  const p = parseFloat(planningItem.panjang || 0);
+                  const l = parseFloat(planningItem.lebar || 0);
+                  const t = parseFloat(planningItem.tebal || planningItem.ketebalan || 0);
+                  
+                  if (p > 0 || l > 0 || t > 0) {
+                     dimString = `${p}x${l}x${t}mm`;
+                  } else {
+                     dimString = '-';
+                  }
+               }
+               return dimString;
+            })(),
             qtyPlanning: planningItem.qty_planning || planningItem.jumlah || 0,
             qtyActual: qtyActualComputed,
             beratActual: Math.round(beratActualComputed || 0),
@@ -925,15 +988,21 @@ export default function AddWOActualPage() {
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-600">Pelanggan</Label>
-                    <p className="text-sm">{selectedWOPlanning.pelanggan?.nama || 'N/A'}</p>
+                    <p className="text-sm">
+                      {selectedWOPlanning.pelanggan?.nama_pelanggan || selectedWOPlanning.pelanggan?.nama || selectedWOPlanning.customer?.name || 'N/A'}
+                    </p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-600">Gudang</Label>
-                    <p className="text-sm">{selectedWOPlanning.gudang?.nama || 'N/A'}</p>
+                    <p className="text-sm">
+                      {selectedWOPlanning.gudang?.nama_gudang || selectedWOPlanning.gudang?.nama || 'N/A'}
+                    </p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-600">Tanggal WO</Label>
-                    <p className="text-sm">{selectedWOPlanning.tanggal_wo || 'N/A'}</p>
+                    <p className="text-sm">
+                      {selectedWOPlanning.tanggal_wo ? format(new Date(selectedWOPlanning.tanggal_wo), 'dd MMM yyyy') : 'N/A'}
+                    </p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-600">Status</Label>
@@ -1009,6 +1078,10 @@ export default function AddWOActualPage() {
         pelaksanaOptions={pelaksanaList}
         value={(pelaksanaModalItemId && actualItems[pelaksanaModalItemId]?.assignments) ? actualItems[pelaksanaModalItemId].assignments : []}
         planningPelaksana={selectedWOPlanning?.items?.find(it => it.id === pelaksanaModalItemId)?.pelaksana || []}
+        qtyPlanning={(() => {
+          const item = selectedWOPlanning?.items?.find(it => it.id === pelaksanaModalItemId);
+          return item ? (item.qty_planning || item.jumlah || 0) : 0;
+        })()}
         loadingOptions={loadingPelaksana}
         onSave={(rows) => {
           const normalized = (Array.isArray(rows) ? rows : []).map(r => ({

@@ -100,8 +100,13 @@ export default function ViewWorkOrderPage() {
       let canvasImages = [];
       try {
         const imagesResponse = await workOrderService.getWorkOrderImages(id);
-        canvasImages = imagesResponse.data?.images || [];
-      } catch (_) {}
+        const imagesData = imagesResponse?.data || imagesResponse;
+        canvasImages = Array.isArray(imagesData) 
+          ? imagesData 
+          : (imagesData?.images && Array.isArray(imagesData.images) ? imagesData.images : []);
+      } catch (err) {
+        console.warn('Gagal load images for print:', err);
+      }
       const printData = {
         nomor_wo: workOrder?.nomor_wo || woNumber || 'N/A',
         tanggal_wo: workOrder?.tanggal_wo || woDate || 'N/A',
@@ -119,7 +124,7 @@ export default function ViewWorkOrderPage() {
           bentukBarang: item.bentukBarang,
           gradeBarang: item.gradeBarang,
           dimensi: item.bentukBarang?.dimensi || `${item.panjang || 0}x${item.lebar || 0}x${item.ketebalan || 0}mm`,
-          qtyPlanning: item.qty || 0,
+          qtyPlanning: item.qty_planning?? 0,
           jenisPotongan: item.jenisPotongan || item.jenis_potongan,
           keterangan: item.catatan || item.keterangan || 'N/A'
         })),

@@ -638,7 +638,12 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
       <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">${item.qtyActual ?? 0}</td>
       <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">${item.beratActual ?? 0} kg</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.jenisPotongan || '-'}</td>
-      <td style="border: 1px solid #ddd; padding: 6px;">${(item.pelaksanas || []).map(p => p.pelaksana?.nama_pelaksana || '-').join(', ')}</td>
+      <td style="border: 1px solid #ddd; padding: 6px;">${(item.pelaksanas || []).map(p => {
+        const name = p.pelaksana?.nama_pelaksana || p.nama_pelaksana || p.nama || '-';
+        const qty = p.qty || p.quantity || 0;
+        const berat = p.berat || p.weight || 0;
+        return `${name} (${qty} Pcs, ${berat} kg)`;
+      }).join(', ')}</td>
     </tr>
   `).join('') || '<tr><td colspan="10" style="text-align: center; padding: 12px;">Tidak ada item</td></tr>';
 
@@ -833,7 +838,7 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
       <td style="border: 1px solid #ddd; padding: 6px;">${item.bentukBarang?.nama_bentuk_barang || item.bentukBarang?.nama_bentuk || item.bentukBarang?.nama || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.gradeBarang?.nama_grade_barang || item.gradeBarang?.nama_grade || item.gradeBarang?.nama || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.bentukBarang?.dimensi || item.dimensi || `${item.panjang || 0}x${item.lebar || 0}x${item.ketebalan || 0}mm`}</td>
-      <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">${item.qty ?? item.qtyPlanning ?? 0}</td>
+      <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">${item.qtyPlanning ?? item.qty ?? 0}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.jenisPotongan || item.jenis_potongan || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.keterangan || item.catatan || '-'}</td>
     </tr>
