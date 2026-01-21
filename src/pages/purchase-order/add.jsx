@@ -1019,15 +1019,32 @@ export default function AddPurchaseOrderPage() {
               />
             </div>
             <div>
-              <Label htmlFor="itemWeight" className="font-semibold text-gray-800">Timbangan (kg)</Label>
-              <Input
-                id="itemWeight"
-                type="number"
-                step="0.01"
-                value={itemWeight}
-                onChange={(e) => setItemWeight(e.target.value)}
-                placeholder="0.00"
-              />
+              <Label htmlFor="itemWeight" className="font-semibold text-gray-800">
+                Timbangan (kg)
+                {loadingWeight && (
+                  <span className="ml-2 text-xs text-gray-500">(Menghitung...)</span>
+                )}
+              </Label>
+              <div className="relative">
+                <Input
+                  id="itemWeight"
+                  type="number"
+                  step="0.01"
+                  value={itemWeight}
+                  onChange={(e) => setItemWeight(e.target.value)}
+                  placeholder="0.00"
+                  disabled={loadingWeight}
+                  className={loadingWeight ? "opacity-60 cursor-wait" : ""}
+                />
+                {loadingWeight && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Berat timbangan akan otomatis terisi saat semua field terisi
+              </p>
             </div>
 
             {/* Row 3: Panjang, Lebar, Tebal */}
