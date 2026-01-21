@@ -171,7 +171,7 @@ export default function ViewWOActualPage() {
     const totalQtyActual = (items || []).reduce((sum, it) => sum + (parseFloat(it.qty_actual || 0) || 0), 0);
     const totalBeratActual = (items || []).reduce((sum, it) => sum + (parseFloat(it.berat ?? it.berat_actual ?? 0) || 0), 0);
     const totalQtyPlanning = (items || []).reduce((sum, it) => {
-      const qtyPlan = it.qty_planning ?? it.work_order_planning_item?.qty ?? 0;
+      const qtyPlan = it.qty_planning ?? it.work_order_planning_item?.qty_planning ?? it.work_order_planning_item?.qty ?? 0;
       return sum + (parseFloat(qtyPlan) || 0);
     }, 0);
     const totalBeratPlanning = (items || []).reduce((sum, it) => {
@@ -220,7 +220,7 @@ export default function ViewWOActualPage() {
             grade_barang: item.grade_barang?.nama || item.grade_barang_nama || planningItem.grade_barang?.nama_grade_barang || planningItem.grade_barang?.nama,
             jenis_potongan: planningItem.jenis_potongan || item.jenis_potongan || 'N/A',
             
-            qty_planning: item.qty_planning ?? planningItem.qty ?? 0,
+            qty_planning: item.qty_planning ?? planningItem.qty_planning ?? planningItem.qty ?? 0,
             berat_planning: Math.round(beratPlanning),
             
             qty_actual: item.qty_actual ?? 0,
@@ -283,7 +283,6 @@ export default function ViewWOActualPage() {
   return (
     <>
     <PageLayout title="Detail WO Actual" subtitle="PRODUKSI">
-      <div className="space-y-6">
         <AlertComponent />
 
         {/* Header - Aligned with Work Order View */}
@@ -298,8 +297,8 @@ export default function ViewWOActualPage() {
             </Button>
         </div>
 
-        {/* Informasi WO Planning & Pelanggan */}
-        <Card>
+        {/* Informasi WO Planning */}
+        <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
@@ -307,33 +306,44 @@ export default function ViewWOActualPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <Label>WO Planning</Label>
+                <Label className="text-sm font-medium text-gray-700">WO Planning</Label>
                 <Input value={planning?.nomor_wo || 'N/A'} disabled className="bg-gray-50" />
               </div>
               <div>
-                <Label>Tanggal WO Planning</Label>
+                <Label className="text-sm font-medium text-gray-700">Tanggal WO Planning</Label>
                 <Input value={planning?.tanggal_wo || 'N/A'} disabled className="bg-gray-50" />
               </div>
               <div>
-                <Label>Status Planning</Label>
+                <Label className="text-sm font-medium text-gray-700">Status Planning</Label>
                 <Input value={planning?.status || 'N/A'} disabled className="bg-gray-50" />
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Informasi Pelanggan & Gudang */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Informasi Pelanggan & Gudang</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label>Pelanggan</Label>
+                <Label className="text-sm font-medium text-gray-700">Pelanggan</Label>
                 <Input value={planning?.pelanggan?.nama || planning?.pelanggan?.nama_pelanggan || 'N/A'} disabled className="bg-gray-50" />
               </div>
               <div>
-                <Label>Gudang</Label>
+                <Label className="text-sm font-medium text-gray-700">Gudang</Label>
                 <Input value={planning?.gudang?.nama || planning?.gudang?.nama_gudang || 'N/A'} disabled className="bg-gray-50" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Informasi WO Actual */}
-        <Card>
+        {/* Informasi Produksi (Actual) */}
+        <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
@@ -343,34 +353,34 @@ export default function ViewWOActualPage() {
           <CardContent>
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
-                <Label>Tanggal Actual</Label>
+                <Label className="text-sm font-medium text-gray-700">Tanggal Actual</Label>
                 <Input value={(woActual.tanggal_actual || woActual.created_at || '').toString().substring(0,10)} disabled className="bg-gray-50" />
               </div>
               <div>
-                <Label>Jam Mulai</Label>
+                <Label className="text-sm font-medium text-gray-700">Jam Mulai</Label>
                 <Input value={woActual.jam_mulai || ''} disabled className="bg-gray-50" />
               </div>
               <div>
-                <Label>Jam Selesai</Label>
+                <Label className="text-sm font-medium text-gray-700">Jam Selesai</Label>
                 <Input value={woActual.jam_selesai || ''} disabled className="bg-gray-50" />
               </div>
               <div>
-                <Label>Status Actual</Label>
+                <Label className="text-sm font-medium text-gray-700">Status Actual</Label>
                 <Input value={woActual.status || 'N/A'} disabled className="bg-gray-50" />
               </div>
               <div>
-                <Label>Prioritas</Label>
+                <Label className="text-sm font-medium text-gray-700">Prioritas</Label>
                 <Input value={woActual.prioritas || 'MEDIUM'} disabled className="bg-gray-50" />
               </div>
              </div>
 
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
               <div>
-                <Label>Catatan</Label>
+                <Label className="text-sm font-medium text-gray-700">Catatan</Label>
                 <Textarea value={woActual.catatan || ''} disabled rows={4} className="bg-gray-50 mt-1.5" />
               </div>
               <div>
-                <Label>Foto Bukti</Label>
+                <Label className="text-sm font-medium text-gray-700">Foto Bukti</Label>
                 <div className="mt-1.5">
                   {(() => {
                     const hdrSrc = resolveImageSrc(headerImageBase64 || woActual.foto_bukti);
@@ -395,46 +405,12 @@ export default function ViewWOActualPage() {
           </CardContent>
         </Card>
 
-        {/* Ringkasan Produksi */}
-        <Card>
+        {/* Items Table (Read-only) */}
+        <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Ringkasan Produksi
-            </CardTitle>
+            <CardTitle>Daftar Item WO Actual</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="bg-gray-50 p-3 rounded-md border">
-                <span className="text-sm text-gray-600 block mb-1">Total Item</span>
-                <span className="text-xl font-semibold text-gray-900">{items.length}</span>
-              </div>
-              <div className="bg-gray-50 p-3 rounded-md border">
-                <span className="text-sm text-gray-600 block mb-1">Total Qty (Plan / Act)</span>
-                <span className="text-xl font-semibold text-gray-900">{totals.totalQtyPlanning} / {totals.totalQtyActual}</span>
-              </div>
-              <div className="bg-gray-50 p-3 rounded-md border">
-                <span className="text-sm text-gray-600 block mb-1">Total Berat (Plan / Act)</span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-semibold text-gray-900">{Math.round(totals.totalBeratPlanning)}</span>
-                  <span className="text-sm text-gray-500">/</span>
-                  <span className="text-xl font-semibold text-blue-600">{Math.round(totals.totalBeratActual)}</span>
-                  <span className="text-sm text-gray-600">kg</span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Items Table (Read-only) */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Item WO (Actual)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-0">
             {items.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 Tidak ada item pada WO Actual ini
@@ -442,27 +418,27 @@ export default function ViewWOActualPage() {
             ) : (
               <div className="space-y-4">
                 <div className="overflow-x-auto">
-                  <Table className="w-full">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-center">Jenis</TableHead>
-                        <TableHead className="text-center">Bentuk</TableHead>
-                        <TableHead className="text-center">Grade</TableHead>
-                        <TableHead className="text-center">Jenis Potongan</TableHead>
-                        <TableHead className="text-center">Qty Planning</TableHead>
-                        <TableHead className="text-center">Berat Planning (kg)</TableHead>
-                        <TableHead className="text-center">Qty Actual</TableHead>
-                        <TableHead className="text-center">Berat Actual (kg)</TableHead>
-                        <TableHead className="text-center">Status</TableHead>
-                        <TableHead className="text-center">Pelaksana</TableHead>
-                        <TableHead className="text-center">Foto Bukti (Item)</TableHead>
+                  <Table>
+                    <TableHeader className="table-header-standard">
+                      <TableRow className="bg-gray-50">
+                        <TableHead className="table-header-cell-standard text-center">Jenis</TableHead>
+                        <TableHead className="table-header-cell-standard text-center">Bentuk</TableHead>
+                        <TableHead className="table-header-cell-standard text-center">Grade</TableHead>
+                        <TableHead className="table-header-cell-standard text-center">Jenis Potongan</TableHead>
+                        <TableHead className="table-header-cell-standard text-center">Qty Planning</TableHead>
+                        <TableHead className="table-header-cell-standard text-center">Berat Planning (kg)</TableHead>
+                        <TableHead className="table-header-cell-standard text-center">Qty Actual</TableHead>
+                        <TableHead className="table-header-cell-standard text-center">Berat Actual (kg)</TableHead>
+                        <TableHead className="table-header-cell-standard text-center">Status</TableHead>
+                        <TableHead className="table-header-cell-standard text-center">Pelaksana</TableHead>
+                        <TableHead className="table-header-cell-standard text-center">Foto Bukti</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {items.map((actualItem) => {
                         const planningItem = actualItem.work_order_planning_item || {};
                         const jenisNama = actualItem.jenis_barang?.nama_jenis || actualItem.jenis_barang_nama || planningItem.jenis_barang?.nama_jenis_barang || planningItem.jenis_barang?.nama;
-                        const qtyPlanning = actualItem.qty_planning ?? planningItem.qty ?? 0;
+                        const qtyPlanning = actualItem.qty_planning ?? planningItem.qty_planning ?? planningItem.qty ?? 0;
                         const pelaksanaArr = Array.isArray(planningItem.pelaksana)
                           ? planningItem.pelaksana
                           : (Array.isArray(planningItem.work_order_item_pelaksanas)
@@ -492,7 +468,7 @@ export default function ViewWOActualPage() {
                         };
 
                         return (
-                          <TableRow key={actualItem.id}>
+                          <TableRow key={actualItem.id} className="hover:bg-gray-50">
                             <TableCell className="text-center font-medium">{jenisNama || 'N/A'}</TableCell>
                             <TableCell className="text-center">{bentukNama || 'N/A'}</TableCell>
                             <TableCell className="text-center">{gradeNama || 'N/A'}</TableCell>
@@ -547,6 +523,34 @@ export default function ViewWOActualPage() {
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Ringkasan Produksi */}
+        <Card className="bg-white border-green-200 mb-6">
+          <CardHeader>
+            <CardTitle>Ringkasan Produksi</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="bg-gray-50 p-3 rounded-md border">
+                <span className="text-sm text-gray-600 block mb-1">Total Item</span>
+                <span className="text-xl font-semibold text-gray-900">{items.length}</span>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-md border">
+                <span className="text-sm text-gray-600 block mb-1">Total Qty (Plan / Act)</span>
+                <span className="text-xl font-semibold text-gray-900">{totals.totalQtyPlanning} / {totals.totalQtyActual}</span>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-md border">
+                <span className="text-sm text-gray-600 block mb-1">Total Berat (Plan / Act)</span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-xl font-semibold text-gray-900">{Math.round(totals.totalBeratPlanning)}</span>
+                  <span className="text-sm text-gray-500">/</span>
+                  <span className="text-xl font-semibold text-blue-600">{Math.round(totals.totalBeratActual)}</span>
+                  <span className="text-sm text-gray-600">kg</span>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -617,7 +621,6 @@ export default function ViewWOActualPage() {
             </div>
           )}
         />
-      </div>
     </PageLayout>
     </>
   );

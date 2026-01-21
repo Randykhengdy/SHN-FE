@@ -141,6 +141,7 @@ export default function AddWOActualPage() {
           grade_barang: item.grade_barang || item.gradeBarang || {},
           jenis_potongan: item.jenis_potongan || item.potongan_jenis || item.jenisPotongan || null,
           jumlah: parseFloat(item.qty || item.quantity || item.jumlah || 0),
+          qty_planning: parseFloat(item.qty_planning || 0),
           berat: parseFloat(item.berat || 0),
           pelaksana: normalizedPelaksana
         };
@@ -169,7 +170,7 @@ export default function AddWOActualPage() {
             id: null,
             pelaksana_id: p?.pelaksana_info?.id || p?.pelaksana?.id || p?.id || null,
             pelaksana: p?.pelaksana_info?.nama_pelaksana || p?.pelaksana?.nama || p?.nama || p?.name || '-',
-            qty: p.qty || (it.pelaksana.length === 1 ? it.jumlah : 0),
+            qty: p.qty || (it.pelaksana.length === 1 ? (it.qty_planning || it.jumlah) : 0),
             weight: '',
             berat: '',
             tanggal: p?.tanggal || null,
@@ -380,10 +381,10 @@ export default function AddWOActualPage() {
           pelaksana_id: r.pelaksana_id ?? r.pelaksanaInfo?.id ?? r.pelaksana?.id ?? r.pelaksana_info?.id ?? null,
           pelaksana: r.pelaksana || r.pelaksana_name || r.pelaksanaInfo?.nama || r.pelaksana_info?.nama_pelaksana || '',
           qty: parseInt(r.qty) || 0,
-          berat: parseFloat(r.weight ?? r.berat) || 0,
+          berat: parseFloat(r.weight ?? r.berat ?? 0) || 0,
           tanggal: r.tanggal || new Date().toISOString().split('T')[0],
-          jamMulai: r.jamMulai ?? r.jam_mulai ?? '08:00:00',
-          jamSelesai: r.jamSelesai ?? r.jam_selesai ?? '17:00:00',
+          jamMulai: (r.jamMulai ?? r.jam_mulai ?? '08:00:00').includes('T') ? (r.jamMulai ?? r.jam_mulai).split('T')[1].substring(0, 8) : (r.jamMulai ?? r.jam_mulai ?? '08:00:00'),
+          jamSelesai: (r.jamSelesai ?? r.jam_selesai ?? '17:00:00').includes('T') ? (r.jamSelesai ?? r.jam_selesai).split('T')[1].substring(0, 8) : (r.jamSelesai ?? r.jam_selesai ?? '17:00:00'),
           catatan: r.catatan || '',
           status: r.status || 'PENDING'
         }));
@@ -468,7 +469,7 @@ export default function AddWOActualPage() {
             bentukBarang: planningItem.bentuk_barang?.nama || planningItem.bentuk_barang?.nama_bentuk_barang || '-',
             gradeBarang: planningItem.grade_barang?.nama || planningItem.grade_barang?.nama_grade_barang || '-',
             dimensi: `${planningItem.panjang || 0}x${planningItem.lebar || 0}x${planningItem.ketebalan || 0}mm`,
-            qtyPlanning: planningItem.jumlah ?? 0,
+            qtyPlanning: planningItem.qty_planning || planningItem.jumlah || 0,
             qtyActual: qtyActualComputed,
             beratActual: Math.round(beratActualComputed || 0),
             jenisPotongan: planningItem.jenis_potongan || 'N/A',
@@ -842,7 +843,7 @@ export default function AddWOActualPage() {
                                 </div>
                               </TableCell>
                               <TableCell className="text-center">{planningItem.jenis_potongan || '-'}</TableCell>
-                              <TableCell className="text-center">{planningItem.jumlah ?? 0}</TableCell>
+                              <TableCell className="text-center">{planningItem.qty_planning || planningItem.jumlah || 0}</TableCell>
                               <TableCell className="text-center">{Math.round(beratPlanningComputed)}</TableCell>
                               <TableCell className="text-center">{qtyActualComputed}</TableCell>
                               <TableCell className="text-center">{Math.round(beratActualComputed)}</TableCell>
