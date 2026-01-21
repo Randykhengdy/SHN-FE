@@ -120,6 +120,7 @@ export default function AddSalesOrderPage() {
   const [deliveryDate, setDeliveryDate] = useState(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
   const [termOfPayment, setTermOfPayment] = useState("");
   const [originWarehouse, setOriginWarehouse] = useState("");
+  const [originWarehouseName, setOriginWarehouseName] = useState(""); // Store warehouse name for printing
   const [handoverMethod, setHandoverMethod] = useState("pickup");
   const [includePPN, setIncludePPN] = useState(true);
 
@@ -570,12 +571,10 @@ export default function AddSalesOrderPage() {
       }
 
       let dimensiString = "";
-      if (itemCutType === "utuh") {
-        dimensiString = "-"; // Untuk jenis potongan "utuh", tidak perlu dimensi
-      } else if (selectedShape.dimensi === "1D") {
-        dimensiString = `${itemLength} x ${itemDiameter}`; // 1D: panjang x tebal
+      if (selectedShape?.dimensi === "1D") {
+        dimensiString = `${itemLength || "-"} x ${itemDiameter || "-"}`; // 1D: panjang x tebal
       } else {
-        dimensiString = `${itemLength} x ${itemWidth} x ${itemDiameter}`; // 2D: panjang x lebar x tebal
+        dimensiString = `${itemLength || "-"} x ${itemWidth || "-"} x ${itemDiameter || "-"}`; // 2D: panjang x lebar x tebal
       }
 
       // Calculate total using satuan-based pricing
@@ -720,9 +719,35 @@ export default function AddSalesOrderPage() {
       console.log("✅ Sales Order berhasil disimpan:", result);
       showAlert("Sukses", "Sales Order berhasil disimpan!", "success");
       try {
-        // Get term label and warehouse name
+        // Get term label
         const termLabel = termOptions.find(opt => opt.value === termOfPayment)?.label || termOfPayment;
-        const warehouseName = warehouseOptions.find(opt => opt.value === originWarehouse)?.label || originWarehouse;
+
+        // Get warehouse name - with fallback to fetch from API if not in state
+        let warehouseName = originWarehouseName;
+        if (!warehouseName && originWarehouse) {
+          try {
+            console.log('⚠️ Warehouse name not in state, fetching from API...');
+            const warehouseResp = await gudangService.getById(originWarehouse);
+            const warehouseData = warehouseResp?.data || warehouseResp;
+            warehouseName = warehouseData?.nama_gudang || warehouseData?.nama || originWarehouse;
+            console.log('✅ Fetched warehouse name:', warehouseName);
+          } catch (err) {
+            console.error('❌ Failed to fetch warehouse name:', err);
+            warehouseName = originWarehouse; // Fallback to ID if fetch fails
+          }
+        }
+
+        if (!warehouseName) {
+          warehouseName = 'N/A';
+        }
+
+        console.log('🖨️ Print data preparation:', {
+          originWarehouse: originWarehouse,
+          originWarehouseName: originWarehouseName,
+          warehouseName: warehouseName,
+          termOfPayment: termOfPayment,
+          termLabel: termLabel
+        });
 
         // Use selectedCustomer data if available, otherwise use form state
         const customerData = selectedCustomer ? {
@@ -804,9 +829,27 @@ export default function AddSalesOrderPage() {
         return;
       }
 
-      // Get term label and warehouse name
+      // Get term label
       const termLabel = termOptions.find(opt => opt.value === termOfPayment)?.label || termOfPayment;
-      const warehouseName = warehouseOptions.find(opt => opt.value === originWarehouse)?.label || originWarehouse;
+
+      // Get warehouse name - use stored name or fetch from API
+      let warehouseName = originWarehouseName;
+      if (!warehouseName && originWarehouse) {
+        try {
+          console.log('⚠️ Warehouse name not in state, fetching from API...');
+          const warehouseResp = await gudangService.getById(originWarehouse);
+          const warehouseData = warehouseResp?.data || warehouseResp;
+          warehouseName = warehouseData?.nama_gudang || warehouseData?.nama || originWarehouse;
+          console.log('✅ Fetched warehouse name:', warehouseName);
+        } catch (err) {
+          console.error('❌ Failed to fetch warehouse name:', err);
+          warehouseName = originWarehouse; // Fallback to ID if fetch fails
+        }
+      }
+
+      if (!warehouseName) {
+        warehouseName = 'N/A';
+      }
 
       // Use selectedCustomer data if available, otherwise use form state
       const customerData = selectedCustomer ? {
@@ -1282,7 +1325,14 @@ export default function AddSalesOrderPage() {
                   placeholder="Pilih Gudang"
                   searchPlaceholder="Cari gudang..."
                   value={originWarehouse}
-                  onValueChange={setOriginWarehouse}
+                  onValueChange={(value, option) => {
+                    setOriginWarehouse(value);
+                    // Store the warehouse name for printing
+                    if (option && option.label) {
+                      setOriginWarehouseName(option.label);
+                      console.log('✅ Warehouse selected:', { id: value, name: option.label });
+                    }
+                  }}
                   required
                   fetchOptions={async (q, page) => {
                     const resp = await gudangService.getPaginated(page || 1, 50, q || "", "", "asc", { tipe_gudang: "gudang" });
@@ -1556,6 +1606,11 @@ export default function AddSalesOrderPage() {
                 type="number"
                 value={itemDiscount}
                 onChange={(e) => setItemDiscount(e.target.value)}
+                onBlur={(e) => {
+                  if (e.target.value === '' || e.target.value === null) {
+                    setItemDiscount('0');
+                  }
+                }}
                 min="0"
                 max="100"
                 placeholder="0"

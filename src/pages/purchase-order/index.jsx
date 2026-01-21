@@ -39,7 +39,7 @@ export default function PurchaseOrderPage() {
   const { hasPermission } = useAppContext();
   const canRead = hasPermission && hasPermission('PURCHASE_ORDER', 'Read');
   const canCreate = hasPermission && hasPermission('PURCHASE_ORDER', 'Create');
-  
+
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -47,12 +47,12 @@ export default function PurchaseOrderPage() {
   const [periodFilter, setPeriodFilter] = useState("all");
   const [sortBy, setSortBy] = useState("tanggal_po");
   const [sortOrder, setSortOrder] = useState("desc");
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
-  
+
   // Delete modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedPO, setSelectedPO] = useState(null);
@@ -135,6 +135,7 @@ export default function PurchaseOrderPage() {
         jumlahItem: po.purchaseOrderItems?.length ?? po.purchase_order_items?.length ?? 0,
         totalAmount: parseFloat(po.total_amount ?? po.totalHarga ?? 0) || 0,
         status: po.status || "Draft",
+        statusBayar: po.status_bayar || "pending",
         catatan: po.catatan || '',
         items: po.purchaseOrderItems ?? po.purchase_order_items ?? []
       }));
@@ -181,6 +182,8 @@ export default function PurchaseOrderPage() {
       case "draft": return "bg-orange-100 text-orange-800";
       case "received": return "bg-blue-100 text-blue-800";
       case "paid": return "bg-green-100 text-green-800";
+      case "pending": return "bg-yellow-100 text-yellow-800";
+      case "partial": return "bg-purple-100 text-purple-800";
       default: return "bg-gray-100 text-gray-800";
     }
   };
@@ -206,23 +209,23 @@ export default function PurchaseOrderPage() {
       console.log('⏭️ Already processing delete operation');
       return;
     }
-    
+
     try {
       setIsDeleting(true);
-      
+
       // Call delete API - use soft delete
       const response = await purchaseOrderService.delete(selectedPO.id);
-      
+
       console.log('✅ Purchase Order deleted:', response);
-      
+
       // Close modal first
       setShowDeleteModal(false);
-      
+
       // Show success message and reload data after alert closes
       showAlert("Sukses", "Purchase Order berhasil dihapus!", "success", () => {
         loadPurchaseOrders();
       });
-      
+
     } catch (error) {
       console.error('❌ Error deleting Purchase Order:', error);
       showAlert("Error", "Gagal menghapus Purchase Order", "error");
@@ -314,7 +317,7 @@ export default function PurchaseOrderPage() {
           'Tanggal Pembayaran': fmtDate(r?.tanggal_pembayaran),
           'Supplier': r?.supplier?.nama_supplier ?? r?.nama_supplier ?? '',
           'Jumlah Item': r?.purchaseOrderItems?.length ?? r?.purchase_order_items?.length ?? 0,
-          'Total Amount': r?.total_amount ?? r?.totalHarga ?? '' ,
+          'Total Amount': r?.total_amount ?? r?.totalHarga ?? '',
           'Status': r?.status ?? ''
         }));
         const wb = window.XLSX.utils.book_new();
@@ -381,357 +384,371 @@ export default function PurchaseOrderPage() {
           <h2 className="text-lg font-semibold text-gray-800">Daftar Purchase Order</h2>
         </div>
         {canCreate ? (
-        <Button onClick={handleAddNew} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
-          <Plus className="w-4 h-4 mr-2" />
-          Tambah Purchase Order
-        </Button>
+          <Button onClick={handleAddNew} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
+            <Plus className="w-4 h-4 mr-2" />
+            Tambah Purchase Order
+          </Button>
         ) : null}
       </div>
 
-        {/* Filter and Search */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg">Filter dan Pencarian</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Cari PO:
-                </label>
-                <Input
-                  placeholder="Cari berdasarkan No PO, nama supplier..."
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="w-full"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Status:
-                </label>
-                <Select value={statusFilter} onValueChange={(value) => {
-                  setStatusFilter(value);
+      {/* Filter and Search */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-lg">Filter dan Pencarian</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Cari PO:
+              </label>
+              <Input
+                placeholder="Cari berdasarkan No PO, nama supplier..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
                   setCurrentPage(1);
-                }}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statusOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Periode:
-                </label>
-                <Select value={periodFilter} onValueChange={(value) => {
-                  setPeriodFilter(value);
-                  setCurrentPage(1);
-                }}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {periodOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {/* Removed refresh button from grid to align with SO layout */}
+                }}
+                className="w-full"
+              />
             </div>
-            <div className="flex justify-end flex-wrap gap-2">
-              <Button 
-                variant="outline" 
-                onClick={loadPurchaseOrders} 
-                disabled={loading}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-              <Button variant="outline" onClick={handleClearFilter}>
-                Clear Filter
-              </Button>
-              <Button variant="default" className="bg-blue-600 hover:bg-blue-700" onClick={handleExport}>
-                <FileText className="w-4 h-4 mr-2" />
-                Report
-              </Button>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status:
+              </label>
+              <Select value={statusFilter} onValueChange={(value) => {
+                setStatusFilter(value);
+                setCurrentPage(1);
+              }}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Periode:
+              </label>
+              <Select value={periodFilter} onValueChange={(value) => {
+                setPeriodFilter(value);
+                setCurrentPage(1);
+              }}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {periodOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Removed refresh button from grid to align with SO layout */}
+          </div>
+          <div className="flex justify-end flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={loadPurchaseOrders}
+              disabled={loading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button variant="outline" onClick={handleClearFilter}>
+              Clear Filter
+            </Button>
+            <Button variant="default" className="bg-blue-600 hover:bg-blue-700" onClick={handleExport}>
+              <FileText className="w-4 h-4 mr-2" />
+              Report
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Purchase Order Table */}
-        <Card className="mb-6">
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50">
-                    <TableHead
-                      className="font-semibold cursor-pointer"
-                      onClick={() => {
-                        setSortBy('nomor_po');
-                        setSortOrder(sortBy === 'nomor_po' && sortOrder === 'asc' ? 'desc' : 'asc');
-                        setCurrentPage(1);
-                      }}
-                    >
-                      No PO
-                    </TableHead>
-                    <TableHead className="font-semibold">Supplier</TableHead>
-                    <TableHead
-                      className="font-semibold cursor-pointer"
-                      onClick={() => {
-                        setSortBy('tanggal_po');
-                        setSortOrder(sortBy === 'tanggal_po' && sortOrder === 'asc' ? 'desc' : 'asc');
-                        setCurrentPage(1);
-                      }}
-                    >
-                      Tanggal PO
-                    </TableHead>
-                    <TableHead
-                      className="font-semibold cursor-pointer"
-                      onClick={() => {
-                        setSortBy('tanggal_penerimaan');
-                        setSortOrder(sortBy === 'tanggal_penerimaan' && sortOrder === 'asc' ? 'desc' : 'asc');
-                        setCurrentPage(1);
-                      }}
-                    >
-                      Tanggal Penerimaan
-                    </TableHead>
-                    <TableHead
-                      className="font-semibold cursor-pointer"
-                      onClick={() => {
-                        setSortBy('tanggal_jatuh_tempo');
-                        setSortOrder(sortBy === 'tanggal_jatuh_tempo' && sortOrder === 'asc' ? 'desc' : 'asc');
-                        setCurrentPage(1);
-                      }}
-                    >
-                      Tanggal Jatuh Tempo
-                    </TableHead>
-                    <TableHead
-                      className="font-semibold cursor-pointer"
-                      onClick={() => {
-                        setSortBy('tanggal_pembayaran');
-                        setSortOrder(sortBy === 'tanggal_pembayaran' && sortOrder === 'asc' ? 'desc' : 'asc');
-                        setCurrentPage(1);
-                      }}
-                    >
-                      Tanggal Pembayaran
-                    </TableHead>
-                    <TableHead className="font-semibold text-center">Jumlah Item</TableHead>
-                    <TableHead
-                      className="font-semibold cursor-pointer"
-                      onClick={() => {
-                        setSortBy('total_amount');
-                        setSortOrder(sortBy === 'total_amount' && sortOrder === 'asc' ? 'desc' : 'asc');
-                        setCurrentPage(1);
-                      }}
-                    >
-                      Total Amount
-                    </TableHead>
-                    <TableHead
-                      className="font-semibold cursor-pointer"
-                      onClick={() => {
-                        setSortBy('status');
-                        setSortOrder(sortBy === 'status' && sortOrder === 'asc' ? 'desc' : 'asc');
-                        setCurrentPage(1);
-                      }}
-                    >
-                      Status
-                    </TableHead>
-                    <TableHead className="font-semibold text-center">Aksi</TableHead>
+      {/* Purchase Order Table */}
+      <Card className="mb-6">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50">
+                  <TableHead
+                    className="font-semibold cursor-pointer"
+                    onClick={() => {
+                      setSortBy('nomor_po');
+                      setSortOrder(sortBy === 'nomor_po' && sortOrder === 'asc' ? 'desc' : 'asc');
+                      setCurrentPage(1);
+                    }}
+                  >
+                    No PO
+                  </TableHead>
+                  <TableHead className="font-semibold">Supplier</TableHead>
+                  <TableHead
+                    className="font-semibold cursor-pointer"
+                    onClick={() => {
+                      setSortBy('tanggal_po');
+                      setSortOrder(sortBy === 'tanggal_po' && sortOrder === 'asc' ? 'desc' : 'asc');
+                      setCurrentPage(1);
+                    }}
+                  >
+                    Tanggal PO
+                  </TableHead>
+                  <TableHead
+                    className="font-semibold cursor-pointer"
+                    onClick={() => {
+                      setSortBy('tanggal_penerimaan');
+                      setSortOrder(sortBy === 'tanggal_penerimaan' && sortOrder === 'asc' ? 'desc' : 'asc');
+                      setCurrentPage(1);
+                    }}
+                  >
+                    Tanggal Penerimaan
+                  </TableHead>
+                  <TableHead
+                    className="font-semibold cursor-pointer"
+                    onClick={() => {
+                      setSortBy('tanggal_jatuh_tempo');
+                      setSortOrder(sortBy === 'tanggal_jatuh_tempo' && sortOrder === 'asc' ? 'desc' : 'asc');
+                      setCurrentPage(1);
+                    }}
+                  >
+                    Tanggal Jatuh Tempo
+                  </TableHead>
+                  <TableHead
+                    className="font-semibold cursor-pointer"
+                    onClick={() => {
+                      setSortBy('tanggal_pembayaran');
+                      setSortOrder(sortBy === 'tanggal_pembayaran' && sortOrder === 'asc' ? 'desc' : 'asc');
+                      setCurrentPage(1);
+                    }}
+                  >
+                    Tanggal Pelunasan
+                  </TableHead>
+                  <TableHead className="font-semibold text-center">Jumlah Item</TableHead>
+                  <TableHead
+                    className="font-semibold cursor-pointer"
+                    onClick={() => {
+                      setSortBy('total_amount');
+                      setSortOrder(sortBy === 'total_amount' && sortOrder === 'asc' ? 'desc' : 'asc');
+                      setCurrentPage(1);
+                    }}
+                  >
+                    Total Amount
+                  </TableHead>
+                  <TableHead
+                    className="font-semibold cursor-pointer"
+                    onClick={() => {
+                      setSortBy('status');
+                      setSortOrder(sortBy === 'status' && sortOrder === 'asc' ? 'desc' : 'asc');
+                      setCurrentPage(1);
+                    }}
+                  >
+                    Status Terima
+                  </TableHead>
+                  <TableHead
+                    className="font-semibold cursor-pointer"
+                    onClick={() => {
+                      setSortBy('status_bayar');
+                      setSortOrder(sortBy === 'status_bayar' && sortOrder === 'asc' ? 'desc' : 'asc');
+                      setCurrentPage(1);
+                    }}
+                  >
+                    Status Bayar
+                  </TableHead>
+                  <TableHead className="font-semibold text-center">Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={11} className="text-center py-8">
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <span className="ml-2">Loading data...</span>
+                      </div>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={10} className="text-center py-8">
-                        <div className="flex items-center justify-center">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                          <span className="ml-2">Loading data...</span>
+                ) : purchaseOrders.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={11} className="text-center py-8 text-gray-500">
+                      Tidak ada data Purchase Order
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  purchaseOrders.map((po) => (
+                    <TableRow key={po.id} className="hover:bg-gray-50">
+                      <TableCell className="font-medium">{po.noPo}</TableCell>
+                      <TableCell>{po.supplier}</TableCell>
+                      <TableCell>{po.tanggalPo}</TableCell>
+                      <TableCell>{po.tanggalPenerimaan}</TableCell>
+                      <TableCell>{po.tanggalJatuhTempo}</TableCell>
+                      <TableCell>{po.tanggalPembayaran}</TableCell>
+                      <TableCell className="text-center">{po.jumlahItem}</TableCell>
+                      <TableCell className="font-semibold">{formatCurrency(po.totalAmount)}</TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(po.status)}>
+                          {po.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(po.statusBayar)}>
+                          {po.statusBayar}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                          <Button size="sm" variant="outline" onClick={() => handleView(po.id)}>
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          {isAdmin() && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDeletePO(po)}
+                              title="Hapus Purchase Order"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
-                  ) : purchaseOrders.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={10} className="text-center py-8 text-gray-500">
-                        Tidak ada data Purchase Order
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    purchaseOrders.map((po) => (
-                      <TableRow key={po.id} className="hover:bg-gray-50">
-                        <TableCell className="font-medium">{po.noPo}</TableCell>
-                        <TableCell>{po.supplier}</TableCell>
-                        <TableCell>{po.tanggalPo}</TableCell>
-                        <TableCell>{po.tanggalPenerimaan}</TableCell>
-                        <TableCell>{po.tanggalJatuhTempo}</TableCell>
-                        <TableCell>{po.tanggalPembayaran}</TableCell>
-                        <TableCell className="text-center">{po.jumlahItem}</TableCell>
-                        <TableCell className="font-semibold">{formatCurrency(po.totalAmount)}</TableCell>
-                        <TableCell>
-                          <Badge className={getStatusColor(po.status)}>
-                            {po.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col sm:flex-row gap-2 justify-center">
-                            <Button size="sm" variant="outline" onClick={() => handleView(po.id)}>
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            {isAdmin() && (
-                              <Button 
-                                size="sm" 
-                                variant="destructive" 
-                                onClick={() => handleDeletePO(po)}
-                                title="Hapus Purchase Order"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-            
-            {/* Pagination */}
-            {purchaseOrders.length > 0 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 bg-white border-t border-gray-200 gap-4">
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-700">
-                    Menampilkan {startItem}-{endItem} dari {totalItems} data
-                  </span>
-                  <select
-                    value={itemsPerPage}
-                    onChange={(e) => {
-                      setItemsPerPage(Number(e.target.value));
-                      setCurrentPage(1);
-                    }}
-                    className="border border-gray-300 rounded px-2 py-1 text-sm"
-                  >
-                    <option value={5}>5 per halaman</option>
-                    <option value={10}>10 per halaman</option>
-                    <option value={25}>25 per halaman</option>
-                    <option value={50}>50 per halaman</option>
-                  </select>
-                </div>
-                
-                {totalPages > 1 && (
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => setCurrentPage(currentPage - 1)}
-                      disabled={currentPage === 1}
-                      className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                    >
-                      Sebelumnya
-                    </button>
-                    
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = currentPage - 2 + i;
-                      }
-                      
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => setCurrentPage(pageNum)}
-                          className={`px-3 py-1 text-sm border rounded ${
-                            currentPage === pageNum
-                              ? 'bg-blue-500 text-white border-blue-500'
-                              : 'border-gray-300 hover:bg-gray-50'
-                          }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
-                    
-                    <button
-                      onClick={() => setCurrentPage(currentPage + 1)}
-                      disabled={currentPage === totalPages}
-                      className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                    >
-                      Selanjutnya
-                    </button>
-                  </div>
+                  ))
                 )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              </TableBody>
+            </Table>
+          </div>
 
-        {/* Summary and Status Breakdown */}
-        <Card className="bg-white border-green-200">
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Summary Statistics */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Ringkasan</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Total PO:</span>
-                    <span className="font-semibold">{totalPO}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Rata-rata per PO:</span>
-                    <span className="font-semibold">{formatCurrency(rataRataPerPO)}</span>
-                  </div>
+          {/* Pagination */}
+          {purchaseOrders.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 bg-white border-t border-gray-200 gap-4">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-700">
+                  Menampilkan {startItem}-{endItem} dari {totalItems} data
+                </span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="border border-gray-300 rounded px-2 py-1 text-sm"
+                >
+                  <option value={5}>5 per halaman</option>
+                  <option value={10}>10 per halaman</option>
+                  <option value={25}>25 per halaman</option>
+                  <option value={50}>50 per halaman</option>
+                </select>
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Sebelumnya
+                  </button>
+
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`px-3 py-1 text-sm border rounded ${currentPage === pageNum
+                          ? 'bg-blue-500 text-white border-blue-500'
+                          : 'border-gray-300 hover:bg-gray-50'
+                          }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Selanjutnya
+                  </button>
                 </div>
-              </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-              {/* Status Breakdown */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Breakdown Status</h3>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(statusBreakdown).map(([status, count]) => (
-                    <Badge key={status} className={getStatusColor(status)}>
-                      {status}: {count}
-                    </Badge>
-                  ))}
+      {/* Summary and Status Breakdown */}
+      <Card className="bg-white border-green-200">
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Summary Statistics */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Ringkasan</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Total PO:</span>
+                  <span className="font-semibold">{totalPO}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Rata-rata per PO:</span>
+                  <span className="font-semibold">{formatCurrency(rataRataPerPO)}</span>
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
-        
-                 {/* Delete Confirmation Modal */}
-         <CustomAlert
-           open={showDeleteModal}
-           onOpenChange={setShowDeleteModal}
-           title="Konfirmasi Hapus"
-            message={`Yakin ingin menghapus Purchase Order "${selectedPO?.noPo}"?`}
-           type="warning"
-           showCancel={true}
-           confirmText={isDeleting ? "Menghapus..." : "Ya, Hapus"}
-           cancelText="Tidak"
-           onConfirm={handleDeleteConfirm}
-         />
-         
-        
-        {/* Alert Modal Component */}
-        <AlertComponent />
-      </PageLayout>
+
+            {/* Status Breakdown */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Breakdown Status</h3>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(statusBreakdown).map(([status, count]) => (
+                  <Badge key={status} className={getStatusColor(status)}>
+                    {status}: {count}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Delete Confirmation Modal */}
+      <CustomAlert
+        open={showDeleteModal}
+        onOpenChange={setShowDeleteModal}
+        title="Konfirmasi Hapus"
+        message={`Yakin ingin menghapus Purchase Order "${selectedPO?.noPo}"?`}
+        type="warning"
+        showCancel={true}
+        confirmText={isDeleting ? "Menghapus..." : "Ya, Hapus"}
+        cancelText="Tidak"
+        onConfirm={handleDeleteConfirm}
+      />
+
+
+      {/* Alert Modal Component */}
+      <AlertComponent />
+    </PageLayout>
   );
 }
