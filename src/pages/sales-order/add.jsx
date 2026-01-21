@@ -571,12 +571,10 @@ export default function AddSalesOrderPage() {
       }
 
       let dimensiString = "";
-      if (itemCutType === "utuh") {
-        dimensiString = "-"; // Untuk jenis potongan "utuh", tidak perlu dimensi
-      } else if (selectedShape.dimensi === "1D") {
-        dimensiString = `${itemLength} x ${itemDiameter}`; // 1D: panjang x tebal
+      if (selectedShape?.dimensi === "1D") {
+        dimensiString = `${itemLength || "-"} x ${itemDiameter || "-"}`; // 1D: panjang x tebal
       } else {
-        dimensiString = `${itemLength} x ${itemWidth} x ${itemDiameter}`; // 2D: panjang x lebar x tebal
+        dimensiString = `${itemLength || "-"} x ${itemWidth || "-"} x ${itemDiameter || "-"}`; // 2D: panjang x lebar x tebal
       }
 
       // Calculate total using satuan-based pricing
