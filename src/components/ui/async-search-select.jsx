@@ -129,7 +129,8 @@ export default function AsyncSearchSelect({
   };
 
   const handleSelect = (opt) => {
-    onValueChange(opt[valueKey]);
+    // Pass both value and the full option object to support accessing label
+    onValueChange(opt[valueKey], opt);
     setIsOpen(false);
     setSearchQuery("");
   };
