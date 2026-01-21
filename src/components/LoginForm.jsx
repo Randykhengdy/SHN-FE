@@ -54,12 +54,12 @@ export default function LoginForm({
       }}>
         {error}
       </div>
-      <div style={{ color: "#fff", fontSize: "0.8em", marginTop: 2, textAlign: "center" }}>
+      {/* <div style={{ color: "#fff", fontSize: "0.8em", marginTop: 2, textAlign: "center" }}>
         Belum punya akun?{" "}
         <Link to="/register" style={{ color: "#90caf9", textDecoration: "none" }}>
           Register
         </Link>
-      </div>
+      </div> */}
     </form>
   );
 } 

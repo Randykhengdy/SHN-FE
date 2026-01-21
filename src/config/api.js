@@ -1,12 +1,12 @@
 // Konfigurasi URL API berdasarkan environment
-//  const DEV_API_URL = "localhost:8000";
-//  const PROD_API_URL = "localhost:8000";
-const DEV_API_URL = "https://shn.divineproject.my.id/api";
-const PROD_API_URL = "https://shn.divineproject.my.id/api";
- 
+const DEV_API_URL = "localhost:8000";
+const PROD_API_URL = "localhost:8000";
+// const DEV_API_URL = "https://shn.divineproject.my.id/api";
+// const PROD_API_URL = "https://shn.divineproject.my.id/api";
+
 // Gunakan environment variable dari Vite jika tersedia
-const API_URL = import.meta.env.VITE_API_URL || 
-               (import.meta.env.PROD ? PROD_API_URL : DEV_API_URL);
+const API_URL = import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD ? PROD_API_URL : DEV_API_URL);
 
 export default {
   baseUrl: API_URL,
