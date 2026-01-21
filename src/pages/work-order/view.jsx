@@ -95,7 +95,7 @@ export default function ViewWorkOrderPage() {
 
   // Handle Print WO (Planning)
   const doPrint = async () => {
-    try {
+    try { 
       setLoading(true);
       let canvasImages = [];
       try {
