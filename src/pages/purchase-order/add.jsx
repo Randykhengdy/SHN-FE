@@ -939,7 +939,7 @@ export default function AddPurchaseOrderPage() {
         </CardHeader>
         <CardContent className="section-content">
           <div className="grid-form m-lg grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Row 1: Bentuk Barang, Qty, Jenis Barang */}
+            {/* Row 1: Bentuk Barang, Jenis Barang, Grade Barang */}
             <div>
               <Label htmlFor="itemShape">Bentuk Barang</Label>
               <div className="flex gap-2">
@@ -960,17 +960,6 @@ export default function AddPurchaseOrderPage() {
               </div>
             </div>
             <div>
-              <Label htmlFor="itemQty" className="font-semibold text-gray-800">Qty</Label>
-              <Input
-                id="itemQty"
-                type="number"
-                value={itemQty}
-                onChange={(e) => setItemQty(e.target.value)}
-                min="1"
-                required
-              />
-            </div>
-            <div>
               <AsyncSearchSelect
                 label="Jenis Barang"
                 placeholder="Pilih Jenis Barang"
@@ -987,8 +976,6 @@ export default function AddPurchaseOrderPage() {
                 required
               />
             </div>
-
-            {/* Row 2: Grade Barang, Satuan, Timbangan */}
             <div>
               <AsyncSearchSelect
                 label="Grade Barang"
@@ -1006,6 +993,19 @@ export default function AddPurchaseOrderPage() {
                 required
               />
             </div>
+
+            {/* Row 2: Qty, Satuan, Empty */}
+            <div>
+              <Label htmlFor="itemQty" className="font-semibold text-gray-800">Qty</Label>
+              <Input
+                id="itemQty"
+                type="number"
+                value={itemQty}
+                onChange={(e) => setItemQty(e.target.value)}
+                min="1"
+                required
+              />
+            </div>
             <div>
               <SearchSelect
                 label="Satuan"
@@ -1018,34 +1018,7 @@ export default function AddPurchaseOrderPage() {
                 required
               />
             </div>
-            <div>
-              <Label htmlFor="itemWeight" className="font-semibold text-gray-800">
-                Timbangan (kg)
-                {loadingWeight && (
-                  <span className="ml-2 text-xs text-gray-500">(Menghitung...)</span>
-                )}
-              </Label>
-              <div className="relative">
-                <Input
-                  id="itemWeight"
-                  type="number"
-                  step="0.01"
-                  value={itemWeight}
-                  onChange={(e) => setItemWeight(e.target.value)}
-                  placeholder="0.00"
-                  disabled={loadingWeight}
-                  className={loadingWeight ? "opacity-60 cursor-wait" : ""}
-                />
-                {loadingWeight && (
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
-                  </div>
-                )}
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Berat timbangan akan otomatis terisi saat semua field terisi
-              </p>
-            </div>
+            <div></div> {/* Empty cell untuk melengkapi 3 kolom */}
 
             {/* Row 3: Panjang, Lebar, Tebal */}
             <div>
@@ -1086,7 +1059,35 @@ export default function AddPurchaseOrderPage() {
               />
             </div>
 
-            {/* Row 4: Harga, Diskon, Empty */}
+            {/* Row 4: Timbangan, Harga, Diskon */}
+            <div>
+              <Label htmlFor="itemWeight" className="font-semibold text-gray-800">
+                Timbangan (kg)
+                {loadingWeight && (
+                  <span className="ml-2 text-xs text-gray-500">(Menghitung...)</span>
+                )}
+              </Label>
+              <div className="relative">
+                <Input
+                  id="itemWeight"
+                  type="number"
+                  step="0.01"
+                  value={itemWeight}
+                  onChange={(e) => setItemWeight(e.target.value)}
+                  placeholder="0.00"
+                  disabled={loadingWeight}
+                  className={loadingWeight ? "opacity-60 cursor-wait" : ""}
+                />
+                {loadingWeight && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Berat timbangan akan otomatis terisi saat semua field terisi
+              </p>
+            </div>
             <div>
               <Label htmlFor="itemPrice" className="font-semibold text-gray-800">Harga (Rp/m²)</Label>
               <Input
@@ -1110,7 +1111,6 @@ export default function AddPurchaseOrderPage() {
                 placeholder="0"
               />
             </div>
-            <div></div> {/* Empty cell untuk melengkapi 3 kolom */}
           </div>
 
           {/* Calculated Values */}
