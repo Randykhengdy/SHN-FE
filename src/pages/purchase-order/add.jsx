@@ -148,7 +148,7 @@ export default function AddPurchaseOrderPage() {
     let totalBeforeDiscount = 0;
 
     if (unitLower.includes('kg') || unitLower.includes('kilogram')) {
-      totalBeforeDiscount = price * (parseFloat(weight) || 0);
+      totalBeforeDiscount = price * (parseFloat(weight) || 0) * qty;
     } else if (unitLower.includes('pc') || unitLower.includes('unit') || unitLower.includes('batang') || unitLower.includes('buah') || unitLower.includes('pieces') || unitLower.includes('utuh')) {
       totalBeforeDiscount = price * qty;
     } else if (unitLower.includes('m2') || unitLower.includes('m²') || unitLower.includes('dimensi')) {
@@ -158,11 +158,10 @@ export default function AddPurchaseOrderPage() {
         totalBeforeDiscount = (length / 1000) * price * qty;
       } else {
         // 2D: Harga per m2
-        totalBeforeDiscount = (length * width / 10000) * price * qty;
+        totalBeforeDiscount = (length * width / 1000000) * price * qty;
       }
-    }
-    else if (unitLower.includes('m3') || unitLower.includes('m³')) {
-      totalBeforeDiscount = (length * width * thickness / 1000000) * price * qty;
+    } else if (unitLower.includes('m3') || unitLower.includes('m³')) {
+      totalBeforeDiscount = (length * width * thickness / 1000000000) * price * qty;
     } else if (unitLower.includes('m') || unitLower.includes('meter')) {
       totalBeforeDiscount = (length / 1000) * price * qty;
     } else {
@@ -205,7 +204,7 @@ export default function AddPurchaseOrderPage() {
           // Untuk bentuk 2D (plat), luas = panjang x lebar (tanpa tebal)
           // Convert mm² to m²
           area = length * width;
-          areaPerItem = (area / 10000).toFixed(2); // Convert mm² to m²
+          areaPerItem = (area / 1000000).toFixed(2); // Convert mm² to m²
         }
 
         // Get selected unit label
