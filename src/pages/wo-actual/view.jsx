@@ -15,6 +15,7 @@ import PelaksanaActualModal from '@/components/modals/PelaksanaActualModal';
 import { useAlert } from '@/hooks/useAlert';
 import apiConfig from '@/config/api';
 import { woActualService } from '@/services/woActualService';
+import { workOrderService } from '@/services/workOrderService';
 import { generateWOActualPrintContent, openPrintDialog } from '@/lib/printUtils';
 import RoleGuard from "@/components/RoleGuard";
 
@@ -36,6 +37,7 @@ export default function ViewWOActualPage() {
   const [pelaksanaModalOpen, setPelaksanaModalOpen] = useState(false);
   const [pelaksanaModalData, setPelaksanaModalData] = useState([]);
   const [pelaksanaPlanningData, setPelaksanaPlanningData] = useState([]);
+  const [modalQtyPlanning, setModalQtyPlanning] = useState(0);
   const [printOptionsOpen, setPrintOptionsOpen] = useState(false);
   const [printLoading, setPrintLoading] = useState(false);
   const [includeImages, setIncludeImages] = useState(true);
@@ -81,8 +83,20 @@ export default function ViewWOActualPage() {
         }
 
         const actual = data.work_order_actual || data.woActual || data;
-        const planningRel = actual.work_order_planning || data.work_order_planning || null;
+        let planningRel = actual.work_order_planning || data.work_order_planning || null;
         const actualItems = actual.work_order_actual_items || data.work_order_actual_items || actual.items || data.items || [];
+
+        // If planning relation exists but missing nested objects (pelanggan/gudang) or items, fetch full planning details
+        if (planningRel && planningRel.id && (!planningRel.pelanggan || !planningRel.gudang || !planningRel.items || planningRel.items.length === 0)) {
+           try {
+             const planningRes = await workOrderService.getWorkOrderById(planningRel.id);
+             if (planningRes?.data) {
+                planningRel = { ...planningRel, ...planningRes.data };
+             }
+           } catch (err) {
+             console.warn('Gagal memuat detail WO Planning:', err);
+           }
+        }
 
         setWoActual(actual);
         setPlanning(planningRel);
@@ -190,14 +204,64 @@ export default function ViewWOActualPage() {
     try {
       setPrintLoading(true);
       
+      // Fetch all planning images first if we have a planning ID
+      let planningImagesMap = {};
+      if (planning?.id) {
+         try {
+           const imagesRes = await workOrderService.getWorkOrderImages(planning.id);
+           const images = imagesRes?.data?.images || [];
+
+           if (Array.isArray(images)) {
+             images.forEach(img => {
+               // Try multiple ID fields to match item
+               const itemIds = [
+                 img.wo_item_id,
+                 img.wo_item_unique_id
+               ].filter(Boolean);
+               
+               // Use a Set to avoid duplicate processing for the same ID
+               const uniqueIds = [...new Set(itemIds)];
+               
+               uniqueIds.forEach(id => {
+                  const key = String(id);
+                  if (!planningImagesMap[key]) {
+                    planningImagesMap[key] = [];
+                  }
+                  // Check if image already added to this key to prevent duplicates
+                  // Use saran_id because 'id' field might not exist in the response
+                  const exists = planningImagesMap[key].some(existing => {
+                    if (img.saran_id && existing.saran_id) {
+                      return existing.saran_id === img.saran_id;
+                    }
+                    // Fallback to strict object equality if no ID available
+                    return existing === img;
+                  });
+                  
+                  if (!exists) {
+                    planningImagesMap[key].push(img);
+                  }
+               });
+             });
+           }
+         } catch (err) {
+           console.warn('Gagal memuat gambar WO Planning untuk print:', err);
+         }
+      }
+      
       const printData = {
+        workOrderPlanning: planning,
+        woActual: woActual,
+        customer: planning?.pelanggan,
+        warehouse: planning?.gudang,
+        
+        // Keep these for backward compatibility if needed, though printUtils uses structure above
         nomor_wo: planning?.nomor_wo || 'N/A',
-        tanggal_wo: planning?.tanggal_wo || 'N/A',
+        tanggal_wo: planning?.created_at || 'N/A',
         status_planning: planning?.status || 'N/A',
         pelanggan: planning?.pelanggan,
         gudang: planning?.gudang,
         
-        tanggal_actual: woActual?.tanggal_actual,
+        tanggal_actual: woActual?.tanggal_actual || woActual?.created_at,
         jam_mulai: woActual?.jam_mulai,
         jam_selesai: woActual?.jam_selesai,
         status_actual: woActual?.status,
@@ -206,31 +270,123 @@ export default function ViewWOActualPage() {
         
         items: items.map(item => {
            const planningItem = item.work_order_planning_item || {};
-           const pelaksanaArr = Array.isArray(planningItem.pelaksana)
-              ? planningItem.pelaksana
-              : (Array.isArray(planningItem.work_order_item_pelaksanas)
-                  ? planningItem.work_order_item_pelaksanas
-                  : []);
+           
+           // Resolve Pelaksana from Actual Assignments (prioritized) or Planning
+           let pelaksanaArr = [];
+           // First check has_many_pelaksana (new API format)
+           if (Array.isArray(item.has_many_pelaksana) && item.has_many_pelaksana.length > 0) {
+             pelaksanaArr = item.has_many_pelaksana;
+           }
+           // Then check actual assignments (if available and is array)
+           else if (Array.isArray(item.assignments) && item.assignments.length > 0) {
+             pelaksanaArr = item.assignments;
+           } 
+           // Then check item.pelaksana (sometimes actual data is here)
+           else if (Array.isArray(item.pelaksana) && item.pelaksana.length > 0) {
+             pelaksanaArr = item.pelaksana;
+           }
+           // Fallback to planning pelaksana if no actual execution data found
+           else if (Array.isArray(planningItem.pelaksana)) {
+             pelaksanaArr = planningItem.pelaksana;
+           } else if (Array.isArray(planningItem.work_order_item_pelaksanas)) {
+             pelaksanaArr = planningItem.work_order_item_pelaksanas;
+           }
+
            const beratPlanning = item.berat_planning ?? pelaksanaArr
               .reduce((a, p) => a + (parseFloat(p.weight ?? p.berat) || 0), 0);
 
+           // Resolve Dimensions
+           // 1. Try pre-formatted dimension strings
+           let dimString = item.dimensi || item.dimensi_actual || planningItem.dimensi;
+           
+           // 2. If no string or it looks invalid (0x0x0mm), try to construct from numeric values
+           if (!dimString || dimString === '0x0x0mm') {
+              const p = parseFloat(planningItem.panjang || item.panjang || 0);
+              const l = parseFloat(planningItem.lebar || item.lebar || 0);
+              const t = parseFloat(planningItem.tebal || item.tebal || item.ketebalan || 0);
+              
+              if (p > 0 || l > 0 || t > 0) {
+                 dimString = `${p}x${l}x${t}mm`;
+              } else {
+                 dimString = '-';
+              }
+           }
+
+           // Resolve Before Images (Planning)
+           // 1. Try from fetched images API (prioritized)
+           let beforeImages = [];
+           
+           // Collect possible IDs for this item to match against images
+           const possibleIds = [
+              planningItem.id,
+              item.work_order_planning_item_id,
+              planningItem.wo_item_unique_id,
+              item.wo_item_unique_id
+           ].filter(Boolean);
+
+           possibleIds.forEach(pid => {
+               const key = String(pid);
+               if (planningImagesMap[key]) {
+                   planningImagesMap[key].forEach(img => {
+                       // Prioritize base64, fallback to file path (simplified based on JSON structure)
+                       const rawVal = img.canvas_image_base64 || img.canvas_file_path;
+                       
+                       const src = resolveImageSrc(rawVal);
+
+                       if (src && !beforeImages.some(existing => existing.src === src)) {
+                           beforeImages.push({ src });
+                       }
+                   });
+               }
+           });
+
+           // 2. Fallback REMOVED as per request - only use API fetched images
+          // if (beforeImages.length === 0) { ... }
+
            return {
-            jenis_barang: item.jenis_barang?.nama_jenis || item.jenis_barang_nama || planningItem.jenis_barang?.nama_jenis_barang || planningItem.jenis_barang?.nama,
-            bentuk_barang: item.bentuk_barang?.nama_bentuk || item.bentuk_barang_nama || planningItem.bentuk_barang?.nama_bentuk_barang || planningItem.bentuk_barang?.nama,
-            grade_barang: item.grade_barang?.nama || item.grade_barang_nama || planningItem.grade_barang?.nama_grade_barang || planningItem.grade_barang?.nama,
-            jenis_potongan: planningItem.jenis_potongan || item.jenis_potongan || 'N/A',
+            jenisBarang: item.jenis_barang?.nama_jenis || item.jenis_barang_nama || planningItem.jenis_barang?.nama_jenis_barang || planningItem.jenis_barang?.nama,
+            bentukBarang: item.bentuk_barang?.nama_bentuk || item.bentuk_barang_nama || planningItem.bentuk_barang?.nama_bentuk_barang || planningItem.bentuk_barang?.nama,
+            gradeBarang: item.grade_barang?.nama || item.grade_barang_nama || planningItem.grade_barang?.nama_grade_barang || planningItem.grade_barang?.nama,
+            dimensi: dimString,
+            jenisPotongan: planningItem.jenis_potongan || item.jenis_potongan || 'N/A',
             
-            qty_planning: item.qty_planning ?? planningItem.qty_planning ?? planningItem.qty ?? 0,
-            berat_planning: Math.round(beratPlanning),
+            qtyPlanning: item.qty_planning ?? planningItem.qty_planning ?? planningItem.qty ?? 0,
+            beratPlanning: Math.round(beratPlanning),
             
-            qty_actual: item.qty_actual ?? 0,
-            berat_actual: Math.round(item.berat ?? item.berat_actual ?? 0),
+            qtyActual: item.qty_actual ?? 0,
+            beratActual: Math.round(item.berat ?? item.berat_actual ?? 0),
             
-            status: item.status || woActual?.status || 'PENDING'
+            beforeImages: beforeImages,
+
+            pelaksanas: pelaksanaArr.map(p => {
+               // Normalize to { pelaksana: { nama_pelaksana: '...' }, qty: ..., berat: ... } for printUtils
+               const name = p.pelaksana?.nama_pelaksana || 
+                          p.pelaksana?.nama || 
+                          p.pelaksana_info?.nama_pelaksana || 
+                          (typeof p.pelaksana === 'string' ? p.pelaksana : null) || 
+                          p.nama_pelaksana || 
+                          '-';
+               
+               // Extract qty and weight from pelaksana assignment
+               const qty = p.qty_actual ?? p.qty ?? p.quantity ?? 0;
+               const berat = Math.round(p.berat_actual ?? p.berat ?? p.weight ?? 0);
+
+               return { 
+                 pelaksana: { nama_pelaksana: name },
+                 qty: qty,
+                 berat: berat
+               };
+            }),
+            status: item.status || woActual?.status || 'PENDING',
+            
+            // Add images
+            afterImages: itemImagesMap[item.id] ? [{ src: itemImagesMap[item.id] }] : [],
+            beforeImages: beforeImages
           };
         }),
         
-        headerImage: headerImageBase64
+        headerImage: headerImageBase64,
+        parentImages: headerImageBase64 ? [{ src: headerImageBase64 }] : []
       };
 
       const html = generateWOActualPrintContent(printData, { includeImages });
@@ -451,19 +607,33 @@ export default function ViewWOActualPage() {
                         const beratActual = actualItem.berat ?? actualItem.berat_actual ?? 0;
                         const status = actualItem.status || woActual?.status || 'PENDING';
 
-                        const pelaksanas = Array.isArray(actualItem.pelaksana) 
-                          ? actualItem.pelaksana 
-                          : (Array.isArray(planningItem.pelaksana) 
-                              ? planningItem.pelaksana 
+                        const planningPelaksanaArr = Array.isArray(planningItem.pelaksana)
+                          ? planningItem.pelaksana
+                          : (Array.isArray(planningItem.work_order_item_pelaksanas)
+                              ? planningItem.work_order_item_pelaksanas
                               : []);
+
+                        // Determine Actual Pelaksana Array with fallback priority
+                        let actualPelaksanaArr = [];
+                        if (Array.isArray(actualItem.has_many_pelaksana) && actualItem.has_many_pelaksana.length > 0) {
+                            actualPelaksanaArr = actualItem.has_many_pelaksana;
+                        } else if (Array.isArray(actualItem.assignments) && actualItem.assignments.length > 0) {
+                            actualPelaksanaArr = actualItem.assignments;
+                        } else if (Array.isArray(actualItem.pelaksana) && actualItem.pelaksana.length > 0) {
+                            actualPelaksanaArr = actualItem.pelaksana;
+                        }
+
+                        // Untuk display di tabel: Prioritas Actual, fallback Planning
+                        const pelaksanas = actualPelaksanaArr.length > 0 ? actualPelaksanaArr : planningPelaksanaArr;
 
                         const bentukNama = actualItem.bentuk_barang?.nama_bentuk || actualItem.bentuk_barang_nama || planningItem.bentuk_barang?.nama_bentuk_barang || planningItem.bentuk_barang?.nama;
                         const gradeNama = actualItem.grade_barang?.nama || actualItem.grade_barang_nama || planningItem.grade_barang?.nama_grade_barang || planningItem.grade_barang?.nama;
                         const jenisPotongan = planningItem.jenis_potongan || actualItem.jenis_potongan || 'N/A';
                         
                         const openPelaksanaModal = () => {
-                          setPelaksanaModalData(pelaksanas);
-                          setPelaksanaPlanningData(pelaksanas);
+                          setPelaksanaModalData(actualPelaksanaArr);
+                          setPelaksanaPlanningData(planningPelaksanaArr);
+                          setModalQtyPlanning(qtyPlanning);
                           setPelaksanaModalOpen(true);
                         };
 
@@ -580,6 +750,7 @@ export default function ViewWOActualPage() {
           value={pelaksanaModalData}
           planningPelaksana={pelaksanaPlanningData}
           readOnly={true}
+          qtyPlanning={modalQtyPlanning}
         />
 
         {/* Image Preview Modal */}

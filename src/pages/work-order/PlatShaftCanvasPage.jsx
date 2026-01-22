@@ -2088,7 +2088,20 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         if (saveMode === 'preview') {
           const itemBarangIdForPreview = workOrderData?.selectedItem?.id || null;
           if (itemBarangIdForPreview) {
+            // Save standard preview (legacy/fallback)
             setStoredPreviewDataUrl(itemBarangIdForPreview, dataURL);
+            
+            // Save specific WO Item preview to localStorage
+            const woItemUniqueId = workOrderData?.workOrderItem?.wo_item_unique_id;
+            if (woItemUniqueId) {
+              try {
+                const specificKey = `WO_canvas_preview_woitem_${woItemUniqueId}_item_${itemBarangIdForPreview}`;
+                localStorage.setItem(specificKey, dataURL);
+                console.log('✅ Saved specific preview to localStorage:', specificKey);
+              } catch (err) {
+                console.warn('⚠️ Failed to save specific preview to localStorage:', err);
+              }
+            }
           }
         }
 
@@ -2121,84 +2134,30 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         }
 
         if (saveMode === 'preview') {
-          // For preview mode, save to app folder using Electron API
+          // For preview mode, we now ONLY use localStorage as per user request
+          // This avoids file system errors in EXE environment
+          console.log('=== SAVE CANVAS PREVIEW (LOCAL STORAGE ONLY) ===');
+          
           try {
-            console.log('=== SAVE CANVAS DEBUG ===');
-            console.log('Save mode:', saveMode);
-            console.log('Filename (ItemId):', filename);
-            console.log('Filename (WoItemId_ItemId):', woItemIdFilename);
-            console.log('DataURL length:', dataURL ? dataURL.length : 'null');
-            console.log('window.electronAPI exists:', !!window.electronAPI);
-            console.log('saveCanvasFile exists:', !!(window.electronAPI && window.electronAPI.saveCanvasFile));
-
-            // Check if we're in Electron environment
-            if (window.electronAPI && window.electronAPI.saveCanvasFile) {
-              console.log('Calling Electron API to save canvas...');
-
-              // Save with original filename format (per item ID)
-              const result = await window.electronAPI.saveCanvasFile(dataURL, filename);
-              console.log('Electron API result (ItemId):', result);
-
-              // Save with new filename format (per woitemid_itemid)
-              let woItemResult = null;
-              if (woItemIdFilename) {
-                console.log('Saving additional copy with woitemid_itemid format...');
-                woItemResult = await window.electronAPI.saveCanvasFile(dataURL, woItemIdFilename);
-                console.log('Electron API result (WoItemId_ItemId):', woItemResult);
-              }
-
-              if (result.success) {
-                if (typeof window !== 'undefined') {
-                  window.canvasPreviewCacheBuster = Date.now();
-                }
-                try {
-                  const itemBarangId = workOrderData?.selectedItem?.id || null;
-                  if (itemBarangId) {
-                    window.dispatchEvent(new CustomEvent('canvasPreviewSaved', { detail: { itemId: itemBarangId } }));
-                  }
-                } catch { }
-                console.log('✅ CANVAS SAVE SUCCESS (ItemId format)!');
-                console.log(`📁 File saved to: ${result.path}`);
-                console.log(`📄 Filename: ${filename}`);
-
-                if (woItemResult && woItemResult.success) {
-                  console.log('✅ CANVAS SAVE SUCCESS (WoItemId_ItemId format)!');
-                  if (typeof window !== 'undefined') {
-                    window.canvasPreviewCacheBuster = Date.now();
-                  }
-                  try {
-                    const itemBarangId = workOrderData?.selectedItem?.id || null;
-                    if (itemBarangId) {
-                      window.dispatchEvent(new CustomEvent('canvasPreviewSaved', { detail: { itemId: itemBarangId } }));
-                    }
-                  } catch { }
-                  console.log(`📁 Additional file saved to: ${woItemResult.path}`);
-                  console.log(`📄 Additional filename: ${woItemIdFilename}`);
-                }
-
-                console.log(`📊 DataURL length: ${dataURL.length} characters`);
-                console.log(`💾 Full path: public/canvas-previews/${filename}`);
-
-                const successMessage = woItemResult && woItemResult.success
-                  ? `Canvas berhasil disimpan!\n\nFile 1: ${filename}\nFile 2: ${woItemIdFilename}\nLokasi: public/canvas-previews/`
-                  : `Canvas berhasil disimpan!\n\nFile: ${filename}\nLokasi: public/canvas-previews/`;
-
-                showAlert('Success', successMessage, 'success');
-              } else {
-                console.error('❌ CANVAS SAVE FAILED!');
-                console.error('Error details:', result.error);
-                console.error('Error message:', result.details);
-              }
-            } else {
-              console.warn('Electron API not available for preview save');
-              console.log('Available window.electronAPI methods:', window.electronAPI ? Object.keys(window.electronAPI) : 'none');
-            }
+             // Logic to dispatch event so other components know update happened
+             if (typeof window !== 'undefined') {
+                window.canvasPreviewCacheBuster = Date.now();
+             }
+             const itemBarangId = workOrderData?.selectedItem?.id || null;
+             if (itemBarangId) {
+                window.dispatchEvent(new CustomEvent('canvasPreviewSaved', { detail: { itemId: itemBarangId } }));
+             }
+             
+             console.log('✅ Canvas preview saved to localStorage successfully');
+             showAlert('Success', 'Canvas berhasil disimpan ke local storage!', 'success');
+             
           } catch (error) {
-            console.error('Error saving to app folder:', error);
-            console.error('Error stack:', error.stack);
+             console.error('Error in post-save operations:', error);
           }
+
         } else {
-          // For download mode
+          // For download mode (User explicitly wants to download the file)
+          // We still try to use Electron API if available, or fallback to browser download
           if (window.electronAPI && window.electronAPI.saveCanvasFile) {
             try {
               const result = await window.electronAPI.saveCanvasFile(dataURL, filename);
