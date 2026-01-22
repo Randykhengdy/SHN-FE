@@ -140,6 +140,39 @@ export default function AddPurchaseOrderPage() {
   // Item List
   const [items, setItems] = useState([]);
 
+  // Helper to calculate total based on unit
+  const calculateTotalPerItem = (params) => {
+    const { unit, price, qty, length, width, thickness, weight, discount, dimensiType } = params;
+    const unitLower = (unit || "").toLowerCase();
+
+    let totalBeforeDiscount = 0;
+
+    if (unitLower.includes('kg') || unitLower.includes('kilogram')) {
+      totalBeforeDiscount = price * (parseFloat(weight) || 0);
+    } else if (unitLower.includes('pc') || unitLower.includes('unit') || unitLower.includes('batang') || unitLower.includes('buah') || unitLower.includes('pieces') || unitLower.includes('utuh')) {
+      totalBeforeDiscount = price * qty;
+    } else if (unitLower.includes('m2') || unitLower.includes('m²') || unitLower.includes('dimensi')) {
+      // Input dimensions are in mm
+      if (dimensiType === "1D") {
+        // 1D: Harga per meter
+        totalBeforeDiscount = (length / 1000) * price * qty;
+      } else {
+        // 2D: Harga per m2
+        totalBeforeDiscount = (length * width / 10000) * price * qty;
+      }
+    }
+    else if (unitLower.includes('m3') || unitLower.includes('m³')) {
+      totalBeforeDiscount = (length * width * thickness / 1000000) * price * qty;
+    } else if (unitLower.includes('m') || unitLower.includes('meter')) {
+      totalBeforeDiscount = (length / 1000) * price * qty;
+    } else {
+      totalBeforeDiscount = price * qty;
+    }
+
+    const discountAmount = totalBeforeDiscount * (parseFloat(discount) || 0) / 100;
+    return totalBeforeDiscount - discountAmount;
+  };
+
   // Calculate item area and total
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -175,33 +208,43 @@ export default function AddPurchaseOrderPage() {
           areaPerItem = (area / 10000).toFixed(2); // Convert mm² to m²
         }
 
-        // Hitung harga per m²
-        let pricePerM2 = "Rp 0/m²";
+        // Get selected unit label
+        const selectedUnitLabel = unitOptions.find(opt => opt.value === itemUnit)?.label || "Dimensi";
+        const unitLower = selectedUnitLabel.toLowerCase();
+
+        // Hitung harga per unit display
+        let pricePerUnitDisplay = `Rp 0/${selectedUnitLabel}`;
         if (pricePerUnit > 0) {
-          pricePerM2 = `Rp ${pricePerUnit.toLocaleString('id-ID')}/m²`;
+          if (unitLower.includes('m2') || unitLower.includes('m²') || unitLower.includes('dimensi')) {
+            if (selectedShape?.dimensi === "1D") {
+              pricePerUnitDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/m`;
+            } else {
+              pricePerUnitDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/m²`;
+            }
+          } else if (unitLower.includes('kg') || unitLower.includes('kilogram')) {
+            pricePerUnitDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/kg`;
+          } else if (unitLower.includes('m3') || unitLower.includes('m³')) {
+            pricePerUnitDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/m³`;
+          } else if (unitLower.includes('m') || unitLower.includes('meter')) {
+            pricePerUnitDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/m`;
+          } else {
+            pricePerUnitDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/${selectedUnitLabel}`;
+          }
         }
-        setItemPricePerUnit(pricePerM2);
+        setItemPricePerUnit(pricePerUnitDisplay);
 
         // Hitung total item (termasuk diskon)
-        // Menggunakan area dalam m/m² untuk perhitungan
-        let totalBeforeDiscount = 0;
-        let totalAfterDiscount = 0;
-
-        if (pricePerUnit > 0) {
-          let areaInM = 0;
-          if (selectedShape?.dimensi === "1D") {
-            // 1D: panjang dalam m
-            areaInM = length / 1000;
-            totalBeforeDiscount = areaInM * pricePerUnit * qty;
-          } else if (selectedShape?.dimensi === "2D") {
-            // 2D: luas dalam m²
-            areaInM = (length * width) / 10000;
-            totalBeforeDiscount = areaInM * pricePerUnit * qty;
-          }
-
-          const discountAmount = totalBeforeDiscount * (discount / 100);
-          totalAfterDiscount = totalBeforeDiscount - discountAmount;
-        }
+        const totalAfterDiscount = calculateTotalPerItem({
+          unit: selectedUnitLabel,
+          price: pricePerUnit,
+          qty: qty,
+          length: length,
+          width: width,
+          thickness: thickness,
+          weight: itemWeight,
+          discount: discount,
+          dimensiType: selectedShape?.dimensi
+        });
 
         // Set area display based on shape
         if (selectedShape?.dimensi === "1D") {
@@ -221,7 +264,7 @@ export default function AddPurchaseOrderPage() {
     }, 100);
 
     return () => clearTimeout(timeoutId);
-  }, [itemLength, itemWidth, itemDiameter, selectedShape, itemQty, itemDiscount, itemPrice]);
+  }, [itemLength, itemWidth, itemDiameter, selectedShape, itemQty, itemDiscount, itemPrice, itemUnit, itemWeight]);
 
   // Auto-calculate berat timbangan when required fields are filled
   useEffect(() => {
@@ -364,28 +407,25 @@ export default function AddPurchaseOrderPage() {
         dimensiString = `${itemLength} x ${itemWidth} x ${itemDiameter}`;
       }
 
-      // Calculate subtotal untuk backend
-      // Input dalam mm, perlu konversi ke m/m² untuk perhitungan
+      // Calculate subtotal menggunakan unit yang dipilih
+      const selectedUnitLabel = unitOptions.find(opt => opt.value === itemUnit)?.label || "Dimensi";
       const length = parseFloat(itemLength) || 0;
       const width = parseFloat(itemWidth) || 0;
+      const thickness = parseFloat(itemDiameter) || 0;
       const qty = parseInt(itemQty);
       const hargaSatuan = parseFloat(itemPrice) || 0;
 
-      let areaInM = 0;
-      let subtotalBeforeDiscount = 0;
-
-      if (selectedShape?.dimensi === "1D") {
-        // 1D: panjang dalam m
-        areaInM = length / 1000;
-        subtotalBeforeDiscount = areaInM * hargaSatuan * qty;
-      } else if (selectedShape?.dimensi === "2D") {
-        // 2D: luas dalam m²
-        areaInM = (length * width) / 10000;
-        subtotalBeforeDiscount = areaInM * hargaSatuan * qty;
-      }
-
-      const discountAmount = subtotalBeforeDiscount * (parseFloat(itemDiscount) || 0) / 100;
-      const subtotal = subtotalBeforeDiscount - discountAmount;
+      const subtotal = calculateTotalPerItem({
+        unit: selectedUnitLabel,
+        price: hargaSatuan,
+        qty: qty,
+        length: length,
+        width: width,
+        thickness: thickness,
+        weight: itemWeight,
+        discount: itemDiscount,
+        dimensiType: selectedShape?.dimensi
+      });
 
       const newItem = {
         id: Date.now(),
@@ -411,7 +451,9 @@ export default function AddPurchaseOrderPage() {
         harga: hargaSatuan, // harga per satuan
         satuan: itemUnit, // satuan
         diskon: parseFloat(itemDiscount) || 0, // persentase diskon (backend value)
-        catatan: itemNotes || null
+        catatan: itemNotes || null,
+        // Logic fields
+        bentuk_dimensi: selectedShape.dimensi
       };
 
       setItems([...items, newItem]);
@@ -707,30 +749,72 @@ export default function AddPurchaseOrderPage() {
     }
   ];
 
+  // Function to get price label based on selected unit (for input field)
+  const getPriceLabel = () => {
+    const selectedUnitLabel = unitOptions.find(opt => opt.value === itemUnit)?.label || "Dimensi";
+    const label = selectedUnitLabel.toLowerCase();
+
+    if (label.includes('kg') || label.includes('kilogram')) {
+      return "Harga (Rp/kg)";
+    } else if (label.includes('pc') || label.includes('unit') || label.includes('batang') || label.includes('buah') || label.includes('pieces') || label.includes('utuh')) {
+      return `Harga (Rp/${selectedUnitLabel})`;
+    } else if (label.includes('m2') || label.includes('m²') || label.includes('dimensi')) {
+      if (selectedShape?.dimensi === "1D") {
+        return "Harga (Rp/m)";
+      }
+      return "Harga (Rp/m²)";
+    }
+    else if (label.includes('m3') || label.includes('m³')) {
+      return "Harga (Rp/m³)";
+    } else if (label.includes('m') || label.includes('meter')) {
+      return "Harga (Rp/m)";
+    }
+
+    return `Harga (Rp/${selectedUnitLabel})`;
+  };
+
+  // Function to get price label for calculated values summary (simpler format)
+  const getPriceSummaryLabel = () => {
+    const selectedUnitLabel = unitOptions.find(opt => opt.value === itemUnit)?.label || "m²";
+    const label = selectedUnitLabel.toLowerCase();
+
+    if (label.includes('kg') || label.includes('kilogram')) {
+      return "Harga/kg";
+    } else if (label.includes('pc') || label.includes('unit') || label.includes('batang') || label.includes('buah') || label.includes('pieces') || label.includes('utuh')) {
+      return `Harga/${selectedUnitLabel}`;
+    } else if (label.includes('m2') || label.includes('m²') || label.includes('dimensi')) {
+      if (selectedShape?.dimensi === "1D") {
+        return "Harga/m";
+      }
+      return "Harga/m²";
+    }
+    else if (label.includes('m3') || label.includes('m³')) {
+      return "Harga/m³";
+    } else if (label.includes('m') || label.includes('meter')) {
+      return "Harga/m";
+    }
+
+    return `Harga/${selectedUnitLabel}`;
+  };
+
   // Calculate summary
   // Perlu mendapatkan dimensi shape untuk setiap item, tapi karena tidak disimpan di item,
   // kita asumsikan semua item 2D (karena purchase order biasanya untuk plat)
   // Atau kita bisa hitung berdasarkan apakah lebar > 0
   const subtotal = items.reduce((sum, item) => {
     try {
-      const length = item.panjang || 0;
-      const width = item.lebar || 0;
-      const qty = item.qty || 0;
-      const harga = item.harga || 0;
-
-      // Konversi mm ke m/m²
-      let areaInM = 0;
-      if (width > 0) {
-        // 2D: luas dalam m²
-        areaInM = (length * width) / 10000;
-      } else {
-        // 1D: panjang dalam m
-        areaInM = length / 1000;
-      }
-
-      const subtotalBeforeDiscount = areaInM * harga * qty;
-
-      return sum + subtotalBeforeDiscount;
+      const total = calculateTotalPerItem({
+        unit: item.satuanDisplay, // Use stored unit label
+        price: item.harga || 0,
+        qty: item.qty || 0,
+        length: item.panjang || 0,
+        width: item.lebar || 0,
+        thickness: item.tebal || 0,
+        weight: item.berat || 0,
+        discount: 0, // subtotal is before discount
+        dimensiType: item.bentuk_dimensi
+      });
+      return sum + total;
     } catch (error) {
       console.error('Error calculating subtotal:', error);
       return sum;
@@ -739,25 +823,18 @@ export default function AddPurchaseOrderPage() {
 
   const totalDiscount = items.reduce((sum, item) => {
     try {
-      const length = item.panjang || 0;
-      const width = item.lebar || 0;
-      const qty = item.qty || 0;
-      const harga = item.harga || 0;
-      const diskon = item.diskon || 0;
-
-      // Konversi mm ke m/m²
-      let areaInM = 0;
-      if (width > 0) {
-        // 2D: luas dalam m²
-        areaInM = (length * width) / 10000;
-      } else {
-        // 1D: panjang dalam m
-        areaInM = length / 1000;
-      }
-
-      const subtotalBeforeDiscount = areaInM * harga * qty;
-      const discountAmount = subtotalBeforeDiscount * (diskon / 100);
-
+      const subtotalBeforeDiscount = calculateTotalPerItem({
+        unit: item.satuanDisplay,
+        price: item.harga || 0,
+        qty: item.qty || 0,
+        length: item.panjang || 0,
+        width: item.lebar || 0,
+        thickness: item.tebal || 0,
+        weight: item.berat || 0,
+        discount: 0,
+        dimensiType: item.bentuk_dimensi
+      });
+      const discountAmount = subtotalBeforeDiscount * (item.diskon || 0) / 100;
       return sum + discountAmount;
     } catch (error) {
       console.error('Error calculating total discount:', error);
@@ -1089,7 +1166,7 @@ export default function AddPurchaseOrderPage() {
               </p>
             </div>
             <div>
-              <Label htmlFor="itemPrice" className="font-semibold text-gray-800">Harga (Rp/m²)</Label>
+              <Label htmlFor="itemPrice" className="font-semibold text-gray-800">{getPriceLabel()} *</Label>
               <Input
                 id="itemPrice"
                 type="number"
@@ -1129,7 +1206,7 @@ export default function AddPurchaseOrderPage() {
               <div className="font-medium text-green-600">{itemArea}</div>
             </div>
             <div>
-              <Label className="text-sm text-gray-600">Harga/m²</Label>
+              <Label className="text-sm text-gray-600">{getPriceSummaryLabel()}</Label>
               <div className="font-medium text-orange-600">{itemPricePerUnit}</div>
             </div>
             <div>
