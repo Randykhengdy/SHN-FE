@@ -6,6 +6,7 @@ import { useAlert } from "@/hooks/useAlert";
 import { Sparkles } from "lucide-react";
 
 export default function BeratJenisPage() {
+  const [activeTab, setActiveTab] = useState('1D'); // Tab state: '1D' or '2D'
   const [bentukBarangMap, setBentukBarangMap] = useState({}); // Map bentuk_barang_id -> dimensi
   const [currentDimensi, setCurrentDimensi] = useState(null);
   const [generating, setGenerating] = useState(false);
@@ -24,7 +25,7 @@ export default function BeratJenisPage() {
   useEffect(() => {
     const editData = editDataRef.current;
     const editId = editData?.id;
-    
+
     // Skip jika sudah diproses atau tidak ada editData
     if (!editData || editId === lastProcessedEditId) {
       if (!editData) {
@@ -40,7 +41,7 @@ export default function BeratJenisPage() {
     // Support both camelCase and snake_case
     const bentukBarang = editData?.bentuk_barang || editData?.bentukBarang;
     const bentukBarangId = editData?.bentuk_barang_id || editData?.bentukBarang?.id;
-    
+
     if (!bentukBarangId) {
       setCurrentDimensi(null);
       return;
@@ -91,10 +92,10 @@ export default function BeratJenisPage() {
         setGenerating(true);
         try {
           const response = await beratJenisService.generateFromItemBarangGroup();
-          
+
           if (response.success) {
             const { created, skipped, total_combinations, data: generatedData } = response.data;
-            
+
             showAlert(
               "Generate Berhasil",
               `Berhasil generate ${created} data berat jenis baru.\n${skipped} kombinasi sudah ada.\nTotal kombinasi: ${total_combinations}`,
@@ -130,17 +131,62 @@ export default function BeratJenisPage() {
     <>
       <AlertComponent />
       <MasterDataLayout
-        title="Berat Jenis"
+        title={`Berat Jenis ${activeTab}`}
         subtitle="Master Data"
-        service={beratJenisService}
+        customHeaderContent={
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-1 inline-flex">
+            <button
+              onClick={() => setActiveTab('1D')}
+              className={`px-6 py-2 rounded-md font-medium transition-all duration-200 ${activeTab === '1D'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+            >
+              Berat Jenis 1D
+            </button>
+            <button
+              onClick={() => setActiveTab('2D')}
+              className={`px-6 py-2 rounded-md font-medium transition-all duration-200 ${activeTab === '2D'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+            >
+              Berat Jenis 2D
+            </button>
+          </div>
+        }
+        service={{
+          ...beratJenisService,
+          // Override getPaginated to filter by dimensi
+          getPaginated: async (page, perPage, search, sortCol, sortDir, filters) => {
+            const response = await beratJenisService.getPaginated(page, perPage, search, sortCol, sortDir, filters);
+            // Filter data based on active tab
+            if (response.data) {
+              response.data = response.data.filter(item => {
+                const bentukBarang = item.bentuk_barang || item.bentukBarang;
+                const dimensi = bentukBarang?.dimensi;
+                if (activeTab === '1D') {
+                  return dimensi === '1D';
+                } else {
+                  return dimensi && dimensi !== '1D';
+                }
+              });
+              // Update total count
+              if (response.pagination) {
+                response.pagination.total = response.data.length;
+              }
+            }
+            return response;
+          }
+        }}
         customHeaderButtons={[
           {
             label: "Generate Item Berat Jenis",
             icon: <Sparkles className="h-4 w-4" />,
             onClick: handleGenerate,
             disabled: generating,
-            className: generating 
-              ? "bg-gray-400 cursor-not-allowed text-white font-medium shadow-sm transition-all duration-200" 
+            className: generating
+              ? "bg-gray-400 cursor-not-allowed text-white font-medium shadow-sm transition-all duration-200"
               : "bg-green-600 hover:bg-green-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
           }
         ]}
@@ -149,7 +195,7 @@ export default function BeratJenisPage() {
           if (!form.jenis_barang_id) errs.push('Jenis Barang');
           if (!form.bentuk_barang_id) errs.push('Bentuk Barang');
           if (!form.grade_barang_id) errs.push('Grade Barang');
-          
+
           // Validasi berdasarkan dimensi
           const dimensi = bentukBarangMap[form.bentuk_barang_id] || currentDimensi;
           if (dimensi === '1D') {
@@ -161,7 +207,7 @@ export default function BeratJenisPage() {
               errs.push('Berat per luas (wajib untuk plat 2D)');
             }
           }
-          
+
           if (errs.length) return `Field wajib: ${errs.join(', ')}`;
           return null;
         }}
@@ -219,13 +265,13 @@ export default function BeratJenisPage() {
               // Gunakan setTimeout untuk mencegah setState di dalam render cycle
               if (edit && editDataRef.current?.id !== edit?.id) {
                 editDataRef.current = edit;
-                
+
                 // Langsung load dimensi dari editData untuk memastikan showIf bisa mengaksesnya
                 // Gunakan setTimeout untuk mencegah setState di dalam render cycle
                 setTimeout(() => {
                   const bentukBarang = edit?.bentuk_barang || edit?.bentukBarang;
                   const bentukBarangId = edit?.bentuk_barang_id || edit?.bentukBarang?.id;
-                  
+
                   if (bentukBarangId) {
                     if (bentukBarang?.dimensi) {
                       // Langsung set dimensi jika ada di editData
@@ -252,24 +298,34 @@ export default function BeratJenisPage() {
             },
             optionsLoader: async () => {
               const response = await bentukBarangService.getAll();
-              const options = (response.data || []).map(item => ({
+              // Get all options first
+              const allOptions = (response.data || []).map(item => ({
                 id: item.id,
                 label: item.nama_bentuk ? `${item.nama_bentuk} (${item.dimensi || 'N/A'})` : item.nama || 'Unknown',
                 value: item.id?.toString(),
                 dimensi: item.dimensi,
                 nama: item.nama_bentuk || item.nama
               }));
-              
+
+              // Filter based on active tab
+              const filteredOptions = allOptions.filter(opt => {
+                if (activeTab === '1D') {
+                  return opt.dimensi === '1D';
+                } else {
+                  return opt.dimensi && opt.dimensi !== '1D';
+                }
+              });
+
               // Update map untuk akses dimensi
               const newMap = {};
-              options.forEach(opt => {
+              allOptions.forEach(opt => {
                 if (opt.id && opt.dimensi) {
                   newMap[opt.id] = opt.dimensi;
                 }
               });
               setBentukBarangMap(prev => ({ ...prev, ...newMap }));
-              
-              return options;
+
+              return filteredOptions;
             },
             onChangeForm: async (form, val) => {
               // Fetch dimensi dari API jika belum ada di map
@@ -286,7 +342,7 @@ export default function BeratJenisPage() {
                 }
               }
               setCurrentDimensi(dimensi || null);
-              
+
               // Reset berat fields saat bentuk barang berubah (hanya saat create, bukan edit)
               if (!form.id) {
                 return {
@@ -334,7 +390,7 @@ export default function BeratJenisPage() {
               // Cek dari form, map, atau currentDimensi
               const bentukBarangId = form.bentuk_barang_id;
               let dimensi = null;
-              
+
               // Cek dari map
               if (bentukBarangId && bentukBarangMap[bentukBarangId]) {
                 dimensi = bentukBarangMap[bentukBarangId];
@@ -349,7 +405,7 @@ export default function BeratJenisPage() {
                 const bentukBarang = editData?.bentuk_barang || editData?.bentukBarang;
                 dimensi = bentukBarang?.dimensi || null;
               }
-              
+
               return dimensi === '1D';
             }
           },
@@ -364,7 +420,7 @@ export default function BeratJenisPage() {
               // Cek dari form, map, atau currentDimensi
               const bentukBarangId = form.bentuk_barang_id;
               let dimensi = null;
-              
+
               // Cek dari map
               if (bentukBarangId && bentukBarangMap[bentukBarangId]) {
                 dimensi = bentukBarangMap[bentukBarangId];
@@ -379,17 +435,17 @@ export default function BeratJenisPage() {
                 const bentukBarang = editData?.bentuk_barang || editData?.bentukBarang;
                 dimensi = bentukBarang?.dimensi || null;
               }
-              
+
               return dimensi && dimensi !== '1D';
             }
           }
         ]}
         columns={[
           { key: "id", label: "ID", align: "center", width: "5rem", maxWidth: "5rem" },
-          { 
-            key: "jenis_barang", 
-            label: "Jenis Barang", 
-            align: "left", 
+          {
+            key: "jenis_barang",
+            label: "Jenis Barang",
+            align: "left",
             minWidth: "12rem",
             getValue: (item) => {
               // Support both camelCase and snake_case
@@ -397,10 +453,10 @@ export default function BeratJenisPage() {
               return jenisBarang?.nama_jenis || jenisBarang?.nama || '-';
             }
           },
-          { 
-            key: "bentuk_barang", 
-            label: "Bentuk Barang", 
-            align: "left", 
+          {
+            key: "bentuk_barang",
+            label: "Bentuk Barang",
+            align: "left",
             minWidth: "12rem",
             getValue: (item) => {
               // Support both camelCase and snake_case
@@ -408,10 +464,10 @@ export default function BeratJenisPage() {
               return bentukBarang?.nama_bentuk || bentukBarang?.nama || '-';
             }
           },
-          { 
-            key: "grade_barang", 
-            label: "Grade Barang", 
-            align: "left", 
+          {
+            key: "grade_barang",
+            label: "Grade Barang",
+            align: "left",
             minWidth: "12rem",
             getValue: (item) => {
               // Support both camelCase and snake_case
@@ -419,10 +475,11 @@ export default function BeratJenisPage() {
               return gradeBarang?.nama || gradeBarang?.nama_grade || '-';
             }
           },
-          { 
-            key: "berat_per_cm", 
-            label: "Berat per cm (kg/cm)", 
-            align: "right", 
+          // Only show in 1D tab
+          ...(activeTab === '1D' ? [{
+            key: "berat_per_cm",
+            label: "Berat per cm (kg/cm)",
+            align: "right",
             width: "12rem",
             getValue: (item) => {
               if (!item.berat_per_cm || item.berat_per_cm === null) return '-';
@@ -444,11 +501,12 @@ export default function BeratJenisPage() {
               }
               return '';
             }
-          },
-          { 
-            key: "berat_per_luas", 
-            label: "Berat per luas (kg/m²)", 
-            align: "right", 
+          }] : []),
+          // Only show in 2D tab
+          ...(activeTab === '2D' ? [{
+            key: "berat_per_luas",
+            label: "Berat per luas (kg/m²)",
+            align: "right",
             width: "12rem",
             getValue: (item) => {
               if (!item.berat_per_luas || item.berat_per_luas === null) return '-';
@@ -470,7 +528,7 @@ export default function BeratJenisPage() {
               }
               return '';
             }
-          }
+          }] : [])
         ]}
       />
     </>

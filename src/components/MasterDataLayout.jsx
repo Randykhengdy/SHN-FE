@@ -17,6 +17,7 @@ export default function MasterDataLayout({
   customEditComponent,
   customActions,
   customHeaderButtons,
+  customHeaderContent,
   getRowClassName,
   validate,
   preprocess,
@@ -61,14 +62,14 @@ export default function MasterDataLayout({
       if (filterConfig && filterValue && String(filterValue).toLowerCase() !== 'semua') {
         filters[filterConfig.param || 'tipe_gudang'] = filterValue;
       }
-      const response = showTrashed 
+      const response = showTrashed
         ? await service.getTrashedPaginated(currentPage, itemsPerPage, debouncedSearchTerm, sortState.col, sortState.dir)
         : await service.getPaginated(currentPage, itemsPerPage, debouncedSearchTerm, sortState.col, sortState.dir, filters);
       const rows = response.data || [];
       setData(rows);
       const serverTotal = response.pagination?.total || response.meta?.total || response.total || response.data?.length || 0;
       setTotalItems(serverTotal);
-      
+
       if (response.pagination?.last_page) {
         setLastPageFromAPI(response.pagination.last_page);
       } else {
@@ -99,7 +100,7 @@ export default function MasterDataLayout({
     setError(null);
     try {
       let processedFormData = { ...formData };
-      
+
       // Filter out hidden fields when editing
       if (editData) {
         fields.forEach((field) => {
@@ -108,7 +109,7 @@ export default function MasterDataLayout({
           }
         });
       }
-      
+
       // Handle role field conversion
       if (processedFormData.role) {
         processedFormData.role_id = processedFormData.role;
@@ -136,7 +137,7 @@ export default function MasterDataLayout({
         await service.create(processedFormData);
         console.log("✅ Data berhasil ditambahkan:", processedFormData);
       }
-      
+
       setIsModalOpen(false);
       setEditData(null);
       setError(null);
@@ -230,8 +231,8 @@ export default function MasterDataLayout({
 
   // Gunakan last_page dari response.pagination jika tersedia, jika tidak hitung dari totalItems
   const [lastPageFromAPI, setLastPageFromAPI] = useState(0);
-  const totalPages = useMemo(() => 
-    lastPageFromAPI > 0 ? lastPageFromAPI : Math.ceil(totalItems / itemsPerPage), 
+  const totalPages = useMemo(() =>
+    lastPageFromAPI > 0 ? lastPageFromAPI : Math.ceil(totalItems / itemsPerPage),
     [lastPageFromAPI, totalItems, itemsPerPage]
   );
 
@@ -246,7 +247,7 @@ export default function MasterDataLayout({
   return (
     <div className="bg-gray-50 min-h-screen">
       <Header />
-      
+
       <div className="p-6">
         <div className="max-w-7xl mx-auto bg-white rounded-lg shadow-md border border-gray-200/60">
           <div className="p-6 space-y-6">
@@ -312,15 +313,15 @@ export default function MasterDataLayout({
                       Tampilkan yang dihapus
                     </Label>
                   </div>
-                  <Button 
-                      variant="outline" 
-                      onClick={fetchData} 
-                      disabled={loading}
-                      className="border-gray-300 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 hover:shadow-sm active:scale-95 group"
-                    >
-                      <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
-                      Refresh
-                    </Button>
+                  <Button
+                    variant="outline"
+                    onClick={fetchData}
+                    disabled={loading}
+                    className="border-gray-300 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 hover:shadow-sm active:scale-95 group"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
+                    Refresh
+                  </Button>
                   {customHeaderButtons && customHeaderButtons.map((button, index) => (
                     <Button
                       key={index}
@@ -350,6 +351,13 @@ export default function MasterDataLayout({
               </div>
             </div>
 
+            {/* Custom Header Content */}
+            {customHeaderContent && (
+              <div className="mb-6">
+                {customHeaderContent}
+              </div>
+            )}
+
             {/* Table */}
             <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
               <div className="overflow-x-auto">
@@ -357,7 +365,7 @@ export default function MasterDataLayout({
                   <thead className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur-sm">
                     <tr className="border-b border-gray-200 shadow-sm">
                       {selection ? (
-                        <th 
+                        <th
                           className={`px-4 py-3 text-sm font-semibold cursor-default text-center min-w-[64px]`}
                           style={{ width: '4rem', minWidth: '4rem' }}
                         >
@@ -365,12 +373,11 @@ export default function MasterDataLayout({
                         </th>
                       ) : null}
                       {columns.map((col) => (
-                        <th 
-                          key={col.key} 
-                          className={`px-4 py-3 text-sm font-semibold group ${
-                            col.key === 'actions' ? 'cursor-default' : 'cursor-pointer hover:bg-gray-100/80 hover:text-blue-600 transition-colors duration-200'
-                          }`}
-                          style={{ 
+                        <th
+                          key={col.key}
+                          className={`px-4 py-3 text-sm font-semibold group ${col.key === 'actions' ? 'cursor-default' : 'cursor-pointer hover:bg-gray-100/80 hover:text-blue-600 transition-colors duration-200'
+                            }`}
+                          style={{
                             textAlign: col.align || 'left',
                             width: col.width,
                             minWidth: col.minWidth
@@ -379,7 +386,7 @@ export default function MasterDataLayout({
                         >
                           <div className="flex items-center gap-1">
                             {col.label}
-                            
+
                             {col.key !== 'actions' && getSortIcon(col.key)}
                           </div>
                         </th>
@@ -405,9 +412,9 @@ export default function MasterDataLayout({
                           ) : null}
                           {Array(columns.length).fill(0).map((_, colIndex) => (
                             <td key={`skeleton-cell-${index}-${colIndex}`} className="px-4 py-4 whitespace-nowrap">
-                              <div 
+                              <div
                                 className={`h-4 ${colIndex === 0 ? 'w-8' : 'w-full max-w-[120px]'} bg-gray-200 rounded`}
-                                style={{ 
+                                style={{
                                   width: colIndex === 0 ? '40px' : '80%',
                                   opacity: 1 - (index * 0.1)
                                 }}
@@ -441,152 +448,152 @@ export default function MasterDataLayout({
                         </td>
                       </tr>
                     ) : (
-                        data.map((item, index) => {
-                          const baseClassName = `border-b border-gray-100 last:border-b-0 hover:bg-blue-50/70 hover:border-l-4 hover:border-l-blue-500 transition-all duration-200 group ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`;
-                          const customClassName = getRowClassName ? getRowClassName(item, index) : '';
-                          return (
-                          <tr 
-                            key={item.id} 
+                      data.map((item, index) => {
+                        const baseClassName = `border-b border-gray-100 last:border-b-0 hover:bg-blue-50/70 hover:border-l-4 hover:border-l-blue-500 transition-all duration-200 group ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`;
+                        const customClassName = getRowClassName ? getRowClassName(item, index) : '';
+                        return (
+                          <tr
+                            key={item.id}
                             className={`${baseClassName} ${customClassName}`}
                           >
-                          {(() => {
-                            if (!selection) return null;
-                            const visible = typeof selection.visible === 'function' ? selection.visible(item) : true;
-                            if (!visible) return <td className="px-4 py-3"></td>;
-                            const checked = typeof selection.isSelected === 'function' ? !!selection.isSelected(item) : false;
-                            return (
-                              <td className="px-4 py-3 text-center">
-                                <input
-                                  type="checkbox"
-                                  checked={checked}
-                                  onChange={() => selection.onToggle && selection.onToggle(item)}
-                                  className="h-4 w-4 cursor-pointer accent-blue-600"
-                                />
-                              </td>
-                            );
-                          })()}
-                          {columns.map((col) => {
-                            // Gunakan custom getValue jika ada, jika tidak gunakan default
-                            const value = col.getValue 
-                              ? col.getValue(item) 
-                              : getValue(item, col.key);
-                            // Gunakan custom getCellClassName jika ada
-                            const cellClassName = col.getCellClassName 
-                              ? col.getCellClassName(item) 
-                              : '';
-                            return (
-                            <td 
-                              key={col.key} 
-                              className={`px-4 py-3 text-sm text-gray-600 group-hover:text-gray-800 transition-colors duration-150 ${cellClassName}`}
-                              style={{ 
-                                textAlign: col.align || 'left',
-                                wordWrap: 'break-word',
-                                maxWidth: col.maxWidth
-                              }}
-                            >
-                              {value}
+                            {(() => {
+                              if (!selection) return null;
+                              const visible = typeof selection.visible === 'function' ? selection.visible(item) : true;
+                              if (!visible) return <td className="px-4 py-3"></td>;
+                              const checked = typeof selection.isSelected === 'function' ? !!selection.isSelected(item) : false;
+                              return (
+                                <td className="px-4 py-3 text-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() => selection.onToggle && selection.onToggle(item)}
+                                    className="h-4 w-4 cursor-pointer accent-blue-600"
+                                  />
+                                </td>
+                              );
+                            })()}
+                            {columns.map((col) => {
+                              // Gunakan custom getValue jika ada, jika tidak gunakan default
+                              const value = col.getValue
+                                ? col.getValue(item)
+                                : getValue(item, col.key);
+                              // Gunakan custom getCellClassName jika ada
+                              const cellClassName = col.getCellClassName
+                                ? col.getCellClassName(item)
+                                : '';
+                              return (
+                                <td
+                                  key={col.key}
+                                  className={`px-4 py-3 text-sm text-gray-600 group-hover:text-gray-800 transition-colors duration-150 ${cellClassName}`}
+                                  style={{
+                                    textAlign: col.align || 'left',
+                                    wordWrap: 'break-word',
+                                    maxWidth: col.maxWidth
+                                  }}
+                                >
+                                  {value}
+                                </td>
+                              );
+                            })}
+                            <td className="px-4 py-3 text-left">
+                              <div className="flex gap-2 justify-start opacity-90 group-hover:opacity-100 transition-opacity duration-200">
+                                {/* Custom Actions - Always show when not in trashed mode */}
+                                {!showTrashed && customActions && customActions.map((action, index) => {
+                                  if (typeof action.visible === 'function' && !action.visible(item)) return null;
+                                  const computedIcon = typeof action.icon === 'function' ? action.icon(item) : action.icon;
+                                  const computedLabel = typeof action.label === 'function' ? action.label(item) : action.label;
+                                  return (
+                                    <Button
+                                      key={index}
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => action.onClick(item)}
+                                      className={action.className || "bg-blue-500 hover:bg-blue-600 text-white border-blue-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-blue-300 focus:ring-offset-1"}
+                                    >
+                                      <span className="flex items-center gap-1">
+                                        {computedIcon}
+                                        {computedLabel}
+                                      </span>
+                                    </Button>
+                                  );
+                                })}
+
+                                {!showTrashed ? (
+                                  <>
+                                    {canUpdate ? (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleEdit(item)}
+                                        className="bg-yellow-400 hover:bg-yellow-500 text-white border-yellow-400 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-yellow-300 focus:ring-offset-1"
+                                      >
+                                        <span className="flex items-center gap-1">
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                          </svg>
+                                          Edit
+                                        </span>
+                                      </Button>
+                                    ) : null}
+                                    {canDelete ? (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleDelete(item.id)}
+                                        className="bg-red-500 hover:bg-red-600 text-white border-red-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-red-300 focus:ring-offset-1"
+                                      >
+                                        <span className="flex items-center gap-1">
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                          </svg>
+                                          Hapus
+                                        </span>
+                                      </Button>
+                                    ) : null}
+                                  </>
+                                ) : (
+                                  <>
+                                    {canDelete ? (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleRestore(item.id)}
+                                        className="bg-green-500 hover:bg-green-600 text-white border-green-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-green-300 focus:ring-offset-1"
+                                      >
+                                        <span className="flex items-center gap-1">
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                          </svg>
+                                          Pulihkan
+                                        </span>
+                                      </Button>
+                                    ) : null}
+                                    {canDelete ? (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleForceDelete(item.id)}
+                                        className="bg-red-500 hover:bg-red-600 text-white border-red-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-red-300 focus:ring-offset-1"
+                                      >
+                                        <span className="flex items-center gap-1">
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                          </svg>
+                                          Hapus Permanen
+                                        </span>
+                                      </Button>
+                                    ) : null}
+                                  </>
+                                )}
+                              </div>
                             </td>
-                            );
-                          })}
-                          <td className="px-4 py-3 text-left">
-                            <div className="flex gap-2 justify-start opacity-90 group-hover:opacity-100 transition-opacity duration-200">
-                              {/* Custom Actions - Always show when not in trashed mode */}
-                              {!showTrashed && customActions && customActions.map((action, index) => {
-                                if (typeof action.visible === 'function' && !action.visible(item)) return null;
-                                const computedIcon = typeof action.icon === 'function' ? action.icon(item) : action.icon;
-                                const computedLabel = typeof action.label === 'function' ? action.label(item) : action.label;
-                                return (
-                                  <Button
-                                    key={index}
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => action.onClick(item)}
-                                    className={action.className || "bg-blue-500 hover:bg-blue-600 text-white border-blue-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-blue-300 focus:ring-offset-1"}
-                                  >
-                                    <span className="flex items-center gap-1">
-                                      {computedIcon}
-                                      {computedLabel}
-                                    </span>
-                                  </Button>
-                                );
-                              })}
-                              
-                              {!showTrashed ? (
-                                <>
-                                  {canUpdate ? (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleEdit(item)}
-                                      className="bg-yellow-400 hover:bg-yellow-500 text-white border-yellow-400 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-yellow-300 focus:ring-offset-1"
-                                    >
-                                      <span className="flex items-center gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                        </svg>
-                                        Edit
-                                      </span>
-                                    </Button>
-                                  ) : null}
-                                  {canDelete ? (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleDelete(item.id)}
-                                      className="bg-red-500 hover:bg-red-600 text-white border-red-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-red-300 focus:ring-offset-1"
-                                    >
-                                      <span className="flex items-center gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                        Hapus
-                                      </span>
-                                    </Button>
-                                  ) : null}
-                                </>
-                              ) : (
-                                <>
-                                  {canDelete ? (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleRestore(item.id)}
-                                      className="bg-green-500 hover:bg-green-600 text-white border-green-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-green-300 focus:ring-offset-1"
-                                    >
-                                      <span className="flex items-center gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                        </svg>
-                                        Pulihkan
-                                      </span>
-                                    </Button>
-                                  ) : null}
-                                  {canDelete ? (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleForceDelete(item.id)}
-                                      className="bg-red-500 hover:bg-red-600 text-white border-red-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-red-300 focus:ring-offset-1"
-                                    >
-                                      <span className="flex items-center gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                        Hapus Permanen
-                                      </span>
-                                    </Button>
-                                  ) : null}
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                          );
-                        })
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
-                
+
                 {/* Pagination */}
                 {data.length > 0 && (
                   <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-gray-200 rounded-b-lg shadow-sm">
@@ -624,7 +631,7 @@ export default function MasterDataLayout({
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Pagination buttons - always show if there's data */}
                     <div className="flex items-center space-x-2">
                       {(() => {
@@ -649,39 +656,39 @@ export default function MasterDataLayout({
                         </svg>
                         Sebelumnya
                       </button>
-                      
+
                       {/* Render pagination buttons in a more compact way */}
                       {(() => {
                         // Array to store page numbers to display
                         const pagesToShow = [];
-                        
+
                         // Always show first page
                         pagesToShow.push(1);
-                        
+
                         // Calculate range around current page
                         const rangeStart = Math.max(2, currentPage - 1);
                         const rangeEnd = Math.min(totalPages - 1, currentPage + 1);
-                        
+
                         // Add ellipsis after first page if needed
                         if (rangeStart > 2) {
                           pagesToShow.push('ellipsis1');
                         }
-                        
+
                         // Add pages around current page
                         for (let i = rangeStart; i <= rangeEnd; i++) {
                           pagesToShow.push(i);
                         }
-                        
+
                         // Add ellipsis before last page if needed
                         if (rangeEnd < totalPages - 1) {
                           pagesToShow.push('ellipsis2');
                         }
-                        
+
                         // Always show last page if more than 1 page
                         if (totalPages > 1) {
                           pagesToShow.push(totalPages);
                         }
-                        
+
                         // Return the pagination buttons
                         return pagesToShow.map((page, index) => {
                           // Render ellipsis
@@ -692,24 +699,23 @@ export default function MasterDataLayout({
                               </span>
                             );
                           }
-                          
+
                           // Render page button
                           return (
                             <button
                               key={page}
                               onClick={() => setCurrentPage(page)}
-                              className={`px-3.5 py-1.5 text-sm font-medium border rounded-md transition-all duration-200 ${
-                                currentPage === page
+                              className={`px-3.5 py-1.5 text-sm font-medium border rounded-md transition-all duration-200 ${currentPage === page
                                   ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                                   : 'border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200'
-                              }`}
+                                }`}
                             >
                               {page}
                             </button>
                           );
                         });
                       })()}
-                      
+
                       <button
                         onClick={() => setCurrentPage(currentPage + 1)}
                         disabled={currentPage === totalPages || totalPages === 0}
@@ -768,7 +774,7 @@ export default function MasterDataLayout({
           size={modalSize}
         />
       )}
-      
+
       {/* Alert Component */}
       <AlertComponent />
     </div>

@@ -10,15 +10,15 @@ export const beratJenisService = {
       page: page.toString(),
       per_page: perPage.toString()
     });
-    
+
     if (search) {
       params.append('search', search);
     }
-    
+
     if (sortBy && sortDir) {
       params.append('sort', `${sortBy},${sortDir}`);
     }
-    
+
     // Add filter parameters
     if (filters.jenis_barang_id) {
       params.append('jenis_barang_id', filters.jenis_barang_id);
@@ -29,7 +29,7 @@ export const beratJenisService = {
     if (filters.grade_barang_id) {
       params.append('grade_barang_id', filters.grade_barang_id);
     }
-    
+
     const response = await request(`/berat-jenis?${params}`, { method: "GET" });
     return response;
   },
@@ -87,15 +87,15 @@ export const beratJenisService = {
       page: page.toString(),
       per_page: perPage.toString()
     });
-    
+
     if (search) {
       params.append('search', search);
     }
-    
+
     if (sortBy && sortDir) {
       params.append('sort', `${sortBy},${sortDir}`);
     }
-    
+
     // Add filter parameters
     if (filters.jenis_barang_id) {
       params.append('jenis_barang_id', filters.jenis_barang_id);
@@ -106,7 +106,7 @@ export const beratJenisService = {
     if (filters.grade_barang_id) {
       params.append('grade_barang_id', filters.grade_barang_id);
     }
-    
+
     return request(`/berat-jenis/with-trashed/trashed?${params}`, { method: "GET" });
   },
 
