@@ -123,6 +123,7 @@ export default function AddSalesOrderPage() {
   const [originWarehouseName, setOriginWarehouseName] = useState(""); // Store warehouse name for printing
   const [handoverMethod, setHandoverMethod] = useState("pickup");
   const [includePPN, setIncludePPN] = useState(true);
+  const [diskonSO, setDiskonSO] = useState("0"); // Diskon SO level (percentage)
 
   // Item Input Form
   const [itemLength, setItemLength] = useState("");
@@ -688,7 +689,8 @@ export default function AddSalesOrderPage() {
         handover_method: handoverMethod,
         pelanggan_id: selectedCustomer?.id || 1,
         subtotal: subtotal || 0,
-        total_diskon: totalDiscount || 0,
+        total_diskon: totalDiscountSO || 0,
+        diskon_so: diskonSOPercent || 0,
         ppn_percent: includePPN ? 11.0 : 0,
         ppn_amount: ppn || 0,
         total_harga_so: totalHargaSO || 0,
@@ -782,7 +784,9 @@ export default function AddSalesOrderPage() {
             total_harga: parseInt(String(item.total).replace(/[^\d]/g, '')) || 0
           })),
           total_harga: subtotal,
-          discount: totalDiscount,
+          discount: totalDiscountSO,
+          diskon_so_percent: diskonSOPercent,
+          diskon_so_amount: diskonSOAmount,
           ppn: ppn,
           grand_total: totalHargaSO
         };
@@ -884,7 +888,9 @@ export default function AddSalesOrderPage() {
           total_harga: parseInt(String(item.total).replace(/[^\d]/g, '')) || 0
         })),
         total_harga: subtotal,
-        discount: totalDiscount,
+        discount: totalDiscountSO,
+        diskon_so_percent: diskonSOPercent,
+        diskon_so_amount: diskonSOAmount,
         ppn: ppn,
         grand_total: totalHargaSO
       };
@@ -1195,6 +1201,7 @@ export default function AddSalesOrderPage() {
   ];
 
   // Calculate summary
+  // Subtotal adalah total harga SETELAH diskon item (sudah termasuk diskon item)
   const subtotal = items.reduce((sum, item) => {
     try {
       const total = parseInt(item.total.replace(/[^\d]/g, '')) || 0;
@@ -1205,19 +1212,15 @@ export default function AddSalesOrderPage() {
     }
   }, 0);
 
-  const totalDiscount = items.reduce((sum, item) => {
-    try {
-      const total = parseInt(item.total.replace(/[^\d]/g, '')) || 0;
-      const discountPercent = parseInt(item.diskon.replace('%', '')) || 0;
-      return sum + (total * discountPercent / 100);
-    } catch (error) {
-      console.error('Error calculating total discount:', error);
-      return sum;
-    }
-  }, 0);
+  // Calculate SO-level discount (dihitung dari subtotal yang sudah termasuk diskon item)
+  const diskonSOPercent = parseFloat(diskonSO) || 0;
+  const diskonSOAmount = subtotal * (diskonSOPercent / 100);
 
-  const ppn = includePPN ? (subtotal - totalDiscount) * 0.11 : 0;
-  const totalHargaSO = subtotal - totalDiscount + ppn;
+  // Total discount = hanya diskon SO (karena diskon item sudah termasuk dalam subtotal)
+  const totalDiscountSO = diskonSOAmount;
+
+  const ppn = includePPN ? (subtotal - totalDiscountSO) * 0.11 : 0;
+  const totalHargaSO = subtotal - totalDiscountSO + ppn;
 
   return (
     <SalesOrderLayout title="Sales Order (SO)" subtitle="TRANSAKSI">
@@ -1406,11 +1409,11 @@ export default function AddSalesOrderPage() {
                     }
                     // Try to fetch if no option passed
                     jenisBarangService.getById(val).then(resp => {
-                        const data = resp?.data || resp;
-                        const label = data?.nama_jenis || data?.nama || data?.label || String(val);
-                        setItemTypeLabel(label);
+                      const data = resp?.data || resp;
+                      const label = data?.nama_jenis || data?.nama || data?.label || String(val);
+                      setItemTypeLabel(label);
                     }).catch(() => {
-                        setItemTypeLabel(String(val));
+                      setItemTypeLabel(String(val));
                     });
                   }
                 }}
@@ -1441,11 +1444,11 @@ export default function AddSalesOrderPage() {
                       return;
                     }
                     gradeBarangService.getById(val).then(resp => {
-                        const data = resp?.data || resp;
-                        const label = data?.nama || data?.nama_grade || data?.label || String(val);
-                        setItemGradeLabel(label);
+                      const data = resp?.data || resp;
+                      const label = data?.nama || data?.nama_grade || data?.label || String(val);
+                      setItemGradeLabel(label);
                     }).catch(() => {
-                        setItemGradeLabel(String(val));
+                      setItemGradeLabel(String(val));
                     });
                   }
                 }}
@@ -1747,14 +1750,35 @@ export default function AddSalesOrderPage() {
               />
             </div>
           </div>
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-5 gap-4">
             <div>
               <Label className="text-sm text-gray-600">Subtotal</Label>
               <div className="text-lg font-semibold">{formatCurrency(subtotal)}</div>
             </div>
             <div>
-              <Label className="text-sm text-gray-600">Total Diskon</Label>
-              <div className="text-lg font-semibold">{formatCurrency(totalDiscount)}</div>
+              <Label className="text-sm text-gray-600">Diskon SO (%)</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={diskonSO}
+                  onChange={(e) => setDiskonSO(e.target.value)}
+                  className="w-24 text-center"
+                  placeholder="0"
+                />
+                <span className="text-sm text-gray-500">%</span>
+              </div>
+              {diskonSOAmount > 0 && (
+                <div className="text-sm text-orange-600 mt-1">
+                  ({formatCurrency(diskonSOAmount)})
+                </div>
+              )}
+            </div>
+            <div>
+              <Label className="text-sm text-gray-600">Total Diskon SO</Label>
+              <div className="text-lg font-semibold text-red-600">{formatCurrency(totalDiscountSO)}</div>
             </div>
             <div>
               <Label className="text-sm text-gray-600">PPN (11%)</Label>

@@ -582,9 +582,15 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
               <td class="summary-label">Total Harga:</td>
               <td class="summary-value">${formatCurrency(salesOrderData.total_harga || salesOrderData.total_amount)}</td>
             </tr>
+            ${salesOrderData.diskon_so_percent || salesOrderData.diskon_so ? `
+            <tr>
+              <td class="summary-label">Diskon SO (${salesOrderData.diskon_so_percent || salesOrderData.diskon_so || 0}%):</td>
+              <td class="summary-value">- ${formatCurrency(salesOrderData.diskon_so_amount || 0)}</td>
+            </tr>
+            ` : ''}
             ${salesOrderData.discount ? `
             <tr>
-              <td class="summary-label">Discount:</td>
+              <td class="summary-label">Total Discount:</td>
               <td class="summary-value">- ${formatCurrency(salesOrderData.discount)}</td>
             </tr>
             ` : ''}
@@ -639,11 +645,11 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
       <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">${item.beratActual ?? 0} kg</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.jenisPotongan || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${(item.pelaksanas || []).map(p => {
-        const name = p.pelaksana?.nama_pelaksana || p.nama_pelaksana || p.nama || '-';
-        const qty = p.qty || p.quantity || 0;
-        const berat = p.berat || p.weight || 0;
-        return `${name} (${qty} Pcs, ${berat} kg)`;
-      }).join(', ')}</td>
+    const name = p.pelaksana?.nama_pelaksana || p.nama_pelaksana || p.nama || '-';
+    const qty = p.qty || p.quantity || 0;
+    const berat = p.berat || p.weight || 0;
+    return `${name} (${qty} Pcs, ${berat} kg)`;
+  }).join(', ')}</td>
     </tr>
   `).join('') || '<tr><td colspan="10" style="text-align: center; padding: 12px;">Tidak ada item</td></tr>';
 
@@ -684,20 +690,20 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
         const afterImages = Array.isArray(it.afterImages) ? it.afterImages : [];
 
         const maxRows = Math.max(beforeImages.length, afterImages.length);
-        
+
         let rowsHtml = '';
         if (maxRows === 0) {
-           rowsHtml = `<div style="padding: 16px; color: #666; font-style: italic; text-align: center;">Tidak ada gambar Before maupun After</div>`;
+          rowsHtml = `<div style="padding: 16px; color: #666; font-style: italic; text-align: center;">Tidak ada gambar Before maupun After</div>`;
         } else {
-           for (let i = 0; i < maxRows; i++) {
-              const beforeImg = beforeImages[i];
-              const afterImg = afterImages[i];
-              
-              const renderImgTile = (img, label, idx) => {
-                  if (!img) return '<div style="height: 100%;"></div>'; // Empty placeholder
-                  
-                  const src = img.canvas_image_base64 || img.image_base64 || img.image_url || img.src || img.url || '';
-                  return `
+          for (let i = 0; i < maxRows; i++) {
+            const beforeImg = beforeImages[i];
+            const afterImg = afterImages[i];
+
+            const renderImgTile = (img, label, idx) => {
+              if (!img) return '<div style="height: 100%;"></div>'; // Empty placeholder
+
+              const src = img.canvas_image_base64 || img.image_base64 || img.image_url || img.src || img.url || '';
+              return `
                     <div style="margin-bottom: 10px; height: 100%;">
                       <div style="font-size: 11px; color: #666; margin-bottom: 4px;">${label} #${idx + 1}</div>
                       <div style="border: 1px solid #ddd; background-color: #fafafa; padding: 8px; text-align: center; height: 280px; display: flex; align-items: center; justify-content: center;">
@@ -710,9 +716,9 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
                       </div>
                     </div>
                   `;
-              };
+            };
 
-              rowsHtml += `
+            rowsHtml += `
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; page-break-inside: avoid;">
                   <div>
                     ${i === 0 ? '<div style="font-weight: bold; margin-bottom: 6px;">Before (WO Planning)</div>' : ''}
@@ -724,7 +730,7 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
                   </div>
                 </div>
               `;
-           }
+          }
         }
 
         return `
@@ -871,12 +877,12 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
           item.wo_item_id,
           // Removed item.item_id to prevent ambiguous mapping when multiple WO items share the same inventory item
         ].filter(Boolean);
-        
+
         // Use Set to ensure unique string keys
         const uniqueIds = [...new Set(idCandidates.map(String))];
         uniqueIds.forEach(id => {
           if (!itemMap.has(id)) {
-             itemMap.set(id, { index: index + 1, name });
+            itemMap.set(id, { index: index + 1, name });
           }
         });
       });
@@ -896,7 +902,7 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
 
         let key = null;
         let info = null;
-        
+
         // Try to match with any candidate ID
         for (const id of idCandidates) {
           const found = itemMap.get(String(id));

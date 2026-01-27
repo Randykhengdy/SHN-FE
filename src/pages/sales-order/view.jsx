@@ -20,11 +20,11 @@ export default function ViewSalesOrderPage() {
   const navigate = useNavigate();
   const { showAlert, AlertComponent } = useAlert();
   const { isUserAdmin, hasRole } = useRole();
-  
+
   // Loading states
   const [loading, setLoading] = useState(false);
   const [printLoading, setPrintLoading] = useState(false);
-  
+
   // Prevent multiple API calls
   const isLoadingRef = useRef(false);
 
@@ -49,7 +49,7 @@ export default function ViewSalesOrderPage() {
 
   // Item List
   const [items, setItems] = useState([]);
-  
+
   const getStatusColor = (processStatus) => {
     const s = String(processStatus || '').toLowerCase();
     switch (s) {
@@ -86,30 +86,30 @@ export default function ViewSalesOrderPage() {
         console.log('🔧 Skipping loadData - already loading (ref check)');
         return;
       }
-      
+
       isLoadingRef.current = true;
-      
+
       try {
         setLoading(true);
 
         // Load sales order data (includes master data)
         console.log('🔧 Fetching sales order data for ID:', id);
         console.log('🔧 API URL:', `${API_ENDPOINTS.salesOrder}/${id}`);
-        
+
         const response = await request(`${API_ENDPOINTS.salesOrder}/${id}`, {
           method: 'GET'
         });
 
         console.log('🔍 Sales Order API Response:', response);
-        
+
         // Handle different response structures
         let soData = response.data || response;
-        
+
         // If response is an array, take the first item
         if (Array.isArray(soData)) {
           soData = soData[0];
         }
-        
+
         // If still no data, try different possible structures
         if (!soData && response.sales_order) {
           soData = response.sales_order;
@@ -117,18 +117,18 @@ export default function ViewSalesOrderPage() {
         if (!soData && response.salesOrder) {
           soData = response.salesOrder;
         }
-        
+
         console.log('🔍 Sales Order Data:', soData);
-        
+
         if (!soData) {
           throw new Error('Sales order data not found in response');
         }
-        
+
         setSalesOrder(soData);
 
         // Extract master data from sales order response
         console.log('🔧 Extracting master data from sales order response...');
-        
+
         // Get customer data from sales order
         const customerData = soData.pelanggan || soData.customer || soData.client;
         if (customerData) {
@@ -146,7 +146,7 @@ export default function ViewSalesOrderPage() {
         // Extract master data from items
         const itemsData = soData.salesOrderItems || soData.items || soData.sales_order_items || soData.orderItems || [];
         console.log('🔍 Items data:', itemsData);
-        
+
         // Collect unique master data from items
         const masterData = {
           jenisBarang: [],
@@ -160,12 +160,12 @@ export default function ViewSalesOrderPage() {
           if (item.jenis_barang && !masterData.jenisBarang.find(jb => jb.id === item.jenis_barang.id)) {
             masterData.jenisBarang.push(item.jenis_barang);
           }
-          
+
           // Add bentuk barang if exists and not already added
           if (item.bentuk_barang && !masterData.bentukBarang.find(bb => bb.id === item.bentuk_barang.id)) {
             masterData.bentukBarang.push(item.bentuk_barang);
           }
-          
+
           // Add grade barang if exists and not already added
           if (item.grade_barang && !masterData.gradeBarang.find(gb => gb.id === item.grade_barang.id)) {
             masterData.gradeBarang.push(item.grade_barang);
@@ -195,22 +195,22 @@ export default function ViewSalesOrderPage() {
           gudang_nama_alt: warehouseData?.nama,
           gudang_label: warehouseData?.label
         });
-        
+
         setSoNumber(soData.nomor_so || soData.so_number || soData.order_number || "");
         setSoDate(formatDateForInput(soData.tanggal_so || soData.so_date || soData.order_date));
         setDeliveryDate(formatDateForInput(soData.tanggal_pengiriman || soData.delivery_date));
         setTermOfPayment(soData.syarat_pembayaran || soData.term_of_payment || "");
-        
+
         // Set warehouse name from included data
-        const warehouseName = warehouseData?.nama_gudang || warehouseData?.nama || 
-                             warehouseData?.label || 'N/A';
+        const warehouseName = warehouseData?.nama_gudang || warehouseData?.nama ||
+          warehouseData?.label || 'N/A';
         setOriginWarehouse(warehouseName);
 
         // Process items with included master data
         if (itemsData && itemsData.length > 0) {
           const mappedItems = itemsData.map(item => {
             console.log('🔍 Mapping item:', item);
-            
+
             // Calculate total if not provided
             const qty = parseFloat(item.qty || item.quantity || item.jumlah || 0);
             const harga = parseFloat(item.harga || item.price || 0);
@@ -218,7 +218,7 @@ export default function ViewSalesOrderPage() {
             const subtotal = qty * harga;
             const discountAmount = subtotal * (diskon / 100);
             const total = subtotal - discountAmount;
-            
+
             console.log('🔍 Item calculations:', {
               qty,
               harga,
@@ -228,7 +228,7 @@ export default function ViewSalesOrderPage() {
               total,
               originalTotal: item.total || item.subtotal
             });
-            
+
             return {
               id: item.id,
               jenisBarang: item.jenis_barang?.nama_jenis_barang || item.jenis_barang?.nama_jenis || item.jenis_barang?.nama || 'N/A',
@@ -295,7 +295,7 @@ export default function ViewSalesOrderPage() {
   const handlePrintSalesOrder = async () => {
     try {
       setPrintLoading(true);
-      
+
       if (!salesOrder) {
         showAlert("Error", "Data sales order tidak ditemukan", "error");
         return;
@@ -324,20 +324,20 @@ export default function ViewSalesOrderPage() {
           const panjang = parseFloat(item.panjang) || 0;
           const lebar = parseFloat(item.lebar) || 0;
           const tebal = parseFloat(item.ketebalan) || 0; // ketebalan already mapped from tebal
-          
+
           let dimensi_potong = '-';
           if (lebar > 0) {
             dimensi_potong = `${panjang} x ${lebar} x ${tebal} mm`;
           } else {
             dimensi_potong = `${panjang} x ${tebal} mm`;
           }
-          
+
           // Use satuan as unit (handle 'N/A' case)
           const unit = (item.satuan && item.satuan !== 'N/A') ? item.satuan : (item.unit || '-');
-          
+
           // Calculate total_kg from berat (weight) if available
           const total_kg = parseFloat(item.berat) || 0;
-          
+
           return {
             nama_item: item.jenisBarang || item.nama_item,
             bentuk_barang: item.bentukBarang || item.bentuk_barang,
@@ -351,7 +351,9 @@ export default function ViewSalesOrderPage() {
           };
         }),
         total_harga: subtotal,
-        discount: totalDiscount,
+        discount: totalDiscountSO,
+        diskon_so_percent: diskonSOPercent,
+        diskon_so_amount: diskonSOAmount,
         ppn: ppnAmount,
         grand_total: grandTotal
       };
@@ -374,23 +376,24 @@ export default function ViewSalesOrderPage() {
 
 
   // Memoized calculations
-  const { subtotal, totalDiscount, ppnAmount, grandTotal } = useMemo(() => {
+  // Subtotal adalah total harga SETELAH diskon item (sudah termasuk diskon item)
+  const { subtotal, diskonSOPercent, diskonSOAmount, totalDiscountSO, ppnAmount, grandTotal } = useMemo(() => {
     console.log('🔍 Calculating totals for items:', items);
-    
+
+    // Subtotal = total semua item (sudah termasuk diskon item)
     const subtotal = items.reduce((sum, item) => {
       const itemTotal = parseFloat(item.total) || 0;
       console.log('🔍 Item total:', { item: item.jenisBarang, total: itemTotal });
       return sum + itemTotal;
     }, 0);
-    
-    const totalDiscount = items.reduce((sum, item) => {
-      const itemTotal = parseFloat(item.total) || 0;
-      const itemDiscount = parseFloat(item.diskon) || 0;
-      const discountAmount = (itemTotal * itemDiscount / 100);
-      console.log('🔍 Item discount:', { item: item.jenisBarang, total: itemTotal, discount: itemDiscount, discountAmount });
-      return sum + discountAmount;
-    }, 0);
-    
+
+    // Get SO-level discount from API response
+    const diskonSOPercent = salesOrder ? (parseFloat(salesOrder.diskon_so) || 0) : 0;
+    const diskonSOAmount = subtotal * (diskonSOPercent / 100);
+
+    // Total discount = hanya diskon SO (karena diskon item sudah termasuk dalam subtotal)
+    const totalDiscountSO = diskonSOAmount;
+
     // Use PPN from API if available, otherwise calculate with 11%
     let ppnAmount = 0;
     if (salesOrder) {
@@ -398,37 +401,40 @@ export default function ViewSalesOrderPage() {
       if (salesOrder.ppn_amount !== undefined && salesOrder.ppn_amount !== null) {
         ppnAmount = parseFloat(salesOrder.ppn_amount) || 0;
         console.log('🔍 Using PPN amount from API:', ppnAmount);
-      } 
+      }
       // If ppn_amount not available but ppn_percent is, calculate it
       else if (salesOrder.ppn_percent !== undefined && salesOrder.ppn_percent !== null) {
         const ppnPercent = parseFloat(salesOrder.ppn_percent) || 0;
-        ppnAmount = (subtotal - totalDiscount) * (ppnPercent / 100);
+        ppnAmount = (subtotal - totalDiscountSO) * (ppnPercent / 100);
         console.log('🔍 Calculating PPN from API percent:', { ppnPercent, ppnAmount });
       }
       // Fallback to 11% if no PPN data from API
       else {
-        ppnAmount = (subtotal - totalDiscount) * 0.11;
+        ppnAmount = (subtotal - totalDiscountSO) * 0.11;
         console.log('🔍 Using default 11% PPN (no API data)');
       }
     } else {
       // Fallback if salesOrder not loaded yet
-      ppnAmount = (subtotal - totalDiscount) * 0.11;
+      ppnAmount = (subtotal - totalDiscountSO) * 0.11;
       console.log('🔍 Using default 11% PPN (salesOrder not loaded)');
     }
-    
-    const grandTotal = subtotal - totalDiscount + ppnAmount;
-    
+
+    const grandTotal = subtotal - totalDiscountSO + ppnAmount;
+
     console.log('🔍 Final calculations:', {
       subtotal,
-      totalDiscount,
+      diskonSOPercent,
+      diskonSOAmount,
+      totalDiscountSO,
       ppnAmount,
       grandTotal,
       itemsCount: items.length,
       salesOrderPPN: salesOrder?.ppn_amount,
-      salesOrderPPNPercent: salesOrder?.ppn_percent
+      salesOrderPPNPercent: salesOrder?.ppn_percent,
+      salesOrderDiskonSO: salesOrder?.diskon_so
     });
-    
-    return { subtotal, totalDiscount, ppnAmount, grandTotal };
+
+    return { subtotal, diskonSOPercent, diskonSOAmount, totalDiscountSO, ppnAmount, grandTotal };
   }, [items, salesOrder]);
 
 
@@ -460,8 +466,8 @@ export default function ViewSalesOrderPage() {
   return (
     <SalesOrderLayout title="Detail Sales Order" subtitle="TRANSAKSI">
       <div className="flex items-center gap-4 mb-6">
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           onClick={() => navigate('/sales-order')}
           className="flex items-center gap-2"
         >
@@ -470,263 +476,269 @@ export default function ViewSalesOrderPage() {
         </Button>
       </div>
 
-        {/* Sales Order Information */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Eye className="w-5 h-5" />
-              Informasi Sales Order
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Sales Order Information */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Eye className="w-5 h-5" />
+            Informasi Sales Order
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <Label className="text-sm font-medium text-gray-700">Nomor SO</Label>
+              <Input
+                value={soNumber}
+                disabled
+                className="bg-gray-50"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-700">Tanggal SO</Label>
+              <Input
+                value={soDate}
+                disabled
+                className="bg-gray-50"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-700">Tanggal Pengiriman</Label>
+              <Input
+                value={deliveryDate}
+                disabled
+                className="bg-gray-50"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-700">Termin Pembayaran</Label>
+              <Input
+                value={termOfPayment || 'N/A'}
+                disabled
+                className="bg-gray-50"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-700">Asal Gudang</Label>
+              <Input
+                value={originWarehouse}
+                disabled
+                className="bg-gray-50"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Customer Information */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Informasi Pelanggan</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {customerData ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label className="text-sm font-medium text-gray-700">Nomor SO</Label>
-                <Input 
-                  value={soNumber} 
-                  disabled 
+                <Label className="text-sm font-medium text-gray-700">Kode Pelanggan</Label>
+                <Input
+                  value={customerData.kode || 'N/A'}
+                  disabled
                   className="bg-gray-50"
                 />
               </div>
               <div>
-                <Label className="text-sm font-medium text-gray-700">Tanggal SO</Label>
-                <Input 
-                  value={soDate} 
-                  disabled 
+                <Label className="text-sm font-medium text-gray-700">Nama Pelanggan</Label>
+                <Input
+                  value={customerData.nama_pelanggan || customerData.nama || customerData.name || 'N/A'}
+                  disabled
                   className="bg-gray-50"
                 />
               </div>
               <div>
-                <Label className="text-sm font-medium text-gray-700">Tanggal Pengiriman</Label>
-                <Input 
-                  value={deliveryDate} 
-                  disabled 
+                <Label className="text-sm font-medium text-gray-700">Kota</Label>
+                <Input
+                  value={customerData.kota || 'N/A'}
+                  disabled
                   className="bg-gray-50"
                 />
               </div>
-                             <div>
-                 <Label className="text-sm font-medium text-gray-700">Termin Pembayaran</Label>
-                 <Input 
-                   value={termOfPayment || 'N/A'} 
-                   disabled 
-                   className="bg-gray-50"
-                 />
-               </div>
               <div>
-                <Label className="text-sm font-medium text-gray-700">Asal Gudang</Label>
-                <Input 
-                  value={originWarehouse} 
-                  disabled 
+                <Label className="text-sm font-medium text-gray-700">Telepon/HP</Label>
+                <Input
+                  value={customerData.telepon_hp || customerData.telepon || customerData.phone || 'N/A'}
+                  disabled
+                  className="bg-gray-50"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Label className="text-sm font-medium text-gray-700">Contact Person</Label>
+                <Input
+                  value={customerData.contact_person || 'N/A'}
+                  disabled
                   className="bg-gray-50"
                 />
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-                 {/* Customer Information */}
-         <Card className="mb-6">
-           <CardHeader>
-             <CardTitle>Informasi Pelanggan</CardTitle>
-           </CardHeader>
-                       <CardContent>
-              {customerData ? (
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div>
-                   <Label className="text-sm font-medium text-gray-700">Kode Pelanggan</Label>
-                   <Input 
-                     value={customerData.kode || 'N/A'} 
-                     disabled 
-                     className="bg-gray-50"
-                   />
-                 </div>
-                 <div>
-                   <Label className="text-sm font-medium text-gray-700">Nama Pelanggan</Label>
-                   <Input 
-                     value={customerData.nama_pelanggan || customerData.nama || customerData.name || 'N/A'} 
-                     disabled 
-                     className="bg-gray-50"
-                   />
-                 </div>
-                 <div>
-                   <Label className="text-sm font-medium text-gray-700">Kota</Label>
-                   <Input 
-                     value={customerData.kota || 'N/A'} 
-                     disabled 
-                     className="bg-gray-50"
-                   />
-                 </div>
-                 <div>
-                   <Label className="text-sm font-medium text-gray-700">Telepon/HP</Label>
-                   <Input 
-                     value={customerData.telepon_hp || customerData.telepon || customerData.phone || 'N/A'} 
-                     disabled 
-                     className="bg-gray-50"
-                   />
-                 </div>
-                 <div className="md:col-span-2">
-                   <Label className="text-sm font-medium text-gray-700">Contact Person</Label>
-                   <Input 
-                     value={customerData.contact_person || 'N/A'} 
-                     disabled 
-                     className="bg-gray-50"
-                   />
-                 </div>
-               </div>
-             ) : (
-               <div className="text-center py-8 text-gray-500">
-                 Data pelanggan tidak ditemukan
-               </div>
-             )}
-           </CardContent>
-         </Card>
-
-        {/* Items Table */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Daftar Item</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                                 <TableHeader className="table-header-standard">
-                   <TableRow className="bg-gray-50">
-                     <TableHead className="table-header-cell-standard">#</TableHead>
-                     <TableHead className="table-header-cell-standard">Jenis Barang</TableHead>
-                     <TableHead className="table-header-cell-standard">Bentuk</TableHead>
-                     <TableHead className="table-header-cell-standard">Grade</TableHead>
-                     <TableHead className="table-header-cell-standard">Dimensi</TableHead>
-                     <TableHead className="table-header-cell-standard">Qty</TableHead>
-                     <TableHead className="table-header-cell-standard">Luas/item</TableHead>
-                     <TableHead className="table-header-cell-standard">Harga</TableHead>
-                     <TableHead className="table-header-cell-standard">Diskon</TableHead>
-                     <TableHead className="table-header-cell-standard">Total</TableHead>
-                   </TableRow>
-                 </TableHeader>
-                <TableBody>
-                                     {items.length === 0 ? (
-                     <TableRow>
-                       <TableCell colSpan={10} className="text-center py-8 text-gray-500">
-                         Tidak ada item
-                       </TableCell>
-                     </TableRow>
-                   ) : (
-                     items.map((item, index) => {
-                       // Calculate luas per item
-                      const panjang = parseFloat(item.panjang) || 0; // mm
-                      const lebar = parseFloat(item.lebar) || 0; // mm
-                      const tebal = parseFloat(item.ketebalan) || 0; // mm
-                      const is2D = lebar > 0;
-                      const luasDisplay = is2D
-                        ? `${(panjang * lebar / 1000000).toFixed(2)} m²`
-                        : `${(panjang / 1000).toFixed(2)} m`;
-                       
-                       // Format dimensi
-                       const dimensi = lebar > 0
-                         ? `${panjang} x ${lebar} x ${tebal} mm`
-                         : `${panjang} x ${tebal} mm`;
-                       
-                       return (
-                         <TableRow key={item.id || index} className="hover:bg-gray-50">
-                           <TableCell className="font-medium">{index + 1}</TableCell>
-                           <TableCell>{item.jenisBarang}</TableCell>
-                           <TableCell>{item.bentukBarang}</TableCell>
-                           <TableCell>{item.gradeBarang}</TableCell>
-                           <TableCell>{dimensi}</TableCell>
-                           <TableCell>{item.qty}</TableCell>
-                          <TableCell>{luasDisplay}</TableCell>
-                           <TableCell>{formatCurrency(item.harga)}</TableCell>
-                           <TableCell>{item.diskon}%</TableCell>
-                           <TableCell className="font-semibold">{formatCurrency(item.total)}</TableCell>
-                         </TableRow>
-                       );
-                     })
-                   )}
-                </TableBody>
-              </Table>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              Data pelanggan tidak ditemukan
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </CardContent>
+      </Card>
 
-        {/* Summary */}
-        <Card className="bg-white border-green-200">
-          <CardHeader>
-            <CardTitle>Ringkasan</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Subtotal:</span>
-                  <span className="font-semibold">{formatCurrency(subtotal)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Total Diskon:</span>
-                  <span className="font-semibold text-red-600">-{formatCurrency(totalDiscount)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">PPN (11%):</span>
-                  <span className="font-semibold">{formatCurrency(ppnAmount)}</span>
-                </div>
-                <div className="border-t pt-4">
-                  <div className="flex justify-between">
-                    <span className="text-lg font-semibold text-gray-800">Total:</span>
-                    <span className="text-lg font-bold text-green-600">{formatCurrency(grandTotal)}</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Jumlah Item:</span>
-                  <span className="font-semibold">{items.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Status:</span>
-                  <span className={`font-semibold px-2 py-0.5 rounded text-sm ${getStatusColor(salesOrder.process_status)}`}>
-                    {formatProcessStatus(salesOrder.process_status)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Tanggal SO:</span>
-                  <span className="font-semibold">{formatDate(salesOrder.tanggal_so)}</span>
-                </div>
-                {salesOrder.updated_at && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Diupdate pada:</span>
-                    <span className="font-semibold">{formatDate(salesOrder.updated_at)}</span>
-                  </div>
+      {/* Items Table */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Daftar Item</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="table-header-standard">
+                <TableRow className="bg-gray-50">
+                  <TableHead className="table-header-cell-standard">#</TableHead>
+                  <TableHead className="table-header-cell-standard">Jenis Barang</TableHead>
+                  <TableHead className="table-header-cell-standard">Bentuk</TableHead>
+                  <TableHead className="table-header-cell-standard">Grade</TableHead>
+                  <TableHead className="table-header-cell-standard">Dimensi</TableHead>
+                  <TableHead className="table-header-cell-standard">Qty</TableHead>
+                  <TableHead className="table-header-cell-standard">Luas/item</TableHead>
+                  <TableHead className="table-header-cell-standard">Harga</TableHead>
+                  <TableHead className="table-header-cell-standard">Diskon</TableHead>
+                  <TableHead className="table-header-cell-standard">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+                      Tidak ada item
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  items.map((item, index) => {
+                    // Calculate luas per item
+                    const panjang = parseFloat(item.panjang) || 0; // mm
+                    const lebar = parseFloat(item.lebar) || 0; // mm
+                    const tebal = parseFloat(item.ketebalan) || 0; // mm
+                    const is2D = lebar > 0;
+                    const luasDisplay = is2D
+                      ? `${(panjang * lebar / 1000000).toFixed(2)} m²`
+                      : `${(panjang / 1000).toFixed(2)} m`;
+
+                    // Format dimensi
+                    const dimensi = lebar > 0
+                      ? `${panjang} x ${lebar} x ${tebal} mm`
+                      : `${panjang} x ${tebal} mm`;
+
+                    return (
+                      <TableRow key={item.id || index} className="hover:bg-gray-50">
+                        <TableCell className="font-medium">{index + 1}</TableCell>
+                        <TableCell>{item.jenisBarang}</TableCell>
+                        <TableCell>{item.bentukBarang}</TableCell>
+                        <TableCell>{item.gradeBarang}</TableCell>
+                        <TableCell>{dimensi}</TableCell>
+                        <TableCell>{item.qty}</TableCell>
+                        <TableCell>{luasDisplay}</TableCell>
+                        <TableCell>{formatCurrency(item.harga)}</TableCell>
+                        <TableCell>{item.diskon}%</TableCell>
+                        <TableCell className="font-semibold">{formatCurrency(item.total)}</TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Summary */}
+      <Card className="bg-white border-green-200">
+        <CardHeader>
+          <CardTitle>Ringkasan</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Subtotal:</span>
+                <span className="font-semibold">{formatCurrency(subtotal)}</span>
+              </div>
+              {diskonSOPercent > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Diskon SO ({diskonSOPercent}%):</span>
+                  <span className="font-semibold text-orange-600">-{formatCurrency(diskonSOAmount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-gray-600">Total Diskon:</span>
+                <span className="font-semibold text-red-600">-{formatCurrency(totalDiscountSO)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">PPN (11%):</span>
+                <span className="font-semibold">{formatCurrency(ppnAmount)}</span>
+              </div>
+              <div className="border-t pt-4">
+                <div className="flex justify-between">
+                  <span className="text-lg font-semibold text-gray-800">Total:</span>
+                  <span className="text-lg font-bold text-green-600">{formatCurrency(grandTotal)}</span>
+                </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
-        
-        {/* Action Buttons */}
-        <div className="flex justify-center gap-4 mt-6">
-          <Button size="lg" variant="outline" onClick={() => navigate('/sales-order')}>
-            Kembali ke List
-          </Button>
-          
-          <RoleGuard roles={['admin', 'manager', 'supervisor']}>
-            <Button 
-              size="lg" 
-              className="bg-blue-600 hover:bg-blue-700"
-              onClick={handlePrintSalesOrder}
-              disabled={printLoading}
-            >
-              {printLoading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              ) : (
-                <Printer className="w-4 h-4 mr-2" />
+
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Jumlah Item:</span>
+                <span className="font-semibold">{items.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Status:</span>
+                <span className={`font-semibold px-2 py-0.5 rounded text-sm ${getStatusColor(salesOrder.process_status)}`}>
+                  {formatProcessStatus(salesOrder.process_status)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Tanggal SO:</span>
+                <span className="font-semibold">{formatDate(salesOrder.tanggal_so)}</span>
+              </div>
+              {salesOrder.updated_at && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Diupdate pada:</span>
+                  <span className="font-semibold">{formatDate(salesOrder.updated_at)}</span>
+                </div>
               )}
-              Cetak
-            </Button>
-          </RoleGuard>
-        </div>
-        
-        {/* Alert Modal Component */}
-        <AlertComponent />
-      </SalesOrderLayout>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Action Buttons */}
+      <div className="flex justify-center gap-4 mt-6">
+        <Button size="lg" variant="outline" onClick={() => navigate('/sales-order')}>
+          Kembali ke List
+        </Button>
+
+        <RoleGuard roles={['admin', 'manager', 'supervisor']}>
+          <Button
+            size="lg"
+            className="bg-blue-600 hover:bg-blue-700"
+            onClick={handlePrintSalesOrder}
+            disabled={printLoading}
+          >
+            {printLoading ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+            ) : (
+              <Printer className="w-4 h-4 mr-2" />
+            )}
+            Cetak
+          </Button>
+        </RoleGuard>
+      </div>
+
+      {/* Alert Modal Component */}
+      <AlertComponent />
+    </SalesOrderLayout>
   );
 }
