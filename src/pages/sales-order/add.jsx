@@ -1647,6 +1647,12 @@ export default function AddSalesOrderPage() {
               <Label className="text-sm text-gray-600">Total Item</Label>
               <div className="font-medium text-red-600">{itemTotal}</div>
             </div>
+            <div>
+              <Label className="text-sm text-gray-600">Total Timbangan</Label>
+              <div className="font-medium text-purple-600">
+                {((parseFloat(itemQty) || 0) * (parseFloat(itemWeight) || 0)).toFixed(4)} kg
+              </div>
+            </div>
           </div>
 
           {/* Notes Section */}
