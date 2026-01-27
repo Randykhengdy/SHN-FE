@@ -123,6 +123,7 @@ export default function AddSalesOrderPage() {
   const [originWarehouseName, setOriginWarehouseName] = useState(""); // Store warehouse name for printing
   const [handoverMethod, setHandoverMethod] = useState("pickup");
   const [includePPN, setIncludePPN] = useState(true);
+  const [priceIncludesPPN, setPriceIncludesPPN] = useState(false); // Harga per item sudah include PPN
   const [diskonSO, setDiskonSO] = useState("0"); // Diskon SO level (percentage)
 
   // Item Input Form
@@ -787,6 +788,8 @@ export default function AddSalesOrderPage() {
           discount: totalDiscountSO,
           diskon_so_percent: diskonSOPercent,
           diskon_so_amount: diskonSOAmount,
+          price_includes_ppn: priceIncludesPPN,
+          dpp: dpp,
           ppn: ppn,
           grand_total: totalHargaSO
         };
@@ -891,6 +894,8 @@ export default function AddSalesOrderPage() {
         discount: totalDiscountSO,
         diskon_so_percent: diskonSOPercent,
         diskon_so_amount: diskonSOAmount,
+        price_includes_ppn: priceIncludesPPN,
+        dpp: dpp,
         ppn: ppn,
         grand_total: totalHargaSO
       };
@@ -1219,8 +1224,32 @@ export default function AddSalesOrderPage() {
   // Total discount = hanya diskon SO (karena diskon item sudah termasuk dalam subtotal)
   const totalDiscountSO = diskonSOAmount;
 
-  const ppn = includePPN ? (subtotal - totalDiscountSO) * 0.11 : 0;
-  const totalHargaSO = subtotal - totalDiscountSO + ppn;
+  // Calculate PPN based on whether item prices already include PPN
+  let ppn = 0;
+  let dpp = 0; // Dasar Pengenaan Pajak (base price before PPN)
+  const afterDiscount = subtotal - totalDiscountSO;
+
+  if (includePPN) {
+    if (priceIncludesPPN) {
+      // Harga sudah include PPN, jadi PPN = harga / 1.11 * 0.11
+      // DPP = harga / 1.11
+      dpp = afterDiscount / 1.11;
+      ppn = afterDiscount - dpp; // atau: dpp * 0.11
+    } else {
+      // Harga belum include PPN, jadi PPN = harga * 0.11
+      dpp = afterDiscount;
+      ppn = afterDiscount * 0.11;
+    }
+  } else {
+    dpp = afterDiscount;
+    ppn = 0;
+  }
+
+  // Total Harga SO: jika harga sudah include PPN, total = subtotal - diskon (tidak tambah PPN lagi)
+  // Jika harga belum include PPN, total = subtotal - diskon + PPN
+  const totalHargaSO = priceIncludesPPN && includePPN
+    ? afterDiscount  // Harga sudah include PPN
+    : afterDiscount + ppn; // Harga belum include PPN, tambahkan PPN
 
   return (
     <SalesOrderLayout title="Sales Order (SO)" subtitle="TRANSAKSI">
@@ -1745,15 +1774,28 @@ export default function AddSalesOrderPage() {
       <Card className="mb-6 bg-green-50 border-green-200">
         <CardContent className="pt-6">
           <div className="mb-4 flex items-center justify-between pb-4 border-b">
-            <div className="flex items-center gap-3">
-              <Label htmlFor="includePPN" className="text-sm font-medium text-gray-700 cursor-pointer">
-                Sertakan PPN (11%)
-              </Label>
-              <Switch
-                id="includePPN"
-                checked={includePPN}
-                onCheckedChange={setIncludePPN}
-              />
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-3">
+                <Label htmlFor="includePPN" className="text-sm font-medium text-gray-700 cursor-pointer">
+                  Sertakan PPN (11%)
+                </Label>
+                <Switch
+                  id="includePPN"
+                  checked={includePPN}
+                  onCheckedChange={setIncludePPN}
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <Label htmlFor="priceIncludesPPN" className="text-sm font-medium text-gray-700 cursor-pointer">
+                  Harga per item sudah include PPN
+                </Label>
+                <Switch
+                  id="priceIncludesPPN"
+                  checked={priceIncludesPPN}
+                  onCheckedChange={setPriceIncludesPPN}
+                  disabled={!includePPN}
+                />
+              </div>
             </div>
           </div>
           <div className="grid grid-cols-5 gap-4">
@@ -1786,8 +1828,22 @@ export default function AddSalesOrderPage() {
               <Label className="text-sm text-gray-600">Total Diskon SO</Label>
               <div className="text-lg font-semibold text-red-600">{formatCurrency(totalDiscountSO)}</div>
             </div>
+            {priceIncludesPPN && includePPN && (
+              <div>
+                <Label className="text-sm text-gray-600">DPP (Dasar Pengenaan Pajak)</Label>
+                <div className="text-lg font-semibold text-blue-600">{formatCurrency(dpp)}</div>
+                <div className="text-xs text-gray-500">
+                  Harga sebelum PPN
+                </div>
+              </div>
+            )}
             <div>
-              <Label className="text-sm text-gray-600">PPN (11%)</Label>
+              <Label className="text-sm text-gray-600">
+                PPN (11%)
+                {priceIncludesPPN && includePPN && (
+                  <span className="text-xs text-gray-500 ml-1">(sudah termasuk)</span>
+                )}
+              </Label>
               <div className="text-lg font-semibold">{formatCurrency(ppn)}</div>
             </div>
             <div>

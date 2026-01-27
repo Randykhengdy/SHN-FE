@@ -594,9 +594,15 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
               <td class="summary-value">- ${formatCurrency(salesOrderData.discount)}</td>
             </tr>
             ` : ''}
+            ${salesOrderData.price_includes_ppn && salesOrderData.dpp ? `
+            <tr>
+              <td class="summary-label">DPP (Dasar Pengenaan Pajak):</td>
+              <td class="summary-value">${formatCurrency(salesOrderData.dpp)}</td>
+            </tr>
+            ` : ''}
             ${salesOrderData.ppn ? `
             <tr>
-              <td class="summary-label">PPN (11%):</td>
+              <td class="summary-label">PPN (11%)${salesOrderData.price_includes_ppn ? ' (sudah termasuk)' : ''}:</td>
               <td class="summary-value">${formatCurrency(salesOrderData.ppn)}</td>
             </tr>
             ` : ''}
