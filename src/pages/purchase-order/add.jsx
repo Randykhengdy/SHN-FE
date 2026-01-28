@@ -157,8 +157,8 @@ export default function AddPurchaseOrderPage() {
         // 1D: Harga per meter
         totalBeforeDiscount = (length / 1000) * price * qty;
       } else {
-        // 2D: Harga per m2
-        totalBeforeDiscount = (length * width / 1000000) * price * qty;
+        // 2D: Harga per m³ (volume)
+        totalBeforeDiscount = (length * width * thickness / 1000000000) * price * qty;
       }
     } else if (unitLower.includes('m3') || unitLower.includes('m³')) {
       totalBeforeDiscount = (length * width * thickness / 1000000000) * price * qty;

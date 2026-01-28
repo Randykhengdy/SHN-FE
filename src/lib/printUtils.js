@@ -303,7 +303,8 @@ export const generateInvoicePrintContent = (invoiceData) => {
   `).join('');
 
   const formatCurrency = (amount) => {
-    return `Rp ${parseFloat(amount).toLocaleString('id-ID')}`;
+    const num = parseFloat(amount).toFixed(2);
+    return `Rp ${num.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
   };
 
   return `
@@ -456,7 +457,8 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
   `).join('') || '<tr><td colspan="9" style="text-align: center; padding: 20px;">Tidak ada item</td></tr>';
 
   const formatCurrency = (amount) => {
-    return `Rp ${parseFloat(amount || 0).toLocaleString('id-ID')}`;
+    const num = parseFloat(amount || 0).toFixed(2);
+    return `Rp ${num.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
   };
 
   const formatDate = (dateString) => {
@@ -1055,7 +1057,8 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
 // Generate printable HTML for Payment Receipt (Kwitansi)
 export const generatePaymentReceiptPrintContent = (receiptData) => {
   const formatCurrency = (amount) => {
-    return `Rp ${parseFloat(amount || 0).toLocaleString('id-ID')}`;
+    const num = parseFloat(amount || 0).toFixed(2);
+    return `Rp ${num.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
   };
 
   // Convert number to Indonesian terbilang (spelled out)

@@ -336,13 +336,13 @@ export default function AddSalesOrderPage() {
       case 'per dimensi':
       case 'per m²':
       case 'm²':
-        // Harga X panjang X lebar (atau panjang saja untuk 1D) - TEBAL TIDAK DIHITUNG
+        // Harga X volume (untuk 2D) atau panjang (untuk 1D)
         if (selectedShape?.dimensi === "1D") {
           // Untuk 1D (shaft): harga X panjang saja
           return pricePerUnit * panjangM;
         } else {
-          // Untuk 2D (plat): harga X panjang X lebar saja (tanpa tebal)
-          return pricePerUnit * panjangM * lebarM;
+          // Untuk 2D (plat): harga X volume (panjang X lebar X tebal)
+          return pricePerUnit * panjangM * lebarM * tebalM;
         }
 
       case 'per m³':
