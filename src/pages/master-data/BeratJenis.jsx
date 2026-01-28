@@ -406,12 +406,18 @@ export default function BeratJenisPage() {
                 dimensi = bentukBarang?.dimensi || null;
               }
 
-              return dimensi === '1D';
+              // Jika dimensi sudah diketahui, gunakan itu
+              if (dimensi) {
+                return dimensi === '1D';
+              }
+
+              // Fallback: gunakan activeTab jika dimensi belum diketahui
+              return activeTab === '1D';
             }
           },
           {
             name: "berat_per_luas",
-            label: "Berat per luas (kg/m²)",
+            label: "Berat per luas (kg/m³)",
             type: "number",
             step: "0.0001",
             required: true,
@@ -436,7 +442,13 @@ export default function BeratJenisPage() {
                 dimensi = bentukBarang?.dimensi || null;
               }
 
-              return dimensi && dimensi !== '1D';
+              // Jika dimensi sudah diketahui, gunakan itu
+              if (dimensi) {
+                return dimensi && dimensi !== '1D';
+              }
+
+              // Fallback: gunakan activeTab jika dimensi belum diketahui
+              return activeTab === '2D';
             }
           }
         ]}
@@ -505,7 +517,7 @@ export default function BeratJenisPage() {
           // Only show in 2D tab
           ...(activeTab === '2D' ? [{
             key: "berat_per_luas",
-            label: "Berat per luas (kg/m²)",
+            label: "Berat per luas (kg/m³)",
             align: "right",
             width: "12rem",
             getValue: (item) => {
