@@ -409,7 +409,12 @@ export default function AddSalesOrderPage() {
             case 'per dimensi':
             case 'per m²':
             case 'm²':
-              priceDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/m²`;
+              // Check if shape is 1D or 2D
+              if (selectedShape?.dimensi === "1D") {
+                priceDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/m`;
+              } else {
+                priceDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/m³`;
+              }
               break;
             case 'per m³':
             case 'm³':
@@ -439,19 +444,21 @@ export default function AddSalesOrderPage() {
           totalAfterDiscount = totalBeforeDiscount - discountAmount;
         }
 
-        // Set area display based on shape
+        // Set area/volume display based on shape
         if (selectedShape?.dimensi === "1D") {
           setItemArea(`${areaPerItem} m`); // 1D shows in meters
         } else {
-          setItemArea(`${areaPerItem} m²`); // 2D shows in square meters
+          // For 2D, calculate volume instead of area
+          const volumePerItem = ((length * width * thickness) / 1000000000).toFixed(4); // mm³ to m³
+          setItemArea(`${volumePerItem} m³`); // 2D shows in cubic meters (volume)
         }
         setItemTotal(`Rp ${totalAfterDiscount.toLocaleString('id-ID')}`);
 
       } catch (error) {
-        console.error('Error calculating area:', error);
+        console.error('Error calculating area/volume:', error);
         setItemThickness("- mm");
-        setItemArea("0.00 m²");
-        setItemPricePerUnit("Rp 0/m²");
+        setItemArea("0.00 m³");
+        setItemPricePerUnit("Rp 0/m³");
         setItemTotal("Rp 0");
       }
     }, 100);
@@ -488,7 +495,7 @@ export default function AddSalesOrderPage() {
         if (selectedShape?.dimensi === "1D") {
           return 'Harga (Rp/m)';
         }
-        return 'Harga (Rp/m²)';
+        return 'Harga (Rp/m³)';
       case 'per m³':
       case 'm³':
         return 'Harga (Rp/m³)';
@@ -518,7 +525,7 @@ export default function AddSalesOrderPage() {
         if (selectedShape?.dimensi === "1D") {
           return 'Harga/m';
         }
-        return 'Harga/m²';
+        return 'Harga/m³';
       case 'per m³':
       case 'm³':
         return 'Harga/m³';
@@ -1665,7 +1672,7 @@ export default function AddSalesOrderPage() {
               <div className="font-medium text-blue-600">{itemThickness}</div>
             </div>
             <div>
-              <Label className="text-sm text-gray-600">Ukuran Panjang/Luas</Label>
+              <Label className="text-sm text-gray-600">{selectedShape?.dimensi === "1D" ? "Ukuran Panjang" : "Ukuran Volume"}</Label>
               <div className="font-medium text-green-600">{itemArea}</div>
             </div>
             <div>

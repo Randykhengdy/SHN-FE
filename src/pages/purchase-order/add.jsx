@@ -218,7 +218,7 @@ export default function AddPurchaseOrderPage() {
             if (selectedShape?.dimensi === "1D") {
               pricePerUnitDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/m`;
             } else {
-              pricePerUnitDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/m²`;
+              pricePerUnitDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/m³`;
             }
           } else if (unitLower.includes('kg') || unitLower.includes('kilogram')) {
             pricePerUnitDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/kg`;
@@ -245,19 +245,21 @@ export default function AddPurchaseOrderPage() {
           dimensiType: selectedShape?.dimensi
         });
 
-        // Set area display based on shape
+        // Set area/volume display based on shape
         if (selectedShape?.dimensi === "1D") {
           setItemArea(`${areaPerItem} m`); // 1D shows in meters
         } else {
-          setItemArea(`${areaPerItem} m²`); // 2D shows in square meters
+          // For 2D, calculate volume instead of area
+          const volumePerItem = ((length * width * thickness) / 1000000000).toFixed(4); // mm³ to m³
+          setItemArea(`${volumePerItem} m³`); // 2D shows in cubic meters (volume)
         }
         setItemTotal(`Rp ${totalAfterDiscount.toLocaleString('id-ID')}`);
 
       } catch (error) {
-        console.error('Error calculating area:', error);
+        console.error('Error calculating area/volume:', error);
         setItemThickness("- mm");
-        setItemArea("0.00 m²");
-        setItemPricePerUnit("Rp 0/m²");
+        setItemArea("0.00 m³");
+        setItemPricePerUnit("Rp 0/m³");
         setItemTotal("Rp 0");
       }
     }, 100);
@@ -761,7 +763,7 @@ export default function AddPurchaseOrderPage() {
       if (selectedShape?.dimensi === "1D") {
         return "Harga (Rp/m)";
       }
-      return "Harga (Rp/m²)";
+      return "Harga (Rp/m³)";
     }
     else if (label.includes('m3') || label.includes('m³')) {
       return "Harga (Rp/m³)";
@@ -785,7 +787,7 @@ export default function AddPurchaseOrderPage() {
       if (selectedShape?.dimensi === "1D") {
         return "Harga/m";
       }
-      return "Harga/m²";
+      return "Harga/m³";
     }
     else if (label.includes('m3') || label.includes('m³')) {
       return "Harga/m³";
@@ -1201,7 +1203,7 @@ export default function AddPurchaseOrderPage() {
               <div className="font-medium text-blue-600">{itemThickness}</div>
             </div>
             <div>
-              <Label className="text-sm text-gray-600">Ukuran Panjang/Luas</Label>
+              <Label className="text-sm text-gray-600">{selectedShape?.dimensi === "1D" ? "Ukuran Panjang" : "Ukuran Volume"}</Label>
               <div className="font-medium text-green-600">{itemArea}</div>
             </div>
             <div>
