@@ -965,11 +965,22 @@ export default function AddWorkOrderPage() {
             const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
             const woItemData = totalQuantityData.find(wo => wo.WoItemID === item.id);
             if (!woItemData || !woItemData.WOQuantity) return [];
-            return woItemData.WOQuantity.map(woq => ({
-              item_barang_id: woq.ItemId,
-              quantity: woq.Quantity,
-              is_selected: true
-            }));
+            return woItemData.WOQuantity.map(woq => {
+              // Get timestamp from stored WOQuantity
+               let saveDate = woq.save_date;
+               
+               // Fallback to ancient date if no timestamp found
+               if (!saveDate) {
+                  saveDate = "2000-01-01 00:00:00";
+               }
+ 
+               return {
+                 item_barang_id: woq.ItemId,
+                 quantity: woq.Quantity,
+                 is_selected: true,
+                 save_date: saveDate
+               };
+            });
           })(),
           pelaksana: item.pelaksana.map(p => ({
             pelaksana_id: p.pelaksana_id,
@@ -1085,6 +1096,16 @@ export default function AddWorkOrderPage() {
                   if (specificImage) console.log('Found specific canvas for payload:', specificKey);
                 } catch (_) {}
               }
+
+              // Get timestamp from stored WOQuantity
+              let saveDate = woq.save_date;
+              
+              // Fallback to ancient date if no timestamp found (so it loses against other updates)
+              if (!saveDate) {
+                 saveDate = '2000-01-01 00:00:00';
+              }
+              
+              base.save_date = saveDate;
 
               if (specificImage) {
                 base.canvas_image = specificImage;

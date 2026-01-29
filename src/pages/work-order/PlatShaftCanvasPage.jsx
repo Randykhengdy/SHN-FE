@@ -2097,9 +2097,51 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
               try {
                 const specificKey = `WO_canvas_preview_woitem_${woItemUniqueId}_item_${itemBarangIdForPreview}`;
                 localStorage.setItem(specificKey, dataURL);
+                
+                // Save timestamp for API (YYYY-MM-DD HH:mm:ss) into WO_total_quantity
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                const formattedDate = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+                
+                // Update WO_total_quantity to include save_date
+                try {
+                  const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
+                  const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
+                  
+                  const woItemData = totalQuantityData.find(item => 
+                    item.WoItemID === currentWoItemId || item.WoItemID === parseInt(currentWoItemId)
+                  );
+                  
+                  if (woItemData && woItemData.WOQuantity) {
+                    const saranItem = woItemData.WOQuantity.find(item => 
+                      item.ItemId === itemBarangIdForPreview || item.ItemId === parseInt(itemBarangIdForPreview)
+                    );
+                    
+                    if (saranItem) {
+                      saranItem.save_date = formattedDate;
+                      localStorage.setItem('WO_total_quantity', JSON.stringify(totalQuantityData));
+                      console.log('✅ Updated save_date in WO_total_quantity:', formattedDate);
+                    } else {
+                        // If saran item doesn't exist yet (might happen if quantity is 0), create it or warn
+                        // Usually it exists if we are saving canvas, but if not, we should probably add it? 
+                        // But canvas saving usually implies we have content. 
+                        // If quantity is 0, maybe we shouldn't force it? 
+                        // Let's just log warning.
+                        console.warn('⚠️ Saran item not found in WO_total_quantity for timestamp update');
+                    }
+                  }
+                } catch (err) {
+                   console.error('Error updating save_date in WO_total_quantity:', err);
+                }
+                
                 console.log('✅ Saved specific preview to localStorage:', specificKey);
               } catch (err) {
-                console.warn('⚠️ Failed to save specific preview to localStorage:', err);
+                console.warn('⚠️ Failed to save specific preview/timestamp to localStorage:', err);
               }
             }
           }
