@@ -84,7 +84,7 @@ export default function SelectPlatShaftDasar({
       const currentWorkOrderId = workOrderId || 'unknown';
       const itemId = workOrderItem.id || 'unknown';
       
-      // Calculate total quantity already arranged in canvas from WO_total_quantity
+      // Calculate total quantity already arranged in canvas from WOtal_quantity
       let arrangedQuantity = 0;
       const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
       const woItemId = workOrderItem.id;

@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import MasterDataLayout from "@/components/MasterDataLayout";
+import { Button } from "@/components/ui/button";
+import ItemBarangCanvasPage from "./ItemBarangCanvasPage";
 import {
   itemBarangService,
   jenisBarangService,
@@ -15,26 +17,54 @@ let bentukBarangDimensiMap = {};
 let rakOptionsCache = {};
 
 export default function ItemBarangPage() {
+  const [isCanvasOpen, setIsCanvasOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+
+  const handleOpenCanvas = (item) => {
+    setSelectedItem(item);
+    setIsCanvasOpen(true);
+  };
+
   return (
-    <MasterDataLayout
-      title="Item Barang"
-      subtitle="Master Data"
-      service={itemBarangService}
-      customActions={[
-        {
-          label: "QR Code",
-          icon: (
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 4h3v3h-3v-3zM14 14h7v7h-7v-7z" />
-            </svg>
-          ),
-          onClick: async (item) => {
-            const { openItemQRPDFPreview } = await import("@/lib/pdfUtils");
-            await openItemQRPDFPreview(item);
+    <>
+      {isCanvasOpen && selectedItem && (
+        <div className="fixed inset-0 z-[100] bg-white w-screen h-screen">
+          <ItemBarangCanvasPage 
+            item={selectedItem} 
+            onClose={() => {
+              setIsCanvasOpen(false);
+              setSelectedItem(null);
+            }} 
+          />
+        </div>
+      )}
+      <MasterDataLayout
+        title="Item Barang"
+        subtitle="Master Data"
+        service={itemBarangService}
+        customActions={[
+          {
+            label: "Edit Canvas",
+            icon: (
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-layout-dashboard"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+            ),
+            onClick: (item) => handleOpenCanvas(item),
+            className: "bg-indigo-500 hover:bg-indigo-600 text-white border-indigo-500"
+          },
+          {
+            label: "QR Code",
+            icon: (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 4h3v3h-3v-3zM14 14h7v7h-7v-7z" />
+              </svg>
+            ),
+            onClick: async (item) => {
+              const { openItemQRPDFPreview } = await import("@/lib/pdfUtils");
+              await openItemQRPDFPreview(item);
+            }
           }
-        }
-      ]}
-      fields={[
+        ]}
+        fields={[
         {
           name: "jenis_barang_id",
           label: "Jenis Barang",
@@ -200,7 +230,7 @@ export default function ItemBarangPage() {
           required: false,
           disabled: (form) => !form?.gudang_id,
           helperText: (form) => !form?.gudang_id ? "Pilih gudang terlebih dahulu" : "Pilih rak untuk item ini"
-        },
+        }
       ]}
       columns={[
         { key: "id", label: "ID", align: "center", width: "5rem", maxWidth: "5rem" },
@@ -220,5 +250,6 @@ export default function ItemBarangPage() {
         { key: "grade_barang.nama", label: "Grade Barang", align: "center", width: "12rem", maxWidth: "12rem" },
       ]}
     />
+    </>
   );
 }
