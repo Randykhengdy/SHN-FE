@@ -1,6 +1,7 @@
 // Export all master data services
 export { gudangService } from './gudangService';
 export { jenisBarangService } from './jenisBarangService';
+export { tipeBarangService } from './tipeBarangService';
 export { bentukBarangService } from './bentukBarangService';
 export { gradeBarangService } from './gradeBarangService';
 export { rakService } from './rakService';

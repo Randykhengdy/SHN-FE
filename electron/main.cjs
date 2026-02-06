@@ -63,12 +63,12 @@ const getPublishRepo = () => {
     ];
     let pkg;
     for (const p of pkgPathCandidates) {
-      if (fs.existsSync(p)) { 
+      if (fs.existsSync(p)) {
         try {
-          pkg = require(p); 
+          pkg = require(p);
           const pub = Array.isArray(pkg.build && pkg.build.publish) ? pkg.build.publish[0] : null;
           if (pub && pub.provider === 'github') {
-             return { owner: pub.owner, repo: pub.repo, token: pub.token };
+            return { owner: pub.owner, repo: pub.repo, token: pub.token };
           }
         } catch (err) {
           console.error('[getPublishRepo] Error reading package.json at', p, err);
@@ -473,6 +473,7 @@ function createWindow() {
         label: 'Masterdata',
         submenu: [
           { label: 'Jenis Barang', accelerator: 'CmdOrCtrl+1', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/jenis-barang') },
+          { label: 'Tipe Barang', accelerator: 'CmdOrCtrl+Shift+1', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/tipe-barang') },
           { label: 'Bentuk Barang', accelerator: 'CmdOrCtrl+2', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/bentuk-barang') },
           { label: 'Grade Barang', accelerator: 'CmdOrCtrl+3', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/grade-barang') },
           { label: 'Berat Jenis', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/berat-jenis') },

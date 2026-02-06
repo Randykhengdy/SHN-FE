@@ -3,6 +3,7 @@ import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Register from "@/pages/Register";
 import JenisBarangPage from "@/pages/master-data/JenisBarang";
+import TipeBarangPage from "@/pages/master-data/TipeBarang";
 import BentukBarangPage from "@/pages/master-data/BentukBarang";
 import GradeBarangPage from "@/pages/master-data/GradeBarang";
 import BeratJenisPage from "@/pages/master-data/BeratJenis";
@@ -56,67 +57,68 @@ import ViewItemBarangRequestPage from "@/pages/item-barang-request/view";
 import NotificationsPage from "@/pages/notifications";
 
 const AppRouter = () => {
-    return (
-      <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/masterdata/jenis-barang" element={<JenisBarangPage />} />
-        <Route path="/masterdata/bentuk-barang" element={<BentukBarangPage />} />
-        <Route path="/masterdata/grade-barang" element={<GradeBarangPage />} />
-        <Route path="/masterdata/berat-jenis" element={<BeratJenisPage />} />
-        <Route path="/masterdata/item-barang" element={<ItemBarangPage />} />
-        <Route path="/masterdata/jenis-biaya" element={<JenisBiayaPage />} />
-        <Route path="/masterdata/jenis-mutasi-stock" element={<JenisMutasiStockPage />} />
-        <Route path="/masterdata/supplier" element={<SupplierPage />} />
-        <Route path="/masterdata/pelanggan" element={<PelangganPage />} />
-        <Route path="/masterdata/gudang" element={<GudangPage />} />
-        <Route path="/masterdata/rak" element={<RakPage />} />
-        <Route path="/masterdata/pelaksana" element={<PelaksanaPage />} />
-        <Route path="/masterdata/jenis-transaksi-kas" element={<JenisTransaksiKasPage />} />
-        <Route path="/masterdata/role" element={<RolePage />} />
-        <Route path="/masterdata/term" element={<TermPage />} />
-        <Route path="/masterdata/unit" element={<UnitPage />} />
-        <Route path="/users" element={<UsersPage />} />
-        <Route path="/workshop" element={<WorkshopPage />} />
-        <Route path="/sales-order" element={<SalesOrderPage />} />
-        <Route path="/sales-order/add" element={<AddSalesOrderPage />} />
-        <Route path="/sales-order/view/:id" element={<ViewSalesOrderPage />} />
-        <Route path="/approval" element={<ApprovalPage />} />
-        <Route path="/work-order" element={<WorkOrderPage />} />
-        <Route path="/work-order/add" element={<AddWorkOrderPage />} />
-        <Route path="/work-order/view/:id" element={<ViewWorkOrderPage />} />
-        <Route path="/work-order/plat-shaft-canvas" element={<WorkOrderPlatShaftCanvasPage />} />
-        <Route path="/canvas-testing" element={<CanvasTestingPage />} />
-        <Route path="/gridstack-testing" element={<GridStackTestingPage />} />
-        <Route path="/simple-grid-testing" element={<SimpleGridTestingPage />} />
-        <Route path="/canvas-grid-testing" element={<CanvasGridTestingPage />} />
-        <Route path="/purchase-order" element={<PurchaseOrderPage />} />
-        <Route path="/purchase-order/add" element={<AddPurchaseOrderPage />} />
-        <Route path="/purchase-order/view/:id" element={<ViewPurchaseOrderPage />} />
-        <Route path="/dashboard/workshop" element={<DashboardWorkshopPage />} />
+  return (
+    <Routes>
+      <Route path="/" element={<Login />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/masterdata/jenis-barang" element={<JenisBarangPage />} />
+      <Route path="/masterdata/tipe-barang" element={<TipeBarangPage />} />
+      <Route path="/masterdata/bentuk-barang" element={<BentukBarangPage />} />
+      <Route path="/masterdata/grade-barang" element={<GradeBarangPage />} />
+      <Route path="/masterdata/berat-jenis" element={<BeratJenisPage />} />
+      <Route path="/masterdata/item-barang" element={<ItemBarangPage />} />
+      <Route path="/masterdata/jenis-biaya" element={<JenisBiayaPage />} />
+      <Route path="/masterdata/jenis-mutasi-stock" element={<JenisMutasiStockPage />} />
+      <Route path="/masterdata/supplier" element={<SupplierPage />} />
+      <Route path="/masterdata/pelanggan" element={<PelangganPage />} />
+      <Route path="/masterdata/gudang" element={<GudangPage />} />
+      <Route path="/masterdata/rak" element={<RakPage />} />
+      <Route path="/masterdata/pelaksana" element={<PelaksanaPage />} />
+      <Route path="/masterdata/jenis-transaksi-kas" element={<JenisTransaksiKasPage />} />
+      <Route path="/masterdata/role" element={<RolePage />} />
+      <Route path="/masterdata/term" element={<TermPage />} />
+      <Route path="/masterdata/unit" element={<UnitPage />} />
+      <Route path="/users" element={<UsersPage />} />
+      <Route path="/workshop" element={<WorkshopPage />} />
+      <Route path="/sales-order" element={<SalesOrderPage />} />
+      <Route path="/sales-order/add" element={<AddSalesOrderPage />} />
+      <Route path="/sales-order/view/:id" element={<ViewSalesOrderPage />} />
+      <Route path="/approval" element={<ApprovalPage />} />
+      <Route path="/work-order" element={<WorkOrderPage />} />
+      <Route path="/work-order/add" element={<AddWorkOrderPage />} />
+      <Route path="/work-order/view/:id" element={<ViewWorkOrderPage />} />
+      <Route path="/work-order/plat-shaft-canvas" element={<WorkOrderPlatShaftCanvasPage />} />
+      <Route path="/canvas-testing" element={<CanvasTestingPage />} />
+      <Route path="/gridstack-testing" element={<GridStackTestingPage />} />
+      <Route path="/simple-grid-testing" element={<SimpleGridTestingPage />} />
+      <Route path="/canvas-grid-testing" element={<CanvasGridTestingPage />} />
+      <Route path="/purchase-order" element={<PurchaseOrderPage />} />
+      <Route path="/purchase-order/add" element={<AddPurchaseOrderPage />} />
+      <Route path="/purchase-order/view/:id" element={<ViewPurchaseOrderPage />} />
+      <Route path="/dashboard/workshop" element={<DashboardWorkshopPage />} />
 
-        <Route path="/finance-invoice-pod" element={<FinanceInvoicePodPage />} />
-        <Route path="/pembayaran" element={<PembayaranPage />} />
-        <Route path="/financial-report" element={<FinancialReportPage />} />
-        <Route path="/mutasi-stock" element={<MutasiStockPage/>} />
-        <Route path="/mutasi-stock/add" element={<AddMutasiStockPage />} />
-        <Route path="/mutasi-stock/view/:id" element={<ViewMutasiStockPage />} />
-        <Route path="/item-barang-request" element={<ItemBarangRequestPage />} />
-        <Route path="/item-barang-request/add" element={<AddItemBarangRequestPage />} />
-        <Route path="/item-barang-request/view/:id" element={<ViewItemBarangRequestPage />} />
-        <Route path="/konversi-barang" element={<KonversiBarangPage/>}/>
-        <Route path="/split-barang" element={<SplitBarangPage/>}/>
-        <Route path="/merge-barang" element={<MergeBarangPage/>}/>
+      <Route path="/finance-invoice-pod" element={<FinanceInvoicePodPage />} />
+      <Route path="/pembayaran" element={<PembayaranPage />} />
+      <Route path="/financial-report" element={<FinancialReportPage />} />
+      <Route path="/mutasi-stock" element={<MutasiStockPage />} />
+      <Route path="/mutasi-stock/add" element={<AddMutasiStockPage />} />
+      <Route path="/mutasi-stock/view/:id" element={<ViewMutasiStockPage />} />
+      <Route path="/item-barang-request" element={<ItemBarangRequestPage />} />
+      <Route path="/item-barang-request/add" element={<AddItemBarangRequestPage />} />
+      <Route path="/item-barang-request/view/:id" element={<ViewItemBarangRequestPage />} />
+      <Route path="/konversi-barang" element={<KonversiBarangPage />} />
+      <Route path="/split-barang" element={<SplitBarangPage />} />
+      <Route path="/merge-barang" element={<MergeBarangPage />} />
 
-        <Route path="/notifications" element={<NotificationsPage />} />
+      <Route path="/notifications" element={<NotificationsPage />} />
 
-        <Route path="/wo-actual" element={<WOActualPage />} />
-        <Route path="/wo-actual/add" element={<AddWOActualPage />} />
-        <Route path="/wo-actual/detail/:id" element={<WOActualDetailPage />} />
-        <Route path="/wo-actual/view/:id" element={<ViewWOActualPage />} />
-      </Routes>
-    );
+      <Route path="/wo-actual" element={<WOActualPage />} />
+      <Route path="/wo-actual/add" element={<AddWOActualPage />} />
+      <Route path="/wo-actual/detail/:id" element={<WOActualDetailPage />} />
+      <Route path="/wo-actual/view/:id" element={<ViewWOActualPage />} />
+    </Routes>
+  );
 };
 
 export default AppRouter;
