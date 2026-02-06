@@ -118,7 +118,7 @@ export default function MasterDataLayout({
 
       if (editData) {
         if (typeof preprocess === 'function') {
-          processedFormData = preprocess(processedFormData) || processedFormData;
+          processedFormData = preprocess(processedFormData, editData) || processedFormData;
         }
         await service.update(editData.id, processedFormData);
         console.log("✅ Data berhasil diupdate:", processedFormData);
@@ -132,7 +132,7 @@ export default function MasterDataLayout({
           }
         }
         if (typeof preprocess === 'function') {
-          processedFormData = preprocess(processedFormData) || processedFormData;
+          processedFormData = preprocess(processedFormData, null) || processedFormData;
         }
         await service.create(processedFormData);
         console.log("✅ Data berhasil ditambahkan:", processedFormData);
@@ -706,8 +706,8 @@ export default function MasterDataLayout({
                               key={page}
                               onClick={() => setCurrentPage(page)}
                               className={`px-3.5 py-1.5 text-sm font-medium border rounded-md transition-all duration-200 ${currentPage === page
-                                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                                  : 'border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200'
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                : 'border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200'
                                 }`}
                             >
                               {page}
