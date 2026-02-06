@@ -7,13 +7,23 @@ const CheckIcon = () => (
 );
 
 // Preprocess function to convert checkbox values to proper booleans
-const preprocessTipeBarang = (formData) => {
+const preprocessTipeBarang = (formData, editData) => {
     const dimensionFields = ['diameter_luar', 'diameter_dalam', 'diameter', 'sisi1', 'sisi2', 'tebal', 'lebar', 'panjang'];
 
     const processed = { ...formData };
     dimensionFields.forEach(field => {
-        // Convert to boolean: true if checked, false otherwise
-        processed[field] = !!processed[field];
+        // If field exists in formData, use it (converted to boolean)
+        if (processed[field] !== undefined) {
+            processed[field] = !!processed[field];
+        }
+        // Otherwise, if editing, preserve the original value from editData
+        else if (editData && editData[field] !== undefined) {
+            processed[field] = !!editData[field];
+        }
+        // If neither exist, default to false
+        else {
+            processed[field] = false;
+        }
     });
 
     return processed;
@@ -37,26 +47,6 @@ export default function TipeBarangPage() {
                     type: "custom",
                     colSpan: 2,
                     render: ({ form, handleChange, editData }) => {
-                        // Initialize all checkbox fields in form state on first render
-                        const initRef = React.useRef(false);
-                        React.useEffect(() => {
-                            if (editData && !initRef.current) {
-                                // Initialize all dimension fields in form state
-                                const dimensionFields = ['diameter_luar', 'diameter_dalam', 'diameter', 'sisi1', 'sisi2', 'tebal', 'lebar', 'panjang'];
-                                dimensionFields.forEach(fieldName => {
-                                    if (form[fieldName] === undefined) {
-                                        handleChange({
-                                            target: {
-                                                name: fieldName,
-                                                value: !!editData[fieldName]
-                                            }
-                                        });
-                                    }
-                                });
-                                initRef.current = true;
-                            }
-                        }, [editData, form, handleChange]);
-
                         // Helper function to get checkbox state
                         const getChecked = (fieldName) => {
                             // If form has the field, use it
