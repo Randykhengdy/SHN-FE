@@ -486,6 +486,8 @@ export default function MasterFormModal({
                   disabled={!!(editData && field.disabledOnEdit)}
                   className=""
                 />
+              ) : field.type === "custom" ? (
+                field.render ? field.render({ form, editData, handleChange, handleSelectChange }) : null
               ) : (
                 <Input
                   id={field.name}
