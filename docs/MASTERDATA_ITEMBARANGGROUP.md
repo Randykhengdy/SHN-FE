@@ -38,6 +38,7 @@ Dokumentasi API untuk manajemen **Item Barang Group** (Kelompok Item Barang). It
 | `quantity_utuh` | integer | Total quantity item dengan `jenis_potongan = 'utuh'` |
 | `quantity_potongan` | integer | Total quantity item potongan (selain utuh) |
 | `sequence` | integer | Urutan tampilan |
+| `nama_group_barang` | string | **Auto-generated** nama group (Format: JENIS BENTUK GRADE DimensionsString) |
 | `created_at` | datetime | Waktu pembuatan |
 | `updated_at` | datetime | Waktu terakhir diupdate |
 | `deleted_at` | datetime | Waktu soft delete (nullable) |
@@ -93,6 +94,7 @@ Content-Type: application/json
         "sisi2": null,
         "quantity_utuh": 50,
         "quantity_potongan": 15,
+        "nama_group_barang": "STAINLESS STEEL PLAT 304 6000x1200x10",
         "jenis_barang": {
           "id": 1,
           "kode": "SS",
@@ -177,6 +179,7 @@ GET /api/item-barang/group?per_page=10&jenis_barang_id=1&min_quantity_utuh=5
       "sisi2": null,
       "quantity_utuh": 50,
       "quantity_potongan": 15,
+      "nama_group_barang": "STAINLESS STEEL PLAT 304 6000x1200x10",
       "jenis_barang": {
         "id": 1,
         "kode": "SS",
@@ -252,6 +255,7 @@ GET /api/item-barang/group/1
     "quantity_utuh": 50,
     "quantity_potongan": 15,
     "sequence": 1,
+    "nama_group_barang": "STAINLESS STEEL PLAT 304 6000x1200x10",
     "jenis_barang": {
       "id": 1,
       "kode": "SS",
@@ -349,6 +353,7 @@ Content-Type: application/json
     "sisi2": null,
     "quantity_utuh": 10,
     "quantity_potongan": 5,
+    "nama_group_barang": "STAINLESS STEEL PIPA 304 6000x5x50x40",
     "jenis_barang": {
       "id": 1,
       "kode": "SS",
@@ -437,6 +442,7 @@ Content-Type: application/json
     "sisi2": null,
     "quantity_utuh": 15,
     "quantity_potongan": 8,
+    "nama_group_barang": "STAINLESS STEEL PIPA 304 6000x5x50x40",
     "jenis_barang": {
       "id": 1,
       "kode": "SS",
@@ -514,6 +520,29 @@ DELETE /api/item-barang/group/10
   "message": "Data group tidak dapat dihapus karena masih digunakan oleh data lain"
 }
 ```
+
+---
+
+## Nama Group Barang (Auto-Generated)
+
+Field `nama_group_barang` adalah field yang **auto-generated** (tidak perlu diisi manual) yang mengikuti format:
+
+```
+<NAMA_JENIS_KAPITAL> <NAMA_BENTUK_KAPITAL> <GRADE> <DIMENSI_STRING>
+```
+
+### Format Dimensi String
+
+Dimensi string dibentuk dari atribut dimensi yang **tidak null**, dipisahkan dengan karakter `x`:
+
+| Contoh Atribut | Dimensi String | Nama Group Barang |
+|----------------|----------------|-------------------|
+| panjang=6000, lebar=1200, tebal=10 | `6000x1200x10` | `STAINLESS STEEL PLAT 304 6000x1200x10` |
+| panjang=6000, tebal=5, diameter_luar=50, diameter_dalam=40 | `6000x5x50x40` | `STAINLESS STEEL PIPA 304 6000x5x50x40` |
+| panjang=6000, diameter=25 | `6000x25` | `STAINLESS STEEL SHAFT BULAT 304 6000x25` |
+| panjang=6000, sisi1=30, sisi2=30 | `6000x30x30` | `STAINLESS STEEL SHAFT KOTAK 304 6000x30x30` |
+
+> **Note:** Hanya atribut dimensi yang memiliki nilai (tidak null) yang akan dimasukkan ke dalam dimensi string.
 
 ---
 
