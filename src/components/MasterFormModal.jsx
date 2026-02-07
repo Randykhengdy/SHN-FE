@@ -170,27 +170,45 @@ export default function MasterFormModal({
   }, [isOpen, editData, fields]);
 
   // Set lebar menjadi 0 jika dimensi adalah 1D (setelah options di-load)
+  // Also initialize _tipe_barang for dynamic field visibility
   useEffect(() => {
     if (!isOpen) return;
     // Cari field bentuk_barang_id dan lebar
     const bentukBarangField = fields.find(f => f.name === 'bentuk_barang_id');
     const lebarField = fields.find(f => f.name === 'lebar');
-    
-    if (bentukBarangField && lebarField && form.bentuk_barang_id && options.bentuk_barang_id) {
-      // Cari dimensi dari options yang sudah di-load
-      const selectedOption = options.bentuk_barang_id.find(opt => 
+
+    if (bentukBarangField && form.bentuk_barang_id && options.bentuk_barang_id) {
+      // Cari dimensi dan tipe_barang dari options yang sudah di-load
+      const selectedOption = options.bentuk_barang_id.find(opt =>
         String(opt.id || opt.value) === String(form.bentuk_barang_id)
       );
       const dimensi = selectedOption?.dimensi;
-      
+      const tipeBarang = selectedOption?.tipe_barang;
+
+      // Build the update object
+      const updates = {};
+
+      // Set _bentuk_barang_dimensi if not already set
+      if (dimensi && !form._bentuk_barang_dimensi) {
+        updates._bentuk_barang_dimensi = dimensi;
+      }
+
+      // Set _tipe_barang if not already set (needed for dynamic field visibility)
+      if (tipeBarang && !form._tipe_barang) {
+        updates._tipe_barang = tipeBarang;
+      }
+
       // Set lebar menjadi 0 jika dimensi adalah 1D dan lebar belum 0
-      if (dimensi === "1D") {
+      if (dimensi === "1D" && lebarField) {
         const currentLebar = String(form.lebar || "");
         if (currentLebar !== "0" && currentLebar !== "") {
-          setForm(prev => ({ ...prev, lebar: "0", _bentuk_barang_dimensi: dimensi }));
-        } else if (!form._bentuk_barang_dimensi) {
-          setForm(prev => ({ ...prev, _bentuk_barang_dimensi: dimensi }));
+          updates.lebar = "0";
         }
+      }
+
+      // Apply updates if any
+      if (Object.keys(updates).length > 0) {
+        setForm(prev => ({ ...prev, ...updates }));
       }
     }
   }, [isOpen, form.bentuk_barang_id, options.bentuk_barang_id]);
@@ -215,7 +233,7 @@ export default function MasterFormModal({
                 };
               });
             }
-          } catch (_) {}
+          } catch (_) { }
         }
       }
     };
@@ -235,7 +253,7 @@ export default function MasterFormModal({
         try {
           const mutated = field.onChangeForm(next, value);
           if (mutated && typeof mutated === 'object') return mutated;
-        } catch (_) {}
+        } catch (_) { }
       }
       return next;
     });
@@ -290,13 +308,13 @@ export default function MasterFormModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={`sm:max-w-none ${sizeClass} ${heightClass} max-h-[90vh] overflow-visible ${size === 'xl' ? 'w-[95vw]' : ''}` }>
+      <DialogContent className={`sm:max-w-none ${sizeClass} ${heightClass} max-h-[90vh] overflow-visible ${size === 'xl' ? 'w-[95vw]' : ''}`}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {authError && (
-            <AuthErrorAlert 
+            <AuthErrorAlert
               onRefresh={() => {
                 setAuthError(false);
                 // Reload options
@@ -341,169 +359,167 @@ export default function MasterFormModal({
                   return null;
                 }
               }
-              
+
               // Check if field is hidden
               const isHidden = field.hidden && (
                 typeof field.hidden === 'function' ? field.hidden(form) : field.hidden
               );
-              
-              return (
-              <div key={field.name} className={`space-y-2 ${field.colSpan === 2 ? 'md:col-span-2' : ''} ${isHidden ? 'hidden' : ''}`}>
-              <Label htmlFor={field.name} className="text-sm font-medium text-gray-700">
-                {field.label}
-              </Label>
 
-              {field.type === "select" ? (
-                <div className="relative dropdown-container">
-                  {editData && field.disabledOnEdit ? (
-                    <div className={`flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm ${'border-gray-300 bg-gray-50'} cursor-default`}>
-                      <span>{(field.editLabel && typeof field.editLabel === 'function') ? field.editLabel(editData, form) : (String(editData[field.name] || ''))}</span>
-                      <svg className="h-4 w-4 opacity-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </div>
-                  ) : (
-                  <button
-                    type="button"
-                    className={`flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      openDropdowns[field.name] 
-                        ? 'border-blue-500 bg-blue-50' 
-                        : 'border-gray-300 bg-white'
-                    } ${editData && field.disabledOnEdit ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-gray-50'}`}
-                    disabled={!!(editData && field.disabledOnEdit)}
-                    onClick={() => {
-                      console.log("🔥 Button clicked for field:", field.name);
-                      // Close other dropdowns and toggle current one
-                      if (editData && field.disabledOnEdit) return;
-                      setOpenDropdowns(prev => {
-                        console.log("📋 Previous dropdowns state:", prev);
-                        const newState = { [field.name]: !prev[field.name] };
-                        console.log("📋 New dropdowns state:", newState);
-                        return newState;
-                      });
-                      // Clear search terms for other fields
-                      setSearchTerms(prev => ({
-                        ...prev,
-                        [field.name]: prev[field.name] || ""
-                      }));
-                    }}
-                  >
-                    <span>
-                      {form[field.name] 
-                        ? (() => {
-                            const option = options[field.name]?.find((opt) => {
-                              // Handle both static options (value/label) and service options (id/optionLabel)
-                              if (opt.value !== undefined) {
-                                return String(opt.value) === form[field.name];
-                              } else {
-                                return String(opt.id) === form[field.name];
-                              }
+              return (
+                <div key={field.name} className={`space-y-2 ${field.colSpan === 2 ? 'md:col-span-2' : ''} ${isHidden ? 'hidden' : ''}`}>
+                  <Label htmlFor={field.name} className="text-sm font-medium text-gray-700">
+                    {field.label}
+                  </Label>
+
+                  {field.type === "select" ? (
+                    <div className="relative dropdown-container">
+                      {editData && field.disabledOnEdit ? (
+                        <div className={`flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm ${'border-gray-300 bg-gray-50'} cursor-default`}>
+                          <span>{(field.editLabel && typeof field.editLabel === 'function') ? field.editLabel(editData, form) : (String(editData[field.name] || ''))}</span>
+                          <svg className="h-4 w-4 opacity-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className={`flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${openDropdowns[field.name]
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-300 bg-white'
+                            } ${editData && field.disabledOnEdit ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-gray-50'}`}
+                          disabled={!!(editData && field.disabledOnEdit)}
+                          onClick={() => {
+                            console.log("🔥 Button clicked for field:", field.name);
+                            // Close other dropdowns and toggle current one
+                            if (editData && field.disabledOnEdit) return;
+                            setOpenDropdowns(prev => {
+                              console.log("📋 Previous dropdowns state:", prev);
+                              const newState = { [field.name]: !prev[field.name] };
+                              console.log("📋 New dropdowns state:", newState);
+                              return newState;
                             });
-                            return option ? (option.label || option[field.optionLabel || "name"] || "N/A") : `Pilih ${field.label}`;
-                          })()
-                        : `Pilih ${field.label}`}
-                    </span>
-                    <svg className="h-4 w-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  )}
-                  
-                  {openDropdowns[field.name] && (
-                    <div className="absolute z-50 mt-1 w-full rounded-md border bg-white shadow-lg">
-                      <div className="p-2">
-                        <input
-                          type="text"
-                          className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder={`Cari ${field.label.toLowerCase()}...`}
-                          value={searchTerms[field.name] || ""}
-                          onChange={(e) => setSearchTerms(prev => ({ ...prev, [field.name]: e.target.value }))}
-                        />
-                      </div>
-                      <div className="max-h-48 overflow-auto">
-                        {options[field.name] && options[field.name].length > 0 ? (
-                          options[field.name]
-                            ?.filter(option => {
-                              if (!searchTerms[field.name]) return true;
-                              
-                              const optionText = option.label || option[field.optionLabel || "name"];
-                              if (!optionText) return false;
-                              
-                              return optionText
-                                .toLowerCase()
-                                .includes(searchTerms[field.name].toLowerCase());
-                            })
-                            ?.map((option) => (
-                              <div
-                                key={option.id || option.value}
-                                className={`cursor-pointer px-3 py-2 text-sm hover:bg-gray-100 ${
-                                  form[field.name] === String(option.id || option.value) ? 'bg-blue-50 text-blue-600' : ''
-                                }`}
-                                onClick={() => {
+                            // Clear search terms for other fields
+                            setSearchTerms(prev => ({
+                              ...prev,
+                              [field.name]: prev[field.name] || ""
+                            }));
+                          }}
+                        >
+                          <span>
+                            {form[field.name]
+                              ? (() => {
+                                const option = options[field.name]?.find((opt) => {
+                                  // Handle both static options (value/label) and service options (id/optionLabel)
+                                  if (opt.value !== undefined) {
+                                    return String(opt.value) === form[field.name];
+                                  } else {
+                                    return String(opt.id) === form[field.name];
+                                  }
+                                });
+                                return option ? (option.label || option[field.optionLabel || "name"] || "N/A") : `Pilih ${field.label}`;
+                              })()
+                              : `Pilih ${field.label}`}
+                          </span>
+                          <svg className="h-4 w-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                      )}
+
+                      {openDropdowns[field.name] && (
+                        <div className="absolute z-50 mt-1 w-full rounded-md border bg-white shadow-lg">
+                          <div className="p-2">
+                            <input
+                              type="text"
+                              className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder={`Cari ${field.label.toLowerCase()}...`}
+                              value={searchTerms[field.name] || ""}
+                              onChange={(e) => setSearchTerms(prev => ({ ...prev, [field.name]: e.target.value }))}
+                            />
+                          </div>
+                          <div className="max-h-48 overflow-auto">
+                            {options[field.name] && options[field.name].length > 0 ? (
+                              options[field.name]
+                                ?.filter(option => {
+                                  if (!searchTerms[field.name]) return true;
+
+                                  const optionText = option.label || option[field.optionLabel || "name"];
+                                  if (!optionText) return false;
+
+                                  return optionText
+                                    .toLowerCase()
+                                    .includes(searchTerms[field.name].toLowerCase());
+                                })
+                                ?.map((option) => (
+                                  <div
+                                    key={option.id || option.value}
+                                    className={`cursor-pointer px-3 py-2 text-sm hover:bg-gray-100 ${form[field.name] === String(option.id || option.value) ? 'bg-blue-50 text-blue-600' : ''
+                                      }`}
+                                    onClick={() => {
+                                      handleSelectChange(field.name, String(option.id || option.value), field);
+                                      setOpenDropdowns(prev => ({ ...prev, [field.name]: false }));
+                                      setSearchTerms(prev => ({ ...prev, [field.name]: "" }));
+                                    }}
+                                  >
+                                    {option.label || option[field.optionLabel || "name"] || "N/A"}
+                                  </div>
+                                ))
+                            ) : null}
+                          </div>
+                          {field.dropdownExtra && (
+                            <div className="border-t px-3 py-2">
+                              {field.dropdownExtra({
+                                form,
+                                options: options[field.name] || [],
+                                onSelect: (option) => {
                                   handleSelectChange(field.name, String(option.id || option.value), field);
                                   setOpenDropdowns(prev => ({ ...prev, [field.name]: false }));
                                   setSearchTerms(prev => ({ ...prev, [field.name]: "" }));
-                                }}
-                              >
-                                {option.label || option[field.optionLabel || "name"] || "N/A"}
-                              </div>
-                            ))
-                        ) : null}
-                      </div>
-                      {field.dropdownExtra && (
-                        <div className="border-t px-3 py-2">
-                          {field.dropdownExtra({
-                            form,
-                            options: options[field.name] || [],
-                            onSelect: (option) => {
-                              handleSelectChange(field.name, String(option.id || option.value), field);
-                              setOpenDropdowns(prev => ({ ...prev, [field.name]: false }));
-                              setSearchTerms(prev => ({ ...prev, [field.name]: "" }));
-                            }
-                          })}
+                                }
+                              })}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
+                  ) : field.type === 'asyncSelect' ? (
+                    <AsyncSearchSelect
+                      label={null}
+                      placeholder={`Pilih ${field.label}`}
+                      searchPlaceholder={`Cari ${field.label.toLowerCase()}...`}
+                      value={form[field.name] || ""}
+                      onValueChange={(val) => handleSelectChange(field.name, String(val || ""), field)}
+                      fetchOptions={async (q, page) => {
+                        if (typeof field.fetchOptions === 'function') {
+                          const rows = await field.fetchOptions(q, page, form);
+                          return Array.isArray(rows) ? rows : (rows?.data || []);
+                        }
+                        return [];
+                      }}
+                      displayKey={field.displayKey || field.optionLabel || 'label'}
+                      valueKey={field.valueKey || 'value'}
+                      required={field.required}
+                      disabled={!!(editData && field.disabledOnEdit)}
+                      className=""
+                    />
+                  ) : field.type === "custom" ? (
+                    field.render ? field.render({ form, editData, handleChange, handleSelectChange }) : null
+                  ) : (
+                    <Input
+                      id={field.name}
+                      name={field.name}
+                      type={field.type || "text"}
+                      value={form[field.name] || ""}
+                      onChange={handleChange}
+                      className="w-full"
+                      required={isHidden ? false : (editData && field.hideOnEdit ? false : field.required)}
+                      maxLength={field.maxLength}
+                      disabled={!!(editData && field.disabledOnEdit)}
+                    />
                   )}
                 </div>
-              ) : field.type === 'asyncSelect' ? (
-                <AsyncSearchSelect
-                  label={null}
-                  placeholder={`Pilih ${field.label}`}
-                  searchPlaceholder={`Cari ${field.label.toLowerCase()}...`}
-                  value={form[field.name] || ""}
-                  onValueChange={(val) => handleSelectChange(field.name, String(val || ""), field)}
-                  fetchOptions={async (q, page) => {
-                    if (typeof field.fetchOptions === 'function') {
-                      const rows = await field.fetchOptions(q, page, form);
-                      return Array.isArray(rows) ? rows : (rows?.data || []);
-                    }
-                    return [];
-                  }}
-                  displayKey={field.displayKey || field.optionLabel || 'label'}
-                  valueKey={field.valueKey || 'value'}
-                  required={field.required}
-                  disabled={!!(editData && field.disabledOnEdit)}
-                  className=""
-                />
-              ) : field.type === "custom" ? (
-                field.render ? field.render({ form, editData, handleChange, handleSelectChange }) : null
-              ) : (
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  type={field.type || "text"}
-                  value={form[field.name] || ""}
-                  onChange={handleChange}
-                  className="w-full"
-                  required={isHidden ? false : (editData && field.hideOnEdit ? false : field.required)}
-                  maxLength={field.maxLength}
-                  disabled={!!(editData && field.disabledOnEdit)}
-                />
-              )}
-            </div>
-          );
-          })}
+              );
+            })}
           </div>
 
           {error && (
@@ -511,7 +527,7 @@ export default function MasterFormModal({
               ❌ {error}
             </div>
           )}
-          
+
           <DialogFooter className="flex gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose} disabled={saveLoading}>
               Batal
