@@ -515,7 +515,16 @@ export default function MasterFormModal({
                       value={form[field.name] || ""}
                       onChange={handleChange}
                       className="w-full"
-                      required={isHidden ? false : (editData && field.hideOnEdit ? false : field.required)}
+                      required={
+                        isHidden
+                          ? false
+                          : (editData && field.hideOnEdit
+                            ? false
+                            : (typeof field.required === 'function'
+                              ? field.required(form)
+                              : field.required))
+                      }
+                      step={field.step}
                       maxLength={field.maxLength}
                       disabled={!!(editData && field.disabledOnEdit)}
                     />

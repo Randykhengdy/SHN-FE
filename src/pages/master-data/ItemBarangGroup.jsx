@@ -4,6 +4,11 @@ import { Button } from "@/components/ui/button";
 import { itemBarangGroupService, jenisBarangService, bentukBarangService, gradeBarangService } from "@/services/master-data";
 import { useAlert } from "@/hooks/useAlert";
 
+// Module-level variable untuk menyimpan mapping dimensi bentuk barang
+let bentukBarangDimensiMap = {};
+// Module-level variable untuk menyimpan mapping tipe barang
+let bentukBarangTipeMap = {};
+
 export default function ItemBarangGroupPage() {
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -72,39 +77,145 @@ export default function ItemBarangGroupPage() {
                     label: "Jenis Barang",
                     type: "select",
                     required: true,
-                    service: jenisBarangService,
-                    optionLabel: (item) => `${item.kode} - ${item.nama_jenis}`,
-                    optionValue: "id"
+                    optionLabel: "label",
+                    optionsLoader: async () => {
+                        const res = await jenisBarangService.getAll();
+                        const list = res?.data || [];
+                        return list.map(it => ({
+                            id: it.id,
+                            value: String(it.id),
+                            label: it.nama_jenis || it.nama || it.kode || String(it.id)
+                        }));
+                    }
                 },
                 {
                     name: "bentuk_barang_id",
                     label: "Bentuk Barang",
                     type: "select",
                     required: true,
-                    service: bentukBarangService,
-                    optionLabel: (item) => `${item.kode} - ${item.nama_bentuk}`,
-                    optionValue: "id"
+                    optionLabel: "label",
+                    optionsLoader: async () => {
+                        const res = await bentukBarangService.getAll();
+                        const options = (res?.data || []).map(item => ({
+                            id: item.id,
+                            value: String(item.id),
+                            label: (item.nama_bentuk || item.nama || 'Unknown') + ` (${item.dimensi || 'N/A'})`,
+                            dimensi: item.dimensi,
+                            tipe_barang: item.tipe_barang
+                        }));
+
+                        // Build maps
+                        bentukBarangDimensiMap = {};
+                        bentukBarangTipeMap = {};
+                        options.forEach(opt => {
+                            if (opt.value) {
+                                bentukBarangDimensiMap[opt.value] = opt.dimensi;
+                                bentukBarangTipeMap[opt.value] = opt.tipe_barang;
+                            }
+                        });
+
+                        return options;
+                    },
+                    onChangeForm: (form, val) => {
+                        const dimensi = bentukBarangDimensiMap[val] || null;
+                        const tipeBarang = bentukBarangTipeMap[val] || null;
+
+                        const updatedForm = {
+                            ...form,
+                            _bentuk_barang_dimensi: dimensi,
+                            _tipe_barang: tipeBarang
+                        };
+
+                        if (dimensi === "1D") {
+                            updatedForm.lebar = null;
+                        }
+
+                        return updatedForm;
+                    }
                 },
                 {
                     name: "grade_barang_id",
                     label: "Grade Barang",
                     type: "select",
                     required: true,
-                    service: gradeBarangService,
-                    optionLabel: (item) => `${item.kode} - ${item.nama}`,
-                    optionValue: "id"
+                    optionLabel: "label",
+                    optionsLoader: async () => {
+                        const res = await gradeBarangService.getAll();
+                        const list = res?.data || [];
+                        return list.map(it => ({
+                            id: it.id,
+                            value: String(it.id),
+                            label: it.nama || it.kode || String(it.id)
+                        }));
+                    }
                 },
-                { name: "panjang", label: "Panjang (mm)", type: "number", step: 0.01 },
-                { name: "lebar", label: "Lebar (mm)", type: "number", step: 0.01 },
-                { name: "tebal", label: "Tebal (mm)", type: "number", step: 0.01 },
-                { name: "diameter_luar", label: "Diameter Luar (mm)", type: "number", step: 0.01 },
-                { name: "diameter_dalam", label: "Diameter Dalam (mm)", type: "number", step: 0.01 },
-                { name: "diameter", label: "Diameter (mm)", type: "number", step: 0.01 },
-                { name: "sisi1", label: "Sisi 1 (mm)", type: "number", step: 0.01 },
-                { name: "sisi2", label: "Sisi 2 (mm)", type: "number", step: 0.01 },
+                // Dynamic dimension fields based on tipe_barang
+                {
+                    name: "diameter_luar",
+                    label: "Diameter Luar (mm)",
+                    type: "number",
+                    step: 0.01,
+                    required: (form) => form._tipe_barang?.diameter_luar === true,
+                    hidden: (form) => form._tipe_barang?.diameter_luar !== true
+                },
+                {
+                    name: "diameter_dalam",
+                    label: "Diameter Dalam (mm)",
+                    type: "number",
+                    step: 0.01,
+                    required: (form) => form._tipe_barang?.diameter_dalam === true,
+                    hidden: (form) => form._tipe_barang?.diameter_dalam !== true
+                },
+                {
+                    name: "diameter",
+                    label: "Diameter (mm)",
+                    type: "number",
+                    step: 0.01,
+                    required: (form) => form._tipe_barang?.diameter === true,
+                    hidden: (form) => form._tipe_barang?.diameter !== true
+                },
+                {
+                    name: "sisi1",
+                    label: "Sisi 1 (mm)",
+                    type: "number",
+                    step: 0.01,
+                    required: (form) => form._tipe_barang?.sisi1 === true,
+                    hidden: (form) => form._tipe_barang?.sisi1 !== true
+                },
+                {
+                    name: "sisi2",
+                    label: "Sisi 2 (mm)",
+                    type: "number",
+                    step: 0.01,
+                    required: (form) => form._tipe_barang?.sisi2 === true,
+                    hidden: (form) => form._tipe_barang?.sisi2 !== true
+                },
+                {
+                    name: "tebal",
+                    label: "Tebal (mm)",
+                    type: "number",
+                    step: 0.01,
+                    required: (form) => form._tipe_barang?.tebal === true,
+                    hidden: (form) => form._tipe_barang?.tebal !== true
+                },
+                {
+                    name: "lebar",
+                    label: "Lebar (mm)",
+                    type: "number",
+                    step: 0.01,
+                    required: (form) => form._tipe_barang?.lebar === true,
+                    hidden: (form) => form._tipe_barang?.lebar !== true
+                },
+                {
+                    name: "panjang",
+                    label: "Panjang (mm)",
+                    type: "number",
+                    step: 0.01,
+                    required: (form) => form._tipe_barang?.panjang === true,
+                    hidden: (form) => form._tipe_barang?.panjang !== true
+                },
                 { name: "quantity_utuh", label: "Quantity Utuh", type: "number", step: 1 },
                 { name: "quantity_potongan", label: "Quantity Potongan", type: "number", step: 1 },
-                { name: "sequence", label: "Urutan Tampilan", type: "number", step: 1 },
             ]}
             columns={[
                 { key: "id", label: "ID", align: "center", width: "5rem", maxWidth: "5rem" },
