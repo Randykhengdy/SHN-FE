@@ -13,6 +13,8 @@ import {
 
 // Module-level variable untuk menyimpan mapping dimensi bentuk barang
 let bentukBarangDimensiMap = {};
+// Module-level variable untuk menyimpan mapping tipe barang
+let bentukBarangTipeMap = {};
 // Module-level cache untuk rak options per gudang
 let rakOptionsCache = {};
 
@@ -29,12 +31,12 @@ export default function ItemBarangPage() {
     <>
       {isCanvasOpen && selectedItem && (
         <div className="fixed inset-0 z-[100] bg-white w-screen h-screen">
-          <ItemBarangCanvasPage 
-            item={selectedItem} 
+          <ItemBarangCanvasPage
+            item={selectedItem}
             onClose={() => {
               setIsCanvasOpen(false);
               setSelectedItem(null);
-            }} 
+            }}
           />
         </div>
       )}
@@ -46,7 +48,7 @@ export default function ItemBarangPage() {
           {
             label: "Edit Canvas",
             icon: (
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-layout-dashboard"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-layout-dashboard"><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></svg>
             ),
             onClick: (item) => handleOpenCanvas(item),
             className: "bg-indigo-500 hover:bg-indigo-600 text-white border-indigo-500"
@@ -65,191 +67,263 @@ export default function ItemBarangPage() {
           }
         ]}
         fields={[
-        {
-          name: "jenis_barang_id",
-          label: "Jenis Barang",
-          type: "select",
-          required: true,
-          optionLabel: "label",
-          optionsLoader: async () => {
-            const res = await jenisBarangService.getAll();
-            const list = res?.data || [];
-            return list.map(it => ({
-              id: it.id,
-              value: String(it.id),
-              label: it.nama_jenis || it.nama || it.kode || String(it.id)
-            }));
-          }
-        },
-        {
-          name: "bentuk_barang_id",
-          label: "Bentuk Barang",
-          type: "select",
-          required: true,
-          optionLabel: "label",
-          optionsLoader: async () => {
-            const res = await bentukBarangService.getAll();
-            const options = (res?.data || []).map(item => ({
-              id: item.id,
-              value: String(item.id),
-              label: (item.nama_bentuk || item.nama || 'Unknown') + ` (${item.dimensi || 'N/A'})`,
-              dimensi: item.dimensi
-            }));
-            bentukBarangDimensiMap = {};
-            options.forEach(opt => { if (opt.value && opt.dimensi) bentukBarangDimensiMap[opt.value] = opt.dimensi; });
-            return options;
+          {
+            name: "jenis_barang_id",
+            label: "Jenis Barang",
+            type: "select",
+            required: true,
+            optionLabel: "label",
+            optionsLoader: async () => {
+              const res = await jenisBarangService.getAll();
+              const list = res?.data || [];
+              return list.map(it => ({
+                id: it.id,
+                value: String(it.id),
+                label: it.nama_jenis || it.nama || it.kode || String(it.id)
+              }));
+            }
           },
-          onChangeForm: (form, val) => {
-            const dimensi = bentukBarangDimensiMap[val] || null;
-            const updatedForm = { ...form, _bentuk_barang_dimensi: dimensi };
-            if (dimensi === "1D") { updatedForm.lebar = null; }
-            return updatedForm;
-          }
-        },
-        {
-          name: "grade_barang_id",
-          label: "Grade Barang",
-          type: "select",
-          required: true,
-          optionLabel: "label",
-          optionsLoader: async () => {
-            const res = await gradeBarangService.getAll();
-            const list = res?.data || [];
-            return list.map(it => ({
-              id: it.id,
-              value: String(it.id),
-              label: it.nama || it.kode || String(it.id)
-            }));
-          }
-        },
-        { name: "panjang", label: "Panjang (mm)", type: "number", step: 0.01, required: true },
-        {
-          name: "lebar",
-          label: "Lebar (mm)",
-          type: "number",
-          step: 0.01,
-          required: (form) => form._bentuk_barang_dimensi === "2D",
-          hidden: (form) => {
-            // Sembunyikan jika dimensi adalah "1D" (tapi tetap render untuk tidak menggeser kolom)
-            return form._bentuk_barang_dimensi === "1D";
-          }
-        },
-        { name: "tebal", label: "Tebal/Diameter/dll (mm)", type: "number", step: 0.01, required: true },
-        { name: "quantity", label: "Quantity", type: "number", step: 0.01, required: true },
-        {
-          name: "jenis_potongan",
-          label: "Jenis Potongan",
-          type: "select",
-          required: true,
-          optionLabel: "label",
-          optionsLoader: async () => [
-            { id: "utuh", value: "utuh", label: "Utuh" },
-            { id: "potongan", value: "potongan", label: "Potongan" }
-          ]
-        },
-        {
-          name: "gudang_id",
-          label: "Gudang",
-          type: "select",
-          required: true,
-          optionLabel: "label",
-          optionsLoader: async () => {
-            const res = await gudangService.getAll();
-            const list = res?.data || [];
-            return list.map(it => ({
-              id: it.id,
-              value: String(it.id),
-              label: it.nama_gudang || it.nama || String(it.id)
-            }));
+          {
+            name: "bentuk_barang_id",
+            label: "Bentuk Barang",
+            type: "select",
+            required: true,
+            optionLabel: "label",
+            optionsLoader: async () => {
+              const res = await bentukBarangService.getAll();
+              const options = (res?.data || []).map(item => ({
+                id: item.id,
+                value: String(item.id),
+                label: (item.nama_bentuk || item.nama || 'Unknown') + ` (${item.dimensi || 'N/A'})`,
+                dimensi: item.dimensi,
+                tipe_barang: item.tipe_barang
+              }));
+
+              // Build maps
+              bentukBarangDimensiMap = {};
+              bentukBarangTipeMap = {};
+              options.forEach(opt => {
+                if (opt.value) {
+                  bentukBarangDimensiMap[opt.value] = opt.dimensi;
+                  bentukBarangTipeMap[opt.value] = opt.tipe_barang;
+                }
+              });
+
+              return options;
+            },
+            onChangeForm: (form, val) => {
+              const dimensi = bentukBarangDimensiMap[val] || null;
+              const tipeBarang = bentukBarangTipeMap[val] || null;
+
+              const updatedForm = {
+                ...form,
+                _bentuk_barang_dimensi: dimensi,
+                _tipe_barang: tipeBarang
+              };
+
+              if (dimensi === "1D") {
+                updatedForm.lebar = null;
+              }
+
+              return updatedForm;
+            }
           },
-          onChangeForm: (form, val) => {
-            // Reset rak when gudang changes and pre-fetch rak options
-            if (val && !rakOptionsCache[val]) {
-              // Fetch and cache rak options for this gudang
-              const params = { gudang_id: val };
-              rakService.getAll(params)
-                .then(res => {
+          {
+            name: "grade_barang_id",
+            label: "Grade Barang",
+            type: "select",
+            required: true,
+            optionLabel: "label",
+            optionsLoader: async () => {
+              const res = await gradeBarangService.getAll();
+              const list = res?.data || [];
+              return list.map(it => ({
+                id: it.id,
+                value: String(it.id),
+                label: it.nama || it.kode || String(it.id)
+              }));
+            }
+          },
+          // Dynamic dimension fields based on tipe_barang
+          {
+            name: "diameter_luar",
+            label: "Diameter Luar (mm)",
+            type: "number",
+            step: 0.01,
+            required: (form) => form._tipe_barang?.diameter_luar === true,
+            hidden: (form) => form._tipe_barang?.diameter_luar !== true
+          },
+          {
+            name: "diameter_dalam",
+            label: "Diameter Dalam (mm)",
+            type: "number",
+            step: 0.01,
+            required: (form) => form._tipe_barang?.diameter_dalam === true,
+            hidden: (form) => form._tipe_barang?.diameter_dalam !== true
+          },
+          {
+            name: "diameter",
+            label: "Diameter (mm)",
+            type: "number",
+            step: 0.01,
+            required: (form) => form._tipe_barang?.diameter === true,
+            hidden: (form) => form._tipe_barang?.diameter !== true
+          },
+          {
+            name: "sisi1",
+            label: "Sisi 1 (mm)",
+            type: "number",
+            step: 0.01,
+            required: (form) => form._tipe_barang?.sisi1 === true,
+            hidden: (form) => form._tipe_barang?.sisi1 !== true
+          },
+          {
+            name: "sisi2",
+            label: "Sisi 2 (mm)",
+            type: "number",
+            step: 0.01,
+            required: (form) => form._tipe_barang?.sisi2 === true,
+            hidden: (form) => form._tipe_barang?.sisi2 !== true
+          },
+          {
+            name: "tebal",
+            label: "Tebal (mm)",
+            type: "number",
+            step: 0.01,
+            required: (form) => form._tipe_barang?.tebal === true,
+            hidden: (form) => form._tipe_barang?.tebal !== true
+          },
+          {
+            name: "lebar",
+            label: "Lebar (mm)",
+            type: "number",
+            step: 0.01,
+            required: (form) => form._tipe_barang?.lebar === true,
+            hidden: (form) => form._tipe_barang?.lebar !== true
+          },
+          {
+            name: "panjang",
+            label: "Panjang (mm)",
+            type: "number",
+            step: 0.01,
+            required: (form) => form._tipe_barang?.panjang === true,
+            hidden: (form) => form._tipe_barang?.panjang !== true
+          },
+          { name: "quantity", label: "Quantity", type: "number", step: 0.01, required: true },
+          {
+            name: "jenis_potongan",
+            label: "Jenis Potongan",
+            type: "select",
+            required: true,
+            optionLabel: "label",
+            optionsLoader: async () => [
+              { id: "utuh", value: "utuh", label: "Utuh" },
+              { id: "potongan", value: "potongan", label: "Potongan" }
+            ]
+          },
+          {
+            name: "gudang_id",
+            label: "Gudang",
+            type: "select",
+            required: true,
+            optionLabel: "label",
+            optionsLoader: async () => {
+              const res = await gudangService.getAll();
+              const list = res?.data || [];
+              return list.map(it => ({
+                id: it.id,
+                value: String(it.id),
+                label: it.nama_gudang || it.nama || String(it.id)
+              }));
+            },
+            onChangeForm: (form, val) => {
+              // Reset rak when gudang changes and pre-fetch rak options
+              if (val && !rakOptionsCache[val]) {
+                // Fetch and cache rak options for this gudang
+                const params = { gudang_id: val };
+                rakService.getAll(params)
+                  .then(res => {
+                    const rakList = res?.data || [];
+                    rakOptionsCache[val] = rakList.map(it => ({
+                      value: String(it.id),
+                      label: `${it.kode_rak || ''} - ${it.nama_rak || it.nama || String(it.id)}`
+                    }));
+                  })
+                  .catch(error => {
+                    console.error('Error fetching rak options:', error);
+                    rakOptionsCache[val] = [];
+                  });
+              }
+              return { ...form, id_rak: null };
+            }
+          },
+          {
+            name: "id_rak",
+            label: "Rak (Opsional)",
+            type: "asyncSelect",
+            fetchOptions: async (q, page, form) => {
+              const gudangId = form?.gudang_id;
+
+              // If no warehouse selected, return empty
+              if (!gudangId) {
+                return [];
+              }
+
+              // Check if we have cached options
+              if (!rakOptionsCache[gudangId]) {
+                // Fetch from API
+                try {
+                  const params = { gudang_id: gudangId };
+                  const res = await rakService.getAll(params);
                   const rakList = res?.data || [];
-                  rakOptionsCache[val] = rakList.map(it => ({
+                  rakOptionsCache[gudangId] = rakList.map(it => ({
                     value: String(it.id),
                     label: `${it.kode_rak || ''} - ${it.nama_rak || it.nama || String(it.id)}`
                   }));
-                })
-                .catch(error => {
+                } catch (error) {
                   console.error('Error fetching rak options:', error);
-                  rakOptionsCache[val] = [];
-                });
-            }
-            return { ...form, id_rak: null };
-          }
-        },
-        {
-          name: "id_rak",
-          label: "Rak (Opsional)",
-          type: "asyncSelect",
-          fetchOptions: async (q, page, form) => {
-            const gudangId = form?.gudang_id;
-
-            // If no warehouse selected, return empty
-            if (!gudangId) {
-              return [];
-            }
-
-            // Check if we have cached options
-            if (!rakOptionsCache[gudangId]) {
-              // Fetch from API
-              try {
-                const params = { gudang_id: gudangId };
-                const res = await rakService.getAll(params);
-                const rakList = res?.data || [];
-                rakOptionsCache[gudangId] = rakList.map(it => ({
-                  value: String(it.id),
-                  label: `${it.kode_rak || ''} - ${it.nama_rak || it.nama || String(it.id)}`
-                }));
-              } catch (error) {
-                console.error('Error fetching rak options:', error);
-                rakOptionsCache[gudangId] = [];
+                  rakOptionsCache[gudangId] = [];
+                }
               }
-            }
 
-            const options = rakOptionsCache[gudangId] || [];
+              const options = rakOptionsCache[gudangId] || [];
 
-            // Filter by search query if provided
-            if (q && q.trim()) {
-              const searchTerm = q.toLowerCase();
-              return options.filter(opt =>
-                opt.label.toLowerCase().includes(searchTerm) ||
-                opt.value.includes(searchTerm)
-              );
-            }
+              // Filter by search query if provided
+              if (q && q.trim()) {
+                const searchTerm = q.toLowerCase();
+                return options.filter(opt =>
+                  opt.label.toLowerCase().includes(searchTerm) ||
+                  opt.value.includes(searchTerm)
+                );
+              }
 
-            return options;
-          },
-          displayKey: "label",
-          valueKey: "value",
-          required: false,
-          disabled: (form) => !form?.gudang_id,
-          helperText: (form) => !form?.gudang_id ? "Pilih gudang terlebih dahulu" : "Pilih rak untuk item ini"
-        }
-      ]}
-      columns={[
-        { key: "id", label: "ID", align: "center", width: "5rem", maxWidth: "5rem" },
-        { key: "kode_barang", label: "Kode Barang", align: "center", width: "10rem", maxWidth: "10rem" },
-        { key: "nama_item_barang", label: "Nama Item Barang", align: "left", minWidth: "15rem", maxWidth: "20rem" },
-        { key: "panjang", label: "Panjang", align: "center", width: "8rem", maxWidth: "8rem", format: "number" },
-        { key: "lebar", label: "Lebar", align: "center", width: "8rem", maxWidth: "8rem", format: "number" },
-        { key: "tebal", label: "Tebal", align: "center", width: "8rem", maxWidth: "8rem", format: "number" },
-        { key: "quantity", label: "Qty", align: "center", width: "8rem", maxWidth: "8rem", format: "number" },
-        { key: "sisa_luas", label: "Sisa Luas", align: "center", width: "10rem", maxWidth: "10rem", format: "number" },
-        { key: "jenis_potongan", label: "Jenis Potongan", align: "center", width: "12rem", maxWidth: "12rem" },
-        { key: "gudang.nama_gudang", label: "Gudang", align: "center", width: "12rem", maxWidth: "12rem" },
-        { key: "rak.nama_rak", label: "Rak", align: "center", width: "12rem", maxWidth: "12rem" },
-        // { key: "is_edit", label: "Is Edit", align: "center", width: "8rem", maxWidth: "8rem", format: "boolean" },
-        { key: "jenis_barang.nama_jenis", label: "Jenis Barang", align: "center", width: "12rem", maxWidth: "12rem" },
-        { key: "bentuk_barang.nama_bentuk", label: "Bentuk Barang", align: "center", width: "12rem", maxWidth: "12rem" },
-        { key: "grade_barang.nama", label: "Grade Barang", align: "center", width: "12rem", maxWidth: "12rem" },
-      ]}
-    />
+              return options;
+            },
+            displayKey: "label",
+            valueKey: "value",
+            required: false,
+            disabled: (form) => !form?.gudang_id,
+            helperText: (form) => !form?.gudang_id ? "Pilih gudang terlebih dahulu" : "Pilih rak untuk item ini"
+          }
+        ]}
+        columns={[
+          { key: "id", label: "ID", align: "center", width: "5rem", maxWidth: "5rem" },
+          { key: "kode_barang", label: "Kode Barang", align: "center", width: "10rem", maxWidth: "10rem" },
+          { key: "nama_item_barang", label: "Nama Item Barang", align: "left", minWidth: "15rem", maxWidth: "20rem" },
+          { key: "panjang", label: "Panjang", align: "center", width: "8rem", maxWidth: "8rem", format: "number" },
+          { key: "lebar", label: "Lebar", align: "center", width: "8rem", maxWidth: "8rem", format: "number" },
+          { key: "tebal", label: "Tebal", align: "center", width: "8rem", maxWidth: "8rem", format: "number" },
+          { key: "quantity", label: "Qty", align: "center", width: "8rem", maxWidth: "8rem", format: "number" },
+          { key: "sisa_luas", label: "Sisa Luas", align: "center", width: "10rem", maxWidth: "10rem", format: "number" },
+          { key: "jenis_potongan", label: "Jenis Potongan", align: "center", width: "12rem", maxWidth: "12rem" },
+          { key: "gudang.nama_gudang", label: "Gudang", align: "center", width: "12rem", maxWidth: "12rem" },
+          { key: "rak.nama_rak", label: "Rak", align: "center", width: "12rem", maxWidth: "12rem" },
+          // { key: "is_edit", label: "Is Edit", align: "center", width: "8rem", maxWidth: "8rem", format: "boolean" },
+          { key: "jenis_barang.nama_jenis", label: "Jenis Barang", align: "center", width: "12rem", maxWidth: "12rem" },
+          { key: "bentuk_barang.nama_bentuk", label: "Bentuk Barang", align: "center", width: "12rem", maxWidth: "12rem" },
+          { key: "grade_barang.nama", label: "Grade Barang", align: "center", width: "12rem", maxWidth: "12rem" },
+        ]}
+      />
     </>
   );
 }
