@@ -21,6 +21,7 @@ let rakOptionsCache = {};
 export default function ItemBarangPage() {
   const [isCanvasOpen, setIsCanvasOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [showDimensions, setShowDimensions] = useState(false);
 
   const handleOpenCanvas = (item) => {
     setSelectedItem(item);
@@ -40,10 +41,25 @@ export default function ItemBarangPage() {
           />
         </div>
       )}
+
       <MasterDataLayout
         title="Item Barang"
         subtitle="Master Data"
         service={itemBarangService}
+        customHeaderContent={
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="showDimensions"
+              checked={showDimensions}
+              onChange={(e) => setShowDimensions(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <label htmlFor="showDimensions" className="text-sm font-medium text-gray-700 cursor-pointer">
+              Tampilkan dimensi
+            </label>
+          </div>
+        }
         customActions={[
           {
             label: "Edit Canvas",
@@ -310,9 +326,17 @@ export default function ItemBarangPage() {
           { key: "id", label: "ID", align: "center", width: "5rem", maxWidth: "5rem" },
           { key: "kode_barang", label: "Kode Barang", align: "center", width: "10rem", maxWidth: "10rem" },
           { key: "nama_item_barang", label: "Nama Item Barang", align: "left", minWidth: "15rem", maxWidth: "20rem" },
-          { key: "panjang", label: "Panjang", align: "center", width: "8rem", maxWidth: "8rem", format: "number" },
-          { key: "lebar", label: "Lebar", align: "center", width: "8rem", maxWidth: "8rem", format: "number" },
-          { key: "tebal", label: "Tebal", align: "center", width: "8rem", maxWidth: "8rem", format: "number" },
+          // Dimension columns - conditionally shown
+          ...(showDimensions ? [
+            { key: "diameter_luar", label: "DL", align: "center", width: "6rem", maxWidth: "6rem", format: "number" },
+            { key: "diameter_dalam", label: "DD", align: "center", width: "6rem", maxWidth: "6rem", format: "number" },
+            { key: "diameter", label: "D", align: "center", width: "6rem", maxWidth: "6rem", format: "number" },
+            { key: "sisi1", label: "S1", align: "center", width: "6rem", maxWidth: "6rem", format: "number" },
+            { key: "sisi2", label: "S2", align: "center", width: "6rem", maxWidth: "6rem", format: "number" },
+            { key: "tebal", label: "T", align: "center", width: "6rem", maxWidth: "6rem", format: "number" },
+            { key: "lebar", label: "L", align: "center", width: "6rem", maxWidth: "6rem", format: "number" },
+            { key: "panjang", label: "P", align: "center", width: "6rem", maxWidth: "6rem", format: "number" },
+          ] : []),
           { key: "quantity", label: "Qty", align: "center", width: "8rem", maxWidth: "8rem", format: "number" },
           { key: "sisa_luas", label: "Sisa Luas", align: "center", width: "10rem", maxWidth: "10rem", format: "number" },
           { key: "jenis_potongan", label: "Jenis Potongan", align: "center", width: "12rem", maxWidth: "12rem" },
