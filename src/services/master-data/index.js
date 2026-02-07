@@ -6,6 +6,7 @@ export { bentukBarangService } from './bentukBarangService';
 export { gradeBarangService } from './gradeBarangService';
 export { rakService } from './rakService';
 export { itemBarangService } from './itemBarangService';
+export { itemBarangGroupService } from './itemBarangGroupService';
 export { jenisBiayaService } from './jenisBiayaService';
 export { jenisMutasiStockService } from './jenisMutasiStockService';
 export { jenisTransaksiKasService } from './jenisTransaksiKasService';

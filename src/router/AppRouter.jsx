@@ -8,6 +8,7 @@ import BentukBarangPage from "@/pages/master-data/BentukBarang";
 import GradeBarangPage from "@/pages/master-data/GradeBarang";
 import BeratJenisPage from "@/pages/master-data/BeratJenis";
 import ItemBarangPage from "@/pages/master-data/ItemBarang";
+import ItemBarangGroupPage from "@/pages/master-data/ItemBarangGroup";
 import JenisMutasiStockPage from "@/pages/master-data/JenisMutasiStock";
 import JenisTransaksiKasPage from "@/pages/master-data/JenisTransaksiKas";
 import JenisBiayaPage from "@/pages/master-data/JenisBiaya";
@@ -68,6 +69,7 @@ const AppRouter = () => {
       <Route path="/masterdata/grade-barang" element={<GradeBarangPage />} />
       <Route path="/masterdata/berat-jenis" element={<BeratJenisPage />} />
       <Route path="/masterdata/item-barang" element={<ItemBarangPage />} />
+      <Route path="/masterdata/item-barang-group" element={<ItemBarangGroupPage />} />
       <Route path="/masterdata/jenis-biaya" element={<JenisBiayaPage />} />
       <Route path="/masterdata/jenis-mutasi-stock" element={<JenisMutasiStockPage />} />
       <Route path="/masterdata/supplier" element={<SupplierPage />} />

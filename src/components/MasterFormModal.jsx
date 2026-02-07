@@ -173,9 +173,8 @@ export default function MasterFormModal({
   // Also initialize _tipe_barang for dynamic field visibility
   useEffect(() => {
     if (!isOpen) return;
-    // Cari field bentuk_barang_id dan lebar
+    // Cari field bentuk_barang_id
     const bentukBarangField = fields.find(f => f.name === 'bentuk_barang_id');
-    const lebarField = fields.find(f => f.name === 'lebar');
 
     if (bentukBarangField && form.bentuk_barang_id && options.bentuk_barang_id) {
       // Cari dimensi dan tipe_barang dari options yang sudah di-load
@@ -196,14 +195,6 @@ export default function MasterFormModal({
       // Set _tipe_barang if not already set (needed for dynamic field visibility)
       if (tipeBarang && !form._tipe_barang) {
         updates._tipe_barang = tipeBarang;
-      }
-
-      // Set lebar menjadi 0 jika dimensi adalah 1D dan lebar belum 0
-      if (dimensi === "1D" && lebarField) {
-        const currentLebar = String(form.lebar || "");
-        if (currentLebar !== "0" && currentLebar !== "") {
-          updates.lebar = "0";
-        }
       }
 
       // Apply updates if any
@@ -261,15 +252,27 @@ export default function MasterFormModal({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Set lebar menjadi 0 jika hidden (dimensi 1D)
+    // Exclude empty or hidden dimension fields from submit
     let submitForm = { ...form };
-    const lebarField = fields.find(f => f.name === 'lebar');
-    if (lebarField && lebarField.hidden) {
-      const isHidden = typeof lebarField.hidden === 'function' ? lebarField.hidden(form) : lebarField.hidden;
-      if (isHidden) {
-        submitForm.lebar = "0";
+
+    // List of dimension fields that should be excluded if empty or hidden
+    const dimensionFields = ['diameter_luar', 'diameter_dalam', 'diameter', 'sisi1', 'sisi2', 'tebal', 'lebar', 'panjang'];
+
+    dimensionFields.forEach(fieldName => {
+      const field = fields.find(f => f.name === fieldName);
+      if (field) {
+        // Check if field is hidden
+        const isHidden = typeof field.hidden === 'function' ? field.hidden(form) : field.hidden;
+        // Check if field is empty
+        const isEmpty = submitForm[fieldName] === '' || submitForm[fieldName] === null || submitForm[fieldName] === undefined;
+
+        // Remove field from submit if hidden or empty
+        if (isHidden || isEmpty) {
+          delete submitForm[fieldName];
+        }
       }
-    }
+    });
+
     onSave(submitForm);
   };
 
