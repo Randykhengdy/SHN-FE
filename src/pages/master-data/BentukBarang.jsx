@@ -52,8 +52,8 @@ export default function BentukBarangPage() {
           key: "tipe_barang_id",
           label: "Tipe Barang",
           align: "left",
-          minWidth: "15rem",
-          getValue: (item) => item.tipe_barang ? item.tipe_barang.name : "-"
+          minWidth: "20rem",
+          getValue: (item) => item.tipe_barang ? `${item.tipe_barang.name} - ${item.tipe_barang.desc}` : "-"
         },
       ]}
     />
