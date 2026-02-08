@@ -143,6 +143,9 @@ export default function AddSalesOrderPage() {
   const [itemNotes, setItemNotes] = useState("");
   const [itemWeight, setItemWeight] = useState("");
   const [itemCutType, setItemCutType] = useState("potongan");
+  const [selectedItemBarangGroup, setSelectedItemBarangGroup] = useState(null);
+  const [itemBarangGroupOptions, setItemBarangGroupOptions] = useState([]);
+  const [loadingItemBarangGroup, setLoadingItemBarangGroup] = useState(false);
   const cutTypeOptions = [
     { value: "potongan", label: "Potongan" },
     { value: "utuh", label: "Utuh" }
@@ -189,6 +192,42 @@ export default function AddSalesOrderPage() {
       setItemDiameter("");
     }
   }, [itemCutType]);
+
+  // Load Item Barang Group options when jenis, bentuk, and grade are selected
+  useEffect(() => {
+    const loadItemBarangGroupOptions = async () => {
+      // Only load if all 3 fields are selected
+      if (!itemType || !selectedShape?.id || !itemGrade) {
+        setItemBarangGroupOptions([]);
+        setSelectedItemBarangGroup(null);
+        return;
+      }
+
+      try {
+        setLoadingItemBarangGroup(true);
+        const queryParams = new URLSearchParams({
+          jenis_barang_id: itemType,
+          bentuk_barang_id: selectedShape.id,
+          grade_barang_id: itemGrade,
+          per_page: 100 // Load more options for dropdown
+        });
+
+        const response = await request(`/item-barang/group?${queryParams.toString()}`, { method: 'GET' });
+        const groups = Array.isArray(response.data) ? response.data : [];
+        setItemBarangGroupOptions(groups);
+
+        // Reset selected group when options change
+        setSelectedItemBarangGroup(null);
+      } catch (error) {
+        console.error('Error loading item barang group:', error);
+        setItemBarangGroupOptions([]);
+      } finally {
+        setLoadingItemBarangGroup(false);
+      }
+    };
+
+    loadItemBarangGroupOptions();
+  }, [itemType, selectedShape?.id, itemGrade]);
 
   // Auto-calculate berat timbangan when required fields are filled
   useEffect(() => {
@@ -1499,6 +1538,59 @@ export default function AddSalesOrderPage() {
                 }}
               />
             </div>
+
+            {/* Row: Item Barang Group - appears when jenis, bentuk, and grade are selected */}
+            {itemType && selectedShape && itemGrade && (
+              <div className="col-span-3">
+                <Label htmlFor="itemBarangGroup">Master Item Barang</Label>
+                <div className="flex gap-2">
+                  <select
+                    id="itemBarangGroup"
+                    value={selectedItemBarangGroup?.id?.toString() || ""}
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      if (!selectedId) {
+                        setSelectedItemBarangGroup(null);
+                        return;
+                      }
+                      const group = itemBarangGroupOptions.find(g => g.id?.toString() === selectedId);
+                      if (group) {
+                        setSelectedItemBarangGroup(group);
+                        // Auto-fill dimensions from selected group
+                        if (group.panjang) setItemLength(group.panjang.toString());
+                        if (group.lebar) setItemWidth(group.lebar.toString());
+                        if (group.tebal) setItemDiameter(group.tebal.toString());
+                      }
+                    }}
+                    disabled={loadingItemBarangGroup || itemBarangGroupOptions.length === 0}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="">
+                      {loadingItemBarangGroup
+                        ? "Memuat..."
+                        : itemBarangGroupOptions.length === 0
+                          ? "Tidak ada Master Item Barang tersedia"
+                          : "Pilih Master Item Barang"}
+                    </option>
+                    {itemBarangGroupOptions.map((group) => (
+                      <option key={group.id} value={group.id?.toString()}>
+                        {group.nama_group_barang || `Group ${group.id}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {selectedItemBarangGroup && (
+                  <p className="text-xs text-green-600 mt-1">
+                    ✓ Qty Utuh: {selectedItemBarangGroup.quantity_utuh || 0} | Qty Potongan: {selectedItemBarangGroup.quantity_potongan || 0}
+                  </p>
+                )}
+                {!loadingItemBarangGroup && itemBarangGroupOptions.length === 0 && itemType && selectedShape && itemGrade && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Tidak ada group dengan kombinasi jenis, bentuk, dan grade ini
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Row 2: Jenis Potongan, Qty, Satuan */}
             <div>
