@@ -126,10 +126,21 @@ export default function AddSalesOrderPage() {
   const [priceIncludesPPN, setPriceIncludesPPN] = useState(false); // Harga per item sudah include PPN
   const [diskonSO, setDiskonSO] = useState("0"); // Diskon SO level (percentage)
 
-  // Item Input Form
-  const [itemLength, setItemLength] = useState("");
-  const [itemWidth, setItemWidth] = useState("");
+  // Item Input Form - Dimension fields (dynamic based on tipe_barang)
+  const [itemPanjang, setItemPanjang] = useState("");
+  const [itemLebar, setItemLebar] = useState("");
+  const [itemTebal, setItemTebal] = useState("");
+  const [itemDiameterLuar, setItemDiameterLuar] = useState("");
+  const [itemDiameterDalam, setItemDiameterDalam] = useState("");
   const [itemDiameter, setItemDiameter] = useState("");
+  const [itemSisi1, setItemSisi1] = useState("");
+  const [itemSisi2, setItemSisi2] = useState("");
+  // Legacy aliases for backward compatibility
+  const itemLength = itemPanjang;
+  const setItemLength = setItemPanjang;
+  const itemWidth = itemLebar;
+  const setItemWidth = setItemLebar;
+  // Other item input fields
   const [itemQty, setItemQty] = useState("1");
   const [itemType, setItemType] = useState("");
   const [itemTypeLabel, setItemTypeLabel] = useState("");
@@ -585,25 +596,47 @@ export default function AddSalesOrderPage() {
 
   const handleAddItem = () => {
     try {
-      // Validasi field wajib
-      // Skip validasi panjang jika jenis potongan adalah "utuh"
-      if (!itemType || !selectedShape || !itemGrade || !itemPrice || !itemQty || (!itemLength && itemCutType !== "utuh")) {
+      // Validasi field wajib dasar
+      if (!itemType || !selectedShape || !itemGrade || !itemPrice || !itemQty) {
         showAlert("Peringatan", "Mohon lengkapi data item yang wajib (*)", "warning");
         return;
       }
 
-      // Validasi berdasarkan dimensi bentuk barang (skip jika jenis potongan adalah "utuh")
+      // Validasi dinamis berdasarkan tipe_barang (skip jika jenis potongan adalah "utuh")
       if (itemCutType !== "utuh") {
-        if (selectedShape.dimensi === "1D") {
-          if (!itemLength || !itemDiameter) {
-            showAlert("Peringatan", "Mohon isi panjang dan tebal untuk bentuk 1D", "warning");
-            return;
-          }
-        } else if (selectedShape.dimensi === "2D") {
-          if (!itemLength || !itemWidth || !itemDiameter) {
-            showAlert("Peringatan", "Mohon isi panjang, lebar, dan tebal untuk bentuk 2D", "warning");
-            return;
-          }
+        const tipe = selectedShape?.tipe_barang || {};
+
+        if (tipe.panjang && !itemPanjang) {
+          showAlert("Peringatan", "Mohon isi panjang", "warning");
+          return;
+        }
+        if (tipe.lebar && !itemLebar) {
+          showAlert("Peringatan", "Mohon isi lebar", "warning");
+          return;
+        }
+        if (tipe.tebal && !itemTebal) {
+          showAlert("Peringatan", "Mohon isi tebal", "warning");
+          return;
+        }
+        if (tipe.diameter_luar && !itemDiameterLuar) {
+          showAlert("Peringatan", "Mohon isi diameter luar", "warning");
+          return;
+        }
+        if (tipe.diameter_dalam && !itemDiameterDalam) {
+          showAlert("Peringatan", "Mohon isi diameter dalam", "warning");
+          return;
+        }
+        if (tipe.diameter && !itemDiameter) {
+          showAlert("Peringatan", "Mohon isi diameter", "warning");
+          return;
+        }
+        if (tipe.sisi1 && !itemSisi1) {
+          showAlert("Peringatan", "Mohon isi sisi 1", "warning");
+          return;
+        }
+        if (tipe.sisi2 && !itemSisi2) {
+          showAlert("Peringatan", "Mohon isi sisi 2", "warning");
+          return;
         }
       }
 
@@ -618,22 +651,33 @@ export default function AddSalesOrderPage() {
         return;
       }
 
-      let dimensiString = "";
-      if (selectedShape?.dimensi === "1D") {
-        dimensiString = `${itemLength || "-"} x ${itemDiameter || "-"}`; // 1D: panjang x tebal
-      } else {
-        dimensiString = `${itemLength || "-"} x ${itemWidth || "-"} x ${itemDiameter || "-"}`; // 2D: panjang x lebar x tebal
-      }
+      // Build dynamic dimensiString for display based on tipe_barang
+      const tipe = selectedShape?.tipe_barang || {};
+      let dimensiParts = [];
+
+      if (tipe.diameter_luar && itemDiameterLuar) dimensiParts.push(`DL:${itemDiameterLuar}`);
+      if (tipe.diameter_dalam && itemDiameterDalam) dimensiParts.push(`DD:${itemDiameterDalam}`);
+      if (tipe.diameter && itemDiameter) dimensiParts.push(`D:${itemDiameter}`);
+      if (tipe.sisi1 && itemSisi1) dimensiParts.push(`S1:${itemSisi1}`);
+      if (tipe.sisi2 && itemSisi2) dimensiParts.push(`S2:${itemSisi2}`);
+      if (tipe.tebal && itemTebal) dimensiParts.push(`T:${itemTebal}`);
+      if (tipe.lebar && itemLebar) dimensiParts.push(`L:${itemLebar}`);
+      if (tipe.panjang && itemPanjang) dimensiParts.push(`P:${itemPanjang}`);
+
+      let dimensiString = dimensiParts.length > 0 ? dimensiParts.join(' x ') : '-';
 
       // Calculate total using satuan-based pricing
       const currentSatuan = unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit;
       const qty = parseInt(itemQty) || 0;
 
+      // Use itemTebal for tebal (backward compatibility) or itemDiameter for older calculation
+      const tebalValue = parseFloat(itemTebal) || parseFloat(itemDiameter) || 0;
+
       const unitPrice = calculatePriceBySatuan(
         currentSatuan,
-        parseFloat(itemLength) || 0,
-        parseFloat(itemWidth) || 0,
-        parseFloat(itemDiameter) || 0,
+        parseFloat(itemPanjang) || 0,
+        parseFloat(itemLebar) || 0,
+        tebalValue,
         qty,
         parseFloat(itemPrice) || 0,
         parseFloat(itemWeight) || 0,
@@ -667,9 +711,15 @@ export default function AddSalesOrderPage() {
         jenisBarangId: itemType,
         bentukBarangId: selectedShape.id,
         gradeBarangId: itemGrade,
-        panjang: parseFloat(itemLength) || 0,
-        lebar: selectedShape.dimensi === "1D" ? 0 : parseFloat(itemWidth) || 0, // 1D doesn't use lebar
-        tebal: parseFloat(itemDiameter) || 0,
+        // Dimension fields - send all to API (nullable)
+        panjang: tipe.panjang ? (parseFloat(itemPanjang) || null) : null,
+        lebar: tipe.lebar ? (parseFloat(itemLebar) || null) : null,
+        tebal: tipe.tebal ? (parseFloat(itemTebal) || null) : null,
+        diameter_luar: tipe.diameter_luar ? (parseFloat(itemDiameterLuar) || null) : null,
+        diameter_dalam: tipe.diameter_dalam ? (parseFloat(itemDiameterDalam) || null) : null,
+        diameter: tipe.diameter ? (parseFloat(itemDiameter) || null) : null,
+        sisi1: tipe.sisi1 ? (parseFloat(itemSisi1) || null) : null,
+        sisi2: tipe.sisi2 ? (parseFloat(itemSisi2) || null) : null,
         berat: parseFloat(itemWeight) || 0,
         harga: parseFloat(itemPrice) || 0, // Backend value
         satuan: itemUnit, // Backend value
@@ -680,10 +730,15 @@ export default function AddSalesOrderPage() {
 
       setItems([...items, newItem]);
 
-      // Reset form
-      setItemLength("");
-      setItemWidth("");
+      // Reset all form fields including new dimension fields
+      setItemPanjang("");
+      setItemLebar("");
+      setItemTebal("");
+      setItemDiameterLuar("");
+      setItemDiameterDalam("");
       setItemDiameter("");
+      setItemSisi1("");
+      setItemSisi2("");
       setItemQty("1");
       setItemType("");
       setItemTypeLabel("");
@@ -695,6 +750,7 @@ export default function AddSalesOrderPage() {
       setItemNotes("");
       setItemWeight("");
       setItemCutType("potongan");
+      setSelectedItemBarangGroup(null);
     } catch (error) {
       console.error('Error adding item:', error);
       showAlert("Error", "Terjadi kesalahan saat menambahkan item", "error");
@@ -1111,10 +1167,18 @@ export default function AddSalesOrderPage() {
   const handleShapeSelect = (shape) => {
     setSelectedShape(shape);
 
-    // Reset field lebar saat bentuk barang berubah
-    if (shape?.dimensi === "1D") {
-      setItemWidth("");
-    }
+    // Reset all dimension fields when shape changes
+    setItemPanjang("");
+    setItemLebar("");
+    setItemTebal("");
+    setItemDiameterLuar("");
+    setItemDiameterDalam("");
+    setItemDiameter("");
+    setItemSisi1("");
+    setItemSisi2("");
+
+    // Also reset the selected item barang group
+    setSelectedItemBarangGroup(null);
   };
 
   // Load group item data with filters and pagination
@@ -1232,9 +1296,16 @@ export default function AddSalesOrderPage() {
 
   // Handle select group item
   const handleSelectGroupItem = (groupItem) => {
-    setItemLength(groupItem.panjang?.toString() || "");
-    setItemWidth(groupItem.lebar?.toString() || "");
-    setItemDiameter(groupItem.tebal?.toString() || "");
+    // Fill all dimension fields from group item
+    if (groupItem.panjang != null) setItemPanjang(groupItem.panjang.toString());
+    if (groupItem.lebar != null) setItemLebar(groupItem.lebar.toString());
+    if (groupItem.tebal != null) setItemTebal(groupItem.tebal.toString());
+    if (groupItem.diameter_luar != null) setItemDiameterLuar(groupItem.diameter_luar.toString());
+    if (groupItem.diameter_dalam != null) setItemDiameterDalam(groupItem.diameter_dalam.toString());
+    if (groupItem.diameter != null) setItemDiameter(groupItem.diameter.toString());
+    if (groupItem.sisi1 != null) setItemSisi1(groupItem.sisi1.toString());
+    if (groupItem.sisi2 != null) setItemSisi2(groupItem.sisi2.toString());
+
     setGroupItemModalOpen(false);
     showAlert("Sukses", "Dimensi berhasil diisi dari group item", "success");
   };
@@ -1556,10 +1627,15 @@ export default function AddSalesOrderPage() {
                       const group = itemBarangGroupOptions.find(g => g.id?.toString() === selectedId);
                       if (group) {
                         setSelectedItemBarangGroup(group);
-                        // Auto-fill dimensions from selected group
-                        if (group.panjang) setItemLength(group.panjang.toString());
-                        if (group.lebar) setItemWidth(group.lebar.toString());
-                        if (group.tebal) setItemDiameter(group.tebal.toString());
+                        // Auto-fill all dimension fields from selected group
+                        if (group.panjang != null) setItemPanjang(group.panjang.toString());
+                        if (group.lebar != null) setItemLebar(group.lebar.toString());
+                        if (group.tebal != null) setItemTebal(group.tebal.toString());
+                        if (group.diameter_luar != null) setItemDiameterLuar(group.diameter_luar.toString());
+                        if (group.diameter_dalam != null) setItemDiameterDalam(group.diameter_dalam.toString());
+                        if (group.diameter != null) setItemDiameter(group.diameter.toString());
+                        if (group.sisi1 != null) setItemSisi1(group.sisi1.toString());
+                        if (group.sisi2 != null) setItemSisi2(group.sisi2.toString());
                       }
                     }}
                     disabled={loadingItemBarangGroup || itemBarangGroupOptions.length === 0}
@@ -1651,52 +1727,151 @@ export default function AddSalesOrderPage() {
               </div>
             </div>
 
-            {/* Row 3: Panjang, Lebar, Tebal */}
-            <div>
-              <Label htmlFor="itemLength">
-                Panjang (mm) {itemCutType !== "utuh" && <span className="text-red-500">*</span>}
-              </Label>
-              <Input
-                id="itemLength"
-                type="number"
-                step="0.01"
-                value={itemLength}
-                onChange={(e) => setItemLength(e.target.value)}
-                placeholder="0.00"
-                disabled={itemCutType === "utuh"}
-                required={itemCutType !== "utuh"}
-              />
-            </div>
-            <div>
-              <Label htmlFor="itemWidth">
-                Lebar (mm) {itemCutType !== "utuh" && selectedShape?.dimensi === "2D" && <span className="text-red-500">*</span>}
-              </Label>
-              <Input
-                id="itemWidth"
-                type="number"
-                step="0.01"
-                value={itemWidth}
-                onChange={(e) => setItemWidth(e.target.value)}
-                placeholder="0.00"
-                disabled={itemCutType === "utuh" || selectedShape?.dimensi === "1D"}
-                required={itemCutType !== "utuh" && selectedShape?.dimensi === "2D"}
-              />
-            </div>
-            <div>
-              <Label htmlFor="itemDiameter">
-                {selectedShape?.dimensi === "1D" ? "Tebal/Diameter/dan lain-lain (mm)" : "Tebal (mm)"} {itemCutType !== "utuh" && (selectedShape?.dimensi === "2D" || selectedShape?.dimensi === "1D") && <span className="text-red-500">*</span>}
-              </Label>
-              <Input
-                id="itemDiameter"
-                type="number"
-                step="0.01"
-                value={itemDiameter}
-                onChange={(e) => setItemDiameter(e.target.value)}
-                placeholder="0.00"
-                disabled={itemCutType === "utuh"}
-                required={itemCutType !== "utuh" && (selectedShape?.dimensi === "2D" || selectedShape?.dimensi === "1D")}
-              />
-            </div>
+            {/* Row 3: Dynamic Dimension Fields based on tipe_barang */}
+            {/* Diameter Luar - for pipes */}
+            {selectedShape?.tipe_barang?.diameter_luar && (
+              <div>
+                <Label htmlFor="itemDiameterLuar">
+                  Diameter Luar (mm) {itemCutType !== "utuh" && <span className="text-red-500">*</span>}
+                </Label>
+                <Input
+                  id="itemDiameterLuar"
+                  type="number"
+                  step="0.01"
+                  value={itemDiameterLuar}
+                  onChange={(e) => setItemDiameterLuar(e.target.value)}
+                  placeholder="0.00"
+                  disabled={itemCutType === "utuh"}
+                  required={itemCutType !== "utuh"}
+                />
+              </div>
+            )}
+            {/* Diameter Dalam - for pipes */}
+            {selectedShape?.tipe_barang?.diameter_dalam && (
+              <div>
+                <Label htmlFor="itemDiameterDalam">
+                  Diameter Dalam (mm) {itemCutType !== "utuh" && <span className="text-red-500">*</span>}
+                </Label>
+                <Input
+                  id="itemDiameterDalam"
+                  type="number"
+                  step="0.01"
+                  value={itemDiameterDalam}
+                  onChange={(e) => setItemDiameterDalam(e.target.value)}
+                  placeholder="0.00"
+                  disabled={itemCutType === "utuh"}
+                  required={itemCutType !== "utuh"}
+                />
+              </div>
+            )}
+            {/* Diameter - for round shafts */}
+            {selectedShape?.tipe_barang?.diameter && (
+              <div>
+                <Label htmlFor="itemDiameter">
+                  Diameter (mm) {itemCutType !== "utuh" && <span className="text-red-500">*</span>}
+                </Label>
+                <Input
+                  id="itemDiameter"
+                  type="number"
+                  step="0.01"
+                  value={itemDiameter}
+                  onChange={(e) => setItemDiameter(e.target.value)}
+                  placeholder="0.00"
+                  disabled={itemCutType === "utuh"}
+                  required={itemCutType !== "utuh"}
+                />
+              </div>
+            )}
+            {/* Sisi 1 - for square/rectangular shafts */}
+            {selectedShape?.tipe_barang?.sisi1 && (
+              <div>
+                <Label htmlFor="itemSisi1">
+                  Sisi 1 (mm) {itemCutType !== "utuh" && <span className="text-red-500">*</span>}
+                </Label>
+                <Input
+                  id="itemSisi1"
+                  type="number"
+                  step="0.01"
+                  value={itemSisi1}
+                  onChange={(e) => setItemSisi1(e.target.value)}
+                  placeholder="0.00"
+                  disabled={itemCutType === "utuh"}
+                  required={itemCutType !== "utuh"}
+                />
+              </div>
+            )}
+            {/* Sisi 2 - for square/rectangular shafts */}
+            {selectedShape?.tipe_barang?.sisi2 && (
+              <div>
+                <Label htmlFor="itemSisi2">
+                  Sisi 2 (mm) {itemCutType !== "utuh" && <span className="text-red-500">*</span>}
+                </Label>
+                <Input
+                  id="itemSisi2"
+                  type="number"
+                  step="0.01"
+                  value={itemSisi2}
+                  onChange={(e) => setItemSisi2(e.target.value)}
+                  placeholder="0.00"
+                  disabled={itemCutType === "utuh"}
+                  required={itemCutType !== "utuh"}
+                />
+              </div>
+            )}
+            {/* Tebal - for plates and pipes */}
+            {selectedShape?.tipe_barang?.tebal && (
+              <div>
+                <Label htmlFor="itemTebal">
+                  Tebal (mm) {itemCutType !== "utuh" && <span className="text-red-500">*</span>}
+                </Label>
+                <Input
+                  id="itemTebal"
+                  type="number"
+                  step="0.01"
+                  value={itemTebal}
+                  onChange={(e) => setItemTebal(e.target.value)}
+                  placeholder="0.00"
+                  disabled={itemCutType === "utuh"}
+                  required={itemCutType !== "utuh"}
+                />
+              </div>
+            )}
+            {/* Lebar - for plates */}
+            {selectedShape?.tipe_barang?.lebar && (
+              <div>
+                <Label htmlFor="itemLebar">
+                  Lebar (mm) {itemCutType !== "utuh" && <span className="text-red-500">*</span>}
+                </Label>
+                <Input
+                  id="itemLebar"
+                  type="number"
+                  step="0.01"
+                  value={itemLebar}
+                  onChange={(e) => setItemLebar(e.target.value)}
+                  placeholder="0.00"
+                  disabled={itemCutType === "utuh"}
+                  required={itemCutType !== "utuh"}
+                />
+              </div>
+            )}
+            {/* Panjang - for all types */}
+            {selectedShape?.tipe_barang?.panjang && (
+              <div>
+                <Label htmlFor="itemPanjang">
+                  Panjang (mm) {itemCutType !== "utuh" && <span className="text-red-500">*</span>}
+                </Label>
+                <Input
+                  id="itemPanjang"
+                  type="number"
+                  step="0.01"
+                  value={itemPanjang}
+                  onChange={(e) => setItemPanjang(e.target.value)}
+                  placeholder="0.00"
+                  disabled={itemCutType === "utuh"}
+                  required={itemCutType !== "utuh"}
+                />
+              </div>
+            )}
 
             {/* Row 4: Timbangan, Harga, Diskon */}
             <div>

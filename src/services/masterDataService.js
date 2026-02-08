@@ -138,7 +138,9 @@ export const getBentukBarangOptions = async () => {
       nama: item.nama_bentuk || item.nama,
       // Tambahkan id dan kode untuk modal
       id: item.id,
-      kode: item.kode
+      kode: item.kode,
+      // Tambahkan tipe_barang untuk dynamic dimension fields
+      tipe_barang: item.tipe_barang
     }));
   }, 'BentukBarangService');
 };
