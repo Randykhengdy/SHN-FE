@@ -333,6 +333,11 @@ export default function AddSalesOrderPage() {
     panjang: "",
     lebar: "",
     tebal: "",
+    diameter_luar: "",
+    diameter_dalam: "",
+    diameter: "",
+    sisi1: "",
+    sisi2: "",
     min_quantity_utuh: "",
     max_quantity_utuh: "",
     min_quantity_potongan: "",
@@ -1209,6 +1214,11 @@ export default function AddSalesOrderPage() {
       if (groupItemFilters.panjang) queryParams.append('panjang', groupItemFilters.panjang);
       if (groupItemFilters.lebar) queryParams.append('lebar', groupItemFilters.lebar);
       if (groupItemFilters.tebal) queryParams.append('tebal', groupItemFilters.tebal);
+      if (groupItemFilters.diameter_luar) queryParams.append('diameter_luar', groupItemFilters.diameter_luar);
+      if (groupItemFilters.diameter_dalam) queryParams.append('diameter_dalam', groupItemFilters.diameter_dalam);
+      if (groupItemFilters.diameter) queryParams.append('diameter', groupItemFilters.diameter);
+      if (groupItemFilters.sisi1) queryParams.append('sisi1', groupItemFilters.sisi1);
+      if (groupItemFilters.sisi2) queryParams.append('sisi2', groupItemFilters.sisi2);
       if (groupItemFilters.max_quantity_utuh) queryParams.append('max_quantity_utuh', groupItemFilters.max_quantity_utuh);
       if (groupItemFilters.min_quantity_potongan) queryParams.append('min_quantity_potongan', groupItemFilters.min_quantity_potongan);
       if (groupItemFilters.max_quantity_potongan) queryParams.append('max_quantity_potongan', groupItemFilters.max_quantity_potongan);
@@ -1243,6 +1253,11 @@ export default function AddSalesOrderPage() {
       panjang: "",
       lebar: "",
       tebal: "",
+      diameter_luar: "",
+      diameter_dalam: "",
+      diameter: "",
+      sisi1: "",
+      sisi2: "",
       min_quantity_utuh: "",
       max_quantity_utuh: "",
       min_quantity_potongan: "",
@@ -1279,6 +1294,11 @@ export default function AddSalesOrderPage() {
       panjang: "",
       lebar: "",
       tebal: "",
+      diameter_luar: "",
+      diameter_dalam: "",
+      diameter: "",
+      sisi1: "",
+      sisi2: "",
       min_quantity_utuh: "",
       max_quantity_utuh: "",
       min_quantity_potongan: "",
@@ -2189,36 +2209,102 @@ export default function AddSalesOrderPage() {
               <Card className="card-standard mb-4 flex-shrink-0">
                 <CardContent className="p-4">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <Label htmlFor="filter-panjang">Panjang (mm)</Label>
-                      <Input
-                        id="filter-panjang"
-                        type="number"
-                        value={groupItemFilters.panjang}
-                        onChange={(e) => handleFilterChange('panjang', e.target.value)}
-                        placeholder="Panjang"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="filter-lebar">Lebar (mm)</Label>
-                      <Input
-                        id="filter-lebar"
-                        type="number"
-                        value={groupItemFilters.lebar}
-                        onChange={(e) => handleFilterChange('lebar', e.target.value)}
-                        placeholder="Lebar"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="filter-tebal">Tebal (mm)</Label>
-                      <Input
-                        id="filter-tebal"
-                        type="number"
-                        value={groupItemFilters.tebal}
-                        onChange={(e) => handleFilterChange('tebal', e.target.value)}
-                        placeholder="Tebal"
-                      />
-                    </div>
+                    {selectedShape?.tipe_barang?.panjang && (
+                      <div>
+                        <Label htmlFor="filter-panjang">Panjang (mm)</Label>
+                        <Input
+                          id="filter-panjang"
+                          type="number"
+                          value={groupItemFilters.panjang}
+                          onChange={(e) => handleFilterChange('panjang', e.target.value)}
+                          placeholder="Panjang"
+                        />
+                      </div>
+                    )}
+                    {selectedShape?.tipe_barang?.lebar && (
+                      <div>
+                        <Label htmlFor="filter-lebar">Lebar (mm)</Label>
+                        <Input
+                          id="filter-lebar"
+                          type="number"
+                          value={groupItemFilters.lebar}
+                          onChange={(e) => handleFilterChange('lebar', e.target.value)}
+                          placeholder="Lebar"
+                        />
+                      </div>
+                    )}
+                    {selectedShape?.tipe_barang?.tebal && (
+                      <div>
+                        <Label htmlFor="filter-tebal">Tebal (mm)</Label>
+                        <Input
+                          id="filter-tebal"
+                          type="number"
+                          value={groupItemFilters.tebal}
+                          onChange={(e) => handleFilterChange('tebal', e.target.value)}
+                          placeholder="Tebal"
+                        />
+                      </div>
+                    )}
+                    {selectedShape?.tipe_barang?.diameter_luar && (
+                      <div>
+                        <Label htmlFor="filter-diameter-luar">Diameter Luar (mm)</Label>
+                        <Input
+                          id="filter-diameter-luar"
+                          type="number"
+                          value={groupItemFilters.diameter_luar}
+                          onChange={(e) => handleFilterChange('diameter_luar', e.target.value)}
+                          placeholder="Diameter Luar"
+                        />
+                      </div>
+                    )}
+                    {selectedShape?.tipe_barang?.diameter_dalam && (
+                      <div>
+                        <Label htmlFor="filter-diameter-dalam">Diameter Dalam (mm)</Label>
+                        <Input
+                          id="filter-diameter-dalam"
+                          type="number"
+                          value={groupItemFilters.diameter_dalam}
+                          onChange={(e) => handleFilterChange('diameter_dalam', e.target.value)}
+                          placeholder="Diameter Dalam"
+                        />
+                      </div>
+                    )}
+                    {selectedShape?.tipe_barang?.diameter && (
+                      <div>
+                        <Label htmlFor="filter-diameter">Diameter (mm)</Label>
+                        <Input
+                          id="filter-diameter"
+                          type="number"
+                          value={groupItemFilters.diameter}
+                          onChange={(e) => handleFilterChange('diameter', e.target.value)}
+                          placeholder="Diameter"
+                        />
+                      </div>
+                    )}
+                    {selectedShape?.tipe_barang?.sisi1 && (
+                      <div>
+                        <Label htmlFor="filter-sisi1">Sisi 1 (mm)</Label>
+                        <Input
+                          id="filter-sisi1"
+                          type="number"
+                          value={groupItemFilters.sisi1}
+                          onChange={(e) => handleFilterChange('sisi1', e.target.value)}
+                          placeholder="Sisi 1"
+                        />
+                      </div>
+                    )}
+                    {selectedShape?.tipe_barang?.sisi2 && (
+                      <div>
+                        <Label htmlFor="filter-sisi2">Sisi 2 (mm)</Label>
+                        <Input
+                          id="filter-sisi2"
+                          type="number"
+                          value={groupItemFilters.sisi2}
+                          onChange={(e) => handleFilterChange('sisi2', e.target.value)}
+                          placeholder="Sisi 2"
+                        />
+                      </div>
+                    )}
                     <div>
                       <Label htmlFor="filter-min-qty-utuh">Min Qty Utuh</Label>
                       <Input
@@ -2287,9 +2373,30 @@ export default function AddSalesOrderPage() {
                       <TableHeader className="table-header-standard sticky top-0 bg-white z-10 border-b">
                         <TableRow>
                           <TableHead className="table-header-cell-standard">ID</TableHead>
-                          <TableHead className="table-header-cell-standard">Panjang (mm)</TableHead>
-                          <TableHead className="table-header-cell-standard">Lebar (mm)</TableHead>
-                          <TableHead className="table-header-cell-standard">Tebal (mm)</TableHead>
+                          {selectedShape?.tipe_barang?.panjang && (
+                            <TableHead className="table-header-cell-standard">Panjang (mm)</TableHead>
+                          )}
+                          {selectedShape?.tipe_barang?.lebar && (
+                            <TableHead className="table-header-cell-standard">Lebar (mm)</TableHead>
+                          )}
+                          {selectedShape?.tipe_barang?.tebal && (
+                            <TableHead className="table-header-cell-standard">Tebal (mm)</TableHead>
+                          )}
+                          {selectedShape?.tipe_barang?.diameter_luar && (
+                            <TableHead className="table-header-cell-standard">D. Luar (mm)</TableHead>
+                          )}
+                          {selectedShape?.tipe_barang?.diameter_dalam && (
+                            <TableHead className="table-header-cell-standard">D. Dalam (mm)</TableHead>
+                          )}
+                          {selectedShape?.tipe_barang?.diameter && (
+                            <TableHead className="table-header-cell-standard">Diameter (mm)</TableHead>
+                          )}
+                          {selectedShape?.tipe_barang?.sisi1 && (
+                            <TableHead className="table-header-cell-standard">Sisi 1 (mm)</TableHead>
+                          )}
+                          {selectedShape?.tipe_barang?.sisi2 && (
+                            <TableHead className="table-header-cell-standard">Sisi 2 (mm)</TableHead>
+                          )}
                           <TableHead className="table-header-cell-standard">Qty Utuh</TableHead>
                           <TableHead className="table-header-cell-standard">Qty Potongan</TableHead>
                           <TableHead className="table-header-cell-standard text-center">Aksi</TableHead>
@@ -2299,9 +2406,30 @@ export default function AddSalesOrderPage() {
                         {groupItemOptions.map((item, index) => (
                           <TableRow key={item.id || index} className="hover:bg-gray-50">
                             <TableCell className="table-cell-standard">{item.id}</TableCell>
-                            <TableCell className="table-cell-standard">{item.panjang?.toLocaleString('id-ID') || '-'}</TableCell>
-                            <TableCell className="table-cell-standard">{item.lebar?.toLocaleString('id-ID') || '-'}</TableCell>
-                            <TableCell className="table-cell-standard">{item.tebal?.toLocaleString('id-ID') || '-'}</TableCell>
+                            {selectedShape?.tipe_barang?.panjang && (
+                              <TableCell className="table-cell-standard">{item.panjang?.toLocaleString('id-ID') || '-'}</TableCell>
+                            )}
+                            {selectedShape?.tipe_barang?.lebar && (
+                              <TableCell className="table-cell-standard">{item.lebar?.toLocaleString('id-ID') || '-'}</TableCell>
+                            )}
+                            {selectedShape?.tipe_barang?.tebal && (
+                              <TableCell className="table-cell-standard">{item.tebal?.toLocaleString('id-ID') || '-'}</TableCell>
+                            )}
+                            {selectedShape?.tipe_barang?.diameter_luar && (
+                              <TableCell className="table-cell-standard">{item.diameter_luar?.toLocaleString('id-ID') || '-'}</TableCell>
+                            )}
+                            {selectedShape?.tipe_barang?.diameter_dalam && (
+                              <TableCell className="table-cell-standard">{item.diameter_dalam?.toLocaleString('id-ID') || '-'}</TableCell>
+                            )}
+                            {selectedShape?.tipe_barang?.diameter && (
+                              <TableCell className="table-cell-standard">{item.diameter?.toLocaleString('id-ID') || '-'}</TableCell>
+                            )}
+                            {selectedShape?.tipe_barang?.sisi1 && (
+                              <TableCell className="table-cell-standard">{item.sisi1?.toLocaleString('id-ID') || '-'}</TableCell>
+                            )}
+                            {selectedShape?.tipe_barang?.sisi2 && (
+                              <TableCell className="table-cell-standard">{item.sisi2?.toLocaleString('id-ID') || '-'}</TableCell>
+                            )}
                             <TableCell className="table-cell-standard">{item.quantity_utuh?.toLocaleString('id-ID') || '-'}</TableCell>
                             <TableCell className="table-cell-standard">{item.quantity_potongan?.toLocaleString('id-ID') || '-'}</TableCell>
                             <TableCell className="table-cell-standard text-center">
