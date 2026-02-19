@@ -1770,7 +1770,7 @@ export default function AddSalesOrderPage() {
                   value={itemDiameterLuar}
                   onChange={(e) => setItemDiameterLuar(e.target.value)}
                   placeholder="0.00"
-                  disabled={itemCutType === "utuh"}
+                  disabled={itemCutType === "utuh" || !selectedShape?.tipe_barang?.cancut_diameter_luar}
                   required={itemCutType !== "utuh"}
                 />
               </div>
@@ -1788,7 +1788,7 @@ export default function AddSalesOrderPage() {
                   value={itemDiameterDalam}
                   onChange={(e) => setItemDiameterDalam(e.target.value)}
                   placeholder="0.00"
-                  disabled={itemCutType === "utuh"}
+                  disabled={itemCutType === "utuh" || !selectedShape?.tipe_barang?.cancut_diameter_dalam}
                   required={itemCutType !== "utuh"}
                 />
               </div>
@@ -1806,7 +1806,7 @@ export default function AddSalesOrderPage() {
                   value={itemDiameter}
                   onChange={(e) => setItemDiameter(e.target.value)}
                   placeholder="0.00"
-                  disabled={itemCutType === "utuh"}
+                  disabled={itemCutType === "utuh" || !selectedShape?.tipe_barang?.cancut_diameter}
                   required={itemCutType !== "utuh"}
                 />
               </div>
@@ -1824,7 +1824,7 @@ export default function AddSalesOrderPage() {
                   value={itemSisi1}
                   onChange={(e) => setItemSisi1(e.target.value)}
                   placeholder="0.00"
-                  disabled={itemCutType === "utuh"}
+                  disabled={itemCutType === "utuh" || !selectedShape?.tipe_barang?.cancut_sisi1}
                   required={itemCutType !== "utuh"}
                 />
               </div>
@@ -1842,7 +1842,7 @@ export default function AddSalesOrderPage() {
                   value={itemSisi2}
                   onChange={(e) => setItemSisi2(e.target.value)}
                   placeholder="0.00"
-                  disabled={itemCutType === "utuh"}
+                  disabled={itemCutType === "utuh" || !selectedShape?.tipe_barang?.cancut_sisi2}
                   required={itemCutType !== "utuh"}
                 />
               </div>
@@ -1860,7 +1860,7 @@ export default function AddSalesOrderPage() {
                   value={itemTebal}
                   onChange={(e) => setItemTebal(e.target.value)}
                   placeholder="0.00"
-                  disabled={itemCutType === "utuh"}
+                  disabled={itemCutType === "utuh" || !selectedShape?.tipe_barang?.cancut_tebal}
                   required={itemCutType !== "utuh"}
                 />
               </div>
@@ -1878,7 +1878,7 @@ export default function AddSalesOrderPage() {
                   value={itemLebar}
                   onChange={(e) => setItemLebar(e.target.value)}
                   placeholder="0.00"
-                  disabled={itemCutType === "utuh"}
+                  disabled={itemCutType === "utuh" || !selectedShape?.tipe_barang?.cancut_lebar}
                   required={itemCutType !== "utuh"}
                 />
               </div>
@@ -1896,7 +1896,7 @@ export default function AddSalesOrderPage() {
                   value={itemPanjang}
                   onChange={(e) => setItemPanjang(e.target.value)}
                   placeholder="0.00"
-                  disabled={itemCutType === "utuh"}
+                  disabled={itemCutType === "utuh" || !selectedShape?.tipe_barang?.cancut_panjang}
                   required={itemCutType !== "utuh"}
                 />
               </div>
