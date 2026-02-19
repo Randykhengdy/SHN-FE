@@ -311,240 +311,244 @@ export default function MasterFormModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={`sm:max-w-none ${sizeClass} ${heightClass} max-h-[90vh] overflow-visible ${size === 'xl' ? 'w-[95vw]' : ''}`}>
-        <DialogHeader>
+      <DialogContent className={`sm:max-w-none ${sizeClass} ${heightClass} max-h-[95vh] overflow-hidden flex flex-col p-0 ${size === 'xl' ? 'w-[95vw]' : ''}`}>
+        <DialogHeader className="px-6 pt-6 pb-4 border-b bg-white">
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {authError && (
-            <AuthErrorAlert
-              onRefresh={() => {
-                setAuthError(false);
-                // Reload options
-                const loadOptions = async () => {
-                  const newOptions = {};
-                  for (const field of fields) {
-                    if (field.type === "select" && field.optionsService) {
-                      try {
-                        const res = await field.optionsService.getAll();
-                        newOptions[field.name] = res.data || [];
-                      } catch (error) {
-                        console.error(`Error reloading options for ${field.name}:`, error);
-                        newOptions[field.name] = [];
+
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 bg-white">
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+            {authError && (
+              <AuthErrorAlert
+                onRefresh={() => {
+                  setAuthError(false);
+                  // Reload options
+                  const loadOptions = async () => {
+                    const newOptions = {};
+                    for (const field of fields) {
+                      if (field.type === "select" && field.optionsService) {
+                        try {
+                          const res = await field.optionsService.getAll();
+                          newOptions[field.name] = res.data || [];
+                        } catch (error) {
+                          console.error(`Error reloading options for ${field.name}:`, error);
+                          newOptions[field.name] = [];
+                        }
                       }
                     }
+                    setOptions(newOptions);
+                  };
+                  loadOptions();
+                }}
+                onLogin={() => {
+                  // Support both hash routing and regular routing
+                  if (window.location.hash) {
+                    window.location.hash = '#/';
+                  } else {
+                    window.location.href = '/';
                   }
-                  setOptions(newOptions);
-                };
-                loadOptions();
-              }}
-              onLogin={() => {
-                // Support both hash routing and regular routing
-                if (window.location.hash) {
-                  window.location.hash = '#/';
-                } else {
-                  window.location.href = '/';
-                }
-              }}
-            />
-          )}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {fields.map((field) => {
-              // Skip fields that should be hidden on edit
-              if (editData && field.hideOnEdit) {
-                return null;
-              }
-              if (field.showIf && typeof field.showIf === 'function') {
-                try {
-                  const visible = field.showIf(form);
-                  if (!visible) return null;
-                } catch (_) {
+                }}
+              />
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {fields.map((field) => {
+                // Skip fields that should be hidden on edit
+                if (editData && field.hideOnEdit) {
                   return null;
                 }
-              }
+                if (field.showIf && typeof field.showIf === 'function') {
+                  try {
+                    const visible = field.showIf(form);
+                    if (!visible) return null;
+                  } catch (_) {
+                    return null;
+                  }
+                }
 
-              // Check if field is hidden
-              const isHidden = field.hidden && (
-                typeof field.hidden === 'function' ? field.hidden(form) : field.hidden
-              );
+                // Check if field is hidden
+                const isHidden = field.hidden && (
+                  typeof field.hidden === 'function' ? field.hidden(form) : field.hidden
+                );
 
-              return (
-                <div key={field.name} className={`space-y-2 ${field.colSpan === 2 ? 'md:col-span-2' : ''} ${isHidden ? 'hidden' : ''}`}>
-                  <Label htmlFor={field.name} className="text-sm font-medium text-gray-700">
-                    {field.label}
-                  </Label>
+                return (
+                  <div key={field.name} className={`space-y-2 ${field.colSpan === 2 ? 'md:col-span-2' : ''} ${isHidden ? 'hidden' : ''}`}>
+                    <Label htmlFor={field.name} className="text-sm font-medium text-gray-700">
+                      {field.label}
+                    </Label>
 
-                  {field.type === "select" ? (
-                    <div className="relative dropdown-container">
-                      {editData && field.disabledOnEdit ? (
-                        <div className={`flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm ${'border-gray-300 bg-gray-50'} cursor-default`}>
-                          <span>{(field.editLabel && typeof field.editLabel === 'function') ? field.editLabel(editData, form) : (String(editData[field.name] || ''))}</span>
-                          <svg className="h-4 w-4 opacity-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          className={`flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${openDropdowns[field.name]
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-300 bg-white'
-                            } ${editData && field.disabledOnEdit ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-gray-50'}`}
-                          disabled={!!(editData && field.disabledOnEdit)}
-                          onClick={() => {
-                            console.log("🔥 Button clicked for field:", field.name);
-                            // Close other dropdowns and toggle current one
-                            if (editData && field.disabledOnEdit) return;
-                            setOpenDropdowns(prev => {
-                              console.log("📋 Previous dropdowns state:", prev);
-                              const newState = { [field.name]: !prev[field.name] };
-                              console.log("📋 New dropdowns state:", newState);
-                              return newState;
-                            });
-                            // Clear search terms for other fields
-                            setSearchTerms(prev => ({
-                              ...prev,
-                              [field.name]: prev[field.name] || ""
-                            }));
-                          }}
-                        >
-                          <span>
-                            {form[field.name]
-                              ? (() => {
-                                const option = options[field.name]?.find((opt) => {
-                                  // Handle both static options (value/label) and service options (id/optionLabel)
-                                  if (opt.value !== undefined) {
-                                    return String(opt.value) === form[field.name];
-                                  } else {
-                                    return String(opt.id) === form[field.name];
-                                  }
-                                });
-                                return option ? (option.label || option[field.optionLabel || "name"] || "N/A") : `Pilih ${field.label}`;
-                              })()
-                              : `Pilih ${field.label}`}
-                          </span>
-                          <svg className="h-4 w-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </button>
-                      )}
-
-                      {openDropdowns[field.name] && (
-                        <div className="absolute z-50 mt-1 w-full rounded-md border bg-white shadow-lg">
-                          <div className="p-2">
-                            <input
-                              type="text"
-                              className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              placeholder={`Cari ${field.label.toLowerCase()}...`}
-                              value={searchTerms[field.name] || ""}
-                              onChange={(e) => setSearchTerms(prev => ({ ...prev, [field.name]: e.target.value }))}
-                            />
+                    {field.type === "select" ? (
+                      <div className="relative dropdown-container">
+                        {editData && field.disabledOnEdit ? (
+                          <div className={`flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm ${'border-gray-300 bg-gray-50'} cursor-default`}>
+                            <span>{(field.editLabel && typeof field.editLabel === 'function') ? field.editLabel(editData, form) : (String(editData[field.name] || ''))}</span>
+                            <svg className="h-4 w-4 opacity-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
                           </div>
-                          <div className="max-h-48 overflow-auto">
-                            {options[field.name] && options[field.name].length > 0 ? (
-                              options[field.name]
-                                ?.filter(option => {
-                                  if (!searchTerms[field.name]) return true;
+                        ) : (
+                          <button
+                            type="button"
+                            className={`flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${openDropdowns[field.name]
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-300 bg-white'
+                              } ${editData && field.disabledOnEdit ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-gray-50'}`}
+                            disabled={!!(editData && field.disabledOnEdit)}
+                            onClick={() => {
+                              console.log("🔥 Button clicked for field:", field.name);
+                              // Close other dropdowns and toggle current one
+                              if (editData && field.disabledOnEdit) return;
+                              setOpenDropdowns(prev => {
+                                console.log("📋 Previous dropdowns state:", prev);
+                                const newState = { [field.name]: !prev[field.name] };
+                                console.log("📋 New dropdowns state:", newState);
+                                return newState;
+                              });
+                              // Clear search terms for other fields
+                              setSearchTerms(prev => ({
+                                ...prev,
+                                [field.name]: prev[field.name] || ""
+                              }));
+                            }}
+                          >
+                            <span>
+                              {form[field.name]
+                                ? (() => {
+                                  const option = options[field.name]?.find((opt) => {
+                                    // Handle both static options (value/label) and service options (id/optionLabel)
+                                    if (opt.value !== undefined) {
+                                      return String(opt.value) === form[field.name];
+                                    } else {
+                                      return String(opt.id) === form[field.name];
+                                    }
+                                  });
+                                  return option ? (option.label || option[field.optionLabel || "name"] || "N/A") : `Pilih ${field.label}`;
+                                })()
+                                : `Pilih ${field.label}`}
+                            </span>
+                            <svg className="h-4 w-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+                        )}
 
-                                  const optionText = option.label || option[field.optionLabel || "name"];
-                                  if (!optionText) return false;
-
-                                  return optionText
-                                    .toLowerCase()
-                                    .includes(searchTerms[field.name].toLowerCase());
-                                })
-                                ?.map((option) => (
-                                  <div
-                                    key={option.id || option.value}
-                                    className={`cursor-pointer px-3 py-2 text-sm hover:bg-gray-100 ${form[field.name] === String(option.id || option.value) ? 'bg-blue-50 text-blue-600' : ''
-                                      }`}
-                                    onClick={() => {
-                                      handleSelectChange(field.name, String(option.id || option.value), field);
-                                      setOpenDropdowns(prev => ({ ...prev, [field.name]: false }));
-                                      setSearchTerms(prev => ({ ...prev, [field.name]: "" }));
-                                    }}
-                                  >
-                                    {option.label || option[field.optionLabel || "name"] || "N/A"}
-                                  </div>
-                                ))
-                            ) : null}
-                          </div>
-                          {field.dropdownExtra && (
-                            <div className="border-t px-3 py-2">
-                              {field.dropdownExtra({
-                                form,
-                                options: options[field.name] || [],
-                                onSelect: (option) => {
-                                  handleSelectChange(field.name, String(option.id || option.value), field);
-                                  setOpenDropdowns(prev => ({ ...prev, [field.name]: false }));
-                                  setSearchTerms(prev => ({ ...prev, [field.name]: "" }));
-                                }
-                              })}
+                        {openDropdowns[field.name] && (
+                          <div className="absolute z-50 mt-1 w-full rounded-md border bg-white shadow-lg">
+                            <div className="p-2">
+                              <input
+                                type="text"
+                                className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder={`Cari ${field.label.toLowerCase()}...`}
+                                value={searchTerms[field.name] || ""}
+                                onChange={(e) => setSearchTerms(prev => ({ ...prev, [field.name]: e.target.value }))}
+                              />
                             </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ) : field.type === 'asyncSelect' ? (
-                    <AsyncSearchSelect
-                      label={null}
-                      placeholder={`Pilih ${field.label}`}
-                      searchPlaceholder={`Cari ${field.label.toLowerCase()}...`}
-                      value={form[field.name] || ""}
-                      onValueChange={(val) => handleSelectChange(field.name, String(val || ""), field)}
-                      fetchOptions={async (q, page) => {
-                        if (typeof field.fetchOptions === 'function') {
-                          const rows = await field.fetchOptions(q, page, form);
-                          return Array.isArray(rows) ? rows : (rows?.data || []);
-                        }
-                        return [];
-                      }}
-                      displayKey={field.displayKey || field.optionLabel || 'label'}
-                      valueKey={field.valueKey || 'value'}
-                      required={field.required}
-                      disabled={!!(editData && field.disabledOnEdit)}
-                      className=""
-                    />
-                  ) : field.type === "custom" ? (
-                    field.render ? field.render({ form, editData, handleChange, handleSelectChange }) : null
-                  ) : (
-                    <Input
-                      id={field.name}
-                      name={field.name}
-                      type={field.type || "text"}
-                      value={form[field.name] || ""}
-                      onChange={handleChange}
-                      className="w-full"
-                      required={
-                        isHidden
-                          ? false
-                          : (editData && field.hideOnEdit
+                            <div className="max-h-48 overflow-auto">
+                              {options[field.name] && options[field.name].length > 0 ? (
+                                options[field.name]
+                                  ?.filter(option => {
+                                    if (!searchTerms[field.name]) return true;
+
+                                    const optionText = option.label || option[field.optionLabel || "name"];
+                                    if (!optionText) return false;
+
+                                    return optionText
+                                      .toLowerCase()
+                                      .includes(searchTerms[field.name].toLowerCase());
+                                  })
+                                  ?.map((option) => (
+                                    <div
+                                      key={option.id || option.value}
+                                      className={`cursor-pointer px-3 py-2 text-sm hover:bg-gray-100 ${form[field.name] === String(option.id || option.value) ? 'bg-blue-50 text-blue-600' : ''
+                                        }`}
+                                      onClick={() => {
+                                        handleSelectChange(field.name, String(option.id || option.value), field);
+                                        setOpenDropdowns(prev => ({ ...prev, [field.name]: false }));
+                                        setSearchTerms(prev => ({ ...prev, [field.name]: "" }));
+                                      }}
+                                    >
+                                      {option.label || option[field.optionLabel || "name"] || "N/A"}
+                                    </div>
+                                  ))
+                              ) : null}
+                            </div>
+                            {field.dropdownExtra && (
+                              <div className="border-t px-3 py-2">
+                                {field.dropdownExtra({
+                                  form,
+                                  options: options[field.name] || [],
+                                  onSelect: (option) => {
+                                    handleSelectChange(field.name, String(option.id || option.value), field);
+                                    setOpenDropdowns(prev => ({ ...prev, [field.name]: false }));
+                                    setSearchTerms(prev => ({ ...prev, [field.name]: "" }));
+                                  }
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : field.type === 'asyncSelect' ? (
+                      <AsyncSearchSelect
+                        label={null}
+                        placeholder={`Pilih ${field.label}`}
+                        searchPlaceholder={`Cari ${field.label.toLowerCase()}...`}
+                        value={form[field.name] || ""}
+                        onValueChange={(val) => handleSelectChange(field.name, String(val || ""), field)}
+                        fetchOptions={async (q, page) => {
+                          if (typeof field.fetchOptions === 'function') {
+                            const rows = await field.fetchOptions(q, page, form);
+                            return Array.isArray(rows) ? rows : (rows?.data || []);
+                          }
+                          return [];
+                        }}
+                        displayKey={field.displayKey || field.optionLabel || 'label'}
+                        valueKey={field.valueKey || 'value'}
+                        required={field.required}
+                        disabled={!!(editData && field.disabledOnEdit)}
+                        className=""
+                      />
+                    ) : field.type === "custom" ? (
+                      field.render ? field.render({ form, editData, handleChange, handleSelectChange }) : null
+                    ) : (
+                      <Input
+                        id={field.name}
+                        name={field.name}
+                        type={field.type || "text"}
+                        value={form[field.name] || ""}
+                        onChange={handleChange}
+                        className="w-full"
+                        required={
+                          isHidden
                             ? false
-                            : (typeof field.required === 'function'
-                              ? field.required(form)
-                              : field.required))
-                      }
-                      step={field.step}
-                      maxLength={field.maxLength}
-                      disabled={!!(editData && field.disabledOnEdit)}
-                    />
-                  )}
-                </div>
-              );
-            })}
+                            : (editData && field.hideOnEdit
+                              ? false
+                              : (typeof field.required === 'function'
+                                ? field.required(form)
+                                : field.required))
+                        }
+                        step={field.step}
+                        maxLength={field.maxLength}
+                        disabled={!!(editData && field.disabledOnEdit)}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {error && (
+              <div className="text-red-600 text-sm p-3 bg-red-50 border border-red-200 rounded-md">
+                ❌ {error}
+              </div>
+            )}
           </div>
 
-          {error && (
-            <div className="text-red-600 text-sm p-3 bg-red-50 border border-red-200 rounded-md">
-              ❌ {error}
-            </div>
-          )}
-
-          <DialogFooter className="flex gap-2 pt-4">
+          <DialogFooter className="px-6 py-4 border-t bg-gray-50/50 flex gap-2 sm:justify-end">
             <Button type="button" variant="outline" onClick={onClose} disabled={saveLoading}>
               Batal
             </Button>
-            <Button type="submit" disabled={saveLoading}>
+            <Button type="submit" disabled={saveLoading} className="bg-blue-600 hover:bg-blue-700">
               {saveLoading ? "Menyimpan..." : (editData ? "Update" : "Simpan")}
             </Button>
           </DialogFooter>
