@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { ArrowLeft, Calendar, Eye, Printer } from "lucide-react";
+import {
+  getTermOptions,
+  getBentukBarangOptions,
+  getUnitOptions
+} from "@/services/masterDataService";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +38,7 @@ export default function ViewSalesOrderPage() {
   const [itemTypeOptions, setItemTypeOptions] = useState([]);
   const [itemShapeOptions, setItemShapeOptions] = useState([]);
   const [itemGradeOptions, setItemGradeOptions] = useState([]);
+  const [unitOptions, setUnitOptions] = useState([]);
 
   // Sales Order Data
   const [salesOrder, setSalesOrder] = useState(null);
@@ -91,6 +97,14 @@ export default function ViewSalesOrderPage() {
 
       try {
         setLoading(true);
+
+        // Load units for mapping IDs to names if needed
+        try {
+          const units = await getUnitOptions();
+          setUnitOptions(units);
+        } catch (err) {
+          console.error('Error loading units:', err);
+        }
 
         // Load sales order data (includes master data)
         console.log('🔧 Fetching sales order data for ID:', id);
@@ -243,6 +257,7 @@ export default function ViewSalesOrderPage() {
               harga: harga,
               diskon: diskon,
               satuan: item.satuan || 'N/A',
+              satuan_nama: item.satuan_barang?.nama || item.unit?.nama || "",
               catatan: item.catatan || item.note || item.notes || "",
               total: item.total || item.subtotal || total || 0
             };
@@ -332,9 +347,6 @@ export default function ViewSalesOrderPage() {
             dimensi_potong = `${panjang} x ${tebal} mm`;
           }
 
-          // Use satuan as unit (handle 'N/A' case)
-          const unit = (item.satuan && item.satuan !== 'N/A') ? item.satuan : (item.unit || '-');
-
           // Calculate total_kg from berat (weight) if available
           const total_kg = parseFloat(item.berat) || 0;
 
@@ -343,7 +355,7 @@ export default function ViewSalesOrderPage() {
             bentuk_barang: item.bentukBarang || item.bentuk_barang,
             grade_barang: item.gradeBarang || item.grade_barang,
             dimensi_potong: dimensi_potong,
-            unit: unit,
+            unit: item.satuan_nama || unitOptions.find(opt => opt.value === item.satuan?.toString())?.label || item.satuan || '-',
             qty: item.qty || item.quantity || 0,
             total_kg: total_kg,
             harga_per_unit: item.harga || item.harga_per_unit || 0,
@@ -605,6 +617,7 @@ export default function ViewSalesOrderPage() {
                   <TableHead className="table-header-cell-standard">Qty</TableHead>
                   <TableHead className="table-header-cell-standard">Luas/item</TableHead>
                   <TableHead className="table-header-cell-standard">Harga</TableHead>
+                  <TableHead className="table-header-cell-standard">Satuan</TableHead>
                   <TableHead className="table-header-cell-standard">Diskon</TableHead>
                   <TableHead className="table-header-cell-standard">Total</TableHead>
                 </TableRow>
@@ -642,6 +655,7 @@ export default function ViewSalesOrderPage() {
                         <TableCell>{item.qty}</TableCell>
                         <TableCell>{luasDisplay}</TableCell>
                         <TableCell>{formatCurrency(item.harga)}</TableCell>
+                        <TableCell>{item.satuan_nama || unitOptions.find(opt => opt.value === item.satuan?.toString())?.label || item.satuan}</TableCell>
                         <TableCell>{item.diskon}%</TableCell>
                         <TableCell className="font-semibold">{formatCurrency(item.total)}</TableCell>
                       </TableRow>
