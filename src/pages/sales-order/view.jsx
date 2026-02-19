@@ -99,9 +99,10 @@ export default function ViewSalesOrderPage() {
         setLoading(true);
 
         // Load units for mapping IDs to names if needed
+        let resolvedUnits = [];
         try {
-          const units = await getUnitOptions();
-          setUnitOptions(units);
+          resolvedUnits = await getUnitOptions();
+          setUnitOptions(resolvedUnits);
         } catch (err) {
           console.error('Error loading units:', err);
         }
@@ -229,7 +230,17 @@ export default function ViewSalesOrderPage() {
             const qty = parseFloat(item.qty || item.quantity || item.jumlah || 0);
             const harga = parseFloat(item.harga || item.price || 0);
             const diskon = parseFloat(item.diskon || item.discount || 0);
-            const subtotal = qty * harga;
+            const berat = parseFloat(item.berat || item.weight || 0);
+
+            // Resolve satuan name from ID using resolvedUnits
+            const resolvedUnit = resolvedUnits.find(opt => opt.value === item.satuan?.toString());
+            const satuanNama = (item.satuan_barang?.nama || item.unit?.nama || resolvedUnit?.label || "").toLowerCase();
+
+            let subtotal = qty * harga;
+            if (satuanNama === 'kilogram' || satuanNama === 'kg') {
+              subtotal = qty * harga * berat;
+            }
+
             const discountAmount = subtotal * (diskon / 100);
             const total = subtotal - discountAmount;
 
@@ -237,6 +248,8 @@ export default function ViewSalesOrderPage() {
               qty,
               harga,
               diskon,
+              berat,
+              satuanNama,
               subtotal,
               discountAmount,
               total,
