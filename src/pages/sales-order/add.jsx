@@ -665,14 +665,21 @@ export default function AddSalesOrderPage() {
       const tipe = selectedShape?.tipe_barang || {};
       let dimensiParts = [];
 
-      if (tipe.diameter_luar && itemDiameterLuar) dimensiParts.push(`DL:${itemDiameterLuar}`);
-      if (tipe.diameter_dalam && itemDiameterDalam) dimensiParts.push(`DD:${itemDiameterDalam}`);
-      if (tipe.diameter && itemDiameter) dimensiParts.push(`D:${itemDiameter}`);
-      if (tipe.sisi1 && itemSisi1) dimensiParts.push(`S1:${itemSisi1}`);
-      if (tipe.sisi2 && itemSisi2) dimensiParts.push(`S2:${itemSisi2}`);
-      if (tipe.tebal && itemTebal) dimensiParts.push(`T:${itemTebal}`);
-      if (tipe.lebar && itemLebar) dimensiParts.push(`L:${itemLebar}`);
-      if (tipe.panjang && itemPanjang) dimensiParts.push(`P:${itemPanjang}`);
+      // Helper to format dimension values: remove trailing zeros and format decimal
+      const formatDim = (val) => {
+        if (!val) return "";
+        const parsed = parseFloat(val);
+        return isNaN(parsed) ? val : parsed.toString();
+      };
+
+      if (tipe.diameter_luar && itemDiameterLuar) dimensiParts.push(formatDim(itemDiameterLuar));
+      if (tipe.diameter_dalam && itemDiameterDalam) dimensiParts.push(formatDim(itemDiameterDalam));
+      if (tipe.diameter && itemDiameter) dimensiParts.push(formatDim(itemDiameter));
+      if (tipe.sisi1 && itemSisi1) dimensiParts.push(formatDim(itemSisi1));
+      if (tipe.sisi2 && itemSisi2) dimensiParts.push(formatDim(itemSisi2));
+      if (tipe.tebal && itemTebal) dimensiParts.push(formatDim(itemTebal));
+      if (tipe.lebar && itemLebar) dimensiParts.push(formatDim(itemLebar));
+      if (tipe.panjang && itemPanjang) dimensiParts.push(formatDim(itemPanjang));
 
       let dimensiString = dimensiParts.length > 0 ? dimensiParts.join(' x ') : '-';
 
