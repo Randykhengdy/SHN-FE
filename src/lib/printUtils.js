@@ -569,7 +569,7 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
             <th>Dimensi Potong</th>
             <th>Unit</th>
             <th>Qty</th>
-            <th>Total Berat</th>
+            <th>Berat Satuan</th>
             <th>Harga per Unit</th>
             <th>Total Harga</th>
           </tr>

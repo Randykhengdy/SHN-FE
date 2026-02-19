@@ -825,6 +825,7 @@ export default function AddSalesOrderPage() {
           diameter: parseFloat(item.diameter) || null,
           sisi1: parseFloat(item.sisi1) || null,
           sisi2: parseFloat(item.sisi2) || null,
+          berat: parseFloat(item.berat) || 0,
           item_barang_group_id: item.masterItemId || null,
           qty: parseInt(item.qty) || 0,
           jenis_barang_id: parseInt(item.jenisBarangId) || 0,

@@ -657,6 +657,7 @@ export default function ViewSalesOrderPage() {
                   <TableHead className="table-header-cell-standard">Grade</TableHead>
                   <TableHead className="table-header-cell-standard">Master Item Barang</TableHead>
                   <TableHead className="table-header-cell-standard">Dimensi</TableHead>
+                  <TableHead className="table-header-cell-standard">Berat Satuan</TableHead>
                   <TableHead className="table-header-cell-standard">Qty</TableHead>
                   <TableHead className="table-header-cell-standard">Luas/item</TableHead>
                   <TableHead className="table-header-cell-standard">Harga</TableHead>
@@ -668,7 +669,7 @@ export default function ViewSalesOrderPage() {
               <TableBody>
                 {items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={12} className="text-center py-8 text-gray-500">
                       Tidak ada item
                     </TableCell>
                   </TableRow>
@@ -694,6 +695,7 @@ export default function ViewSalesOrderPage() {
                         <TableCell>{item.gradeBarang}</TableCell>
                         <TableCell>{item.masterItemName}</TableCell>
                         <TableCell>{dimensi}</TableCell>
+                        <TableCell>{item.berat ? `${item.berat} kg` : '-'}</TableCell>
                         <TableCell>{item.qty}</TableCell>
                         <TableCell>{luasDisplay}</TableCell>
                         <TableCell>{formatCurrency(item.harga)}</TableCell>
