@@ -248,10 +248,14 @@ export default function ViewSalesOrderPage() {
               jenisBarang: item.jenis_barang?.nama_jenis_barang || item.jenis_barang?.nama_jenis || item.jenis_barang?.nama || 'N/A',
               bentukBarang: item.bentuk_barang?.nama_bentuk_barang || item.bentuk_barang?.nama_bentuk || item.bentuk_barang?.nama || 'N/A',
               gradeBarang: item.grade_barang?.nama_grade_barang || item.grade_barang?.nama || item.grade_barang?.nama_grade || 'N/A',
-              panjang: item.panjang || item.length || 0,
-              lebar: item.lebar || item.width || 0,
+              panjang: item.panjang || 0,
+              lebar: item.lebar || 0,
+              tebal: item.tebal || 0,
+              diameter_luar: item.diameter_luar || 0,
+              diameter_dalam: item.diameter_dalam || 0,
               diameter: item.diameter || 0,
-              ketebalan: item.tebal || item.ketebalan || item.thickness || 0,
+              sisi1: item.sisi1 || 0,
+              sisi2: item.sisi2 || 0,
               berat: item.berat || item.weight || 0,
               qty: qty,
               harga: harga,
@@ -637,7 +641,7 @@ export default function ViewSalesOrderPage() {
                     // Calculate luas per item
                     const panjang = parseFloat(item.panjang) || 0; // mm
                     const lebar = parseFloat(item.lebar) || 0; // mm
-                    const tebal = parseFloat(item.ketebalan) || 0; // mm
+                    const tebal = parseFloat(item.tebal) || 0; // mm
                     const is2D = lebar > 0;
                     const luasDisplay = is2D
                       ? `${(panjang * lebar / 1000000).toFixed(2)} m²`
