@@ -195,14 +195,19 @@ export default function AddSalesOrderPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemCutType]);
 
-  // Reset panjang, lebar, dan tebal ketika jenis potongan berubah menjadi "utuh"
+  // Populate panjang, lebar, dan tebal ketika jenis potongan berubah menjadi "utuh" dari group yang dipilih
   useEffect(() => {
-    if (itemCutType === "utuh") {
-      setItemLength("");
-      setItemWidth("");
-      setItemDiameter("");
+    if (itemCutType === "utuh" && selectedItemBarangGroup) {
+      if (selectedItemBarangGroup.panjang != null) setItemPanjang(selectedItemBarangGroup.panjang.toString());
+      if (selectedItemBarangGroup.lebar != null) setItemLebar(selectedItemBarangGroup.lebar.toString());
+      if (selectedItemBarangGroup.tebal != null) setItemTebal(selectedItemBarangGroup.tebal.toString());
+      if (selectedItemBarangGroup.diameter_luar != null) setItemDiameterLuar(selectedItemBarangGroup.diameter_luar.toString());
+      if (selectedItemBarangGroup.diameter_dalam != null) setItemDiameterDalam(selectedItemBarangGroup.diameter_dalam.toString());
+      if (selectedItemBarangGroup.diameter != null) setItemDiameter(selectedItemBarangGroup.diameter.toString());
+      if (selectedItemBarangGroup.sisi1 != null) setItemSisi1(selectedItemBarangGroup.sisi1.toString());
+      if (selectedItemBarangGroup.sisi2 != null) setItemSisi2(selectedItemBarangGroup.sisi2.toString());
     }
-  }, [itemCutType]);
+  }, [itemCutType, selectedItemBarangGroup]);
 
   // Load Item Barang Group options when jenis, bentuk, and grade are selected
   useEffect(() => {
