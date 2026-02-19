@@ -124,7 +124,8 @@ export default function AddSalesOrderPage() {
   const [handoverMethod, setHandoverMethod] = useState("pickup");
   const [includePPN, setIncludePPN] = useState(true);
   const [priceIncludesPPN, setPriceIncludesPPN] = useState(false); // Harga per item sudah include PPN
-  const [diskonSO, setDiskonSO] = useState("0"); // Diskon SO level (percentage)
+  const [diskonSO, setDiskonSO] = useState("0"); // Diskon SO level (percentage or nominal)
+  const [soDiscountType, setSoDiscountType] = useState("percent"); // percent or nominal
 
   // Item Input Form - Dimension fields (dynamic based on tipe_barang)
   const [itemPanjang, setItemPanjang] = useState("");
@@ -151,6 +152,7 @@ export default function AddSalesOrderPage() {
   const [itemPrice, setItemPrice] = useState("");
   const [itemUnit, setItemUnit] = useState("per-dimensi");
   const [itemDiscount, setItemDiscount] = useState("0");
+  const [itemDiscountType, setItemDiscountType] = useState("percent"); // percent or nominal
   const [itemNotes, setItemNotes] = useState("");
   const [itemWeight, setItemWeight] = useState("");
   const [itemCutType, setItemCutType] = useState("potongan");
@@ -500,7 +502,14 @@ export default function AddSalesOrderPage() {
             totalBeforeDiscount = unitPrice * qty; // Kalikan dengan quantity untuk satuan lain
           }
 
-          const discountAmount = totalBeforeDiscount * (discount / 100);
+          let discountAmount = 0;
+          if (itemDiscountType === "percent") {
+            discountAmount = totalBeforeDiscount * (discount / 100);
+          } else {
+            // Nominal discount
+            discountAmount = discount;
+          }
+
           totalAfterDiscount = totalBeforeDiscount - discountAmount;
         }
 
@@ -524,7 +533,7 @@ export default function AddSalesOrderPage() {
     }, 100);
 
     return () => clearTimeout(timeoutId);
-  }, [itemLength, itemWidth, itemDiameter, selectedShape, itemQty, itemDiscount, itemPrice, itemWeight, itemUnit, unitOptions]);
+  }, [itemLength, itemWidth, itemDiameter, selectedShape, itemQty, itemDiscount, itemDiscountType, itemPrice, itemWeight, itemUnit, unitOptions]);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('id-ID', {
@@ -710,7 +719,14 @@ export default function AddSalesOrderPage() {
         totalBeforeDiscount = unitPrice * qty; // Kalikan dengan quantity untuk satuan lain
       }
 
-      const discountAmount = totalBeforeDiscount * (parseFloat(itemDiscount) || 0) / 100;
+      let discountAmount = 0;
+      if (itemDiscountType === "percent") {
+        discountAmount = totalBeforeDiscount * (parseFloat(itemDiscount) || 0) / 100;
+      } else {
+        // Nominal discount
+        discountAmount = parseFloat(itemDiscount) || 0;
+      }
+
       const finalTotal = totalBeforeDiscount - discountAmount;
 
       const newItem = {
@@ -723,7 +739,8 @@ export default function AddSalesOrderPage() {
         luasPerItem: itemArea,
         hargaDisplay: itemPricePerUnit,
         satuanDisplay: unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit,
-        diskon: `${itemDiscount}%`,
+        diskon: itemDiscountType === 'percent' ? `${itemDiscount}%` : `Rp ${parseFloat(itemDiscount).toLocaleString('id-ID')}`,
+        diskon_type: itemDiscountType,
         total: `Rp ${finalTotal.toLocaleString('id-ID')}`,
         jenisBarangId: itemType,
         bentukBarangId: selectedShape.id,
@@ -741,7 +758,7 @@ export default function AddSalesOrderPage() {
         harga: parseFloat(itemPrice) || 0, // Backend value
         satuan: itemUnit, // Backend value
         jenis_potongan: itemCutType,
-        diskonPercent: parseFloat(itemDiscount) || 0,
+        diskonAmount: parseFloat(itemDiscount) || 0,
         masterItemId: selectedItemBarangGroup?.id || null,
         masterItemName: selectedItemBarangGroup?.nama_group_barang || '-',
         catatan: itemNotes
@@ -812,7 +829,8 @@ export default function AddSalesOrderPage() {
         pelanggan_id: selectedCustomer?.id || 1,
         subtotal: subtotal || 0,
         total_diskon: totalDiscountSO || 0,
-        diskon_so: diskonSOPercent || 0,
+        diskon_so: parseFloat(diskonSO) || 0,
+        diskon_so_type: soDiscountType,
         ppn_percent: includePPN ? 11.0 : 0,
         ppn_amount: ppn || 0,
         total_harga_so: totalHargaSO || 0,
@@ -834,7 +852,8 @@ export default function AddSalesOrderPage() {
           harga: parseFloat(item.harga) || 0,
           satuan: item.satuan,
           jenis_potongan: item.jenis_potongan,
-          diskon: parseFloat(item.diskonPercent) || 0,
+          diskon: parseFloat(item.diskonAmount) || 0,
+          diskon_type: item.diskon_type || "percent",
           catatan: item.catatan || ""
         }))
       };
@@ -915,7 +934,8 @@ export default function AddSalesOrderPage() {
           })),
           total_harga: subtotal,
           discount: totalDiscountSO,
-          diskon_so_percent: diskonSOPercent,
+          diskon_so_value: parseFloat(diskonSO) || 0,
+          diskon_so_type: soDiscountType,
           diskon_so_amount: diskonSOAmount,
           price_includes_ppn: priceIncludesPPN,
           dpp: dpp,
@@ -1022,7 +1042,8 @@ export default function AddSalesOrderPage() {
         })),
         total_harga: subtotal,
         discount: totalDiscountSO,
-        diskon_so_percent: diskonSOPercent,
+        diskon_so_value: parseFloat(diskonSO) || 0,
+        diskon_so_type: soDiscountType,
         diskon_so_amount: diskonSOAmount,
         price_includes_ppn: priceIncludesPPN,
         dpp: dpp,
@@ -1372,7 +1393,7 @@ export default function AddSalesOrderPage() {
   // Subtotal adalah total harga SETELAH diskon item (sudah termasuk diskon item)
   const subtotal = items.reduce((sum, item) => {
     try {
-      const total = parseInt(item.total.replace(/[^\d]/g, '')) || 0;
+      const total = parseInt(item.total.replace(/[^0-9-]/g, '')) || 0;
       return sum + total;
     } catch (error) {
       console.error('Error calculating subtotal:', error);
@@ -1381,8 +1402,14 @@ export default function AddSalesOrderPage() {
   }, 0);
 
   // Calculate SO-level discount (dihitung dari subtotal yang sudah termasuk diskon item)
-  const diskonSOPercent = parseFloat(diskonSO) || 0;
-  const diskonSOAmount = subtotal * (diskonSOPercent / 100);
+  const diskonSOValue = parseFloat(diskonSO) || 0;
+  let diskonSOAmount = 0;
+
+  if (soDiscountType === "percent") {
+    diskonSOAmount = subtotal * (diskonSOValue / 100);
+  } else {
+    diskonSOAmount = diskonSOValue;
+  }
 
   // Total discount = hanya diskon SO (karena diskon item sudah termasuk dalam subtotal)
   const totalDiscountSO = diskonSOAmount;
@@ -1954,21 +1981,34 @@ export default function AddSalesOrderPage() {
               />
             </div>
             <div>
-              <Label htmlFor="itemDiscount">Diskon (%)</Label>
-              <Input
-                id="itemDiscount"
-                type="number"
-                value={itemDiscount}
-                onChange={(e) => setItemDiscount(e.target.value)}
-                onBlur={(e) => {
-                  if (e.target.value === '' || e.target.value === null) {
-                    setItemDiscount('0');
-                  }
-                }}
-                min="0"
-                max="100"
-                placeholder="0"
-              />
+              <Label htmlFor="itemDiscount">Diskon</Label>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Input
+                    id="itemDiscount"
+                    type="number"
+                    value={itemDiscount}
+                    onChange={(e) => setItemDiscount(e.target.value)}
+                    onBlur={(e) => {
+                      if (e.target.value === '' || e.target.value === null) {
+                        setItemDiscount('0');
+                      }
+                    }}
+                    min="0"
+                    placeholder="0"
+                  />
+                </div>
+                <div className="w-32">
+                  <select
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={itemDiscountType}
+                    onChange={(e) => setItemDiscountType(e.target.value)}
+                  >
+                    <option value="percent">% Persen</option>
+                    <option value="nominal">Rp Nominal</option>
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -2120,19 +2160,25 @@ export default function AddSalesOrderPage() {
               <div className="text-lg font-semibold">{formatCurrency(subtotal)}</div>
             </div>
             <div>
-              <Label className="text-sm text-gray-600">Diskon SO (%)</Label>
+              <Label className="text-sm text-gray-600">Diskon SO</Label>
               <div className="flex items-center gap-2">
                 <Input
                   type="number"
                   min="0"
-                  max="100"
                   step="0.01"
                   value={diskonSO}
                   onChange={(e) => setDiskonSO(e.target.value)}
                   className="w-24 text-center"
                   placeholder="0"
                 />
-                <span className="text-sm text-gray-500">%</span>
+                <select
+                  className="h-10 rounded-md border border-input bg-background px-2 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={soDiscountType}
+                  onChange={(e) => setSoDiscountType(e.target.value)}
+                >
+                  <option value="percent">%</option>
+                  <option value="nominal">Rp</option>
+                </select>
               </div>
               {diskonSOAmount > 0 && (
                 <div className="text-sm text-orange-600 mt-1">

@@ -241,7 +241,7 @@ export default function ViewSalesOrderPage() {
               subtotal = qty * harga * berat;
             }
 
-            const discountAmount = subtotal * (diskon / 100);
+            const discountAmount = item.diskon_type === 'nominal' ? diskon : subtotal * (diskon / 100);
             const total = subtotal - discountAmount;
 
             console.log('🔍 Item calculations:', {
@@ -274,6 +274,7 @@ export default function ViewSalesOrderPage() {
               qty: qty,
               harga: harga,
               diskon: diskon,
+              diskon_type: item.diskon_type || 'percent',
               satuan: item.satuan || 'N/A',
               satuan_nama: item.satuan_barang?.nama || item.unit?.nama || "",
               masterItemName: item.item_barang_group?.nama_group_barang || item.master_item_nama || '-',
@@ -419,7 +420,8 @@ export default function ViewSalesOrderPage() {
         }),
         total_harga: subtotal,
         discount: totalDiscountSO,
-        diskon_so_percent: diskonSOPercent,
+        diskon_so_value: diskonSOValue,
+        diskon_so_type: diskonSOType,
         diskon_so_amount: diskonSOAmount,
         ppn: ppnAmount,
         grand_total: grandTotal
@@ -444,7 +446,7 @@ export default function ViewSalesOrderPage() {
 
   // Memoized calculations
   // Subtotal adalah total harga SETELAH diskon item (sudah termasuk diskon item)
-  const { subtotal, diskonSOPercent, diskonSOAmount, totalDiscountSO, ppnAmount, grandTotal } = useMemo(() => {
+  const { subtotal, diskonSOValue, diskonSOType, diskonSOAmount, totalDiscountSO, ppnAmount, grandTotal } = useMemo(() => {
     console.log('🔍 Calculating totals for items:', items);
 
     // Subtotal = total semua item (sudah termasuk diskon item)
@@ -454,9 +456,16 @@ export default function ViewSalesOrderPage() {
       return sum + itemTotal;
     }, 0);
 
-    // Get SO-level discount from API response
-    const diskonSOPercent = salesOrder ? (parseFloat(salesOrder.diskon_so) || 0) : 0;
-    const diskonSOAmount = subtotal * (diskonSOPercent / 100);
+    // Calculate SO-level discount (dihitung dari subtotal yang sudah termasuk diskon item)
+    const diskonSOValue = salesOrder ? (parseFloat(salesOrder.diskon_so) || 0) : 0;
+    const diskonSOType = salesOrder?.diskon_so_type || 'percent'; // percent or nominal
+
+    let diskonSOAmount = 0;
+    if (diskonSOType === 'percent') {
+      diskonSOAmount = subtotal * (diskonSOValue / 100);
+    } else {
+      diskonSOAmount = diskonSOValue;
+    }
 
     // Total discount = hanya diskon SO (karena diskon item sudah termasuk dalam subtotal)
     const totalDiscountSO = diskonSOAmount;
@@ -490,7 +499,8 @@ export default function ViewSalesOrderPage() {
 
     console.log('🔍 Final calculations:', {
       subtotal,
-      diskonSOPercent,
+      diskonSOValue,
+      diskonSOType,
       diskonSOAmount,
       totalDiscountSO,
       ppnAmount,
@@ -501,7 +511,7 @@ export default function ViewSalesOrderPage() {
       salesOrderDiskonSO: salesOrder?.diskon_so
     });
 
-    return { subtotal, diskonSOPercent, diskonSOAmount, totalDiscountSO, ppnAmount, grandTotal };
+    return { subtotal, diskonSOValue, diskonSOType, diskonSOAmount, totalDiscountSO, ppnAmount, grandTotal };
   }, [items, salesOrder]);
 
 
@@ -713,7 +723,7 @@ export default function ViewSalesOrderPage() {
                         <TableCell>{luasDisplay}</TableCell>
                         <TableCell>{formatCurrency(item.harga)}</TableCell>
                         <TableCell>{item.satuan_nama || unitOptions.find(opt => opt.value === item.satuan?.toString())?.label || item.satuan}</TableCell>
-                        <TableCell>{item.diskon}%</TableCell>
+                        <TableCell>{item.diskon_type === 'nominal' ? formatCurrency(item.diskon) : `${item.diskon}%`}</TableCell>
                         <TableCell className="font-semibold">{formatCurrency(item.total)}</TableCell>
                       </TableRow>
                     );
@@ -737,9 +747,11 @@ export default function ViewSalesOrderPage() {
                 <span className="text-gray-600">Subtotal:</span>
                 <span className="font-semibold">{formatCurrency(subtotal)}</span>
               </div>
-              {diskonSOPercent > 0 && (
+              {diskonSOAmount > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Diskon SO ({diskonSOPercent}%):</span>
+                  <span className="text-gray-600">
+                    Diskon SO ({diskonSOType === 'percent' ? `${diskonSOValue}%` : 'Nominal'}):
+                  </span>
                   <span className="font-semibold text-orange-600">-{formatCurrency(diskonSOAmount)}</span>
                 </div>
               )}

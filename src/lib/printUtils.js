@@ -586,13 +586,18 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
               <td class="summary-label">Total Harga:</td>
               <td class="summary-value">${formatCurrency(salesOrderData.total_harga || salesOrderData.total_amount)}</td>
             </tr>
-            ${salesOrderData.diskon_so_percent || salesOrderData.diskon_so ? `
+            ${salesOrderData.diskon_so_amount ? `
+            <tr>
+              <td class="summary-label">Diskon SO ${salesOrderData.diskon_so_type === 'percent' ? `(${salesOrderData.diskon_so_value}%)` : '(Nominal)'}:</td>
+              <td class="summary-value">- ${formatCurrency(salesOrderData.diskon_so_amount)}</td>
+            </tr>
+            ` : (salesOrderData.diskon_so_percent || salesOrderData.diskon_so ? `
             <tr>
               <td class="summary-label">Diskon SO (${salesOrderData.diskon_so_percent || salesOrderData.diskon_so || 0}%):</td>
               <td class="summary-value">- ${formatCurrency(salesOrderData.diskon_so_amount || 0)}</td>
             </tr>
-            ` : ''}
-            ${salesOrderData.discount ? `
+            ` : '')}
+            ${(salesOrderData.discount && salesOrderData.discount !== salesOrderData.diskon_so_amount) ? `
             <tr>
               <td class="summary-label">Total Discount:</td>
               <td class="summary-value">- ${formatCurrency(salesOrderData.discount)}</td>
