@@ -258,6 +258,7 @@ export default function ViewSalesOrderPage() {
               diskon: diskon,
               satuan: item.satuan || 'N/A',
               satuan_nama: item.satuan_barang?.nama || item.unit?.nama || "",
+              masterItemName: item.item_barang_group?.nama_group_barang || item.master_item_nama || '-',
               catatan: item.catatan || item.note || item.notes || "",
               total: item.total || item.subtotal || total || 0
             };
@@ -354,6 +355,7 @@ export default function ViewSalesOrderPage() {
             nama_item: item.jenisBarang || item.nama_item,
             bentuk_barang: item.bentukBarang || item.bentuk_barang,
             grade_barang: item.gradeBarang || item.grade_barang,
+            master_item: item.masterItemName || item.master_item_nama || '-',
             dimensi_potong: dimensi_potong,
             unit: item.satuan_nama || unitOptions.find(opt => opt.value === item.satuan?.toString())?.label || item.satuan || '-',
             qty: item.qty || item.quantity || 0,
@@ -613,6 +615,7 @@ export default function ViewSalesOrderPage() {
                   <TableHead className="table-header-cell-standard">Jenis Barang</TableHead>
                   <TableHead className="table-header-cell-standard">Bentuk</TableHead>
                   <TableHead className="table-header-cell-standard">Grade</TableHead>
+                  <TableHead className="table-header-cell-standard">Master Item Barang</TableHead>
                   <TableHead className="table-header-cell-standard">Dimensi</TableHead>
                   <TableHead className="table-header-cell-standard">Qty</TableHead>
                   <TableHead className="table-header-cell-standard">Luas/item</TableHead>
@@ -625,7 +628,7 @@ export default function ViewSalesOrderPage() {
               <TableBody>
                 {items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={11} className="text-center py-8 text-gray-500">
                       Tidak ada item
                     </TableCell>
                   </TableRow>
@@ -651,6 +654,7 @@ export default function ViewSalesOrderPage() {
                         <TableCell>{item.jenisBarang}</TableCell>
                         <TableCell>{item.bentukBarang}</TableCell>
                         <TableCell>{item.gradeBarang}</TableCell>
+                        <TableCell>{item.masterItemName}</TableCell>
                         <TableCell>{dimensi}</TableCell>
                         <TableCell>{item.qty}</TableCell>
                         <TableCell>{luasDisplay}</TableCell>

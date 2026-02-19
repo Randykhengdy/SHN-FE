@@ -447,6 +447,7 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
       <td style="border: 1px solid #ddd; padding: 8px;">${item.nama_item || item.jenis_barang || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 8px;">${item.bentuk_barang || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 8px;">${item.grade_barang || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 8px;">${item.master_item || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 8px;">${item.dimensi_potong || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 8px;">${item.unit || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.qty || 0}</td>
@@ -454,7 +455,7 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
       <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">Rp ${parseFloat(item.harga_per_unit || 0).toLocaleString('id-ID')}</td>
       <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">Rp ${parseFloat(item.total_harga || 0).toLocaleString('id-ID')}</td>
     </tr>
-  `).join('') || '<tr><td colspan="9" style="text-align: center; padding: 20px;">Tidak ada item</td></tr>';
+  `).join('') || '<tr><td colspan="10" style="text-align: center; padding: 20px;">Tidak ada item</td></tr>';
 
   const formatCurrency = (amount) => {
     const num = parseFloat(amount || 0).toFixed(2);
@@ -564,6 +565,7 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
             <th>Jenis Barang</th>
             <th>Bentuk</th>
             <th>Grade</th>
+            <th>Master Item Barang</th>
             <th>Dimensi Potong</th>
             <th>Unit</th>
             <th>Qty</th>

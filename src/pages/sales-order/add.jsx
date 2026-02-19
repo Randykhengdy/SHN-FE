@@ -742,6 +742,7 @@ export default function AddSalesOrderPage() {
         satuan: itemUnit, // Backend value
         jenis_potongan: itemCutType,
         diskonPercent: parseFloat(itemDiscount) || 0,
+        masterItemName: selectedItemBarangGroup?.nama_group_barang || '-',
         catatan: itemNotes
       };
 
@@ -896,6 +897,7 @@ export default function AddSalesOrderPage() {
             nama_item: item.jenisBarang,
             bentuk_barang: item.bentuk,
             grade_barang: item.grade,
+            master_item: item.masterItemName || '-',
             dimensi_potong: item.dimensi,
             unit: item.satuanDisplay || item.satuan,
             qty: item.qty,
@@ -1002,6 +1004,7 @@ export default function AddSalesOrderPage() {
           nama_item: item.jenisBarang,
           bentuk_barang: item.bentuk,
           grade_barang: item.grade,
+          master_item: item.masterItemName || '-',
           dimensi_potong: item.dimensi,
           unit: item.satuanDisplay || item.satuan,
           qty: item.qty,
@@ -2023,6 +2026,7 @@ export default function AddSalesOrderPage() {
                 <TableHead className="table-header-cell-standard">Jenis Barang</TableHead>
                 <TableHead className="table-header-cell-standard">Bentuk</TableHead>
                 <TableHead className="table-header-cell-standard">Grade</TableHead>
+                <TableHead className="table-header-cell-standard">Master Item Barang</TableHead>
                 <TableHead className="table-header-cell-standard">Dimensi</TableHead>
                 <TableHead className="table-header-cell-standard">Qty</TableHead>
                 <TableHead className="table-header-cell-standard">Luas/item</TableHead>
@@ -2041,6 +2045,7 @@ export default function AddSalesOrderPage() {
                   <TableCell className="table-cell-standard">{item.jenisBarang}</TableCell>
                   <TableCell className="table-cell-standard">{item.bentuk}</TableCell>
                   <TableCell className="table-cell-standard">{item.grade}</TableCell>
+                  <TableCell className="table-cell-standard">{item.masterItemName}</TableCell>
                   <TableCell className="table-cell-standard">{item.dimensi}</TableCell>
                   <TableCell className="table-cell-standard">{item.qty}</TableCell>
                   <TableCell className="table-cell-standard">{item.luasPerItem}</TableCell>
@@ -2063,7 +2068,7 @@ export default function AddSalesOrderPage() {
               ))}
               {items.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={13} className="table-cell-standard text-center text-gray-500 py-8">
+                  <TableCell colSpan={14} className="table-cell-standard text-center text-gray-500 py-8">
                     Belum ada item yang ditambahkan
                   </TableCell>
                 </TableRow>
