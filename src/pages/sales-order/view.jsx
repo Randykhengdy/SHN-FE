@@ -247,6 +247,7 @@ export default function ViewSalesOrderPage() {
               id: item.id,
               jenisBarang: item.jenis_barang?.nama_jenis_barang || item.jenis_barang?.nama_jenis || item.jenis_barang?.nama || 'N/A',
               bentukBarang: item.bentuk_barang?.nama_bentuk_barang || item.bentuk_barang?.nama_bentuk || item.bentuk_barang?.nama || 'N/A',
+              bentuk_barang_data: item.bentuk_barang, // Store raw data for metadata access
               gradeBarang: item.grade_barang?.nama_grade_barang || item.grade_barang?.nama || item.grade_barang?.nama_grade || 'N/A',
               panjang: item.panjang || 0,
               lebar: item.lebar || 0,
@@ -303,6 +304,51 @@ export default function ViewSalesOrderPage() {
     });
   };
 
+  const formatDimensions = (item) => {
+    const parts = [];
+    const formatNum = (val) => {
+      if (val === undefined || val === null) return null;
+      const parsed = parseFloat(val);
+      return isNaN(parsed) || parsed === 0 ? null : parsed.toString();
+    };
+
+    // Check which fields to include. If we have tipe_barang metadata, use it.
+    // Otherwise, fall back to showing all non-zero fields in a standard order.
+    const tipe = item.tipe_barang || item.bentuk_barang_data?.tipe_barang || null;
+
+    if (tipe) {
+      if (tipe.diameter_luar && formatNum(item.diameter_luar)) parts.push(formatNum(item.diameter_luar));
+      if (tipe.diameter_dalam && formatNum(item.diameter_dalam)) parts.push(formatNum(item.diameter_dalam));
+      if (tipe.diameter && formatNum(item.diameter)) parts.push(formatNum(item.diameter));
+      if (tipe.sisi1 && formatNum(item.sisi1)) parts.push(formatNum(item.sisi1));
+      if (tipe.sisi2 && formatNum(item.sisi2)) parts.push(formatNum(item.sisi2));
+      if (tipe.tebal && formatNum(item.tebal)) parts.push(formatNum(item.tebal));
+      if (tipe.lebar && formatNum(item.lebar)) parts.push(formatNum(item.lebar));
+      if (tipe.panjang && formatNum(item.panjang)) parts.push(formatNum(item.panjang));
+    } else {
+      // Fallback: show all non-zero values in standard order
+      const dLuar = formatNum(item.diameter_luar);
+      const dDalam = formatNum(item.diameter_dalam);
+      const diam = formatNum(item.diameter);
+      const s1 = formatNum(item.sisi1);
+      const s2 = formatNum(item.sisi2);
+      const t = formatNum(item.tebal);
+      const l = formatNum(item.lebar);
+      const p = formatNum(item.panjang);
+
+      if (dLuar) parts.push(dLuar);
+      if (dDalam) parts.push(dDalam);
+      if (diam) parts.push(diam);
+      if (s1) parts.push(s1);
+      if (s2) parts.push(s2);
+      if (t) parts.push(t);
+      if (l) parts.push(l);
+      if (p) parts.push(p);
+    }
+
+    return parts.length > 0 ? parts.join(' x ') + ' mm' : '-';
+  };
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -340,17 +386,7 @@ export default function ViewSalesOrderPage() {
         gudang_asal: originWarehouse,
         customer: mappedCustomer,
         items: items.map(item => {
-          // Build dimensi_potong from panjang, lebar, and tebal/ketebalan
-          const panjang = parseFloat(item.panjang) || 0;
-          const lebar = parseFloat(item.lebar) || 0;
-          const tebal = parseFloat(item.ketebalan) || 0; // ketebalan already mapped from tebal
-
-          let dimensi_potong = '-';
-          if (lebar > 0) {
-            dimensi_potong = `${panjang} x ${lebar} x ${tebal} mm`;
-          } else {
-            dimensi_potong = `${panjang} x ${tebal} mm`;
-          }
+          const dimensi_potong = formatDimensions(item);
 
           // Calculate total_kg from berat (weight) if available
           const total_kg = parseFloat(item.berat) || 0;
@@ -648,9 +684,7 @@ export default function ViewSalesOrderPage() {
                       : `${(panjang / 1000).toFixed(2)} m`;
 
                     // Format dimensi
-                    const dimensi = lebar > 0
-                      ? `${panjang} x ${lebar} x ${tebal} mm`
-                      : `${panjang} x ${tebal} mm`;
+                    const dimensi = formatDimensions(item);
 
                     return (
                       <TableRow key={item.id || index} className="hover:bg-gray-50">
