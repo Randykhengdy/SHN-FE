@@ -213,7 +213,7 @@ export default function ViewSalesOrderPage() {
         setSoNumber(soData.nomor_so || soData.so_number || soData.order_number || "");
         setSoDate(formatDateForInput(soData.tanggal_so || soData.so_date || soData.order_date));
         setDeliveryDate(formatDateForInput(soData.tanggal_pengiriman || soData.delivery_date));
-        setTermOfPayment(soData.syarat_pembayaran || soData.term_of_payment || "");
+        setTermOfPayment(soData.term_of_payment?.nama || soData.syarat_pembayaran || "");
 
         // Set warehouse name from included data
         const warehouseName = warehouseData?.nama_gudang || warehouseData?.nama ||

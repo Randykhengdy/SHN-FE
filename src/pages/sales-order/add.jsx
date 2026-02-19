@@ -742,6 +742,7 @@ export default function AddSalesOrderPage() {
         satuan: itemUnit, // Backend value
         jenis_potongan: itemCutType,
         diskonPercent: parseFloat(itemDiscount) || 0,
+        masterItemId: selectedItemBarangGroup?.id || null,
         masterItemName: selectedItemBarangGroup?.nama_group_barang || '-',
         catatan: itemNotes
       };
@@ -824,6 +825,7 @@ export default function AddSalesOrderPage() {
           diameter: parseFloat(item.diameter) || null,
           sisi1: parseFloat(item.sisi1) || null,
           sisi2: parseFloat(item.sisi2) || null,
+          item_barang_group_id: item.masterItemId || null,
           qty: parseInt(item.qty) || 0,
           jenis_barang_id: parseInt(item.jenisBarangId) || 0,
           bentuk_barang_id: parseInt(item.bentukBarangId) || 0,
