@@ -1331,6 +1331,9 @@ export default function AddSalesOrderPage() {
     if (groupItem.sisi1 != null) setItemSisi1(groupItem.sisi1.toString());
     if (groupItem.sisi2 != null) setItemSisi2(groupItem.sisi2.toString());
 
+    // Also set the selected group to update the dropdown selection
+    setSelectedItemBarangGroup(groupItem);
+
     setGroupItemModalOpen(false);
     showAlert("Sukses", "Dimensi berhasil diisi dari group item", "success");
   };
@@ -1664,7 +1667,7 @@ export default function AddSalesOrderPage() {
                       }
                     }}
                     disabled={loadingItemBarangGroup || itemBarangGroupOptions.length === 0}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex-1 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <option value="">
                       {loadingItemBarangGroup
@@ -1679,6 +1682,20 @@ export default function AddSalesOrderPage() {
                       </option>
                     ))}
                   </select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleOpenGroupItemModal}
+                    disabled={loadingGroupItem || !itemType || !selectedShape || !itemGrade}
+                    className="h-10 w-12"
+                    title="Pilih Group Item Barang"
+                  >
+                    {loadingGroupItem ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                    ) : (
+                      <Package className="w-4 h-4" />
+                    )}
+                  </Button>
                 </div>
                 {selectedItemBarangGroup && (
                   <p className="text-xs text-green-600 mt-1">
@@ -1718,37 +1735,17 @@ export default function AddSalesOrderPage() {
             </div>
             <div>
               <Label htmlFor="itemUnit">Satuan <span className="text-red-500">*</span></Label>
-              <div className="flex gap-2 items-end">
-                <div className={itemCutType === "utuh" ? "flex-[4]" : "flex-1"}>
-                  <SearchSelect
-                    label=""
-                    placeholder="Pilih Satuan"
-                    searchPlaceholder="Cari satuan..."
-                    value={itemUnit}
-                    onValueChange={setItemUnit}
-                    options={unitOptions}
-                    loading={loadingUnit}
-                    required
-                  />
-                </div>
-                {itemCutType === "utuh" && (
-                  <div className="flex-[1]">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleOpenGroupItemModal}
-                      disabled={loadingGroupItem || !itemType || !selectedShape || !itemGrade}
-                      className="w-full h-10"
-                      title="Pilih Group Item Barang"
-                    >
-                      {loadingGroupItem ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
-                      ) : (
-                        <Package className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </div>
-                )}
+              <div className="flex-1">
+                <SearchSelect
+                  label=""
+                  placeholder="Pilih Satuan"
+                  searchPlaceholder="Cari satuan..."
+                  value={itemUnit}
+                  onValueChange={setItemUnit}
+                  options={unitOptions}
+                  loading={loadingUnit}
+                  required
+                />
               </div>
             </div>
 
@@ -2504,6 +2501,6 @@ export default function AddSalesOrderPage() {
 
       {/* Alert Modal Component */}
       <AlertComponent />
-    </SalesOrderLayout>
+    </SalesOrderLayout >
   );
 }
