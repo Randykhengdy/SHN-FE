@@ -146,10 +146,10 @@ export default function TipeBarangPage() {
                 ];
 
                 return (
-                    <>
+                    <React.Fragment key={item.id}>
                         {/* Row 1: Gunakan */}
-                        <tr className={`${baseClassName} ${customClassName} border-b-0`}>
-                            <td rowSpan={2} className="px-4 py-3 text-sm text-gray-600 text-center border-r border-gray-100 italic">
+                        <tr className={`${baseClassName} ${customClassName} border-b-0 ${index % 2 !== 0 ? 'bg-gray-50/80' : 'bg-white'}`}>
+                            <td rowSpan={2} className="px-4 py-3 text-sm text-gray-600 text-center border-r border-gray-200 italic">
                                 {getValue(item, "id")}
                             </td>
                             <td rowSpan={2} className="px-4 py-3 text-sm text-gray-600 font-medium border-r border-gray-100">
@@ -161,7 +161,7 @@ export default function TipeBarangPage() {
                                 </div>
                             </td>
                             {dims.map(dim => (
-                                <td key={dim} className="px-4 py-2 text-sm text-center border-r border-gray-50/50">
+                                <td key={dim} className={`px-4 py-2 text-sm text-center border-r border-gray-50/50 ${index % 2 !== 0 ? 'bg-gray-50/20' : ''}`}>
                                     {item[dim] ? <CheckIcon /> : <span className="text-gray-200">-</span>}
                                 </td>
                             ))}
@@ -170,9 +170,9 @@ export default function TipeBarangPage() {
                             </td>
                         </tr>
                         {/* Row 2: Bisa Potong */}
-                        <tr className={`${baseClassName} ${customClassName} bg-gray-50/30`}>
+                        <tr className={`${baseClassName} ${customClassName} ${index % 2 !== 0 ? 'bg-gray-50/80' : 'bg-white'}`}>
                             {cancuts.map((cc, i) => (
-                                <td key={cc} className={`px-4 py-2 text-sm text-center border-r border-gray-50/50 ${!item[dims[i]] ? 'bg-gray-100/20' : ''}`}>
+                                <td key={cc} className={`px-4 py-2 text-sm text-center border-r border-gray-50/50 ${!item[dims[i]] ? 'bg-gray-200/5' : ''}`}>
                                     {item[cc] ? (
                                         <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green-700 bg-green-50 px-1 rounded border border-green-200">
                                             <span>CUT</span>
@@ -183,7 +183,7 @@ export default function TipeBarangPage() {
                                 </td>
                             ))}
                         </tr>
-                    </>
+                    </React.Fragment>
                 );
             }}
         />
