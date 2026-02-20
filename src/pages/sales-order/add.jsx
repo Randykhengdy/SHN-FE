@@ -298,7 +298,10 @@ export default function AddSalesOrderPage() {
           grade_barang_id: parseInt(itemGrade),
           panjang: panjangCm,
           lebar: lebarCm,
-          tebal: tebalCm
+          tebal: tebalCm,
+          item_barang_group_id: (selectedShape.dimensi === "1D" && selectedItemBarangGroup?.id)
+            ? parseInt(selectedItemBarangGroup.id)
+            : null
         };
 
         const response = await beratJenisService.calculateWeight(requestData);
@@ -327,7 +330,7 @@ export default function AddSalesOrderPage() {
     }, 500); // 500ms debounce
 
     return () => clearTimeout(timeoutId);
-  }, [itemType, selectedShape, itemGrade, itemLength, itemWidth, itemDiameter, itemCutType]);
+  }, [itemType, selectedShape, itemGrade, itemLength, itemWidth, itemDiameter, itemCutType, selectedItemBarangGroup]);
 
   // Modal state
   const [shapeModalOpen, setShapeModalOpen] = useState(false);
