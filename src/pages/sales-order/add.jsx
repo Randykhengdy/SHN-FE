@@ -252,7 +252,8 @@ export default function AddSalesOrderPage() {
     // Validate and parse numeric values
     const panjang = parseFloat(itemLength);
     const lebar = parseFloat(itemWidth);
-    const tebal = parseFloat(itemDiameter);
+    // Use itemTebal if available (for Plate/2D), otherwise itemDiameter (for Round Bar/1D)
+    const tebal = parseFloat(itemTebal) || parseFloat(itemDiameter);
 
     // Check if all required fields are filled with valid numeric values
     // For "utuh", dimensions should be filled from group item selection
@@ -263,7 +264,8 @@ export default function AddSalesOrderPage() {
       itemLength &&
       !isNaN(panjang) &&
       panjang > 0 &&
-      itemDiameter &&
+      // Check if we have a valid thickness/diameter
+      (itemTebal || itemDiameter) &&
       !isNaN(tebal) &&
       tebal >= 0;
 
@@ -330,7 +332,7 @@ export default function AddSalesOrderPage() {
     }, 500); // 500ms debounce
 
     return () => clearTimeout(timeoutId);
-  }, [itemType, selectedShape, itemGrade, itemLength, itemWidth, itemDiameter, itemCutType, selectedItemBarangGroup]);
+  }, [itemType, selectedShape, itemGrade, itemLength, itemWidth, itemDiameter, itemTebal, itemCutType, selectedItemBarangGroup]);
 
   // Modal state
   const [shapeModalOpen, setShapeModalOpen] = useState(false);
