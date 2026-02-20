@@ -831,6 +831,8 @@ export default function AddSalesOrderPage() {
         total_diskon: totalDiscountSO || 0,
         diskon_so: parseFloat(diskonSO) || 0,
         diskon_so_type: soDiscountType,
+        include_ppn: includePPN,
+        price_include_ppn: priceIncludesPPN,
         ppn_percent: includePPN ? 11.0 : 0,
         ppn_amount: ppn || 0,
         total_harga_so: totalHargaSO || 0,

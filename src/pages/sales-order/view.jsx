@@ -446,7 +446,7 @@ export default function ViewSalesOrderPage() {
 
   // Memoized calculations
   // Subtotal adalah total harga SETELAH diskon item (sudah termasuk diskon item)
-  const { subtotal, diskonSOValue, diskonSOType, diskonSOAmount, totalDiscountSO, ppnAmount, grandTotal } = useMemo(() => {
+  const { subtotal, diskonSOValue, diskonSOType, diskonSOAmount, totalDiscountSO, ppnAmount, grandTotal, includePPN, priceIncludesPPN, dpp } = useMemo(() => {
     console.log('🔍 Calculating totals for items:', items);
 
     // Subtotal = total semua item (sudah termasuk diskon item)
@@ -470,32 +470,53 @@ export default function ViewSalesOrderPage() {
     // Total discount = hanya diskon SO (karena diskon item sudah termasuk dalam subtotal)
     const totalDiscountSO = diskonSOAmount;
 
-    // Use PPN from API if available, otherwise calculate with 11%
+    // Get flags from salesOrder
+    // Default to true for include_ppn if undefined (backward compatibility)
+    // Default to false for price_include_ppn if undefined
+    const includePPN = salesOrder?.include_ppn !== false && salesOrder?.include_ppn !== 0;
+    const priceIncludesPPN = salesOrder?.price_include_ppn === true || salesOrder?.price_include_ppn === 1;
+
+    // Calculate PPN
     let ppnAmount = 0;
-    if (salesOrder) {
-      // Prioritize ppn_amount from API
-      if (salesOrder.ppn_amount !== undefined && salesOrder.ppn_amount !== null) {
-        ppnAmount = parseFloat(salesOrder.ppn_amount) || 0;
-        console.log('🔍 Using PPN amount from API:', ppnAmount);
-      }
-      // If ppn_amount not available but ppn_percent is, calculate it
-      else if (salesOrder.ppn_percent !== undefined && salesOrder.ppn_percent !== null) {
-        const ppnPercent = parseFloat(salesOrder.ppn_percent) || 0;
-        ppnAmount = (subtotal - totalDiscountSO) * (ppnPercent / 100);
-        console.log('🔍 Calculating PPN from API percent:', { ppnPercent, ppnAmount });
-      }
-      // Fallback to 11% if no PPN data from API
-      else {
+
+    if (includePPN) {
+      if (priceIncludesPPN) {
+        // Harga sudah include PPN. 
+        // DPP = (Subtotal - Diskon) / 1.11
+        // PPN = (Subtotal - Diskon) - DPP
+        const amountAfterDiscount = subtotal - totalDiscountSO;
+        const dpp = amountAfterDiscount / 1.11;
+        ppnAmount = amountAfterDiscount - dpp;
+      } else {
+        // Harga belum include PPN.
+        // PPN = (Subtotal - Diskon) * 11%
         ppnAmount = (subtotal - totalDiscountSO) * 0.11;
-        console.log('🔍 Using default 11% PPN (no API data)');
       }
     } else {
-      // Fallback if salesOrder not loaded yet
-      ppnAmount = (subtotal - totalDiscountSO) * 0.11;
-      console.log('🔍 Using default 11% PPN (salesOrder not loaded)');
+      ppnAmount = 0;
     }
 
-    const grandTotal = subtotal - totalDiscountSO + ppnAmount;
+    // If API provides exact PPN amount and we are supposed to include PPN, we can use it, 
+    // but recalculating ensures consistency if local changes happen (though this is view).
+    // However, sometimes API PPN might be slightly different due to rounding on backend.
+    // Let's prefer API value if available and includePPN is true
+    if (salesOrder && includePPN) {
+      if (salesOrder.ppn_amount !== undefined && salesOrder.ppn_amount !== null) {
+        ppnAmount = parseFloat(salesOrder.ppn_amount) || 0;
+      }
+    }
+
+    // Grand Total calculation
+    let grandTotal = 0;
+    if (includePPN && priceIncludesPPN) {
+      // If price includes PPN, the subtotal already includes everything (except SO discount which we deducted)
+      // So Grand Total = Subtotal - DiscountSO
+      // (PPN is part of that amount)
+      grandTotal = subtotal - totalDiscountSO;
+    } else {
+      // If price excludes PPN, we add PPN to the amount after discount
+      grandTotal = (subtotal - totalDiscountSO) + ppnAmount;
+    }
 
     console.log('🔍 Final calculations:', {
       subtotal,
@@ -503,15 +524,15 @@ export default function ViewSalesOrderPage() {
       diskonSOType,
       diskonSOAmount,
       totalDiscountSO,
+      includePPN,
+      priceIncludesPPN,
       ppnAmount,
       grandTotal,
       itemsCount: items.length,
-      salesOrderPPN: salesOrder?.ppn_amount,
-      salesOrderPPNPercent: salesOrder?.ppn_percent,
-      salesOrderDiskonSO: salesOrder?.diskon_so
+      salesOrderPPN: salesOrder?.ppn_amount
     });
 
-    return { subtotal, diskonSOValue, diskonSOType, diskonSOAmount, totalDiscountSO, ppnAmount, grandTotal };
+    return { subtotal, diskonSOValue, diskonSOType, diskonSOAmount, totalDiscountSO, ppnAmount, grandTotal, includePPN, priceIncludesPPN };
   }, [items, salesOrder]);
 
 
@@ -759,8 +780,19 @@ export default function ViewSalesOrderPage() {
                 <span className="text-gray-600">Total Diskon:</span>
                 <span className="font-semibold text-red-600">-{formatCurrency(totalDiscountSO)}</span>
               </div>
+
+              {includePPN && priceIncludesPPN && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">DPP (Dasar Pengenaan Pajak):</span>
+                  <span className="font-semibold text-blue-600">{formatCurrency(dpp)}</span>
+                </div>
+              )}
+
               <div className="flex justify-between">
-                <span className="text-gray-600">PPN (11%):</span>
+                <span className="text-gray-600">
+                  PPN (11%)
+                  {includePPN && !priceIncludesPPN ? '' : includePPN ? ' (Include)' : ' (Exempt)'}
+                </span>
                 <span className="font-semibold">{formatCurrency(ppnAmount)}</span>
               </div>
               <div className="border-t pt-4">
@@ -771,7 +803,7 @@ export default function ViewSalesOrderPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-gray-600">Jumlah Item:</span>
                 <span className="font-semibold">{items.length}</span>
@@ -782,7 +814,26 @@ export default function ViewSalesOrderPage() {
                   {formatProcessStatus(salesOrder.process_status)}
                 </span>
               </div>
-              <div className="flex justify-between">
+
+              {/* VAT Status Badges */}
+              <div className="flex flex-col gap-2 pt-2 border-t">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Status PPN:</span>
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${includePPN ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'}`}>
+                    {includePPN ? 'PPN Ditambahkan' : 'Tanpa PPN'}
+                  </span>
+                </div>
+                {includePPN && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Tipe Harga:</span>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${priceIncludesPPN ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>
+                      {priceIncludesPPN ? 'Harga Termasuk PPN' : 'Harga Belum Termasuk PPN'}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-between pt-2 border-t">
                 <span className="text-gray-600">Tanggal SO:</span>
                 <span className="font-semibold">{formatDate(salesOrder.tanggal_so)}</span>
               </div>
