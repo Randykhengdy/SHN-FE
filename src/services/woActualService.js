@@ -105,7 +105,9 @@ export const woActualService = {
       try {
         const errJson = await resp.json();
         msg = errJson?.message || msg;
-      } catch (_) {}
+      } catch (err) {
+        console.error(err);
+      }
       throw new Error(msg);
     }
     return resp.blob();
@@ -128,7 +130,29 @@ export const woActualService = {
       try {
         const errJson = await resp.json();
         msg = errJson?.message || msg;
-      } catch (_) {}
+      } catch (err) {
+        console.error(err);
+      }
+      throw new Error(msg);
+    }
+    return resp.blob();
+  },
+
+  // Get WO Actual leftover item image as Blob (binary stream)
+  getWOActualItemSisaImageBlob: async (itemId) => {
+    const url = `${apiConfig.baseUrl}${API_ENDPOINTS.workOrderActual}/item/${itemId}/sisa-image?ts=${Date.now()}`;
+    const resp = await fetch(url, {
+      headers: { ...getAuthHeader(), Accept: 'image/*' },
+      cache: 'no-store'
+    });
+    if (!resp.ok) {
+      let msg = `Failed to fetch leftover item image (${resp.status})`;
+      try {
+        const errJson = await resp.json();
+        msg = errJson?.message || msg;
+      } catch (err) {
+        console.error(err);
+      }
       throw new Error(msg);
     }
     return resp.blob();

@@ -696,15 +696,16 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
     `;
   })();
 
-  // Render Before/After images per item (Planning vs Actual) using mapped arrays
+  // Render Before/After/Sisa images per item (Planning vs Actual) using mapped arrays
   const beforeAfterSectionHtml = includeImages && (woActualData.items || []).length > 0
     ? (() => {
       const itemSections = (woActualData.items || []).map((item, idx) => {
         const it = { ...item, no: idx + 1 };
         const beforeImages = Array.isArray(it.beforeImages) ? it.beforeImages : [];
         const afterImages = Array.isArray(it.afterImages) ? it.afterImages : [];
+        const sisaImages = Array.isArray(it.sisaImages) ? it.sisaImages : [];
 
-        const maxRows = Math.max(beforeImages.length, afterImages.length);
+        const maxRows = Math.max(beforeImages.length, afterImages.length, sisaImages.length);
 
         let rowsHtml = '';
         if (maxRows === 0) {
@@ -713,6 +714,7 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
           for (let i = 0; i < maxRows; i++) {
             const beforeImg = beforeImages[i];
             const afterImg = afterImages[i];
+            const sisaImg = sisaImages[i];
 
             const renderImgTile = (img, label, idx) => {
               if (!img) return '<div style="height: 100%;"></div>'; // Empty placeholder
@@ -734,7 +736,7 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
             };
 
             rowsHtml += `
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; page-break-inside: avoid;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; page-break-inside: avoid;">
                   <div>
                     ${i === 0 ? '<div style="font-weight: bold; margin-bottom: 6px;">Before (WO Planning)</div>' : ''}
                     ${renderImgTile(beforeImg, 'Before', i)}
@@ -742,6 +744,10 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
                   <div>
                     ${i === 0 ? '<div style="font-weight: bold; margin-bottom: 6px;">After (WO Actual)</div>' : ''}
                     ${renderImgTile(afterImg, 'After', i)}
+                  </div>
+                  <div>
+                    ${i === 0 ? '<div style="font-weight: bold; margin-bottom: 6px;">Sisa Barang</div>' : ''}
+                    ${renderImgTile(sisaImg, 'Sisa', i)}
                   </div>
                 </div>
               `;

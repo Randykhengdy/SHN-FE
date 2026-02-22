@@ -41,6 +41,7 @@ export default function ViewWOActualPage() {
   const [printOptionsOpen, setPrintOptionsOpen] = useState(false);
   const [printLoading, setPrintLoading] = useState(false);
   const [includeImages, setIncludeImages] = useState(true);
+  const [itemSisaImagesMap, setItemSisaImagesMap] = useState({});
 
   // Helper: build storage URL from file path
   const buildStorageUrl = (path) => {
@@ -171,8 +172,41 @@ export default function ViewWOActualPage() {
   }, [items, itemImagesMap]);
 
   useEffect(() => {
+    const loadItemSisaImages = async () => {
+      if (!items || items.length === 0) return;
+
+      const updates = {};
+      let hasUpdates = false;
+
+      await Promise.all(items.map(async (item) => {
+        if (itemSisaImagesMap[item.id]) return;
+
+        try {
+          const blob = await woActualService.getWOActualItemSisaImageBlob(item.id);
+          const url = URL.createObjectURL(blob);
+          updates[item.id] = url;
+          hasUpdates = true;
+        } catch (e) {
+          console.warn(`Gagal load image sisa item ${item.id}:`, e);
+        }
+      }));
+
+      if (hasUpdates) {
+        setItemSisaImagesMap(prev => ({ ...prev, ...updates }));
+      }
+    };
+
+    loadItemSisaImages();
+  }, [items, itemSisaImagesMap]);
+
+  useEffect(() => {
     return () => {
       Object.values(itemImagesMap).forEach(url => {
+        if (url && typeof url === 'string' && url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+      Object.values(itemSisaImagesMap).forEach(url => {
         if (url && typeof url === 'string' && url.startsWith('blob:')) {
           URL.revokeObjectURL(url);
         }
@@ -343,22 +377,22 @@ export default function ViewWOActualPage() {
            // 2. Fallback REMOVED as per request - only use API fetched images
           // if (beforeImages.length === 0) { ... }
 
-           return {
-            jenisBarang: item.jenis_barang?.nama_jenis || item.jenis_barang_nama || planningItem.jenis_barang?.nama_jenis_barang || planningItem.jenis_barang?.nama,
-            bentukBarang: item.bentuk_barang?.nama_bentuk || item.bentuk_barang_nama || planningItem.bentuk_barang?.nama_bentuk_barang || planningItem.bentuk_barang?.nama,
-            gradeBarang: item.grade_barang?.nama || item.grade_barang_nama || planningItem.grade_barang?.nama_grade_barang || planningItem.grade_barang?.nama,
-            dimensi: dimString,
-            jenisPotongan: planningItem.jenis_potongan || item.jenis_potongan || 'N/A',
-            
-            qtyPlanning: item.qty_planning ?? planningItem.qty_planning ?? planningItem.qty ?? 0,
-            beratPlanning: Math.round(beratPlanning),
-            
-            qtyActual: item.qty_actual ?? 0,
-            beratActual: Math.round(item.berat ?? item.berat_actual ?? 0),
-            
-            beforeImages: beforeImages,
+          return {
+           jenisBarang: item.jenis_barang?.nama_jenis || item.jenis_barang_nama || planningItem.jenis_barang?.nama_jenis_barang || planningItem.jenis_barang?.nama,
+           bentukBarang: item.bentuk_barang?.nama_bentuk || item.bentuk_barang_nama || planningItem.bentuk_barang?.nama_bentuk_barang || planningItem.bentuk_barang?.nama,
+           gradeBarang: item.grade_barang?.nama || item.grade_barang_nama || planningItem.grade_barang?.nama_grade_barang || planningItem.grade_barang?.nama,
+           dimensi: dimString,
+           jenisPotongan: planningItem.jenis_potongan || item.jenis_potongan || 'N/A',
+           
+           qtyPlanning: item.qty_planning ?? planningItem.qty_planning ?? planningItem.qty ?? 0,
+           beratPlanning: Math.round(beratPlanning),
+           
+           qtyActual: item.qty_actual ?? 0,
+           beratActual: Math.round(item.berat ?? item.berat_actual ?? 0),
+           
+           beforeImages: beforeImages,
 
-            pelaksanas: pelaksanaArr.map(p => {
+           pelaksanas: pelaksanaArr.map(p => {
                // Normalize to { pelaksana: { nama_pelaksana: '...' }, qty: ..., berat: ... } for printUtils
                const name = p.pelaksana?.nama_pelaksana || 
                           p.pelaksana?.nama || 
@@ -377,12 +411,13 @@ export default function ViewWOActualPage() {
                  berat: berat
                };
             }),
-            status: item.status || woActual?.status || 'PENDING',
-            
-            // Add images
-            afterImages: itemImagesMap[item.id] ? [{ src: itemImagesMap[item.id] }] : [],
-            beforeImages: beforeImages
-          };
+           status: item.status || woActual?.status || 'PENDING',
+           
+           // Add images
+           afterImages: itemImagesMap[item.id] ? [{ src: itemImagesMap[item.id] }] : [],
+           sisaImages: itemSisaImagesMap[item.id] ? [{ src: itemSisaImagesMap[item.id] }] : [],
+           beforeImages: beforeImages
+         };
         }),
         
         headerImage: headerImageBase64,
@@ -588,6 +623,7 @@ export default function ViewWOActualPage() {
                         <TableHead className="table-header-cell-standard text-center">Status</TableHead>
                         <TableHead className="table-header-cell-standard text-center">Pelaksana</TableHead>
                         <TableHead className="table-header-cell-standard text-center">Foto Bukti</TableHead>
+                        <TableHead className="table-header-cell-standard text-center">Foto Sisa</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -678,6 +714,26 @@ export default function ViewWOActualPage() {
                                       alt="Foto Item"
                                       className="w-10 h-10 object-cover rounded border cursor-pointer"
                                       onClick={() => { setPreviewSrc(displaySrc); setPreviewTitle(`Foto Item: ${jenisNama}`); setPreviewOpen(true); }}
+                                    />
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-gray-400">-</span>
+                                );
+                              })()}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {(() => {
+                                const cachedBlobSrc = resolveImageSrc(itemSisaImagesMap[actualItem.id]);
+                                const rawPathSrc = resolveImageSrc(actualItem.foto_sisa_barang);
+                                const displaySrc = cachedBlobSrc || rawPathSrc;
+
+                                return displaySrc ? (
+                                  <div className="flex flex-col items-center gap-1">
+                                    <img
+                                      src={displaySrc}
+                                      alt="Foto Sisa Item"
+                                      className="w-10 h-10 object-cover rounded border cursor-pointer"
+                                      onClick={() => { setPreviewSrc(displaySrc); setPreviewTitle(`Foto Sisa Item: ${jenisNama}`); setPreviewOpen(true); }}
                                     />
                                   </div>
                                 ) : (
