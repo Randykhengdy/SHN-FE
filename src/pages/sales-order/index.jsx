@@ -36,19 +36,21 @@ export default function SalesOrderListPage() {
   const { hasPermission } = useAppContext();
   const canRead = hasPermission && hasPermission('SALES_ORDER', 'Read');
   const canCreate = hasPermission && hasPermission('SALES_ORDER', 'Create');
-  
+
   const [salesOrders, setSalesOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [partialStatusFilter, setPartialStatusFilter] = useState("all");
+  const [statusCounts, setStatusCounts] = useState(null);
+  const [summaryData, setSummaryData] = useState(null);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
   // Sorting state
   const [sortBy, setSortBy] = useState('none'); // Backend field name or 'none'
   const [sortOrder, setSortOrder] = useState('asc'); // 'asc' | 'desc'
-  
+
   // Map frontend sort keys to backend field names
   const mapSortKeyToBackend = (frontendKey) => {
     const mapping = {
@@ -66,7 +68,7 @@ export default function SalesOrderListPage() {
     };
     return mapping[frontendKey] || frontendKey;
   };
-  
+
   const handleSort = (field) => {
     const backendField = mapSortKeyToBackend(field);
     setSortBy((prev) => {
@@ -82,18 +84,18 @@ export default function SalesOrderListPage() {
     });
     setCurrentPage(1);
   };
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
-  
+
   // Delete modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteModalType, setDeleteModalType] = useState('admin'); // 'admin' or 'request'
   const [selectedSO, setSelectedSO] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false); // Prevent multiple delete operations
-  
+
   // Delete request modal state
   const [showDeleteRequestModal, setShowDeleteRequestModal] = useState(false);
 
@@ -101,7 +103,7 @@ export default function SalesOrderListPage() {
   const loadSalesOrders = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       // Prepare API parameters
       const params = {
         page: currentPage,
@@ -119,7 +121,7 @@ export default function SalesOrderListPage() {
       Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
 
       const result = await salesOrderService.getAll(params);
-      
+
       // Transform API data to match our UI structure
       const transformedData = (result.data || []).map(so => ({
         id: so.id,
@@ -145,9 +147,19 @@ export default function SalesOrderListPage() {
         deleteRequestedBy: so.delete_requested_by?.name || null,
         items: so.sales_order_items || []
       }));
-      
+
       setSalesOrders(transformedData);
       setTotalItems(result.total || result.pagination?.total || transformedData.length);
+
+      // Capture status counts from backend
+      if (result.status_counts) {
+        setStatusCounts(result.status_counts);
+      }
+
+      // Capture summary from backend
+      if (result.summary) {
+        setSummaryData(result.summary);
+      }
     } catch (error) {
       console.error('Error loading sales orders:', error);
       showAlert("Error", "Gagal memuat data Sales Order", "error");
@@ -172,14 +184,13 @@ export default function SalesOrderListPage() {
   };
 
   // Calculate summary statistics
-  // Note: With backend pagination, these statistics only reflect the current page data
-  // For accurate totals across all filtered data, consider adding a separate summary endpoint
-  const totalSO = totalItems; // This is correct - total from backend
-  const totalNilai = salesOrders.reduce((sum, so) => sum + so.totalHarga, 0); // Only current page
-  const rataRataPerSO = totalSO > 0 ? totalNilai / totalSO : 0; // Only current page
+  // Prefer backend summary for accuracy across pages
+  const totalSO = summaryData?.total_so || totalItems;
+  const totalNilai = summaryData?.total_nilai || salesOrders.reduce((sum, so) => sum + so.totalHarga, 0);
+  const rataRataPerSO = summaryData?.rata_rata || (totalSO > 0 ? totalNilai / totalSO : 0);
 
-  // Calculate status breakdown based on process_status (only current page)
-  const statusBreakdown = {
+  // Calculate status breakdown (prefer backend counts for accuracy across pages)
+  const statusBreakdown = statusCounts || {
     submit: salesOrders.filter(so => so.processStatus === "submit").length,
     partial_wo: salesOrders.filter(so => so.processStatus === "partial_wo").length,
     complete: salesOrders.filter(so => so.processStatus === "complete").length,
@@ -241,23 +252,23 @@ export default function SalesOrderListPage() {
       console.log('⏭️ Already processing delete operation');
       return;
     }
-    
+
     try {
       setIsDeleting(true);
-      
+
       // Call delete API - use soft delete
       const response = await salesOrderService.delete(selectedSO.id, 'soft');
-      
+
       console.log('✅ Sales Order deleted:', response);
-      
+
       // Close modal first
       setShowDeleteModal(false);
-      
+
       // Show success message and reload data after alert closes
       showAlert("Sukses", "Sales Order berhasil dihapus!", "success", () => {
         loadSalesOrders();
       });
-      
+
     } catch (error) {
       console.error('❌ Error deleting Sales Order:', error);
       showAlert("Error", "Gagal menghapus Sales Order", "error");
@@ -271,24 +282,24 @@ export default function SalesOrderListPage() {
     try {
       // Call request delete API
       const response = await salesOrderService.requestDelete(selectedSO.id, reason);
-      
+
       console.log('✅ Delete request submitted:', response);
-      
+
       // Close modal first
       setShowDeleteRequestModal(false);
-      
+
       // Show success message and reload data after alert closes
       showAlert(
-        "Sukses", 
+        "Sukses",
         "Permintaan hapus berhasil diajukan!\n\n" +
         "📧 Admin akan meninjau permintaan Anda.\n" +
-        "📋 Alasan: " + reason, 
+        "📋 Alasan: " + reason,
         "success",
         () => {
           loadSalesOrders();
         }
       );
-      
+
     } catch (error) {
       console.error('❌ Error requesting delete:', error);
       showAlert("Error", "Gagal mengajukan permintaan hapus", "error");
@@ -300,14 +311,14 @@ export default function SalesOrderListPage() {
     try {
       // Call cancel delete request API
       const response = await salesOrderService.cancelDeleteRequest(so.id);
-      
+
       console.log('✅ Delete request cancelled:', response);
-      
+
       // Show success message and reload data after alert closes
       showAlert("Sukses", "Permintaan hapus berhasil dibatalkan!", "success", () => {
         loadSalesOrders();
       });
-      
+
     } catch (error) {
       console.error('❌ Error cancelling delete request:', error);
       showAlert("Error", "Gagal membatalkan permintaan hapus", "error");
@@ -324,6 +335,8 @@ export default function SalesOrderListPage() {
     setDateTo("");
     setSortBy('none');
     setSortOrder('asc');
+    setStatusCounts(null);
+    setSummaryData(null);
     setCurrentPage(1);
   };
 
@@ -468,378 +481,377 @@ export default function SalesOrderListPage() {
           <h2 className="text-lg font-semibold text-gray-800">Daftar Sales Order</h2>
         </div>
         {canCreate ? (
-        <Button onClick={handleAddNew} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
-          <Plus className="w-4 h-4 mr-2" />
-          Tambah Sales Order
-        </Button>
+          <Button onClick={handleAddNew} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
+            <Plus className="w-4 h-4 mr-2" />
+            Tambah Sales Order
+          </Button>
         ) : null}
       </div>
 
-        {/* Filter and Search */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg">Filter dan Pencarian</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Cari SO:
-                </label>
-                <Input
-                  placeholder="Cari berdasarkan No SO, nama pelanggan..."
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="w-full"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tanggal SO Dari
-                </label>
-                <Input
-                  type="date"
-                  placeholder="dd/mm/yyyy"
-                  value={dateFrom}
-                  onChange={(e) => {
-                    setDateFrom(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tanggal SO Sampai
-                </label>
-                <Input
-                  type="date"
-                  placeholder="dd/mm/yyyy"
-                  value={dateTo}
-                  onChange={(e) => {
-                    setDateTo(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Status:
-                </label>
-                <Select value={statusFilter} onValueChange={(value) => {
-                  setStatusFilter(value);
+      {/* Filter and Search */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-lg">Filter dan Pencarian</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Cari SO:
+              </label>
+              <Input
+                placeholder="Cari berdasarkan No SO, nama pelanggan..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
                   setCurrentPage(1);
-                }}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statusOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Status Partial:
-                </label>
-                <Select value={partialStatusFilter} onValueChange={(value) => {
-                  setPartialStatusFilter(value);
+                }}
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tanggal SO Dari
+              </label>
+              <Input
+                type="date"
+                placeholder="dd/mm/yyyy"
+                value={dateFrom}
+                onChange={(e) => {
+                  setDateFrom(e.target.value);
                   setCurrentPage(1);
-                }}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Semua</SelectItem>
-                    <SelectItem value="partial_wo">Partial WO</SelectItem>
-                    <SelectItem value="cancel">Cancel</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
+                }}
+              />
             </div>
-            <div className="flex justify-end flex-wrap gap-2">
-              <Button 
-                variant="outline" 
-                onClick={loadSalesOrders} 
-                disabled={loading}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-              <Button variant="outline" onClick={handleClearFilter}>
-                Clear Filter
-              </Button>
-              <Button variant="default" className="bg-blue-600 hover:bg-blue-700" onClick={handleExport}>
-                <FileText className="w-4 h-4 mr-2" />
-                Report
-              </Button>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tanggal SO Sampai
+              </label>
+              <Input
+                type="date"
+                placeholder="dd/mm/yyyy"
+                value={dateTo}
+                onChange={(e) => {
+                  setDateTo(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status:
+              </label>
+              <Select value={statusFilter} onValueChange={(value) => {
+                setStatusFilter(value);
+                setCurrentPage(1);
+              }}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status Partial:
+              </label>
+              <Select value={partialStatusFilter} onValueChange={(value) => {
+                setPartialStatusFilter(value);
+                setCurrentPage(1);
+              }}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua</SelectItem>
+                  <SelectItem value="partial_wo">Partial WO</SelectItem>
+                  <SelectItem value="cancel">Cancel</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        {/* Sales Order Table */}
-        <Card className="mb-6">
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50">
-                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('noSo')}>No SO</TableHead>
-                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('pelanggan')}>Pelanggan</TableHead>
-                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('tanggalSo')}>Tanggal SO</TableHead>
-                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('tanggalPengiriman')}>Tanggal Pengiriman</TableHead>
-                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('asalGudang')}>Asal Gudang</TableHead>
-                    <TableHead className="font-semibold text-center cursor-pointer select-none" onClick={() => handleSort('jumlahItem')}>Jumlah Item</TableHead>
-                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('subtotal')}>Subtotal</TableHead>
-                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('totalDiskon')}>Diskon</TableHead>
-                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('ppnAmount')}>PPN</TableHead>
-                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('totalHarga')}>Total Harga</TableHead>
-                    <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('process_status')}>Status</TableHead>
-                    <TableHead className="font-semibold text-center">Partial WO</TableHead>
-                    <TableHead className="font-semibold text-center">Aksi</TableHead>
+          </div>
+          <div className="flex justify-end flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={loadSalesOrders}
+              disabled={loading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button variant="outline" onClick={handleClearFilter}>
+              Clear Filter
+            </Button>
+            <Button variant="default" className="bg-blue-600 hover:bg-blue-700" onClick={handleExport}>
+              <FileText className="w-4 h-4 mr-2" />
+              Report
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Sales Order Table */}
+      <Card className="mb-6">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50">
+                  <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('noSo')}>No SO</TableHead>
+                  <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('pelanggan')}>Pelanggan</TableHead>
+                  <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('tanggalSo')}>Tanggal SO</TableHead>
+                  <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('tanggalPengiriman')}>Tanggal Pengiriman</TableHead>
+                  <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('asalGudang')}>Asal Gudang</TableHead>
+                  <TableHead className="font-semibold text-center cursor-pointer select-none" onClick={() => handleSort('jumlahItem')}>Jumlah Item</TableHead>
+                  <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('subtotal')}>Subtotal</TableHead>
+                  <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('totalDiskon')}>Diskon</TableHead>
+                  <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('ppnAmount')}>PPN</TableHead>
+                  <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('totalHarga')}>Total Harga</TableHead>
+                  <TableHead className="font-semibold cursor-pointer select-none" onClick={() => handleSort('process_status')}>Status</TableHead>
+                  <TableHead className="font-semibold text-center">Partial WO</TableHead>
+                  <TableHead className="font-semibold text-center">Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={13} className="text-center py-8">
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <span className="ml-2">Loading data...</span>
+                      </div>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={13} className="text-center py-8">
-                        <div className="flex items-center justify-center">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                          <span className="ml-2">Loading data...</span>
-                        </div>
+                ) : salesOrders.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={13} className="text-center py-8 text-gray-500">
+                      Tidak ada data Sales Order
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  salesOrders.map((so) => (
+                    <TableRow key={so.id} className="hover:bg-gray-50">
+                      <TableCell className="font-medium">{so.noSo}</TableCell>
+                      <TableCell>{so.pelanggan}</TableCell>
+                      <TableCell>{so.tanggalSo}</TableCell>
+                      <TableCell>{so.tanggalPengiriman}</TableCell>
+                      <TableCell>{so.asalGudang}</TableCell>
+                      <TableCell className="text-center">{so.jumlahItem}</TableCell>
+                      <TableCell>{formatCurrency(so.subtotal)}</TableCell>
+                      <TableCell>{formatCurrency(so.totalDiskon)}</TableCell>
+                      <TableCell>{formatCurrency(so.ppnAmount)}</TableCell>
+                      <TableCell className="font-semibold">{formatCurrency(so.totalHarga)}</TableCell>
+                      <TableCell>
+                        {so.deleteRequestStatus === 'delete_requested' ? (
+                          <Badge className="bg-orange-100 text-orange-800">
+                            🗑️ Delete Requested
+                          </Badge>
+                        ) : (
+                          <Badge className={getStatusColor(so.processStatus)}>
+                            {formatProcessStatus(so.processStatus)}
+                          </Badge>
+                        )}
                       </TableCell>
-                    </TableRow>
-                  ) : salesOrders.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={13} className="text-center py-8 text-gray-500">
-                        Tidak ada data Sales Order
+                      <TableCell className="text-center">
+                        {so.partialWoStatus === 'partial_wo' ? (
+                          <Badge className="bg-purple-100 text-purple-800">
+                            Partial WO
+                          </Badge>
+                        ) : so.partialWoStatus === 'cancel' ? (
+                          <Badge className="bg-red-100 text-red-800">
+                            Cancel
+                          </Badge>
+                        ) : (
+                          "-"
+                        )}
                       </TableCell>
-                    </TableRow>
-                  ) : (
-                    salesOrders.map((so) => (
-                      <TableRow key={so.id} className="hover:bg-gray-50">
-                        <TableCell className="font-medium">{so.noSo}</TableCell>
-                        <TableCell>{so.pelanggan}</TableCell>
-                        <TableCell>{so.tanggalSo}</TableCell>
-                        <TableCell>{so.tanggalPengiriman}</TableCell>
-                        <TableCell>{so.asalGudang}</TableCell>
-                        <TableCell className="text-center">{so.jumlahItem}</TableCell>
-                        <TableCell>{formatCurrency(so.subtotal)}</TableCell>
-                        <TableCell>{formatCurrency(so.totalDiskon)}</TableCell>
-                        <TableCell>{formatCurrency(so.ppnAmount)}</TableCell>
-                        <TableCell className="font-semibold">{formatCurrency(so.totalHarga)}</TableCell>
-                        <TableCell>
-                          {so.deleteRequestStatus === 'delete_requested' ? (
-                            <Badge className="bg-orange-100 text-orange-800">
-                              🗑️ Delete Requested
-                            </Badge>
-                          ) : (
-                            <Badge className={getStatusColor(so.processStatus)}>
-                              {formatProcessStatus(so.processStatus)}
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {so.partialWoStatus === 'partial_wo' ? (
-                            <Badge className="bg-purple-100 text-purple-800">
-                              Partial WO
-                            </Badge>
-                          ) : so.partialWoStatus === 'cancel' ? (
-                            <Badge className="bg-red-100 text-red-800">
-                              Cancel
-                            </Badge>
-                          ) : (
-                            "-"
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col sm:flex-row gap-2 justify-center">
-                            <Button size="sm" variant="outline" onClick={() => handleView(so.id)}>
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            {/* <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleConvertToWO(so.id)}>
+                      <TableCell>
+                        <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                          <Button size="sm" variant="outline" onClick={() => handleView(so.id)}>
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          {/* <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleConvertToWO(so.id)}>
                               <ArrowRight className="w-4 h-4 mr-1" />
                               <span className="hidden sm:inline">Convert to WO</span>
                             </Button> */}
-                            {isAdmin() ? (
-                              <Button 
-                                size="sm" 
-                                variant="destructive" 
-                                onClick={() => handleDeleteSO(so)}
-                                title="Hapus Sales Order (Admin)"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            ) : so.deleteRequestStatus === 'delete_requested' ? (
-                              <Button 
-                                size="sm" 
-                                className="bg-yellow-600 hover:bg-yellow-700" 
-                                onClick={() => handleCancelDeleteRequest(so)}
-                                title="Batalkan Permintaan Hapus"
-                              >
-                                <X className="w-4 h-4" />
-                              </Button>
-                            ) : (
-                              <Button 
-                                size="sm" 
-                                className="bg-orange-600 hover:bg-orange-700" 
-                                onClick={() => handleRequestDeleteSO(so)}
-                                title="Ajukan Permintaan Hapus"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-            
-            {/* Pagination */}
-            {salesOrders.length > 0 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 bg-white border-t border-gray-200 gap-4">
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-700">
-                    Menampilkan {startItem}-{endItem} dari {totalItems} data
-                  </span>
-                  <select
-                    value={itemsPerPage}
-                    onChange={(e) => {
-                      setItemsPerPage(Number(e.target.value));
-                      setCurrentPage(1);
-                    }}
-                    className="border border-gray-300 rounded px-2 py-1 text-sm"
-                  >
-                    <option value={5}>5 per halaman</option>
-                    <option value={10}>10 per halaman</option>
-                    <option value={25}>25 per halaman</option>
-                    <option value={50}>50 per halaman</option>
-                  </select>
-                </div>
-                
-                {totalPages > 1 && (
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => setCurrentPage(currentPage - 1)}
-                      disabled={currentPage === 1}
-                      className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                    >
-                      Sebelumnya
-                    </button>
-                    
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = currentPage - 2 + i;
-                      }
-                      
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => setCurrentPage(pageNum)}
-                          className={`px-3 py-1 text-sm border rounded ${
-                            currentPage === pageNum
-                              ? 'bg-blue-500 text-white border-blue-500'
-                              : 'border-gray-300 hover:bg-gray-50'
-                          }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
-                    
-                    <button
-                      onClick={() => setCurrentPage(currentPage + 1)}
-                      disabled={currentPage === totalPages}
-                      className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                    >
-                      Selanjutnya
-                    </button>
-                  </div>
+                          {isAdmin() ? (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDeleteSO(so)}
+                              title="Hapus Sales Order (Admin)"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          ) : so.deleteRequestStatus === 'delete_requested' ? (
+                            <Button
+                              size="sm"
+                              className="bg-yellow-600 hover:bg-yellow-700"
+                              onClick={() => handleCancelDeleteRequest(so)}
+                              title="Batalkan Permintaan Hapus"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              className="bg-orange-600 hover:bg-orange-700"
+                              onClick={() => handleRequestDeleteSO(so)}
+                              title="Ajukan Permintaan Hapus"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
                 )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              </TableBody>
+            </Table>
+          </div>
 
-        {/* Summary and Status Breakdown */}
-        <Card className="bg-white border-green-200">
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Summary Statistics */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Ringkasan</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Total SO:</span>
-                    <span className="font-semibold">{totalSO}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Total Nilai:</span>
-                    <span className="font-semibold">{formatCurrency(totalNilai)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Rata-rata per SO:</span>
-                    <span className="font-semibold">{formatCurrency(rataRataPerSO)}</span>
-                  </div>
+          {/* Pagination */}
+          {salesOrders.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 bg-white border-t border-gray-200 gap-4">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-700">
+                  Menampilkan {startItem}-{endItem} dari {totalItems} data
+                </span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="border border-gray-300 rounded px-2 py-1 text-sm"
+                >
+                  <option value={5}>5 per halaman</option>
+                  <option value={10}>10 per halaman</option>
+                  <option value={25}>25 per halaman</option>
+                  <option value={50}>50 per halaman</option>
+                </select>
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Sebelumnya
+                  </button>
+
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`px-3 py-1 text-sm border rounded ${currentPage === pageNum
+                          ? 'bg-blue-500 text-white border-blue-500'
+                          : 'border-gray-300 hover:bg-gray-50'
+                          }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Selanjutnya
+                  </button>
                 </div>
-              </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-              {/* Status Breakdown */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Breakdown Status</h3>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(statusBreakdown).map(([processStatus, count]) => (
-                    <Badge key={processStatus} className={getStatusColor(processStatus)}>
-                      {formatProcessStatus(processStatus)}: {count}
-                    </Badge>
-                  ))}
+      {/* Summary and Status Breakdown */}
+      <Card className="bg-white border-green-200">
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Summary Statistics */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Ringkasan</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Total SO:</span>
+                  <span className="font-semibold">{totalSO}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Total Nilai:</span>
+                  <span className="font-semibold">{formatCurrency(totalNilai)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Rata-rata per SO:</span>
+                  <span className="font-semibold">{formatCurrency(rataRataPerSO)}</span>
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
-        
-                 {/* Delete Confirmation Modal */}
-         <CustomAlert
-           open={showDeleteModal}
-           onOpenChange={setShowDeleteModal}
-           title="Konfirmasi Hapus"
-           message={`Yakin ingin menghapus Sales Order "${selectedSO?.noSo}"?`}
-           type="warning"
-           showCancel={true}
-           confirmText={isDeleting ? "Menghapus..." : "Ya, Hapus"}
-           cancelText="Tidak"
-           onConfirm={handleDeleteConfirm}
-         />
-         
-         {/* Delete Request Modal */}
-         <DeleteRequestModal
-           open={showDeleteRequestModal}
-           onOpenChange={setShowDeleteRequestModal}
-           salesOrder={selectedSO}
-           onConfirm={handleRequestDeleteConfirm}
-           onCancel={() => setShowDeleteRequestModal(false)}
-         />
-        
-        {/* Alert Modal Component */}
-        <AlertComponent />
-      </PageLayout>
+
+            {/* Status Breakdown */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Breakdown Status</h3>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(statusBreakdown).map(([processStatus, count]) => (
+                  <Badge key={processStatus} className={getStatusColor(processStatus)}>
+                    {formatProcessStatus(processStatus)}: {count}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Delete Confirmation Modal */}
+      <CustomAlert
+        open={showDeleteModal}
+        onOpenChange={setShowDeleteModal}
+        title="Konfirmasi Hapus"
+        message={`Yakin ingin menghapus Sales Order "${selectedSO?.noSo}"?`}
+        type="warning"
+        showCancel={true}
+        confirmText={isDeleting ? "Menghapus..." : "Ya, Hapus"}
+        cancelText="Tidak"
+        onConfirm={handleDeleteConfirm}
+      />
+
+      {/* Delete Request Modal */}
+      <DeleteRequestModal
+        open={showDeleteRequestModal}
+        onOpenChange={setShowDeleteRequestModal}
+        salesOrder={selectedSO}
+        onConfirm={handleRequestDeleteConfirm}
+        onCancel={() => setShowDeleteRequestModal(false)}
+      />
+
+      {/* Alert Modal Component */}
+      <AlertComponent />
+    </PageLayout>
   );
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import MasterDataLayout from "@/components/MasterDataLayout";
-import { beratJenisService, bentukBarangService } from "@/services/master-data";
+import { beratJenisService, bentukBarangService, itemBarangGroupService } from "@/services/master-data";
 import { getJenisBarangOptions, getGradeBarangOptions } from "@/services/masterDataService";
 import { useAlert } from "@/hooks/useAlert";
 import { Sparkles } from "lucide-react";
@@ -192,20 +192,31 @@ export default function BeratJenisPage() {
         ]}
         validate={(form) => {
           const errs = [];
-          if (!form.jenis_barang_id) errs.push('Jenis Barang');
-          if (!form.bentuk_barang_id) errs.push('Bentuk Barang');
-          if (!form.grade_barang_id) errs.push('Grade Barang');
 
           // Validasi berdasarkan dimensi
           const dimensi = bentukBarangMap[form.bentuk_barang_id] || currentDimensi;
+
           if (dimensi === '1D') {
+            // Untuk 1D, item_barang_group_id wajib (jika bukan general rule, 
+            // tapi skrg sepertinya default 1D harus spesifik per group)
+            if (!form.item_barang_group_id) errs.push('Item Barang Group');
             if (!form.berat_per_cm || parseFloat(form.berat_per_cm) <= 0) {
               errs.push('Berat per cm (wajib untuk barang 1D)');
             }
           } else if (dimensi && dimensi !== '1D') {
+            // Untuk 2D, item_barang_group_id biasanya null (general rule per material)
+            if (!form.jenis_barang_id) errs.push('Jenis Barang');
+            if (!form.bentuk_barang_id) errs.push('Bentuk Barang');
+            if (!form.grade_barang_id) errs.push('Grade Barang');
+
             if (!form.berat_per_luas || parseFloat(form.berat_per_luas) <= 0) {
               errs.push('Berat per luas (wajib untuk plat 2D)');
             }
+          } else {
+            // Fallback validation if dimension unknown
+            if (!form.jenis_barang_id) errs.push('Jenis Barang');
+            if (!form.bentuk_barang_id) errs.push('Bentuk Barang');
+            if (!form.grade_barang_id) errs.push('Grade Barang');
           }
 
           if (errs.length) return `Field wajib: ${errs.join(', ')}`;
@@ -219,8 +230,15 @@ export default function BeratJenisPage() {
             if (form.berat_per_cm) {
               form.berat_per_cm = parseFloat(form.berat_per_cm);
             }
+            // Ensure item_barang_group_id is sent
+            if (form.item_barang_group_id) {
+              form.item_barang_group_id = parseInt(form.item_barang_group_id);
+            }
           } else if (dimensi && dimensi !== '1D') {
             delete form.berat_per_cm;
+            // For 2D, we might want to ensure item_barang_group_id is null?
+            // Or backend handles it. Let's send null if not present.
+            // form.item_barang_group_id = null;
             if (form.berat_per_luas) {
               form.berat_per_luas = parseFloat(form.berat_per_luas);
             }
@@ -228,6 +246,47 @@ export default function BeratJenisPage() {
           return form;
         }}
         fields={[
+          {
+            name: "item_barang_group_id",
+            label: "Item Barang Group",
+            type: "select", // Changed to select for searching
+            required: (form) => {
+              const bentukBarangId = form.bentuk_barang_id;
+              let dimensi = bentukBarangMap[bentukBarangId] || currentDimensi;
+              if (dimensi) return dimensi === '1D';
+              return activeTab === '1D';
+            },
+            showIf: (form) => {
+              const bentukBarangId = form.bentuk_barang_id;
+              let dimensi = bentukBarangMap[bentukBarangId] || currentDimensi;
+              if (dimensi) return dimensi === '1D';
+              return activeTab === '1D';
+            },
+            optionLabel: "label",
+            mapFromEdit: (edit) => {
+              return edit?.item_barang_group_id || edit?.itemBarangGroup?.id || "";
+            },
+            editLabel: (edit) => {
+              const group = edit?.item_barang_group || edit?.itemBarangGroup;
+              return group?.nama_group_barang || String(edit?.item_barang_group_id || "");
+            },
+            optionsLoader: async () => {
+              const res = await itemBarangGroupService.getAll();
+              const list = res?.data || [];
+              return list.map(it => ({
+                id: it.id,
+                value: String(it.id),
+                label: it.nama_group_barang || String(it.id)
+              }));
+            },
+            onChangeForm: (form, val, options) => {
+              // When selecting item_barang_group, we can auto-fill jenis, bentuk, grade if available
+              // But usually user selects this first? Or maybe backend fills it. 
+              // Let's assume user picks this and we can find corresponding jenis/bentuk/grade from option if we had that data.
+              // For now, simpler to just let them pick.
+              return form;
+            }
+          },
           {
             name: "jenis_barang_id",
             label: "Jenis Barang",
@@ -454,6 +513,17 @@ export default function BeratJenisPage() {
         ]}
         columns={[
           { key: "id", label: "ID", align: "center", width: "5rem", maxWidth: "5rem" },
+          // Only show in 1D tab
+          ...(activeTab === '1D' ? [{
+            key: "item_barang_group.nama_group_barang",
+            label: "Nama Group Barang",
+            align: "left",
+            minWidth: "15rem",
+            getValue: (item) => {
+              const group = item.item_barang_group || item.itemBarangGroup;
+              return group?.nama_group_barang || '-';
+            }
+          }] : []),
           {
             key: "jenis_barang",
             label: "Jenis Barang",

@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { ArrowLeft, Calendar, Eye, Printer } from "lucide-react";
+import {
+  getTermOptions,
+  getBentukBarangOptions,
+  getUnitOptions
+} from "@/services/masterDataService";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +38,7 @@ export default function ViewSalesOrderPage() {
   const [itemTypeOptions, setItemTypeOptions] = useState([]);
   const [itemShapeOptions, setItemShapeOptions] = useState([]);
   const [itemGradeOptions, setItemGradeOptions] = useState([]);
+  const [unitOptions, setUnitOptions] = useState([]);
 
   // Sales Order Data
   const [salesOrder, setSalesOrder] = useState(null);
@@ -91,6 +97,15 @@ export default function ViewSalesOrderPage() {
 
       try {
         setLoading(true);
+
+        // Load units for mapping IDs to names if needed
+        let resolvedUnits = [];
+        try {
+          resolvedUnits = await getUnitOptions();
+          setUnitOptions(resolvedUnits);
+        } catch (err) {
+          console.error('Error loading units:', err);
+        }
 
         // Load sales order data (includes master data)
         console.log('🔧 Fetching sales order data for ID:', id);
@@ -199,7 +214,7 @@ export default function ViewSalesOrderPage() {
         setSoNumber(soData.nomor_so || soData.so_number || soData.order_number || "");
         setSoDate(formatDateForInput(soData.tanggal_so || soData.so_date || soData.order_date));
         setDeliveryDate(formatDateForInput(soData.tanggal_pengiriman || soData.delivery_date));
-        setTermOfPayment(soData.syarat_pembayaran || soData.term_of_payment || "");
+        setTermOfPayment(soData.term_of_payment?.nama || soData.syarat_pembayaran || "");
 
         // Set warehouse name from included data
         const warehouseName = warehouseData?.nama_gudang || warehouseData?.nama ||
@@ -215,14 +230,26 @@ export default function ViewSalesOrderPage() {
             const qty = parseFloat(item.qty || item.quantity || item.jumlah || 0);
             const harga = parseFloat(item.harga || item.price || 0);
             const diskon = parseFloat(item.diskon || item.discount || 0);
-            const subtotal = qty * harga;
-            const discountAmount = subtotal * (diskon / 100);
+            const berat = parseFloat(item.berat || item.weight || 0);
+
+            // Resolve satuan name from ID using resolvedUnits
+            const resolvedUnit = resolvedUnits.find(opt => opt.value === item.satuan?.toString());
+            const satuanNama = (item.satuan_barang?.nama || item.unit?.nama || resolvedUnit?.label || "").toLowerCase();
+
+            let subtotal = qty * harga;
+            if (satuanNama === 'kilogram' || satuanNama === 'kg') {
+              subtotal = qty * harga * berat;
+            }
+
+            const discountAmount = item.diskon_type === 'nominal' ? diskon : subtotal * (diskon / 100);
             const total = subtotal - discountAmount;
 
             console.log('🔍 Item calculations:', {
               qty,
               harga,
               diskon,
+              berat,
+              satuanNama,
               subtotal,
               discountAmount,
               total,
@@ -233,16 +260,24 @@ export default function ViewSalesOrderPage() {
               id: item.id,
               jenisBarang: item.jenis_barang?.nama_jenis_barang || item.jenis_barang?.nama_jenis || item.jenis_barang?.nama || 'N/A',
               bentukBarang: item.bentuk_barang?.nama_bentuk_barang || item.bentuk_barang?.nama_bentuk || item.bentuk_barang?.nama || 'N/A',
+              bentuk_barang_data: item.bentuk_barang, // Store raw data for metadata access
               gradeBarang: item.grade_barang?.nama_grade_barang || item.grade_barang?.nama || item.grade_barang?.nama_grade || 'N/A',
-              panjang: item.panjang || item.length || 0,
-              lebar: item.lebar || item.width || 0,
+              panjang: item.panjang || 0,
+              lebar: item.lebar || 0,
+              tebal: item.tebal || 0,
+              diameter_luar: item.diameter_luar || 0,
+              diameter_dalam: item.diameter_dalam || 0,
               diameter: item.diameter || 0,
-              ketebalan: item.tebal || item.ketebalan || item.thickness || 0,
+              sisi1: item.sisi1 || 0,
+              sisi2: item.sisi2 || 0,
               berat: item.berat || item.weight || 0,
               qty: qty,
               harga: harga,
               diskon: diskon,
+              diskon_type: item.diskon_type || 'percent',
               satuan: item.satuan || 'N/A',
+              satuan_nama: item.satuan_barang?.nama || item.unit?.nama || "",
+              masterItemName: item.item_barang_group?.nama_group_barang || item.master_item_nama || '-',
               catatan: item.catatan || item.note || item.notes || "",
               total: item.total || item.subtotal || total || 0
             };
@@ -283,6 +318,51 @@ export default function ViewSalesOrderPage() {
     });
   };
 
+  const formatDimensions = (item) => {
+    const parts = [];
+    const formatNum = (val) => {
+      if (val === undefined || val === null) return null;
+      const parsed = parseFloat(val);
+      return isNaN(parsed) || parsed === 0 ? null : parsed.toString();
+    };
+
+    // Check which fields to include. If we have tipe_barang metadata, use it.
+    // Otherwise, fall back to showing all non-zero fields in a standard order.
+    const tipe = item.tipe_barang || item.bentuk_barang_data?.tipe_barang || null;
+
+    if (tipe) {
+      if (tipe.diameter_luar && formatNum(item.diameter_luar)) parts.push(formatNum(item.diameter_luar));
+      if (tipe.diameter_dalam && formatNum(item.diameter_dalam)) parts.push(formatNum(item.diameter_dalam));
+      if (tipe.diameter && formatNum(item.diameter)) parts.push(formatNum(item.diameter));
+      if (tipe.sisi1 && formatNum(item.sisi1)) parts.push(formatNum(item.sisi1));
+      if (tipe.sisi2 && formatNum(item.sisi2)) parts.push(formatNum(item.sisi2));
+      if (tipe.tebal && formatNum(item.tebal)) parts.push(formatNum(item.tebal));
+      if (tipe.lebar && formatNum(item.lebar)) parts.push(formatNum(item.lebar));
+      if (tipe.panjang && formatNum(item.panjang)) parts.push(formatNum(item.panjang));
+    } else {
+      // Fallback: show all non-zero values in standard order
+      const dLuar = formatNum(item.diameter_luar);
+      const dDalam = formatNum(item.diameter_dalam);
+      const diam = formatNum(item.diameter);
+      const s1 = formatNum(item.sisi1);
+      const s2 = formatNum(item.sisi2);
+      const t = formatNum(item.tebal);
+      const l = formatNum(item.lebar);
+      const p = formatNum(item.panjang);
+
+      if (dLuar) parts.push(dLuar);
+      if (dDalam) parts.push(dDalam);
+      if (diam) parts.push(diam);
+      if (s1) parts.push(s1);
+      if (s2) parts.push(s2);
+      if (t) parts.push(t);
+      if (l) parts.push(l);
+      if (p) parts.push(p);
+    }
+
+    return parts.length > 0 ? parts.join(' x ') + ' mm' : '-';
+  };
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -320,20 +400,7 @@ export default function ViewSalesOrderPage() {
         gudang_asal: originWarehouse,
         customer: mappedCustomer,
         items: items.map(item => {
-          // Build dimensi_potong from panjang, lebar, and tebal/ketebalan
-          const panjang = parseFloat(item.panjang) || 0;
-          const lebar = parseFloat(item.lebar) || 0;
-          const tebal = parseFloat(item.ketebalan) || 0; // ketebalan already mapped from tebal
-
-          let dimensi_potong = '-';
-          if (lebar > 0) {
-            dimensi_potong = `${panjang} x ${lebar} x ${tebal} mm`;
-          } else {
-            dimensi_potong = `${panjang} x ${tebal} mm`;
-          }
-
-          // Use satuan as unit (handle 'N/A' case)
-          const unit = (item.satuan && item.satuan !== 'N/A') ? item.satuan : (item.unit || '-');
+          const dimensi_potong = formatDimensions(item);
 
           // Calculate total_kg from berat (weight) if available
           const total_kg = parseFloat(item.berat) || 0;
@@ -342,8 +409,9 @@ export default function ViewSalesOrderPage() {
             nama_item: item.jenisBarang || item.nama_item,
             bentuk_barang: item.bentukBarang || item.bentuk_barang,
             grade_barang: item.gradeBarang || item.grade_barang,
+            master_item: item.masterItemName || item.master_item_nama || '-',
             dimensi_potong: dimensi_potong,
-            unit: unit,
+            unit: item.satuan_nama || unitOptions.find(opt => opt.value === item.satuan?.toString())?.label || item.satuan || '-',
             qty: item.qty || item.quantity || 0,
             total_kg: total_kg,
             harga_per_unit: item.harga || item.harga_per_unit || 0,
@@ -352,7 +420,8 @@ export default function ViewSalesOrderPage() {
         }),
         total_harga: subtotal,
         discount: totalDiscountSO,
-        diskon_so_percent: diskonSOPercent,
+        diskon_so_value: diskonSOValue,
+        diskon_so_type: diskonSOType,
         diskon_so_amount: diskonSOAmount,
         ppn: ppnAmount,
         grand_total: grandTotal
@@ -377,7 +446,7 @@ export default function ViewSalesOrderPage() {
 
   // Memoized calculations
   // Subtotal adalah total harga SETELAH diskon item (sudah termasuk diskon item)
-  const { subtotal, diskonSOPercent, diskonSOAmount, totalDiscountSO, ppnAmount, grandTotal } = useMemo(() => {
+  const { subtotal, diskonSOValue, diskonSOType, diskonSOAmount, totalDiscountSO, ppnAmount, grandTotal, includePPN, priceIncludesPPN, dpp } = useMemo(() => {
     console.log('🔍 Calculating totals for items:', items);
 
     // Subtotal = total semua item (sudah termasuk diskon item)
@@ -387,54 +456,83 @@ export default function ViewSalesOrderPage() {
       return sum + itemTotal;
     }, 0);
 
-    // Get SO-level discount from API response
-    const diskonSOPercent = salesOrder ? (parseFloat(salesOrder.diskon_so) || 0) : 0;
-    const diskonSOAmount = subtotal * (diskonSOPercent / 100);
+    // Calculate SO-level discount (dihitung dari subtotal yang sudah termasuk diskon item)
+    const diskonSOValue = salesOrder ? (parseFloat(salesOrder.diskon_so) || 0) : 0;
+    const diskonSOType = salesOrder?.diskon_so_type || 'percent'; // percent or nominal
+
+    let diskonSOAmount = 0;
+    if (diskonSOType === 'percent') {
+      diskonSOAmount = subtotal * (diskonSOValue / 100);
+    } else {
+      diskonSOAmount = diskonSOValue;
+    }
 
     // Total discount = hanya diskon SO (karena diskon item sudah termasuk dalam subtotal)
     const totalDiscountSO = diskonSOAmount;
 
-    // Use PPN from API if available, otherwise calculate with 11%
+    // Get flags from salesOrder
+    // Default to true for include_ppn if undefined (backward compatibility)
+    // Default to false for price_include_ppn if undefined
+    const includePPN = salesOrder?.include_ppn !== false && salesOrder?.include_ppn !== 0;
+    const priceIncludesPPN = salesOrder?.price_include_ppn === true || salesOrder?.price_include_ppn === 1;
+
+    // Calculate PPN
     let ppnAmount = 0;
-    if (salesOrder) {
-      // Prioritize ppn_amount from API
-      if (salesOrder.ppn_amount !== undefined && salesOrder.ppn_amount !== null) {
-        ppnAmount = parseFloat(salesOrder.ppn_amount) || 0;
-        console.log('🔍 Using PPN amount from API:', ppnAmount);
-      }
-      // If ppn_amount not available but ppn_percent is, calculate it
-      else if (salesOrder.ppn_percent !== undefined && salesOrder.ppn_percent !== null) {
-        const ppnPercent = parseFloat(salesOrder.ppn_percent) || 0;
-        ppnAmount = (subtotal - totalDiscountSO) * (ppnPercent / 100);
-        console.log('🔍 Calculating PPN from API percent:', { ppnPercent, ppnAmount });
-      }
-      // Fallback to 11% if no PPN data from API
-      else {
+
+    if (includePPN) {
+      if (priceIncludesPPN) {
+        // Harga sudah include PPN. 
+        // DPP = (Subtotal - Diskon) / 1.11
+        // PPN = (Subtotal - Diskon) - DPP
+        const amountAfterDiscount = subtotal - totalDiscountSO;
+        const dpp = amountAfterDiscount / 1.11;
+        ppnAmount = amountAfterDiscount - dpp;
+      } else {
+        // Harga belum include PPN.
+        // PPN = (Subtotal - Diskon) * 11%
         ppnAmount = (subtotal - totalDiscountSO) * 0.11;
-        console.log('🔍 Using default 11% PPN (no API data)');
       }
     } else {
-      // Fallback if salesOrder not loaded yet
-      ppnAmount = (subtotal - totalDiscountSO) * 0.11;
-      console.log('🔍 Using default 11% PPN (salesOrder not loaded)');
+      ppnAmount = 0;
     }
 
-    const grandTotal = subtotal - totalDiscountSO + ppnAmount;
+    // If API provides exact PPN amount and we are supposed to include PPN, we can use it, 
+    // but recalculating ensures consistency if local changes happen (though this is view).
+    // However, sometimes API PPN might be slightly different due to rounding on backend.
+    // Let's prefer API value if available and includePPN is true
+    if (salesOrder && includePPN) {
+      if (salesOrder.ppn_amount !== undefined && salesOrder.ppn_amount !== null) {
+        ppnAmount = parseFloat(salesOrder.ppn_amount) || 0;
+      }
+    }
+
+    // Grand Total calculation
+    let grandTotal = 0;
+    if (includePPN && priceIncludesPPN) {
+      // If price includes PPN, the subtotal already includes everything (except SO discount which we deducted)
+      // So Grand Total = Subtotal - DiscountSO
+      // (PPN is part of that amount)
+      grandTotal = subtotal - totalDiscountSO;
+    } else {
+      // If price excludes PPN, we add PPN to the amount after discount
+      grandTotal = (subtotal - totalDiscountSO) + ppnAmount;
+    }
 
     console.log('🔍 Final calculations:', {
       subtotal,
-      diskonSOPercent,
+      diskonSOValue,
+      diskonSOType,
       diskonSOAmount,
       totalDiscountSO,
+      includePPN,
+      priceIncludesPPN,
       ppnAmount,
       grandTotal,
       itemsCount: items.length,
-      salesOrderPPN: salesOrder?.ppn_amount,
-      salesOrderPPNPercent: salesOrder?.ppn_percent,
-      salesOrderDiskonSO: salesOrder?.diskon_so
+      salesOrderPPN: salesOrder?.ppn_amount
     });
 
-    return { subtotal, diskonSOPercent, diskonSOAmount, totalDiscountSO, ppnAmount, grandTotal };
+    return { subtotal, diskonSOValue, diskonSOType, diskonSOAmount, totalDiscountSO, ppnAmount, grandTotal, includePPN, priceIncludesPPN };
   }, [items, salesOrder]);
 
 
@@ -601,10 +699,13 @@ export default function ViewSalesOrderPage() {
                   <TableHead className="table-header-cell-standard">Jenis Barang</TableHead>
                   <TableHead className="table-header-cell-standard">Bentuk</TableHead>
                   <TableHead className="table-header-cell-standard">Grade</TableHead>
+                  <TableHead className="table-header-cell-standard">Master Item Barang</TableHead>
                   <TableHead className="table-header-cell-standard">Dimensi</TableHead>
+                  <TableHead className="table-header-cell-standard">Berat Satuan</TableHead>
                   <TableHead className="table-header-cell-standard">Qty</TableHead>
                   <TableHead className="table-header-cell-standard">Luas/item</TableHead>
                   <TableHead className="table-header-cell-standard">Harga</TableHead>
+                  <TableHead className="table-header-cell-standard">Satuan</TableHead>
                   <TableHead className="table-header-cell-standard">Diskon</TableHead>
                   <TableHead className="table-header-cell-standard">Total</TableHead>
                 </TableRow>
@@ -612,7 +713,7 @@ export default function ViewSalesOrderPage() {
               <TableBody>
                 {items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={12} className="text-center py-8 text-gray-500">
                       Tidak ada item
                     </TableCell>
                   </TableRow>
@@ -621,16 +722,14 @@ export default function ViewSalesOrderPage() {
                     // Calculate luas per item
                     const panjang = parseFloat(item.panjang) || 0; // mm
                     const lebar = parseFloat(item.lebar) || 0; // mm
-                    const tebal = parseFloat(item.ketebalan) || 0; // mm
+                    const tebal = parseFloat(item.tebal) || 0; // mm
                     const is2D = lebar > 0;
                     const luasDisplay = is2D
                       ? `${(panjang * lebar / 1000000).toFixed(2)} m²`
                       : `${(panjang / 1000).toFixed(2)} m`;
 
                     // Format dimensi
-                    const dimensi = lebar > 0
-                      ? `${panjang} x ${lebar} x ${tebal} mm`
-                      : `${panjang} x ${tebal} mm`;
+                    const dimensi = formatDimensions(item);
 
                     return (
                       <TableRow key={item.id || index} className="hover:bg-gray-50">
@@ -638,11 +737,14 @@ export default function ViewSalesOrderPage() {
                         <TableCell>{item.jenisBarang}</TableCell>
                         <TableCell>{item.bentukBarang}</TableCell>
                         <TableCell>{item.gradeBarang}</TableCell>
+                        <TableCell>{item.masterItemName}</TableCell>
                         <TableCell>{dimensi}</TableCell>
+                        <TableCell>{item.berat ? `${item.berat} kg` : '-'}</TableCell>
                         <TableCell>{item.qty}</TableCell>
                         <TableCell>{luasDisplay}</TableCell>
                         <TableCell>{formatCurrency(item.harga)}</TableCell>
-                        <TableCell>{item.diskon}%</TableCell>
+                        <TableCell>{item.satuan_nama || unitOptions.find(opt => opt.value === item.satuan?.toString())?.label || item.satuan}</TableCell>
+                        <TableCell>{item.diskon_type === 'nominal' ? formatCurrency(item.diskon) : `${item.diskon}%`}</TableCell>
                         <TableCell className="font-semibold">{formatCurrency(item.total)}</TableCell>
                       </TableRow>
                     );
@@ -666,9 +768,11 @@ export default function ViewSalesOrderPage() {
                 <span className="text-gray-600">Subtotal:</span>
                 <span className="font-semibold">{formatCurrency(subtotal)}</span>
               </div>
-              {diskonSOPercent > 0 && (
+              {diskonSOAmount > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Diskon SO ({diskonSOPercent}%):</span>
+                  <span className="text-gray-600">
+                    Diskon SO ({diskonSOType === 'percent' ? `${diskonSOValue}%` : 'Nominal'}):
+                  </span>
                   <span className="font-semibold text-orange-600">-{formatCurrency(diskonSOAmount)}</span>
                 </div>
               )}
@@ -676,8 +780,19 @@ export default function ViewSalesOrderPage() {
                 <span className="text-gray-600">Total Diskon:</span>
                 <span className="font-semibold text-red-600">-{formatCurrency(totalDiscountSO)}</span>
               </div>
+
+              {includePPN && priceIncludesPPN && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">DPP (Dasar Pengenaan Pajak):</span>
+                  <span className="font-semibold text-blue-600">{formatCurrency(dpp)}</span>
+                </div>
+              )}
+
               <div className="flex justify-between">
-                <span className="text-gray-600">PPN (11%):</span>
+                <span className="text-gray-600">
+                  PPN (11%)
+                  {includePPN && !priceIncludesPPN ? '' : includePPN ? ' (Include)' : ' (Exempt)'}
+                </span>
                 <span className="font-semibold">{formatCurrency(ppnAmount)}</span>
               </div>
               <div className="border-t pt-4">
@@ -688,7 +803,7 @@ export default function ViewSalesOrderPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-gray-600">Jumlah Item:</span>
                 <span className="font-semibold">{items.length}</span>
@@ -699,7 +814,26 @@ export default function ViewSalesOrderPage() {
                   {formatProcessStatus(salesOrder.process_status)}
                 </span>
               </div>
-              <div className="flex justify-between">
+
+              {/* VAT Status Badges */}
+              <div className="flex flex-col gap-2 pt-2 border-t">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Status PPN:</span>
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${includePPN ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'}`}>
+                    {includePPN ? 'PPN Ditambahkan' : 'Tanpa PPN'}
+                  </span>
+                </div>
+                {includePPN && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Tipe Harga:</span>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${priceIncludesPPN ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>
+                      {priceIncludesPPN ? 'Harga Termasuk PPN' : 'Harga Belum Termasuk PPN'}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-between pt-2 border-t">
                 <span className="text-gray-600">Tanggal SO:</span>
                 <span className="font-semibold">{formatDate(salesOrder.tanggal_so)}</span>
               </div>

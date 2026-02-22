@@ -234,6 +234,7 @@ export default function ItemBarangGroupPage() {
             ]}
             columns={[
                 { key: "id", label: "ID", align: "center", width: "5rem", maxWidth: "5rem" },
+                { key: "bentuk_barang.dimensi", label: "Dimensi", align: "center", width: "8rem", maxWidth: "8rem" },
                 { key: "jenis_barang.nama_jenis", label: "Jenis Barang", align: "left", width: "12rem", maxWidth: "15rem" },
                 { key: "bentuk_barang.nama_bentuk", label: "Bentuk Barang", align: "left", width: "12rem", maxWidth: "15rem" },
                 { key: "grade_barang.nama", label: "Grade Barang", align: "left", width: "12rem", maxWidth: "15rem" },

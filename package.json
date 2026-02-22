@@ -4,7 +4,7 @@
   "description": "SHN Desktop Application",
   "author": "SHN",
   "private": true,
-  "version": "0.0.6",
+  "version": "0.0.7",
   "type": "module",
   "scripts": {
     "dev:vite": "vite",

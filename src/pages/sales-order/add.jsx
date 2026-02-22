@@ -124,7 +124,8 @@ export default function AddSalesOrderPage() {
   const [handoverMethod, setHandoverMethod] = useState("pickup");
   const [includePPN, setIncludePPN] = useState(true);
   const [priceIncludesPPN, setPriceIncludesPPN] = useState(false); // Harga per item sudah include PPN
-  const [diskonSO, setDiskonSO] = useState("0"); // Diskon SO level (percentage)
+  const [diskonSO, setDiskonSO] = useState("0"); // Diskon SO level (percentage or nominal)
+  const [soDiscountType, setSoDiscountType] = useState("percent"); // percent or nominal
 
   // Item Input Form - Dimension fields (dynamic based on tipe_barang)
   const [itemPanjang, setItemPanjang] = useState("");
@@ -151,6 +152,7 @@ export default function AddSalesOrderPage() {
   const [itemPrice, setItemPrice] = useState("");
   const [itemUnit, setItemUnit] = useState("per-dimensi");
   const [itemDiscount, setItemDiscount] = useState("0");
+  const [itemDiscountType, setItemDiscountType] = useState("percent"); // percent or nominal
   const [itemNotes, setItemNotes] = useState("");
   const [itemWeight, setItemWeight] = useState("");
   const [itemCutType, setItemCutType] = useState("potongan");
@@ -195,14 +197,19 @@ export default function AddSalesOrderPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemCutType]);
 
-  // Reset panjang, lebar, dan tebal ketika jenis potongan berubah menjadi "utuh"
+  // Populate panjang, lebar, dan tebal ketika jenis potongan berubah menjadi "utuh" dari group yang dipilih
   useEffect(() => {
-    if (itemCutType === "utuh") {
-      setItemLength("");
-      setItemWidth("");
-      setItemDiameter("");
+    if (itemCutType === "utuh" && selectedItemBarangGroup) {
+      if (selectedItemBarangGroup.panjang != null) setItemPanjang(selectedItemBarangGroup.panjang.toString());
+      if (selectedItemBarangGroup.lebar != null) setItemLebar(selectedItemBarangGroup.lebar.toString());
+      if (selectedItemBarangGroup.tebal != null) setItemTebal(selectedItemBarangGroup.tebal.toString());
+      if (selectedItemBarangGroup.diameter_luar != null) setItemDiameterLuar(selectedItemBarangGroup.diameter_luar.toString());
+      if (selectedItemBarangGroup.diameter_dalam != null) setItemDiameterDalam(selectedItemBarangGroup.diameter_dalam.toString());
+      if (selectedItemBarangGroup.diameter != null) setItemDiameter(selectedItemBarangGroup.diameter.toString());
+      if (selectedItemBarangGroup.sisi1 != null) setItemSisi1(selectedItemBarangGroup.sisi1.toString());
+      if (selectedItemBarangGroup.sisi2 != null) setItemSisi2(selectedItemBarangGroup.sisi2.toString());
     }
-  }, [itemCutType]);
+  }, [itemCutType, selectedItemBarangGroup]);
 
   // Load Item Barang Group options when jenis, bentuk, and grade are selected
   useEffect(() => {
@@ -245,7 +252,8 @@ export default function AddSalesOrderPage() {
     // Validate and parse numeric values
     const panjang = parseFloat(itemLength);
     const lebar = parseFloat(itemWidth);
-    const tebal = parseFloat(itemDiameter);
+    // Use itemTebal if available (for Plate/2D), otherwise itemDiameter (for Round Bar/1D)
+    const tebal = parseFloat(itemTebal) || parseFloat(itemDiameter);
 
     // Check if all required fields are filled with valid numeric values
     // For "utuh", dimensions should be filled from group item selection
@@ -256,7 +264,8 @@ export default function AddSalesOrderPage() {
       itemLength &&
       !isNaN(panjang) &&
       panjang > 0 &&
-      itemDiameter &&
+      // Check if we have a valid thickness/diameter
+      (itemTebal || itemDiameter) &&
       !isNaN(tebal) &&
       tebal >= 0;
 
@@ -291,7 +300,10 @@ export default function AddSalesOrderPage() {
           grade_barang_id: parseInt(itemGrade),
           panjang: panjangCm,
           lebar: lebarCm,
-          tebal: tebalCm
+          tebal: tebalCm,
+          item_barang_group_id: (selectedShape.dimensi === "1D" && selectedItemBarangGroup?.id)
+            ? parseInt(selectedItemBarangGroup.id)
+            : null
         };
 
         const response = await beratJenisService.calculateWeight(requestData);
@@ -320,7 +332,7 @@ export default function AddSalesOrderPage() {
     }, 500); // 500ms debounce
 
     return () => clearTimeout(timeoutId);
-  }, [itemType, selectedShape, itemGrade, itemLength, itemWidth, itemDiameter, itemCutType]);
+  }, [itemType, selectedShape, itemGrade, itemLength, itemWidth, itemDiameter, itemTebal, itemCutType, selectedItemBarangGroup]);
 
   // Modal state
   const [shapeModalOpen, setShapeModalOpen] = useState(false);
@@ -333,6 +345,11 @@ export default function AddSalesOrderPage() {
     panjang: "",
     lebar: "",
     tebal: "",
+    diameter_luar: "",
+    diameter_dalam: "",
+    diameter: "",
+    sisi1: "",
+    sisi2: "",
     min_quantity_utuh: "",
     max_quantity_utuh: "",
     min_quantity_potongan: "",
@@ -490,7 +507,14 @@ export default function AddSalesOrderPage() {
             totalBeforeDiscount = unitPrice * qty; // Kalikan dengan quantity untuk satuan lain
           }
 
-          const discountAmount = totalBeforeDiscount * (discount / 100);
+          let discountAmount = 0;
+          if (itemDiscountType === "percent") {
+            discountAmount = totalBeforeDiscount * (discount / 100);
+          } else {
+            // Nominal discount
+            discountAmount = discount;
+          }
+
           totalAfterDiscount = totalBeforeDiscount - discountAmount;
         }
 
@@ -514,7 +538,7 @@ export default function AddSalesOrderPage() {
     }, 100);
 
     return () => clearTimeout(timeoutId);
-  }, [itemLength, itemWidth, itemDiameter, selectedShape, itemQty, itemDiscount, itemPrice, itemWeight, itemUnit, unitOptions]);
+  }, [itemLength, itemWidth, itemDiameter, selectedShape, itemQty, itemDiscount, itemDiscountType, itemPrice, itemWeight, itemUnit, unitOptions]);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('id-ID', {
@@ -655,14 +679,21 @@ export default function AddSalesOrderPage() {
       const tipe = selectedShape?.tipe_barang || {};
       let dimensiParts = [];
 
-      if (tipe.diameter_luar && itemDiameterLuar) dimensiParts.push(`DL:${itemDiameterLuar}`);
-      if (tipe.diameter_dalam && itemDiameterDalam) dimensiParts.push(`DD:${itemDiameterDalam}`);
-      if (tipe.diameter && itemDiameter) dimensiParts.push(`D:${itemDiameter}`);
-      if (tipe.sisi1 && itemSisi1) dimensiParts.push(`S1:${itemSisi1}`);
-      if (tipe.sisi2 && itemSisi2) dimensiParts.push(`S2:${itemSisi2}`);
-      if (tipe.tebal && itemTebal) dimensiParts.push(`T:${itemTebal}`);
-      if (tipe.lebar && itemLebar) dimensiParts.push(`L:${itemLebar}`);
-      if (tipe.panjang && itemPanjang) dimensiParts.push(`P:${itemPanjang}`);
+      // Helper to format dimension values: remove trailing zeros and format decimal
+      const formatDim = (val) => {
+        if (!val) return "";
+        const parsed = parseFloat(val);
+        return isNaN(parsed) ? val : parsed.toString();
+      };
+
+      if (tipe.diameter_luar && itemDiameterLuar) dimensiParts.push(formatDim(itemDiameterLuar));
+      if (tipe.diameter_dalam && itemDiameterDalam) dimensiParts.push(formatDim(itemDiameterDalam));
+      if (tipe.diameter && itemDiameter) dimensiParts.push(formatDim(itemDiameter));
+      if (tipe.sisi1 && itemSisi1) dimensiParts.push(formatDim(itemSisi1));
+      if (tipe.sisi2 && itemSisi2) dimensiParts.push(formatDim(itemSisi2));
+      if (tipe.tebal && itemTebal) dimensiParts.push(formatDim(itemTebal));
+      if (tipe.lebar && itemLebar) dimensiParts.push(formatDim(itemLebar));
+      if (tipe.panjang && itemPanjang) dimensiParts.push(formatDim(itemPanjang));
 
       let dimensiString = dimensiParts.length > 0 ? dimensiParts.join(' x ') : '-';
 
@@ -693,7 +724,14 @@ export default function AddSalesOrderPage() {
         totalBeforeDiscount = unitPrice * qty; // Kalikan dengan quantity untuk satuan lain
       }
 
-      const discountAmount = totalBeforeDiscount * (parseFloat(itemDiscount) || 0) / 100;
+      let discountAmount = 0;
+      if (itemDiscountType === "percent") {
+        discountAmount = totalBeforeDiscount * (parseFloat(itemDiscount) || 0) / 100;
+      } else {
+        // Nominal discount
+        discountAmount = parseFloat(itemDiscount) || 0;
+      }
+
       const finalTotal = totalBeforeDiscount - discountAmount;
 
       const newItem = {
@@ -706,7 +744,8 @@ export default function AddSalesOrderPage() {
         luasPerItem: itemArea,
         hargaDisplay: itemPricePerUnit,
         satuanDisplay: unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit,
-        diskon: `${itemDiscount}%`,
+        diskon: itemDiscountType === 'percent' ? `${itemDiscount}%` : `Rp ${parseFloat(itemDiscount).toLocaleString('id-ID')}`,
+        diskon_type: itemDiscountType,
         total: `Rp ${finalTotal.toLocaleString('id-ID')}`,
         jenisBarangId: itemType,
         bentukBarangId: selectedShape.id,
@@ -724,7 +763,9 @@ export default function AddSalesOrderPage() {
         harga: parseFloat(itemPrice) || 0, // Backend value
         satuan: itemUnit, // Backend value
         jenis_potongan: itemCutType,
-        diskonPercent: parseFloat(itemDiscount) || 0,
+        diskonAmount: parseFloat(itemDiscount) || 0,
+        masterItemId: selectedItemBarangGroup?.id || null,
+        masterItemName: selectedItemBarangGroup?.nama_group_barang || '-',
         catatan: itemNotes
       };
 
@@ -793,14 +834,24 @@ export default function AddSalesOrderPage() {
         pelanggan_id: selectedCustomer?.id || 1,
         subtotal: subtotal || 0,
         total_diskon: totalDiscountSO || 0,
-        diskon_so: diskonSOPercent || 0,
+        diskon_so: parseFloat(diskonSO) || 0,
+        diskon_so_type: soDiscountType,
+        include_ppn: includePPN,
+        price_include_ppn: priceIncludesPPN,
         ppn_percent: includePPN ? 11.0 : 0,
         ppn_amount: ppn || 0,
         total_harga_so: totalHargaSO || 0,
         items: items.map(item => ({
-          panjang: parseFloat(item.panjang) || 0,
-          lebar: parseFloat(item.lebar) || 0,
-          tebal: parseFloat(item.tebal) || 0,
+          panjang: parseFloat(item.panjang) || null,
+          lebar: parseFloat(item.lebar) || null,
+          tebal: parseFloat(item.tebal) || null,
+          diameter_luar: parseFloat(item.diameter_luar) || null,
+          diameter_dalam: parseFloat(item.diameter_dalam) || null,
+          diameter: parseFloat(item.diameter) || null,
+          sisi1: parseFloat(item.sisi1) || null,
+          sisi2: parseFloat(item.sisi2) || null,
+          berat: parseFloat(item.berat) || 0,
+          item_barang_group_id: item.masterItemId || null,
           qty: parseInt(item.qty) || 0,
           jenis_barang_id: parseInt(item.jenisBarangId) || 0,
           bentuk_barang_id: parseInt(item.bentukBarangId) || 0,
@@ -808,7 +859,8 @@ export default function AddSalesOrderPage() {
           harga: parseFloat(item.harga) || 0,
           satuan: item.satuan,
           jenis_potongan: item.jenis_potongan,
-          diskon: parseFloat(item.diskonPercent) || 0,
+          diskon: parseFloat(item.diskonAmount) || 0,
+          diskon_type: item.diskon_type || "percent",
           catatan: item.catatan || ""
         }))
       };
@@ -879,8 +931,9 @@ export default function AddSalesOrderPage() {
             nama_item: item.jenisBarang,
             bentuk_barang: item.bentuk,
             grade_barang: item.grade,
+            master_item: item.masterItemName || '-',
             dimensi_potong: item.dimensi,
-            unit: item.satuan,
+            unit: item.satuanDisplay || item.satuan,
             qty: item.qty,
             total_kg: item.berat || 0,
             harga_per_unit: typeof item.harga === 'number' ? item.harga : parseInt(String(item.harga).replace(/[^\d]/g, '')) || 0,
@@ -888,7 +941,8 @@ export default function AddSalesOrderPage() {
           })),
           total_harga: subtotal,
           discount: totalDiscountSO,
-          diskon_so_percent: diskonSOPercent,
+          diskon_so_value: parseFloat(diskonSO) || 0,
+          diskon_so_type: soDiscountType,
           diskon_so_amount: diskonSOAmount,
           price_includes_ppn: priceIncludesPPN,
           dpp: dpp,
@@ -985,8 +1039,9 @@ export default function AddSalesOrderPage() {
           nama_item: item.jenisBarang,
           bentuk_barang: item.bentuk,
           grade_barang: item.grade,
+          master_item: item.masterItemName || '-',
           dimensi_potong: item.dimensi,
-          unit: item.satuan,
+          unit: item.satuanDisplay || item.satuan,
           qty: item.qty,
           total_kg: item.berat || 0,
           harga_per_unit: typeof item.harga === 'number' ? item.harga : parseInt(String(item.harga).replace(/[^\d]/g, '')) || 0,
@@ -994,7 +1049,8 @@ export default function AddSalesOrderPage() {
         })),
         total_harga: subtotal,
         discount: totalDiscountSO,
-        diskon_so_percent: diskonSOPercent,
+        diskon_so_value: parseFloat(diskonSO) || 0,
+        diskon_so_type: soDiscountType,
         diskon_so_amount: diskonSOAmount,
         price_includes_ppn: priceIncludesPPN,
         dpp: dpp,
@@ -1209,6 +1265,11 @@ export default function AddSalesOrderPage() {
       if (groupItemFilters.panjang) queryParams.append('panjang', groupItemFilters.panjang);
       if (groupItemFilters.lebar) queryParams.append('lebar', groupItemFilters.lebar);
       if (groupItemFilters.tebal) queryParams.append('tebal', groupItemFilters.tebal);
+      if (groupItemFilters.diameter_luar) queryParams.append('diameter_luar', groupItemFilters.diameter_luar);
+      if (groupItemFilters.diameter_dalam) queryParams.append('diameter_dalam', groupItemFilters.diameter_dalam);
+      if (groupItemFilters.diameter) queryParams.append('diameter', groupItemFilters.diameter);
+      if (groupItemFilters.sisi1) queryParams.append('sisi1', groupItemFilters.sisi1);
+      if (groupItemFilters.sisi2) queryParams.append('sisi2', groupItemFilters.sisi2);
       if (groupItemFilters.max_quantity_utuh) queryParams.append('max_quantity_utuh', groupItemFilters.max_quantity_utuh);
       if (groupItemFilters.min_quantity_potongan) queryParams.append('min_quantity_potongan', groupItemFilters.min_quantity_potongan);
       if (groupItemFilters.max_quantity_potongan) queryParams.append('max_quantity_potongan', groupItemFilters.max_quantity_potongan);
@@ -1243,6 +1304,11 @@ export default function AddSalesOrderPage() {
       panjang: "",
       lebar: "",
       tebal: "",
+      diameter_luar: "",
+      diameter_dalam: "",
+      diameter: "",
+      sisi1: "",
+      sisi2: "",
       min_quantity_utuh: "",
       max_quantity_utuh: "",
       min_quantity_potongan: "",
@@ -1279,6 +1345,11 @@ export default function AddSalesOrderPage() {
       panjang: "",
       lebar: "",
       tebal: "",
+      diameter_luar: "",
+      diameter_dalam: "",
+      diameter: "",
+      sisi1: "",
+      sisi2: "",
       min_quantity_utuh: "",
       max_quantity_utuh: "",
       min_quantity_potongan: "",
@@ -1306,6 +1377,9 @@ export default function AddSalesOrderPage() {
     if (groupItem.sisi1 != null) setItemSisi1(groupItem.sisi1.toString());
     if (groupItem.sisi2 != null) setItemSisi2(groupItem.sisi2.toString());
 
+    // Also set the selected group to update the dropdown selection
+    setSelectedItemBarangGroup(groupItem);
+
     setGroupItemModalOpen(false);
     showAlert("Sukses", "Dimensi berhasil diisi dari group item", "success");
   };
@@ -1326,7 +1400,7 @@ export default function AddSalesOrderPage() {
   // Subtotal adalah total harga SETELAH diskon item (sudah termasuk diskon item)
   const subtotal = items.reduce((sum, item) => {
     try {
-      const total = parseInt(item.total.replace(/[^\d]/g, '')) || 0;
+      const total = parseInt(item.total.replace(/[^0-9-]/g, '')) || 0;
       return sum + total;
     } catch (error) {
       console.error('Error calculating subtotal:', error);
@@ -1335,8 +1409,14 @@ export default function AddSalesOrderPage() {
   }, 0);
 
   // Calculate SO-level discount (dihitung dari subtotal yang sudah termasuk diskon item)
-  const diskonSOPercent = parseFloat(diskonSO) || 0;
-  const diskonSOAmount = subtotal * (diskonSOPercent / 100);
+  const diskonSOValue = parseFloat(diskonSO) || 0;
+  let diskonSOAmount = 0;
+
+  if (soDiscountType === "percent") {
+    diskonSOAmount = subtotal * (diskonSOValue / 100);
+  } else {
+    diskonSOAmount = diskonSOValue;
+  }
 
   // Total discount = hanya diskon SO (karena diskon item sudah termasuk dalam subtotal)
   const totalDiscountSO = diskonSOAmount;
@@ -1639,7 +1719,7 @@ export default function AddSalesOrderPage() {
                       }
                     }}
                     disabled={loadingItemBarangGroup || itemBarangGroupOptions.length === 0}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex-1 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <option value="">
                       {loadingItemBarangGroup
@@ -1654,6 +1734,20 @@ export default function AddSalesOrderPage() {
                       </option>
                     ))}
                   </select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleOpenGroupItemModal}
+                    disabled={loadingGroupItem || !itemType || !selectedShape || !itemGrade}
+                    className="h-10 w-12"
+                    title="Pilih Group Item Barang"
+                  >
+                    {loadingGroupItem ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                    ) : (
+                      <Package className="w-4 h-4" />
+                    )}
+                  </Button>
                 </div>
                 {selectedItemBarangGroup && (
                   <p className="text-xs text-green-600 mt-1">
@@ -1693,37 +1787,17 @@ export default function AddSalesOrderPage() {
             </div>
             <div>
               <Label htmlFor="itemUnit">Satuan <span className="text-red-500">*</span></Label>
-              <div className="flex gap-2 items-end">
-                <div className={itemCutType === "utuh" ? "flex-[4]" : "flex-1"}>
-                  <SearchSelect
-                    label=""
-                    placeholder="Pilih Satuan"
-                    searchPlaceholder="Cari satuan..."
-                    value={itemUnit}
-                    onValueChange={setItemUnit}
-                    options={unitOptions}
-                    loading={loadingUnit}
-                    required
-                  />
-                </div>
-                {itemCutType === "utuh" && (
-                  <div className="flex-[1]">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleOpenGroupItemModal}
-                      disabled={loadingGroupItem || !itemType || !selectedShape || !itemGrade}
-                      className="w-full h-10"
-                      title="Pilih Group Item Barang"
-                    >
-                      {loadingGroupItem ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
-                      ) : (
-                        <Package className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </div>
-                )}
+              <div className="flex-1">
+                <SearchSelect
+                  label=""
+                  placeholder="Pilih Satuan"
+                  searchPlaceholder="Cari satuan..."
+                  value={itemUnit}
+                  onValueChange={setItemUnit}
+                  options={unitOptions}
+                  loading={loadingUnit}
+                  required
+                />
               </div>
             </div>
 
@@ -1741,7 +1815,7 @@ export default function AddSalesOrderPage() {
                   value={itemDiameterLuar}
                   onChange={(e) => setItemDiameterLuar(e.target.value)}
                   placeholder="0.00"
-                  disabled={itemCutType === "utuh"}
+                  disabled={itemCutType === "utuh" || !selectedShape?.tipe_barang?.cancut_diameter_luar}
                   required={itemCutType !== "utuh"}
                 />
               </div>
@@ -1759,7 +1833,7 @@ export default function AddSalesOrderPage() {
                   value={itemDiameterDalam}
                   onChange={(e) => setItemDiameterDalam(e.target.value)}
                   placeholder="0.00"
-                  disabled={itemCutType === "utuh"}
+                  disabled={itemCutType === "utuh" || !selectedShape?.tipe_barang?.cancut_diameter_dalam}
                   required={itemCutType !== "utuh"}
                 />
               </div>
@@ -1777,7 +1851,7 @@ export default function AddSalesOrderPage() {
                   value={itemDiameter}
                   onChange={(e) => setItemDiameter(e.target.value)}
                   placeholder="0.00"
-                  disabled={itemCutType === "utuh"}
+                  disabled={itemCutType === "utuh" || !selectedShape?.tipe_barang?.cancut_diameter}
                   required={itemCutType !== "utuh"}
                 />
               </div>
@@ -1795,7 +1869,7 @@ export default function AddSalesOrderPage() {
                   value={itemSisi1}
                   onChange={(e) => setItemSisi1(e.target.value)}
                   placeholder="0.00"
-                  disabled={itemCutType === "utuh"}
+                  disabled={itemCutType === "utuh" || !selectedShape?.tipe_barang?.cancut_sisi1}
                   required={itemCutType !== "utuh"}
                 />
               </div>
@@ -1813,7 +1887,7 @@ export default function AddSalesOrderPage() {
                   value={itemSisi2}
                   onChange={(e) => setItemSisi2(e.target.value)}
                   placeholder="0.00"
-                  disabled={itemCutType === "utuh"}
+                  disabled={itemCutType === "utuh" || !selectedShape?.tipe_barang?.cancut_sisi2}
                   required={itemCutType !== "utuh"}
                 />
               </div>
@@ -1831,7 +1905,7 @@ export default function AddSalesOrderPage() {
                   value={itemTebal}
                   onChange={(e) => setItemTebal(e.target.value)}
                   placeholder="0.00"
-                  disabled={itemCutType === "utuh"}
+                  disabled={itemCutType === "utuh" || !selectedShape?.tipe_barang?.cancut_tebal}
                   required={itemCutType !== "utuh"}
                 />
               </div>
@@ -1849,7 +1923,7 @@ export default function AddSalesOrderPage() {
                   value={itemLebar}
                   onChange={(e) => setItemLebar(e.target.value)}
                   placeholder="0.00"
-                  disabled={itemCutType === "utuh"}
+                  disabled={itemCutType === "utuh" || !selectedShape?.tipe_barang?.cancut_lebar}
                   required={itemCutType !== "utuh"}
                 />
               </div>
@@ -1867,7 +1941,7 @@ export default function AddSalesOrderPage() {
                   value={itemPanjang}
                   onChange={(e) => setItemPanjang(e.target.value)}
                   placeholder="0.00"
-                  disabled={itemCutType === "utuh"}
+                  disabled={itemCutType === "utuh" || !selectedShape?.tipe_barang?.cancut_panjang}
                   required={itemCutType !== "utuh"}
                 />
               </div>
@@ -1914,21 +1988,34 @@ export default function AddSalesOrderPage() {
               />
             </div>
             <div>
-              <Label htmlFor="itemDiscount">Diskon (%)</Label>
-              <Input
-                id="itemDiscount"
-                type="number"
-                value={itemDiscount}
-                onChange={(e) => setItemDiscount(e.target.value)}
-                onBlur={(e) => {
-                  if (e.target.value === '' || e.target.value === null) {
-                    setItemDiscount('0');
-                  }
-                }}
-                min="0"
-                max="100"
-                placeholder="0"
-              />
+              <Label htmlFor="itemDiscount">Diskon</Label>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Input
+                    id="itemDiscount"
+                    type="number"
+                    value={itemDiscount}
+                    onChange={(e) => setItemDiscount(e.target.value)}
+                    onBlur={(e) => {
+                      if (e.target.value === '' || e.target.value === null) {
+                        setItemDiscount('0');
+                      }
+                    }}
+                    min="0"
+                    placeholder="0"
+                  />
+                </div>
+                <div className="w-32">
+                  <select
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={itemDiscountType}
+                    onChange={(e) => setItemDiscountType(e.target.value)}
+                  >
+                    <option value="percent">% Persen</option>
+                    <option value="nominal">Rp Nominal</option>
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1994,6 +2081,7 @@ export default function AddSalesOrderPage() {
                 <TableHead className="table-header-cell-standard">Jenis Barang</TableHead>
                 <TableHead className="table-header-cell-standard">Bentuk</TableHead>
                 <TableHead className="table-header-cell-standard">Grade</TableHead>
+                <TableHead className="table-header-cell-standard">Master Item Barang</TableHead>
                 <TableHead className="table-header-cell-standard">Dimensi</TableHead>
                 <TableHead className="table-header-cell-standard">Qty</TableHead>
                 <TableHead className="table-header-cell-standard">Luas/item</TableHead>
@@ -2012,6 +2100,7 @@ export default function AddSalesOrderPage() {
                   <TableCell className="table-cell-standard">{item.jenisBarang}</TableCell>
                   <TableCell className="table-cell-standard">{item.bentuk}</TableCell>
                   <TableCell className="table-cell-standard">{item.grade}</TableCell>
+                  <TableCell className="table-cell-standard">{item.masterItemName}</TableCell>
                   <TableCell className="table-cell-standard">{item.dimensi}</TableCell>
                   <TableCell className="table-cell-standard">{item.qty}</TableCell>
                   <TableCell className="table-cell-standard">{item.luasPerItem}</TableCell>
@@ -2034,7 +2123,7 @@ export default function AddSalesOrderPage() {
               ))}
               {items.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={13} className="table-cell-standard text-center text-gray-500 py-8">
+                  <TableCell colSpan={14} className="table-cell-standard text-center text-gray-500 py-8">
                     Belum ada item yang ditambahkan
                   </TableCell>
                 </TableRow>
@@ -2078,19 +2167,25 @@ export default function AddSalesOrderPage() {
               <div className="text-lg font-semibold">{formatCurrency(subtotal)}</div>
             </div>
             <div>
-              <Label className="text-sm text-gray-600">Diskon SO (%)</Label>
+              <Label className="text-sm text-gray-600">Diskon SO</Label>
               <div className="flex items-center gap-2">
                 <Input
                   type="number"
                   min="0"
-                  max="100"
                   step="0.01"
                   value={diskonSO}
                   onChange={(e) => setDiskonSO(e.target.value)}
                   className="w-24 text-center"
                   placeholder="0"
                 />
-                <span className="text-sm text-gray-500">%</span>
+                <select
+                  className="h-10 rounded-md border border-input bg-background px-2 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={soDiscountType}
+                  onChange={(e) => setSoDiscountType(e.target.value)}
+                >
+                  <option value="percent">%</option>
+                  <option value="nominal">Rp</option>
+                </select>
               </div>
               {diskonSOAmount > 0 && (
                 <div className="text-sm text-orange-600 mt-1">
@@ -2189,36 +2284,102 @@ export default function AddSalesOrderPage() {
               <Card className="card-standard mb-4 flex-shrink-0">
                 <CardContent className="p-4">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <Label htmlFor="filter-panjang">Panjang (mm)</Label>
-                      <Input
-                        id="filter-panjang"
-                        type="number"
-                        value={groupItemFilters.panjang}
-                        onChange={(e) => handleFilterChange('panjang', e.target.value)}
-                        placeholder="Panjang"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="filter-lebar">Lebar (mm)</Label>
-                      <Input
-                        id="filter-lebar"
-                        type="number"
-                        value={groupItemFilters.lebar}
-                        onChange={(e) => handleFilterChange('lebar', e.target.value)}
-                        placeholder="Lebar"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="filter-tebal">Tebal (mm)</Label>
-                      <Input
-                        id="filter-tebal"
-                        type="number"
-                        value={groupItemFilters.tebal}
-                        onChange={(e) => handleFilterChange('tebal', e.target.value)}
-                        placeholder="Tebal"
-                      />
-                    </div>
+                    {selectedShape?.tipe_barang?.panjang && (
+                      <div>
+                        <Label htmlFor="filter-panjang">Panjang (mm)</Label>
+                        <Input
+                          id="filter-panjang"
+                          type="number"
+                          value={groupItemFilters.panjang}
+                          onChange={(e) => handleFilterChange('panjang', e.target.value)}
+                          placeholder="Panjang"
+                        />
+                      </div>
+                    )}
+                    {selectedShape?.tipe_barang?.lebar && (
+                      <div>
+                        <Label htmlFor="filter-lebar">Lebar (mm)</Label>
+                        <Input
+                          id="filter-lebar"
+                          type="number"
+                          value={groupItemFilters.lebar}
+                          onChange={(e) => handleFilterChange('lebar', e.target.value)}
+                          placeholder="Lebar"
+                        />
+                      </div>
+                    )}
+                    {selectedShape?.tipe_barang?.tebal && (
+                      <div>
+                        <Label htmlFor="filter-tebal">Tebal (mm)</Label>
+                        <Input
+                          id="filter-tebal"
+                          type="number"
+                          value={groupItemFilters.tebal}
+                          onChange={(e) => handleFilterChange('tebal', e.target.value)}
+                          placeholder="Tebal"
+                        />
+                      </div>
+                    )}
+                    {selectedShape?.tipe_barang?.diameter_luar && (
+                      <div>
+                        <Label htmlFor="filter-diameter-luar">Diameter Luar (mm)</Label>
+                        <Input
+                          id="filter-diameter-luar"
+                          type="number"
+                          value={groupItemFilters.diameter_luar}
+                          onChange={(e) => handleFilterChange('diameter_luar', e.target.value)}
+                          placeholder="Diameter Luar"
+                        />
+                      </div>
+                    )}
+                    {selectedShape?.tipe_barang?.diameter_dalam && (
+                      <div>
+                        <Label htmlFor="filter-diameter-dalam">Diameter Dalam (mm)</Label>
+                        <Input
+                          id="filter-diameter-dalam"
+                          type="number"
+                          value={groupItemFilters.diameter_dalam}
+                          onChange={(e) => handleFilterChange('diameter_dalam', e.target.value)}
+                          placeholder="Diameter Dalam"
+                        />
+                      </div>
+                    )}
+                    {selectedShape?.tipe_barang?.diameter && (
+                      <div>
+                        <Label htmlFor="filter-diameter">Diameter (mm)</Label>
+                        <Input
+                          id="filter-diameter"
+                          type="number"
+                          value={groupItemFilters.diameter}
+                          onChange={(e) => handleFilterChange('diameter', e.target.value)}
+                          placeholder="Diameter"
+                        />
+                      </div>
+                    )}
+                    {selectedShape?.tipe_barang?.sisi1 && (
+                      <div>
+                        <Label htmlFor="filter-sisi1">Sisi 1 (mm)</Label>
+                        <Input
+                          id="filter-sisi1"
+                          type="number"
+                          value={groupItemFilters.sisi1}
+                          onChange={(e) => handleFilterChange('sisi1', e.target.value)}
+                          placeholder="Sisi 1"
+                        />
+                      </div>
+                    )}
+                    {selectedShape?.tipe_barang?.sisi2 && (
+                      <div>
+                        <Label htmlFor="filter-sisi2">Sisi 2 (mm)</Label>
+                        <Input
+                          id="filter-sisi2"
+                          type="number"
+                          value={groupItemFilters.sisi2}
+                          onChange={(e) => handleFilterChange('sisi2', e.target.value)}
+                          placeholder="Sisi 2"
+                        />
+                      </div>
+                    )}
                     <div>
                       <Label htmlFor="filter-min-qty-utuh">Min Qty Utuh</Label>
                       <Input
@@ -2287,9 +2448,30 @@ export default function AddSalesOrderPage() {
                       <TableHeader className="table-header-standard sticky top-0 bg-white z-10 border-b">
                         <TableRow>
                           <TableHead className="table-header-cell-standard">ID</TableHead>
-                          <TableHead className="table-header-cell-standard">Panjang (mm)</TableHead>
-                          <TableHead className="table-header-cell-standard">Lebar (mm)</TableHead>
-                          <TableHead className="table-header-cell-standard">Tebal (mm)</TableHead>
+                          {selectedShape?.tipe_barang?.panjang && (
+                            <TableHead className="table-header-cell-standard">Panjang (mm)</TableHead>
+                          )}
+                          {selectedShape?.tipe_barang?.lebar && (
+                            <TableHead className="table-header-cell-standard">Lebar (mm)</TableHead>
+                          )}
+                          {selectedShape?.tipe_barang?.tebal && (
+                            <TableHead className="table-header-cell-standard">Tebal (mm)</TableHead>
+                          )}
+                          {selectedShape?.tipe_barang?.diameter_luar && (
+                            <TableHead className="table-header-cell-standard">D. Luar (mm)</TableHead>
+                          )}
+                          {selectedShape?.tipe_barang?.diameter_dalam && (
+                            <TableHead className="table-header-cell-standard">D. Dalam (mm)</TableHead>
+                          )}
+                          {selectedShape?.tipe_barang?.diameter && (
+                            <TableHead className="table-header-cell-standard">Diameter (mm)</TableHead>
+                          )}
+                          {selectedShape?.tipe_barang?.sisi1 && (
+                            <TableHead className="table-header-cell-standard">Sisi 1 (mm)</TableHead>
+                          )}
+                          {selectedShape?.tipe_barang?.sisi2 && (
+                            <TableHead className="table-header-cell-standard">Sisi 2 (mm)</TableHead>
+                          )}
                           <TableHead className="table-header-cell-standard">Qty Utuh</TableHead>
                           <TableHead className="table-header-cell-standard">Qty Potongan</TableHead>
                           <TableHead className="table-header-cell-standard text-center">Aksi</TableHead>
@@ -2299,9 +2481,30 @@ export default function AddSalesOrderPage() {
                         {groupItemOptions.map((item, index) => (
                           <TableRow key={item.id || index} className="hover:bg-gray-50">
                             <TableCell className="table-cell-standard">{item.id}</TableCell>
-                            <TableCell className="table-cell-standard">{item.panjang?.toLocaleString('id-ID') || '-'}</TableCell>
-                            <TableCell className="table-cell-standard">{item.lebar?.toLocaleString('id-ID') || '-'}</TableCell>
-                            <TableCell className="table-cell-standard">{item.tebal?.toLocaleString('id-ID') || '-'}</TableCell>
+                            {selectedShape?.tipe_barang?.panjang && (
+                              <TableCell className="table-cell-standard">{item.panjang?.toLocaleString('id-ID') || '-'}</TableCell>
+                            )}
+                            {selectedShape?.tipe_barang?.lebar && (
+                              <TableCell className="table-cell-standard">{item.lebar?.toLocaleString('id-ID') || '-'}</TableCell>
+                            )}
+                            {selectedShape?.tipe_barang?.tebal && (
+                              <TableCell className="table-cell-standard">{item.tebal?.toLocaleString('id-ID') || '-'}</TableCell>
+                            )}
+                            {selectedShape?.tipe_barang?.diameter_luar && (
+                              <TableCell className="table-cell-standard">{item.diameter_luar?.toLocaleString('id-ID') || '-'}</TableCell>
+                            )}
+                            {selectedShape?.tipe_barang?.diameter_dalam && (
+                              <TableCell className="table-cell-standard">{item.diameter_dalam?.toLocaleString('id-ID') || '-'}</TableCell>
+                            )}
+                            {selectedShape?.tipe_barang?.diameter && (
+                              <TableCell className="table-cell-standard">{item.diameter?.toLocaleString('id-ID') || '-'}</TableCell>
+                            )}
+                            {selectedShape?.tipe_barang?.sisi1 && (
+                              <TableCell className="table-cell-standard">{item.sisi1?.toLocaleString('id-ID') || '-'}</TableCell>
+                            )}
+                            {selectedShape?.tipe_barang?.sisi2 && (
+                              <TableCell className="table-cell-standard">{item.sisi2?.toLocaleString('id-ID') || '-'}</TableCell>
+                            )}
                             <TableCell className="table-cell-standard">{item.quantity_utuh?.toLocaleString('id-ID') || '-'}</TableCell>
                             <TableCell className="table-cell-standard">{item.quantity_potongan?.toLocaleString('id-ID') || '-'}</TableCell>
                             <TableCell className="table-cell-standard text-center">
@@ -2371,6 +2574,6 @@ export default function AddSalesOrderPage() {
 
       {/* Alert Modal Component */}
       <AlertComponent />
-    </SalesOrderLayout>
+    </SalesOrderLayout >
   );
 }
