@@ -254,7 +254,8 @@ export default function AddWorkOrderPage() {
           tebal: parseFloat(item.tebal) || 0,
           panjang: parseFloat(item.panjang) || 0,
           lebar: parseFloat(item.lebar) || 0,
-          qty: parseInt(item.qty) || 1 // Menambahkan quantity ke request
+          qty: parseInt(item.qty) || 1,
+          item_barang_group_id: item.item_barang_group_id || null
         })
       });
 
@@ -530,6 +531,8 @@ export default function AddWorkOrderPage() {
             grade_barang_id: (item.grade_barang_id || item.grade_barang?.id || item.item_grade_id)?.toString?.() || '',
             jenis_potongan: (item.jenis_potongan ?? item.potongan_jenis ?? item.jenisPotongan ?? null),
             catatan: (item.catatan ?? item.note ?? item.notes ?? ''),
+            item_barang_group_id: item.item_barang_group_id || item.item_barang_group?.id || null,
+            item_barang_group_name: item.item_barang_group?.nama_group_barang || null,
             pelaksana: []
           };
         });
@@ -597,6 +600,8 @@ export default function AddWorkOrderPage() {
       grade_barang_id: '',
       jenis_potongan: 'potongan',
       catatan: '',
+      item_barang_group_id: null,
+      item_barang_group_name: null,
       pelaksana: []
     };
     setEditingItem(newItem);
@@ -692,7 +697,8 @@ export default function AddWorkOrderPage() {
           panjang: parseFloat(item.panjang) || 0,
           lebar: parseFloat(item.lebar) || 0,
           per_page: SARAN_PER_PAGE,
-          page: 1
+          page: 1,
+          item_barang_group_id: item.item_barang_group_id || null
         })
       });
       
@@ -1074,6 +1080,7 @@ export default function AddWorkOrderPage() {
           satuan: 'PCS',
           diskon: 0,
           catatan: item.catatan,
+          item_barang_group_id: item.item_barang_group_id || null,
           saran_plat_dasar: (() => {
             const tq = totalQuantityData;
             const woItemData = tq.find(wo => wo.WoItemID === item.id);
@@ -1253,6 +1260,7 @@ export default function AddWorkOrderPage() {
           jenisBarang: { nama_jenis_barang: mapLabel(jenisBarangList, item.jenis_barang_id), nama: mapLabel(jenisBarangList, item.jenis_barang_id) },
           bentukBarang: { nama_bentuk_barang: mapLabel(bentukBarangList, item.bentuk_barang_id), nama_bentuk: mapLabel(bentukBarangList, item.bentuk_barang_id), nama: mapLabel(bentukBarangList, item.bentuk_barang_id) },
           gradeBarang: { nama_grade_barang: mapLabel(gradeBarangList, item.grade_barang_id), nama_grade: mapLabel(gradeBarangList, item.grade_barang_id), nama: mapLabel(gradeBarangList, item.grade_barang_id) },
+          groupBarangName: item.item_barang_group_name || '-',
           dimensi: `${item.panjang || 0}x${item.lebar || 0}x${item.tebal || 0}mm`,
           qtyPlanning: item.qty_planning ??  0,
           jenisPotongan: item.jenis_potongan || 'potongan',
@@ -1599,6 +1607,7 @@ export default function AddWorkOrderPage() {
                     <TableHeader className="text-left">Jenis</TableHeader>
                     <TableHeader className="text-left">Bentuk</TableHeader>
                     <TableHeader className="text-left">Grade</TableHeader>
+                    <TableHeader className="text-left">Group Barang</TableHeader>
                     <TableHeader className="text-left">Jenis Potongan</TableHeader>
                     <TableHeader className="text-left">Catatan</TableHeader>
                     <TableHeader className="text-left">Plat Dasar</TableHeader>
@@ -1683,6 +1692,11 @@ export default function AddWorkOrderPage() {
                         <TableCell className="text-left">
                           <div className="px-3 py-2 bg-gray-50 rounded text-sm">
                             {getGradeBarangName(item.grade_barang_id)}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-left">
+                          <div className="px-3 py-2 bg-gray-50 rounded text-sm">
+                            {item.item_barang_group_name || '-'}
                           </div>
                         </TableCell>
                         <TableCell className="text-left">

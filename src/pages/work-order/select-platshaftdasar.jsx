@@ -269,7 +269,8 @@ export default function SelectPlatShaftDasar({
           panjang: parseFloat(workOrderItem?.panjang || 0),
           lebar: parseFloat(workOrderItem?.lebar || 0),
           per_page: perPage,
-          page: 1
+          page: 1,
+          item_barang_group_id: workOrderItem?.item_barang_group_id || null
         })
       });
 

@@ -864,12 +864,13 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
       <td style="border: 1px solid #ddd; padding: 6px;">${item.jenisBarang?.nama_jenis_barang || item.jenisBarang?.nama || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.bentukBarang?.nama_bentuk_barang || item.bentukBarang?.nama_bentuk || item.bentukBarang?.nama || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.gradeBarang?.nama_grade_barang || item.gradeBarang?.nama_grade || item.gradeBarang?.nama || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 6px;">${item.groupBarangName || item.item_barang_group_name || item.item_barang_group?.nama_group_barang || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.bentukBarang?.dimensi || item.dimensi || `${item.panjang || 0}x${item.lebar || 0}x${item.ketebalan || 0}mm`}</td>
       <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">${item.qtyPlanning ?? item.qty ?? 0}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.jenisPotongan || item.jenis_potongan || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.keterangan || item.catatan || '-'}</td>
     </tr>
-  `).join('') || '<tr><td colspan="8" style="text-align: center; padding: 12px;">Tidak ada item</td></tr>';
+  `).join('') || '<tr><td colspan="9" style="text-align: center; padding: 12px;">Tidak ada item</td></tr>';
 
   // Render canvas images with robust item-based grouping and naming
   const canvasImagesHtml = includeImages && (woPlanningData.canvasImages || []).length > 0
@@ -1032,6 +1033,7 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
             <th>Jenis</th>
             <th>Bentuk</th>
             <th>Grade</th>
+            <th>Group Barang</th>
             <th>Dimensi</th>
             <th>Qty Planning</th>
             <th>Jenis Potongan</th>
