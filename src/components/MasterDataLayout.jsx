@@ -460,13 +460,14 @@ export default function MasterDataLayout({
                                 if (typeof action.visible === 'function' && !action.visible(item)) return null;
                                 const computedIcon = typeof action.icon === 'function' ? action.icon(item) : action.icon;
                                 const computedLabel = typeof action.label === 'function' ? action.label(item) : action.label;
+                                const computedClassName = typeof action.className === 'function' ? action.className(item) : action.className;
                                 return (
                                   <Button
                                     key={idx}
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => action.onClick(item)}
-                                    className={action.className || "bg-blue-500 hover:bg-blue-600 text-white border-blue-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-blue-300 focus:ring-offset-1"}
+                                    onClick={() => action.onClick(item, fetchData)}
+                                    className={computedClassName || "bg-blue-500 hover:bg-blue-600 text-white border-blue-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-blue-300 focus:ring-offset-1"}
                                   >
                                     <span className="flex items-center gap-1">
                                       {computedIcon}

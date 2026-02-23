@@ -90,5 +90,11 @@ export const itemBarangService = {
   },
   async getItemUtuh() {
     return request(`/item-barang/bulk`, { method: "GET" });
+  },
+  async updateQrCodeStatus(id, is_qrcode_printed) {
+    return request(`/item-barang/${id}/qrcode-status`, {
+      method: "PATCH",
+      body: JSON.stringify({ is_qrcode_printed }),
+    });
   }
 };

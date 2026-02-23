@@ -144,20 +144,22 @@ export default function InputHargaBarangDatangPage() {
         });
     };
 
-    // Build dimension string from item_barang_group
+    // Build dimension string from item_barang_group (matches backend logic)
     const buildDimensi = (detail) => {
         const group = detail?.item_barang_group;
         if (!group) return "-";
-        const parts = [];
-        if (group.panjang) parts.push(`P:${group.panjang}`);
-        if (group.lebar) parts.push(`L:${group.lebar}`);
-        if (group.tebal) parts.push(`T:${group.tebal}`);
-        if (group.diameter) parts.push(`Ø:${group.diameter}`);
-        if (group.diameter_luar) parts.push(`ØL:${group.diameter_luar}`);
-        if (group.diameter_dalam) parts.push(`ØD:${group.diameter_dalam}`);
-        if (group.sisi1) parts.push(`S1:${group.sisi1}`);
-        if (group.sisi2) parts.push(`S2:${group.sisi2}`);
-        return parts.length > 0 ? parts.join(" × ") : "-";
+
+        const dimensions = [];
+        if (group.diameter_luar) dimensions.push(parseFloat(group.diameter_luar));
+        if (group.diameter_dalam) dimensions.push(parseFloat(group.diameter_dalam));
+        if (group.diameter) dimensions.push(parseFloat(group.diameter));
+        if (group.sisi1) dimensions.push(parseFloat(group.sisi1));
+        if (group.sisi2) dimensions.push(parseFloat(group.sisi2));
+        if (group.tebal) dimensions.push(parseFloat(group.tebal));
+        if (group.lebar) dimensions.push(parseFloat(group.lebar));
+        if (group.panjang) dimensions.push(parseFloat(group.panjang));
+
+        return dimensions.length > 0 ? dimensions.join("x") : "-";
     };
 
     // Format number as Rupiah
@@ -220,9 +222,6 @@ export default function InputHargaBarangDatangPage() {
                                         Kode Penerimaan
                                     </TableHead>
                                     <TableHead className="font-semibold">Nama Group</TableHead>
-                                    <TableHead className="font-semibold">
-                                        Jenis / Bentuk / Grade
-                                    </TableHead>
                                     <TableHead className="font-semibold">Dimensi</TableHead>
                                     <TableHead className="font-semibold text-center">
                                         Qty
@@ -239,7 +238,7 @@ export default function InputHargaBarangDatangPage() {
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={9} className="text-center py-8">
+                                        <TableCell colSpan={8} className="text-center py-8">
                                             <div className="flex items-center justify-center">
                                                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                                                 <span className="ml-2 text-gray-500">Loading data...</span>
@@ -248,7 +247,7 @@ export default function InputHargaBarangDatangPage() {
                                     </TableRow>
                                 ) : items.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={9} className="text-center py-12 text-gray-500">
+                                        <TableCell colSpan={8} className="text-center py-12 text-gray-500">
                                             <Package className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                                             <p className="text-lg font-medium">Tidak ada item Non-PO pending</p>
                                         </TableCell>
@@ -268,15 +267,7 @@ export default function InputHargaBarangDatangPage() {
                                                 <TableCell>
                                                     {group?.nama_group_barang || "-"}
                                                 </TableCell>
-                                                <TableCell>
-                                                    <div className="flex flex-col gap-0.5">
-                                                        <span className="text-sm">
-                                                            {group?.jenis_barang?.kode || "-"} /{" "}
-                                                            {group?.bentuk_barang?.kode || "-"} /{" "}
-                                                            {group?.grade_barang?.kode || "-"}
-                                                        </span>
-                                                    </div>
-                                                </TableCell>
+
                                                 <TableCell className="text-sm">
                                                     {buildDimensi(detail)}
                                                 </TableCell>
@@ -415,14 +406,7 @@ export default function InputHargaBarangDatangPage() {
                                         {selectedItem.penerimaan_barang?.kode_penerimaan || (selectedItem.penerimaan_barang?.id ? `RCV-${selectedItem.penerimaan_barang.id}` : "-")}
                                     </span>
                                 </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Jenis / Bentuk / Grade</span>
-                                    <span className="font-medium">
-                                        {selectedItem.item_barang_group?.jenis_barang?.kode || "-"} /{" "}
-                                        {selectedItem.item_barang_group?.bentuk_barang?.kode || "-"} /{" "}
-                                        {selectedItem.item_barang_group?.grade_barang?.kode || "-"}
-                                    </span>
-                                </div>
+
                                 <div className="flex justify-between text-sm">
                                     <span className="text-gray-500">Dimensi</span>
                                     <span>{buildDimensi(selectedItem)}</span>
