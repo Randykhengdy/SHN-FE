@@ -1,32 +1,25 @@
-import { request } from "../lib/request";
+import { request } from "@/lib/request";
+import { API_ENDPOINTS } from "@/config/api";
 
 export const penerimaanBarangService = {
-    /**
-     * Get pending Non-PO items (status=pending, is_nonpo_processed=0)
-     */
-    async getPendingNonPoItems(params = {}) {
-        const queryParams = new URLSearchParams({
-            status: "pending",
-            is_nonpo_processed: "0",
-            per_page: (params.per_page || 100).toString(),
-            page: (params.page || 1).toString(),
-        });
-
-        if (params.search) {
-            queryParams.append("search", params.search);
-        }
-
-        return request(`/item-barang?${queryParams}`, { method: "GET" });
-    },
-
-    /**
-     * Process Non-PO item — admin sets harga_modal and berat
-     * PATCH /api/penerimaan-barang/process-nonpo-item/{itemBarangId}
-     */
-    async processNonPoItem(itemBarangId, data) {
-        return request(`/penerimaan-barang/process-nonpo-item/${itemBarangId}`, {
-            method: "PATCH",
-            body: JSON.stringify(data),
+    // Get all pending non-PO items (status=pending, is_nonpo_processed=0)
+    getPendingNonPoItems: async (params = {}) => {
+        const queryParams = {
+            ...params,
+            status: 'pending',
+            is_nonpo_processed: 0
+        };
+        const queryString = new URLSearchParams(queryParams).toString();
+        return await request(`${API_ENDPOINTS.itemBarang}?${queryString}`, {
+            method: 'GET'
         });
     },
+
+    // Process a non-PO item (set harga_modal, berat, and mark as processed)
+    processNonPoItem: async (id, data) => {
+        return await request(`${API_ENDPOINTS.penerimaanBarang}/process-nonpo-item/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data)
+        });
+    }
 };

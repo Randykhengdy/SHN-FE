@@ -22,7 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Search, DollarSign, Weight, Package, RefreshCw } from "lucide-react";
 import { penerimaanBarangService } from "@/services/penerimaanBarangService";
 import { useAlert } from "@/hooks/useAlert";
-import SalesOrderLayout from "@/components/SalesOrderLayout";
+import PageLayout from "@/components/PageLayout";
 
 export default function InputHargaBarangDatangPage() {
     // Hooks
@@ -47,34 +47,24 @@ export default function InputHargaBarangDatangPage() {
 
     // Load data
     const loadPendingItems = useCallback(
-        async (showError = true) => {
+        async () => {
             try {
                 setLoading(true);
-                const response = await penerimaanBarangService.getPendingNonPoItems({
+                const result = await penerimaanBarangService.getPendingNonPoItems({
                     search: searchQuery,
                     per_page: itemsPerPage,
                     page: currentPage,
                 });
-                const body = response?.data;
-                const rows = Array.isArray(body)
-                    ? body
-                    : Array.isArray(body?.data)
-                        ? body.data
-                        : [];
-                setItems(rows);
 
-                // Set total items from pagination metadata
-                const total = body?.pagination?.total ?? response?.total ?? rows.length;
-                setTotalItems(total);
+                setItems(result.data || []);
+                setTotalItems(result.pagination?.total || 0);
             } catch (error) {
                 console.error("❌ Error loading pending items:", error);
-                if (showError) {
-                    showAlert(
-                        "Error",
-                        "Gagal memuat data item pending: " + (error.message || ""),
-                        "error"
-                    );
-                }
+                showAlert(
+                    "Error",
+                    "Gagal memuat data item pending: " + (error.message || ""),
+                    "error"
+                );
                 setItems([]);
             } finally {
                 setLoading(false);
@@ -124,7 +114,7 @@ export default function InputHargaBarangDatangPage() {
                 "Sukses",
                 `Item ${selectedItem.kode_barang || selectedItem.nama_item_barang} berhasil diproses!`,
                 "success",
-                () => loadPendingItems(false)
+                () => loadPendingItems()
             );
         } catch (error) {
             console.error("❌ Error processing item:", error);
@@ -177,9 +167,9 @@ export default function InputHargaBarangDatangPage() {
     const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
     return (
-        <SalesOrderLayout
+        <PageLayout
             title="Input Harga Barang Datang"
-            subtitle="TRANSAKSI"
+            category="TRANSAKSI"
         >
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
@@ -197,9 +187,6 @@ export default function InputHargaBarangDatangPage() {
                                     setSearchQuery(e.target.value);
                                     setCurrentPage(1);
                                 }}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter") loadPendingItems();
-                                }}
                             />
                         </div>
                         <Button
@@ -216,181 +203,182 @@ export default function InputHargaBarangDatangPage() {
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">
-                    {loading ? (
-                        <div className="flex items-center justify-center py-12">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                            <span className="ml-3 text-gray-500">Loading data...</span>
-                        </div>
-                    ) : items.length === 0 ? (
-                        <div className="text-center py-12 text-gray-500">
-                            <Package className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                            <p className="text-lg font-medium">
-                                Tidak ada item Non-PO pending
-                            </p>
-                            <p className="text-sm mt-1">
-                                Semua item sudah diproses atau belum ada penerimaan Non-PO baru
-                            </p>
-                        </div>
-                    ) : (
-                        <>
-                            <div className="overflow-x-auto">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow className="bg-gray-50">
-                                            <TableHead className="font-semibold w-[40px]">
-                                                No
-                                            </TableHead>
-                                            <TableHead className="font-semibold">
-                                                Kode Barang
-                                            </TableHead>
-                                            <TableHead className="font-semibold">Nama Item</TableHead>
-                                            <TableHead className="font-semibold">
-                                                Jenis / Bentuk / Grade
-                                            </TableHead>
-                                            <TableHead className="font-semibold">Dimensi</TableHead>
-                                            <TableHead className="font-semibold text-center">
-                                                Qty
-                                            </TableHead>
-                                            <TableHead className="font-semibold">
-                                                Gudang / Rak
-                                            </TableHead>
-                                            <TableHead className="font-semibold">Tanggal</TableHead>
-                                            <TableHead className="font-semibold text-center">
-                                                Aksi
-                                            </TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {items.map((item, idx) => (
-                                            <TableRow key={item.id} className="hover:bg-gray-50">
-                                                <TableCell className="text-gray-500">
-                                                    {(currentPage - 1) * itemsPerPage + idx + 1}
-                                                </TableCell>
-                                                <TableCell className="font-mono text-sm font-medium">
-                                                    {item.kode_barang || "-"}
-                                                </TableCell>
-                                                <TableCell>{item.nama_item_barang || "-"}</TableCell>
-                                                <TableCell>
-                                                    <div className="flex flex-col gap-0.5">
-                                                        <span className="text-sm">
-                                                            {item.jenis_barang?.kode || "-"} /{" "}
-                                                            {item.bentuk_barang?.kode || "-"} /{" "}
-                                                            {item.grade_barang?.kode || "-"}
-                                                        </span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-sm">
-                                                    {buildDimensi(item)}
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    <Badge variant="secondary">{item.quantity || 0}</Badge>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm">
-                                                            {item.gudang?.nama_gudang ||
-                                                                item.gudang?.nama ||
-                                                                "-"}
-                                                        </span>
-                                                        <span className="text-xs text-gray-500">
-                                                            {item.rak?.kode || "-"}
-                                                        </span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-sm">
-                                                    {formatDate(item.created_at)}
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    <Button
-                                                        size="sm"
-                                                        className="bg-blue-600 hover:bg-blue-700"
-                                                        onClick={() => handleOpenProcess(item)}
-                                                        disabled={processingId === item.id}
-                                                    >
-                                                        {processingId === item.id ? (
-                                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                                        ) : (
-                                                            <>
-                                                                <DollarSign className="w-4 h-4 mr-1" />
-                                                                Process
-                                                            </>
-                                                        )}
-                                                    </Button>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
-
-                            {/* Pagination Controls */}
-                            <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 bg-white border-t border-gray-200 gap-4">
-                                <div className="flex items-center space-x-2">
-                                    <span className="text-sm text-gray-700">
-                                        Menampilkan {startItem}-{endItem} dari {totalItems} data
-                                    </span>
-                                    <select
-                                        value={itemsPerPage}
-                                        onChange={(e) => {
-                                            setItemsPerPage(Number(e.target.value));
-                                            setCurrentPage(1);
-                                        }}
-                                        className="border border-gray-300 rounded px-2 py-1 text-sm bg-white"
-                                    >
-                                        <option value={5}>5 per halaman</option>
-                                        <option value={10}>10 per halaman</option>
-                                        <option value={25}>25 per halaman</option>
-                                        <option value={50}>50 per halaman</option>
-                                    </select>
-                                </div>
-
-                                {totalPages > 1 && (
-                                    <div className="flex items-center space-x-2">
-                                        <button
-                                            onClick={() => setCurrentPage(currentPage - 1)}
-                                            disabled={currentPage === 1}
-                                            className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 bg-white"
-                                        >
-                                            Sebelumnya
-                                        </button>
-
-                                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                                            let pageNum;
-                                            if (totalPages <= 5) {
-                                                pageNum = i + 1;
-                                            } else if (currentPage <= 3) {
-                                                pageNum = i + 1;
-                                            } else if (currentPage >= totalPages - 2) {
-                                                pageNum = totalPages - 4 + i;
-                                            } else {
-                                                pageNum = currentPage - 2 + i;
-                                            }
-
-                                            return (
-                                                <button
-                                                    key={pageNum}
-                                                    onClick={() => setCurrentPage(pageNum)}
-                                                    className={`px-3 py-1 text-sm border rounded ${currentPage === pageNum
-                                                        ? 'bg-blue-500 text-white border-blue-500'
-                                                        : 'border-gray-300 hover:bg-gray-50 bg-white'
-                                                        }`}
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="bg-gray-50">
+                                    <TableHead className="font-semibold w-[40px]">
+                                        No
+                                    </TableHead>
+                                    <TableHead className="font-semibold">
+                                        Kode Barang
+                                    </TableHead>
+                                    <TableHead className="font-semibold">Nama Item</TableHead>
+                                    <TableHead className="font-semibold">
+                                        Jenis / Bentuk / Grade
+                                    </TableHead>
+                                    <TableHead className="font-semibold">Dimensi</TableHead>
+                                    <TableHead className="font-semibold text-center">
+                                        Qty
+                                    </TableHead>
+                                    <TableHead className="font-semibold">
+                                        Gudang / Rak
+                                    </TableHead>
+                                    <TableHead className="font-semibold">Tanggal</TableHead>
+                                    <TableHead className="font-semibold text-center">
+                                        Aksi
+                                    </TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {loading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={9} className="text-center py-8">
+                                            <div className="flex items-center justify-center">
+                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                                <span className="ml-2 text-gray-500">Loading data...</span>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ) : items.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={9} className="text-center py-12 text-gray-500">
+                                            <Package className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                                            <p className="text-lg font-medium">Tidak ada item Non-PO pending</p>
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    items.map((item, idx) => (
+                                        <TableRow key={item.id} className="hover:bg-gray-50">
+                                            <TableCell className="text-gray-500">
+                                                {(currentPage - 1) * itemsPerPage + idx + 1}
+                                            </TableCell>
+                                            <TableCell className="font-mono text-sm font-medium">
+                                                {item.kode_barang || "-"}
+                                            </TableCell>
+                                            <TableCell>{item.nama_item_barang || "-"}</TableCell>
+                                            <TableCell>
+                                                <div className="flex flex-col gap-0.5">
+                                                    <span className="text-sm">
+                                                        {item.jenis_barang?.kode || "-"} /{" "}
+                                                        {item.bentuk_barang?.kode || "-"} /{" "}
+                                                        {item.grade_barang?.kode || "-"}
+                                                    </span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-sm">
+                                                {buildDimensi(item)}
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <Badge variant="secondary">{item.quantity || 0}</Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm">
+                                                        {item.gudang?.nama_gudang ||
+                                                            item.gudang?.nama ||
+                                                            "-"}
+                                                    </span>
+                                                    <span className="text-xs text-gray-500">
+                                                        {item.rak?.kode || "-"}
+                                                    </span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-sm">
+                                                {formatDate(item.created_at)}
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <Button
+                                                    size="sm"
+                                                    className="bg-blue-600 hover:bg-blue-700"
+                                                    onClick={() => handleOpenProcess(item)}
+                                                    disabled={processingId === item.id}
                                                 >
-                                                    {pageNum}
-                                                </button>
-                                            );
-                                        })}
-
-                                        <button
-                                            onClick={() => setCurrentPage(currentPage + 1)}
-                                            disabled={currentPage === totalPages}
-                                            className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 bg-white"
-                                        >
-                                            Selanjutnya
-                                        </button>
-                                    </div>
+                                                    {processingId === item.id ? (
+                                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                                    ) : (
+                                                        <>
+                                                            <DollarSign className="w-4 h-4 mr-1" />
+                                                            Process
+                                                        </>
+                                                    )}
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
                                 )}
+                            </TableBody>
+                        </Table>
+                    </div>
+
+                    {/* Pagination */}
+                    {items.length > 0 && (
+                        <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 bg-white border-t border-gray-200 gap-4">
+                            <div className="flex items-center space-x-2">
+                                <span className="text-sm text-gray-700">
+                                    Menampilkan {startItem}-{endItem} dari {totalItems} data
+                                </span>
+                                <select
+                                    value={itemsPerPage}
+                                    onChange={(e) => {
+                                        setItemsPerPage(Number(e.target.value));
+                                        setCurrentPage(1);
+                                    }}
+                                    className="border border-gray-300 rounded px-2 py-1 text-sm"
+                                >
+                                    <option value={5}>5 per halaman</option>
+                                    <option value={10}>10 per halaman</option>
+                                    <option value={25}>25 per halaman</option>
+                                    <option value={50}>50 per halaman</option>
+                                </select>
                             </div>
-                        </>
+
+                            {totalPages > 1 && (
+                                <div className="flex items-center space-x-2">
+                                    <button
+                                        onClick={() => setCurrentPage(currentPage - 1)}
+                                        disabled={currentPage === 1}
+                                        className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                                    >
+                                        Sebelumnya
+                                    </button>
+
+                                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                        let pageNum;
+                                        if (totalPages <= 5) {
+                                            pageNum = i + 1;
+                                        } else if (currentPage <= 3) {
+                                            pageNum = i + 1;
+                                        } else if (currentPage >= totalPages - 2) {
+                                            pageNum = totalPages - 4 + i;
+                                        } else {
+                                            pageNum = currentPage - 2 + i;
+                                        }
+
+                                        return (
+                                            <button
+                                                key={pageNum}
+                                                onClick={() => setCurrentPage(pageNum)}
+                                                className={`px-3 py-1 text-sm border rounded ${currentPage === pageNum
+                                                    ? 'bg-blue-500 text-white border-blue-500'
+                                                    : 'border-gray-300 hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                {pageNum}
+                                            </button>
+                                        );
+                                    })}
+
+                                    <button
+                                        onClick={() => setCurrentPage(currentPage + 1)}
+                                        disabled={currentPage === totalPages}
+                                        className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                                    >
+                                        Selanjutnya
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     )}
                 </CardContent>
             </Card>
@@ -501,6 +489,6 @@ export default function InputHargaBarangDatangPage() {
             </Dialog>
 
             <AlertComponent />
-        </SalesOrderLayout>
+        </PageLayout>
     );
 }
