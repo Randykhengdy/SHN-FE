@@ -4,19 +4,32 @@
 
 Fitur **Penerimaan Barang Non-PO** memungkinkan penerimaan barang ke gudang tanpa memerlukan referensi Purchase Order (PO) atau Stock Mutation. Proses ini terdiri dari 2 tahap:
 
-1. **Store Non-PO** — Membuat data penerimaan barang beserta item-item baru
-2. **Process Non-PO Item** — Admin mengisi harga modal dan berat, mengaktifkan item
+1. **Store Non-PO** — Membuat data penerimaan barang beserta detail (tanpa membuat ItemBarang)
+2. **Process Non-PO** — Admin mengisi harga modal dan berat, **ItemBarang baru dibuat** dengan status `active`
 
 ---
 
 ## Database Migration
 
-Migration `2026_02_22_145529_add_harga_modal_and_nonpo_processed_to_item_barang_table.php` menambahkan 2 kolom pada tabel `ref_item_barang`:
+### Migration awal: `2026_02_22_145529_add_harga_modal_and_nonpo_processed_to_item_barang_table.php`
+
+Menambahkan kolom pada tabel `ref_item_barang`:
 
 | Kolom | Tipe | Default | Keterangan |
 |---|---|---|---|
-| `harga_modal` | `decimal(15,2)` | `NULL` | Harga modal barang (diisi saat proses) |
+| `harga_modal` | `decimal(15,2)` | `NULL` | Harga modal barang |
 | `is_nonpo_processed` | `boolean` | `false` | Penanda item sudah diproses admin |
+
+### Migration refactor: `2026_02_23_121800_refactor_nonpo_penerimaan_barang_detail.php`
+
+Perubahan pada tabel `trx_penerimaan_barang_detail`:
+
+| Perubahan | Keterangan |
+|---|---|
+| `id_item_barang` → **nullable** | Detail non-PO belum punya ItemBarang saat store |
+| + `item_barang_group_id` | FK ke `ref_item_barang_group` (nullable) |
+| + `tipe_terima` | `bundle` atau `satuan` (nullable) |
+| + `is_processed` | boolean, default `false` |
 
 ---
 
@@ -27,15 +40,17 @@ enum ItemBarangStatus: string
 {
     case ACTIVE  = 'active';   // Barang aktif, siap digunakan
     case DESTROY = 'destroy';  // Barang dihancurkan
-    case PENDING = 'pending';  // Menunggu proses (status awal Non-PO)
 }
 ```
 
+> [!NOTE]
+> Status `pending` sudah dihapus. ItemBarang sekarang langsung dibuat dengan status `active` saat diproses.
+
 ### Alur Status Non-PO:
 ```
-[storeNonPo] → status: "pending", is_nonpo_processed: false
+[storeNonPo] → Hanya simpan PenerimaanBarangDetail (id_item_barang = NULL)
       ↓
-[processNonPoItem] → status: "active", is_nonpo_processed: true
+[processNonPo] → Buat ItemBarang (status: "active", harga_modal, berat terisi)
 ```
 
 ---
@@ -51,7 +66,7 @@ Middleware: `checkrole`
 POST /api/penerimaan-barang/non-po
 ```
 
-**Deskripsi:** Membuat data penerimaan barang baru dari sumber Non-PO. Secara otomatis membuat record `ItemBarang` baru dan `ItemBarangGroup` (jika belum ada).
+**Deskripsi:** Membuat data penerimaan barang baru dari sumber Non-PO. **Tidak membuat ItemBarang** — hanya menyimpan metadata group pada `PenerimaanBarangDetail`. ItemBarang dibuat saat tahap `processNonPo`.
 
 #### Request Body
 
@@ -112,17 +127,6 @@ POST /api/penerimaan-barang/non-po
 | `tipe_terima` | string | ✅ | `"bundle"` atau `"satuan"` |
 | `id_rak` | integer | ✅ | ID rak tempat penyimpanan |
 
-#### Logika `tipe_terima`
-
-| Tipe | Jumlah ItemBarang Dibuat | Quantity per Item |
-|---|---|---|
-| `bundle` | 1 record | qty = N |
-| `satuan` | N record | qty = 1 per record |
-
-**Contoh:** `qty = 10`
-- `bundle` → 1 ItemBarang dengan `quantity = 10`
-- `satuan` → 10 ItemBarang masing-masing `quantity = 1`
-
 #### Proses Internal (storeNonPo)
 
 ```mermaid
@@ -137,19 +141,16 @@ flowchart TD
     G --> H{item_barang_group_id<br/>ada?}
     H -->|Ada| I[Ambil group existing]
     H -->|Tidak ada| J[Buat/cari group baru<br/>dari jenis+bentuk+grade+dimensi]
-    I --> K[Build nama_item_barang]
+    I --> K[Simpan PenerimaanBarangDetail]
     J --> K
-    K --> L[Hitung sisa_luas]
-    L --> M{tipe_terima?}
-    M -->|bundle| N[Buat 1 ItemBarang<br/>qty = N]
-    M -->|satuan| O[Buat N ItemBarang<br/>qty = 1 each]
-    N --> P[Buat PenerimaanBarangDetail]
-    O --> P
-    P --> Q[Update group quantities]
-    Q --> R{Detail lain?}
-    R -->|Ya| G
-    R -->|Tidak| S[Commit & Response]
+    K --> L["id_item_barang = NULL<br/>item_barang_group_id = group.id<br/>tipe_terima, qty, id_rak<br/>is_processed = false"]
+    L --> M{Detail lain?}
+    M -->|Ya| G
+    M -->|Tidak| N[Commit & Response]
 ```
+
+> [!IMPORTANT]
+> `storeNonPo` **tidak** membuat ItemBarang sama sekali. Detail disimpan dengan `id_item_barang = NULL` dan `is_processed = false`. ItemBarang baru dibuat saat `processNonPo`.
 
 #### Response Sukses (201)
 
@@ -170,18 +171,13 @@ flowchart TD
       {
         "id": 30,
         "id_penerimaan_barang": 15,
-        "id_item_barang": 120,
+        "id_item_barang": null,
+        "item_barang_group_id": 5,
         "id_rak": 3,
         "qty": 10,
-        "item_barang": {
-          "id": 120,
-          "kode_barang": "PL-SS-A-6000x1500x10-000045",
-          "nama_item_barang": "PL-SS-A-6000x1500x10",
-          "status": "pending",
-          "is_nonpo_processed": false,
-          "harga_modal": null,
-          "quantity": 10
-        },
+        "tipe_terima": "bundle",
+        "is_processed": false,
+        "item_barang_group": { "id": 5, "jenis_barang_id": 1, "bentuk_barang_id": 2, "grade_barang_id": 1 },
         "rak": { "id": 3, "kode": "RAK-A01" }
       }
     ]
@@ -189,24 +185,21 @@ flowchart TD
 }
 ```
 
-> [!IMPORTANT]
-> Item yang dibuat melalui `storeNonPo` memiliki `status = "pending"` dan `is_nonpo_processed = false`. Item belum bisa digunakan dalam transaksi lain hingga diproses melalui endpoint `processNonPoItem`.
-
 ---
 
-### 2. Process Non-PO Item
+### 2. Process Non-PO
 
 ```
-PATCH /api/penerimaan-barang/process-nonpo-item/{itemBarangId}
+PATCH /api/penerimaan-barang/process-nonpo/{detailId}
 ```
 
-**Deskripsi:** Admin mengisi harga modal dan berat untuk item Non-PO. Mengubah status item dari `pending` menjadi `active`.
+**Deskripsi:** Admin mengisi harga modal dan berat. **Di sinilah ItemBarang dibuat** dengan status langsung `active`. Detail yang sudah diproses akan ter-link ke ItemBarang yang baru dibuat.
 
 #### Path Parameter
 
 | Parameter | Tipe | Keterangan |
 |---|---|---|
-| `itemBarangId` | integer | ID item barang yang akan diproses |
+| `detailId` | integer | ID `PenerimaanBarangDetail` yang akan diproses |
 
 #### Request Body
 
@@ -226,25 +219,42 @@ PATCH /api/penerimaan-barang/process-nonpo-item/{itemBarangId}
 
 #### Validasi
 
-- Item harus ada di database
-- Item belum pernah diproses (`is_nonpo_processed = false`)
+- Detail harus ada di database
+- Detail belum pernah diproses (`is_processed = false`)
+- Detail harus memiliki `item_barang_group_id`
 - Jika sudah diproses → return error `422`
 
-#### Proses Internal
+#### Logika `tipe_terima` saat Process
+
+| Tipe | Jumlah ItemBarang Dibuat | Quantity per Item | Detail |
+|---|---|---|---|
+| `bundle` | 1 record | qty = N | Detail original diupdate |
+| `satuan` | N record | qty = 1 per record | Detail original diupdate + detail tambahan dibuat |
+
+**Contoh:** Detail dengan `qty = 10`
+- `bundle` → 1 ItemBarang dengan `quantity = 10`, detail original diupdate
+- `satuan` → 10 ItemBarang masing-masing `quantity = 1`, detail original diupdate untuk item pertama, 9 detail tambahan dibuat
+
+#### Proses Internal (processNonPo)
 
 ```mermaid
 flowchart TD
     A[Request masuk] --> B[Validasi harga_modal & berat]
-    B --> C{Item ditemukan?}
+    B --> C{Detail ditemukan?}
     C -->|Tidak| D[Error 404]
     C -->|Ya| E{Sudah diproses?}
-    E -->|Ya| F[Error 422:<br/>Item sudah diproses sebelumnya]
-    E -->|Tidak| G[Update item]
-    G --> H[harga_modal = input]
-    G --> I[berat = input]
-    G --> J[is_nonpo_processed = true]
-    G --> K[status = active]
-    H & I & J & K --> L[Response sukses]
+    E -->|Ya| F["Error 422:<br/>Detail sudah diproses"]
+    E -->|Tidak| G[Load group + relasi]
+    G --> H[Build nama_item_barang]
+    H --> I[Hitung sisa_luas]
+    I --> J{tipe_terima?}
+    J -->|bundle| K[Buat 1 ItemBarang<br/>qty = N, status = active]
+    J -->|satuan| L[Buat N ItemBarang<br/>qty = 1, status = active]
+    K --> M[Update detail:<br/>id_item_barang, is_processed = true]
+    L --> N["Update detail original + buat detail tambahan"]
+    M --> O[Update group quantities]
+    N --> O
+    O --> P[Commit & Response]
 ```
 
 #### Response Sukses (200)
@@ -252,37 +262,41 @@ flowchart TD
 ```json
 {
   "success": true,
-  "message": "Item barang Non-PO berhasil diproses",
-  "data": {
-    "id": 120,
-    "kode_barang": "PL-SS-A-6000x1500x10-000045",
-    "nama_item_barang": "PL-SS-A-6000x1500x10",
-    "status": "active",
-    "harga_modal": "150000.00",
-    "berat": "25.50",
-    "is_nonpo_processed": true,
-    "jenis_barang": { "id": 1, "kode": "SS", "nama": "Stainless Steel" },
-    "bentuk_barang": { "id": 2, "kode": "PL", "nama": "Plat" },
-    "grade_barang": { "id": 1, "kode": "A", "nama": "Grade A" },
-    "gudang": { "id": 1, "nama": "Gudang Utama" },
-    "rak": { "id": 3, "kode": "RAK-A01" }
-  }
+  "message": "Item barang Non-PO berhasil diproses (1 item dibuat)",
+  "data": [
+    {
+      "id": 120,
+      "kode_barang": "PL-SS-A-6000x1500x10-000045",
+      "nama_item_barang": "PL-SS-A-6000x1500x10",
+      "status": "active",
+      "harga_modal": "150000.00",
+      "berat": "25.50",
+      "is_nonpo_processed": true,
+      "quantity": 10
+    }
+  ]
 }
 ```
 
 #### Error Response
 
 ```json
-// Item tidak ditemukan (404)
+// Detail tidak ditemukan (404)
 {
   "success": false,
-  "message": "Item barang tidak ditemukan"
+  "message": "Detail penerimaan barang tidak ditemukan"
 }
 
-// Item sudah diproses (422)
+// Detail sudah diproses (422)
 {
   "success": false,
-  "message": "Item barang ini sudah diproses sebelumnya"
+  "message": "Detail ini sudah diproses sebelumnya"
+}
+
+// Detail tanpa group (422)
+{
+  "success": false,
+  "message": "Detail ini tidak memiliki referensi group barang"
 }
 ```
 
@@ -309,10 +323,12 @@ Membuat nama item barang otomatis dari relasi bentuk, jenis, grade, dan dimensi 
 
 ### createItemBarangNonPo
 
-Membuat record `ItemBarang` baru dengan:
+Membuat record `ItemBarang` baru (dipanggil saat `processNonPo`):
 - `kode_barang` = `{nama_item_barang}-{sequence_number}` (auto-generated)
-- `status` = `pending`
-- `is_nonpo_processed` = `false`
+- `status` = `active` (langsung aktif)
+- `harga_modal` = dari input admin
+- `berat` = dari input admin
+- `is_nonpo_processed` = `true`
 - `jenis_potongan` = `utuh`
 - `is_available` = `true`
 - Dimensi diambil dari group
@@ -320,9 +336,6 @@ Membuat record `ItemBarang` baru dengan:
 ### updateGroupQuantitiesNonPo
 
 Menghitung ulang `quantity_utuh` dan `quantity_potongan` pada `ItemBarangGroup` berdasarkan item-item yang berstatus `active`.
-
-> [!NOTE]
-> Karena item Non-PO baru dibuat dengan status `pending`, quantity group baru akan terupdate setelah item diproses (status berubah ke `active`) melalui mekanisme lain atau trigger.
 
 ---
 
@@ -339,17 +352,18 @@ sequenceDiagram
     Note right of User: Kirim detail barang,<br/>gudang, rak, qty, tipe_terima
     API->>DB: Create PenerimaanBarang (origin=nonpo)
     API->>DB: Resolve/Create ItemBarangGroup
-    API->>DB: Create ItemBarang (status=pending)
-    API->>DB: Create PenerimaanBarangDetail
-    API->>DB: Update group quantities
-    API-->>User: Response sukses
+    API->>DB: Create PenerimaanBarangDetail<br/>(id_item_barang=NULL, is_processed=false)
+    API-->>User: Response sukses (detail tanpa ItemBarang)
 
-    Note over User,Admin: Item belum aktif (pending)
+    Note over User,Admin: Detail belum diproses (is_processed=false)
 
-    Admin->>API: PATCH /penerimaan-barang/process-nonpo-item/{id}
+    Admin->>API: PATCH /penerimaan-barang/process-nonpo/{detailId}
     Note right of Admin: Kirim harga_modal & berat
-    API->>DB: Update ItemBarang<br/>(status=active, is_nonpo_processed=true)
-    API-->>Admin: Response sukses
+    API->>DB: Create ItemBarang<br/>(status=active, harga_modal, berat)
+    API->>DB: Update detail.id_item_barang
+    API->>DB: Update detail.is_processed = true
+    API->>DB: Update group quantities
+    API-->>Admin: Response sukses (ItemBarang dibuat)
 
     Note over User,Admin: Item aktif & siap digunakan
 ```
@@ -360,8 +374,10 @@ sequenceDiagram
 
 | File | Keterangan |
 |---|---|
-| `app/Http/Controllers/MasterData/PenerimaanBarangController.php` | Controller utama (storeNonPo, processNonPoItem) |
+| `app/Http/Controllers/MasterData/PenerimaanBarangController.php` | Controller utama (storeNonPo, processNonPo) |
+| `app/Models/Transactions/PenerimaanBarangDetail.php` | Model detail (fillable: item_barang_group_id, tipe_terima, is_processed) |
 | `app/Models/MasterData/ItemBarang.php` | Model item barang |
-| `app/Enums/ItemBarangStatus.php` | Enum status item (active, destroy, pending) |
+| `app/Enums/ItemBarangStatus.php` | Enum status item (active, destroy) |
 | `routes/api.php` | Definisi route API |
 | `database/migrations/2026_02_22_145529_add_harga_modal_and_nonpo_processed_to_item_barang_table.php` | Migration tambah kolom harga_modal dan is_nonpo_processed |
+| `database/migrations/2026_02_23_121800_refactor_nonpo_penerimaan_barang_detail.php` | Migration refactor: nullable id_item_barang + kolom metadata nonpo |

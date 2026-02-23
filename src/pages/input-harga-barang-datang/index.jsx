@@ -110,9 +110,13 @@ export default function InputHargaBarangDatangPage() {
                 berat: berat,
             });
             setShowProcessModal(false);
+            const group = selectedItem.item_barang_group;
+            const groupLabel = group
+                ? `${group.jenis_barang?.kode || ''}-${group.bentuk_barang?.kode || ''}-${group.grade_barang?.kode || ''}`
+                : `Detail #${selectedItem.id}`;
             showAlert(
                 "Sukses",
-                `Item ${selectedItem.kode_barang || selectedItem.nama_item_barang} berhasil diproses!`,
+                `Item ${groupLabel} berhasil diproses!`,
                 "success",
                 () => loadPendingItems()
             );
@@ -140,17 +144,19 @@ export default function InputHargaBarangDatangPage() {
         });
     };
 
-    // Build dimension string
-    const buildDimensi = (item) => {
+    // Build dimension string from item_barang_group
+    const buildDimensi = (detail) => {
+        const group = detail?.item_barang_group;
+        if (!group) return "-";
         const parts = [];
-        if (item.panjang) parts.push(`P:${item.panjang}`);
-        if (item.lebar) parts.push(`L:${item.lebar}`);
-        if (item.tebal) parts.push(`T:${item.tebal}`);
-        if (item.diameter) parts.push(`Ø:${item.diameter}`);
-        if (item.diameter_luar) parts.push(`ØL:${item.diameter_luar}`);
-        if (item.diameter_dalam) parts.push(`ØD:${item.diameter_dalam}`);
-        if (item.sisi1) parts.push(`S1:${item.sisi1}`);
-        if (item.sisi2) parts.push(`S2:${item.sisi2}`);
+        if (group.panjang) parts.push(`P:${group.panjang}`);
+        if (group.lebar) parts.push(`L:${group.lebar}`);
+        if (group.tebal) parts.push(`T:${group.tebal}`);
+        if (group.diameter) parts.push(`Ø:${group.diameter}`);
+        if (group.diameter_luar) parts.push(`ØL:${group.diameter_luar}`);
+        if (group.diameter_dalam) parts.push(`ØD:${group.diameter_dalam}`);
+        if (group.sisi1) parts.push(`S1:${group.sisi1}`);
+        if (group.sisi2) parts.push(`S2:${group.sisi2}`);
         return parts.length > 0 ? parts.join(" × ") : "-";
     };
 
@@ -211,9 +217,9 @@ export default function InputHargaBarangDatangPage() {
                                         No
                                     </TableHead>
                                     <TableHead className="font-semibold">
-                                        Kode Barang
+                                        Kode Penerimaan
                                     </TableHead>
-                                    <TableHead className="font-semibold">Nama Item</TableHead>
+                                    <TableHead className="font-semibold">Nama Group</TableHead>
                                     <TableHead className="font-semibold">
                                         Jenis / Bentuk / Grade
                                     </TableHead>
@@ -248,64 +254,70 @@ export default function InputHargaBarangDatangPage() {
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    items.map((item, idx) => (
-                                        <TableRow key={item.id} className="hover:bg-gray-50">
-                                            <TableCell className="text-gray-500">
-                                                {(currentPage - 1) * itemsPerPage + idx + 1}
-                                            </TableCell>
-                                            <TableCell className="font-mono text-sm font-medium">
-                                                {item.kode_barang || "-"}
-                                            </TableCell>
-                                            <TableCell>{item.nama_item_barang || "-"}</TableCell>
-                                            <TableCell>
-                                                <div className="flex flex-col gap-0.5">
-                                                    <span className="text-sm">
-                                                        {item.jenis_barang?.kode || "-"} /{" "}
-                                                        {item.bentuk_barang?.kode || "-"} /{" "}
-                                                        {item.grade_barang?.kode || "-"}
-                                                    </span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-sm">
-                                                {buildDimensi(item)}
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <Badge variant="secondary">{item.quantity || 0}</Badge>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex flex-col">
-                                                    <span className="text-sm">
-                                                        {item.gudang?.nama_gudang ||
-                                                            item.gudang?.nama ||
-                                                            "-"}
-                                                    </span>
-                                                    <span className="text-xs text-gray-500">
-                                                        {item.rak?.kode || "-"}
-                                                    </span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-sm">
-                                                {formatDate(item.created_at)}
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <Button
-                                                    size="sm"
-                                                    className="bg-blue-600 hover:bg-blue-700"
-                                                    onClick={() => handleOpenProcess(item)}
-                                                    disabled={processingId === item.id}
-                                                >
-                                                    {processingId === item.id ? (
-                                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                                    ) : (
-                                                        <>
-                                                            <DollarSign className="w-4 h-4 mr-1" />
-                                                            Process
-                                                        </>
-                                                    )}
-                                                </Button>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
+                                    items.map((detail, idx) => {
+                                        const group = detail.item_barang_group;
+                                        const gudang = detail.penerimaan_barang?.gudang;
+                                        return (
+                                            <TableRow key={detail.id} className="hover:bg-gray-50">
+                                                <TableCell className="text-gray-500">
+                                                    {(currentPage - 1) * itemsPerPage + idx + 1}
+                                                </TableCell>
+                                                <TableCell className="font-mono text-sm font-medium">
+                                                    {detail.penerimaan_barang?.kode_penerimaan || (detail.penerimaan_barang?.id ? `RCV-${detail.penerimaan_barang.id}` : "-")}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {group?.nama_group_barang || "-"}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <span className="text-sm">
+                                                            {group?.jenis_barang?.kode || "-"} /{" "}
+                                                            {group?.bentuk_barang?.kode || "-"} /{" "}
+                                                            {group?.grade_barang?.kode || "-"}
+                                                        </span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-sm">
+                                                    {buildDimensi(detail)}
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <Badge variant="secondary">{detail.qty || 0}</Badge>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm">
+                                                            {gudang?.nama_gudang ||
+                                                                gudang?.nama ||
+                                                                "-"}
+                                                        </span>
+                                                        <span className="text-xs text-gray-500">
+                                                            {detail.rak?.kode || "-"}
+                                                        </span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-sm">
+                                                    {formatDate(detail.created_at)}
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <Button
+                                                        size="sm"
+                                                        className="bg-blue-600 hover:bg-blue-700"
+                                                        onClick={() => handleOpenProcess(detail)}
+                                                        disabled={processingId === detail.id}
+                                                    >
+                                                        {processingId === detail.id ? (
+                                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                                        ) : (
+                                                            <>
+                                                                <DollarSign className="w-4 h-4 mr-1" />
+                                                                Process
+                                                            </>
+                                                        )}
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })
                                 )}
                             </TableBody>
                         </Table>
@@ -398,15 +410,17 @@ export default function InputHargaBarangDatangPage() {
                             {/* Item Info */}
                             <div className="bg-gray-50 rounded-lg p-3 space-y-1.5">
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Kode</span>
+                                    <span className="text-gray-500">Penerimaan</span>
                                     <span className="font-mono font-medium">
-                                        {selectedItem.kode_barang}
+                                        {selectedItem.penerimaan_barang?.kode_penerimaan || (selectedItem.penerimaan_barang?.id ? `RCV-${selectedItem.penerimaan_barang.id}` : "-")}
                                     </span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Nama</span>
+                                    <span className="text-gray-500">Jenis / Bentuk / Grade</span>
                                     <span className="font-medium">
-                                        {selectedItem.nama_item_barang}
+                                        {selectedItem.item_barang_group?.jenis_barang?.kode || "-"} /{" "}
+                                        {selectedItem.item_barang_group?.bentuk_barang?.kode || "-"} /{" "}
+                                        {selectedItem.item_barang_group?.grade_barang?.kode || "-"}
                                     </span>
                                 </div>
                                 <div className="flex justify-between text-sm">
@@ -415,7 +429,16 @@ export default function InputHargaBarangDatangPage() {
                                 </div>
                                 <div className="flex justify-between text-sm">
                                     <span className="text-gray-500">Qty</span>
-                                    <span>{selectedItem.quantity}</span>
+                                    <span>{selectedItem.qty || 0}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-gray-500">Gudang / Rak</span>
+                                    <span>
+                                        {selectedItem.penerimaan_barang?.gudang?.nama_gudang ||
+                                            selectedItem.penerimaan_barang?.gudang?.nama || "-"}
+                                        {" / "}
+                                        {selectedItem.rak?.kode || "-"}
+                                    </span>
                                 </div>
                             </div>
 

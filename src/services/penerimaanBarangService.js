@@ -2,22 +2,17 @@ import { request } from "@/lib/request";
 import { API_ENDPOINTS } from "@/config/api";
 
 export const penerimaanBarangService = {
-    // Get all pending non-PO items (status=pending, is_nonpo_processed=0)
+    // Get all pending (unprocessed) Non-PO details
     getPendingNonPoItems: async (params = {}) => {
-        const queryParams = {
-            ...params,
-            status: 'pending',
-            is_nonpo_processed: 0
-        };
-        const queryString = new URLSearchParams(queryParams).toString();
-        return await request(`${API_ENDPOINTS.itemBarang}?${queryString}`, {
+        const queryString = new URLSearchParams(params).toString();
+        return await request(`${API_ENDPOINTS.penerimaanBarang}/pending-nonpo?${queryString}`, {
             method: 'GET'
         });
     },
 
-    // Process a non-PO item (set harga_modal, berat, and mark as processed)
-    processNonPoItem: async (id, data) => {
-        return await request(`${API_ENDPOINTS.penerimaanBarang}/process-nonpo-item/${id}`, {
+    // Process a non-PO detail (create ItemBarang with harga_modal + berat)
+    processNonPoItem: async (detailId, data) => {
+        return await request(`${API_ENDPOINTS.penerimaanBarang}/process-nonpo/${detailId}`, {
             method: 'PATCH',
             body: JSON.stringify(data)
         });
