@@ -56,6 +56,7 @@ import ItemBarangRequestPage from "@/pages/item-barang-request";
 import AddItemBarangRequestPage from "@/pages/item-barang-request/add";
 import ViewItemBarangRequestPage from "@/pages/item-barang-request/view";
 import NotificationsPage from "@/pages/notifications";
+import InputHargaBarangDatangPage from "@/pages/input-harga-barang-datang";
 
 const AppRouter = () => {
   return (
@@ -114,6 +115,7 @@ const AppRouter = () => {
       <Route path="/merge-barang" element={<MergeBarangPage />} />
 
       <Route path="/notifications" element={<NotificationsPage />} />
+      <Route path="/input-harga-barang-datang" element={<InputHargaBarangDatangPage />} />
 
       <Route path="/wo-actual" element={<WOActualPage />} />
       <Route path="/wo-actual/add" element={<AddWOActualPage />} />
