@@ -246,8 +246,9 @@ export default function ItemBarangRequestPage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>No. Dokumen</TableHead>
+                                        <TableHead>Gudang Asal</TableHead>
+                                        <TableHead>Gudang Tujuan</TableHead>
                                         <TableHead className="text-center">Quantity</TableHead>
-                                        {/* Urgency column dihapus */}
                                         <TableHead>Status</TableHead>
                                         <TableHead>Requestor</TableHead>
                                         <TableHead>Tanggal Request</TableHead>
@@ -281,6 +282,8 @@ export default function ItemBarangRequestPage() {
                                                     <TableCell className="font-medium">
                                                         {request.nomor_request || request.document_number || "-"}
                                                     </TableCell>
+                                                    <TableCell>{request.asal_gudang?.nama_gudang || "-"}</TableCell>
+                                                    <TableCell>{request.tujuan_gudang?.nama_gudang || "-"}</TableCell>
                                                     <TableCell className="text-center font-semibold">
                                                         {totalQty}
                                                     </TableCell>

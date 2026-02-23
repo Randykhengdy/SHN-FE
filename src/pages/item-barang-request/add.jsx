@@ -22,6 +22,7 @@ export default function AddItemBarangRequestPage() {
     const canCreate = hasPermission && hasPermission('ITEM_BARANG_REQUEST', 'Create');
 
     const [formData, setFormData] = useState({
+        gudang_asal_id: "",
         gudang_tujuan_id: "",
         keterangan: "",
         details: [],
@@ -99,6 +100,12 @@ export default function AddItemBarangRequestPage() {
 
     const validateForm = () => {
         const errors = [];
+        if (!formData.gudang_asal_id) {
+            errors.push("Gudang asal harus dipilih");
+        }
+        if (!formData.gudang_tujuan_id) {
+            errors.push("Gudang tujuan harus dipilih");
+        }
         if (formData.details.length === 0) {
             errors.push("Minimal harus ada satu item dalam request");
         }
@@ -164,6 +171,15 @@ export default function AddItemBarangRequestPage() {
                         {/* Header Information */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
+                                <Label>Gudang Asal</Label>
+                                <SearchSelect
+                                    placeholder="Pilih gudang asal"
+                                    value={formData.gudang_asal_id}
+                                    onValueChange={(val) => setFormData(prev => ({ ...prev, gudang_asal_id: val }))}
+                                    options={gudangOptions}
+                                />
+                            </div>
+                            <div className="space-y-2">
                                 <Label>Gudang Tujuan</Label>
                                 <SearchSelect
                                     placeholder="Pilih gudang tujuan"
@@ -172,7 +188,7 @@ export default function AddItemBarangRequestPage() {
                                     options={gudangOptions}
                                 />
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-2 md:col-span-2">
                                 <Label>Keterangan Request</Label>
                                 <Input
                                     placeholder="Contoh: Request untuk Proyek A"

@@ -246,10 +246,14 @@ export default function ViewItemBarangRequestPage() {
                     </CardHeader>
                     <CardContent className="space-y-8 p-6">
                         {/* Summary Header */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                             <div className="space-y-1">
                                 <Label className="text-gray-500 font-normal">Status Request</Label>
                                 <div className="pt-1">{getStatusBadge(request.status)}</div>
+                            </div>
+                            <div className="space-y-1">
+                                <Label className="text-gray-500 font-normal">Gudang Asal</Label>
+                                <div className="font-semibold text-gray-900">{request.asal_gudang?.nama_gudang || "-"}</div>
                             </div>
                             <div className="space-y-1">
                                 <Label className="text-gray-500 font-normal">Gudang Tujuan</Label>
