@@ -55,7 +55,7 @@ export default function ItemBarangRequestPage() {
             try {
                 const resp = await getGudangOptions();
                 setGudangOptions(resp || []);
-            } catch (_) {}
+            } catch (_) { }
         };
         loadGudang();
     }, []);
@@ -72,7 +72,7 @@ export default function ItemBarangRequestPage() {
             };
 
             const response = await itemBarangRequestService.getAll(params);
-            
+
             if (response.success) {
                 const rows = Array.isArray(response.data) ? response.data : (Array.isArray(response?.data?.data) ? response.data.data : []);
                 setRequests(rows);
@@ -111,7 +111,7 @@ export default function ItemBarangRequestPage() {
         try {
             setIsDeleting(true);
             const response = await itemBarangRequestService.delete(selectedRequest.id);
-            
+
             if (response.success) {
                 showAlertRef.current && showAlertRef.current("success", "Request berhasil dihapus");
                 loadRequests();
@@ -131,7 +131,7 @@ export default function ItemBarangRequestPage() {
     const handleApprove = async (request) => {
         try {
             const response = await itemBarangRequestService.approve(request.id, { approval_notes: "Approved" });
-            
+
             if (response.success) {
                 showAlertRef.current && showAlertRef.current("success", "Request berhasil disetujui");
                 loadRequests();
@@ -147,7 +147,7 @@ export default function ItemBarangRequestPage() {
     const handleReject = async (request) => {
         try {
             const response = await itemBarangRequestService.reject(request.id);
-            
+
             if (response.success) {
                 showAlertRef.current && showAlertRef.current("success", "Request berhasil ditolak");
                 loadRequests();
@@ -196,7 +196,7 @@ export default function ItemBarangRequestPage() {
                         <div className="flex justify-between items-center">
                             <CardTitle>Daftar Item Barang Request</CardTitle>
                             {canCreate ? (
-                                <Button onClick={() => navigate("/item-barang-request/add")} className="bg-green-600 hover:bg-green-700 text-white"> 
+                                <Button onClick={() => navigate("/item-barang-request/add")} className="bg-green-600 hover:bg-green-700 text-white">
                                     <Plus className="h-4 w-4 mr-2" />
                                     Tambah Request
                                 </Button>
@@ -246,65 +246,75 @@ export default function ItemBarangRequestPage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>No. Dokumen</TableHead>
-                                        <TableHead>Item Barang</TableHead>
-                                        <TableHead>Quantity</TableHead>
+                                        <TableHead className="text-center">Quantity</TableHead>
                                         {/* Urgency column dihapus */}
                                         <TableHead>Status</TableHead>
                                         <TableHead>Requestor</TableHead>
                                         <TableHead>Tanggal Request</TableHead>
-                                        <TableHead>Aksi</TableHead>
+                                        <TableHead className="text-center">Aksi</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {loading ? (
                                         <TableRow>
-                                            <TableCell colSpan={8} className="text-center py-4">
+                                            <TableCell colSpan={7} className="text-center py-4">
                                                 Loading...
                                             </TableCell>
                                         </TableRow>
                                     ) : requests.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={8} className="text-center py-4">
+                                            <TableCell colSpan={7} className="text-center py-4">
                                                 Tidak ada data request
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        requests.map((request) => (
-                                            <TableRow key={request.id}>
-                                                <TableCell className="font-medium">
-                                                    {request.nomor_request || request.document_number || "-"}
-                                                </TableCell>
-                                                <TableCell className="font-medium">{`${request.nama_item_barang || request.item_barang?.nama || "-"} | ${request.kode_barang || request.item_barang?.kode || "-"}`}</TableCell>
-                                                <TableCell>{request.quantity}</TableCell>
-                                                {/* Urgency value dihapus */}
-                                                <TableCell>{getStatusBadge(request.status)}</TableCell>
-                                                <TableCell>{request.requested_by?.name || request.user?.name || "-"}</TableCell>
-                                                <TableCell>
-                                                    {request.requested_at ? new Date(request.requested_at).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" }) : "-"}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex gap-2">
-                                                        <Button
-                                                            size="sm"
-                                                            onClick={() => navigate(`/item-barang-request/view/${request.id}`)}
-                                                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                                                        >
-                                                            <Eye className="h-4 w-4" />
-                                                        </Button>
-                                                        {canDelete && request.status === 'pending' ? (
+                                        requests.map((request) => {
+                                            const detailsCount = request.details?.length || 0;
+
+                                            // Calculate total quantity from details specifically
+                                            const detailsQty = (request.details || []).reduce((sum, d) => sum + (parseInt(d.quantity) || 0), 0);
+                                            // Fallback to header quantity if details count is 0
+                                            const totalQty = detailsCount > 0 ? detailsQty : (parseInt(request.quantity) || 0);
+
+                                            return (
+                                                <TableRow key={request.id}>
+                                                    <TableCell className="font-medium">
+                                                        {request.nomor_request || request.document_number || "-"}
+                                                    </TableCell>
+                                                    <TableCell className="text-center font-semibold">
+                                                        {totalQty}
+                                                    </TableCell>
+                                                    <TableCell>{getStatusBadge(request.status)}</TableCell>
+                                                    <TableCell>{request.requested_by?.name || request.user?.name || "-"}</TableCell>
+                                                    <TableCell>
+                                                        {request.requested_at ? new Date(request.requested_at).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" }) : "-"}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex gap-2 justify-center">
                                                             <Button
                                                                 size="sm"
-                                                                variant="destructive"
-                                                                onClick={() => { setSelectedRequest(request); setShowDeleteModal(true); }}
-                                                                className="text-white"
+                                                                onClick={() => navigate(`/item-barang-request/view/${request.id}`)}
+                                                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                                title="Lihat Detail"
                                                             >
-                                                                <Trash2 className="h-4 w-4" />
+                                                                <Eye className="h-4 w-4" />
                                                             </Button>
-                                                        ) : null}
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
+                                                            {canDelete && request.status === 'pending' ? (
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="destructive"
+                                                                    onClick={() => { setSelectedRequest(request); setShowDeleteModal(true); }}
+                                                                    className="text-white"
+                                                                    title="Hapus"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            ) : null}
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )
+                                        })
                                     )}
                                 </TableBody>
                             </Table>

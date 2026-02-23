@@ -5,7 +5,8 @@ import {
   gradeBarangService,
   pelangganService,
   supplierService,
-  itemBarangService
+  itemBarangService,
+  itemBarangGroupService
 } from './master-data';
 import { request } from '@/lib/request';
 
@@ -157,6 +158,19 @@ export const getGradeBarangOptions = async () => {
       searchKey: item.nama || item.nama_grade || item.label || 'Unknown'
     }));
   }, 'GradeBarangService');
+};
+
+// Fetch Item Barang Group options
+export const getItemBarangGroupOptions = async () => {
+  checkMemoryUsage();
+  return await safeApiCall(async () => {
+    const response = await itemBarangGroupService.getAll();
+    return response.data.map(item => ({
+      value: item.id?.toString(),
+      label: item.nama_group_barang || 'Unknown',
+      searchKey: item.nama_group_barang || 'Unknown'
+    }));
+  }, 'ItemBarangGroupService');
 };
 
 // Fetch Term of Payment options from static API

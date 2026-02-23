@@ -26,13 +26,13 @@ export default function ApprovalPage() {
   const [loading, setLoading] = useState(false);
   const [approvingId, setApprovingId] = useState(null); // Track which request is being approved
   const [rejectingId, setRejectingId] = useState(null); // Track which request is being rejected
-  
+
   // Rejection modal state
   const [showRejectionModal, setShowRejectionModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [approveNotes, setApproveNotes] = useState("");
-  
+
 
 
   useEffect(() => {
@@ -49,22 +49,33 @@ export default function ApprovalPage() {
       const response = await itemBarangRequestService.getPendingRequests({ per_page: 100 });
       const body = response?.data;
       const rows = Array.isArray(body) ? body : (Array.isArray(body?.data) ? body.data : []);
-      const transformed = rows.map(r => ({
-        id: r.id,
-        nomor_request: r.nomor_request,
-        item: `${r.nama_item_barang || r.item_barang?.nama || '-'}`,
-        kode_item: r.kode_barang || r.item_barang?.kode || null,
-        quantity: r.quantity,
-        requested_by: r.requested_by?.name || 'Unknown',
-        requested_at: r.requested_at,
-        keterangan: r.keterangan || '',
-        status: r.status || 'pending',
-        gudang_asal: r.asal_gudang?.nama_gudang || r.gudang_asal?.nama_gudang || r.gudang?.nama_gudang || null,
-        gudang_tujuan: r.tujuan_gudang?.nama_gudang || r.gudang_tujuan?.nama_gudang || null
-      }));
+      const transformed = rows.map(r => {
+        const detailsCount = r.details?.length || 0;
+        const firstDetail = r.details?.[0];
+        const itemName = detailsCount > 1
+          ? `${firstDetail?.item_name || 'Item'} (+${detailsCount - 1} lainnya)`
+          : (firstDetail?.item_name || r.nama_item_barang || "-");
+        const totalQty = detailsCount > 0
+          ? r.details.reduce((sum, d) => sum + (d.quantity || 0), 0)
+          : (r.quantity || 0);
+
+        return {
+          id: r.id,
+          nomor_request: r.nomor_request || r.document_number,
+          item: itemName,
+          kode_item: firstDetail?.kode_barang || r.kode_barang || r.item_barang?.kode || null,
+          quantity: totalQty,
+          requested_by: r.requested_by?.name || r.user?.name || 'Unknown',
+          requested_at: r.requested_at || r.created_at,
+          keterangan: r.keterangan || r.notes || '',
+          status: r.status || 'pending',
+          gudang_asal: r.asal_gudang?.nama_gudang || r.gudang?.nama_gudang || null,
+          gudang_tujuan: r.tujuan_gudang?.nama_gudang || null
+        };
+      });
       setItemRequests(transformed);
     } catch (error) {
-      console.error('❌ Error loading delete requests:', error);
+      console.error('❌ Error loading item requests:', error);
       if (showErrorAlert) {
         showAlert("Error", "Gagal memuat data request item barang", "error");
       }
@@ -133,20 +144,20 @@ export default function ApprovalPage() {
       console.log('⏭️ Already processing rejection for request:', selectedRequest.id);
       return;
     }
-    
+
     try {
       setRejectingId(selectedRequest.id);
       const response = await itemBarangRequestService.reject(selectedRequest.id, { approval_notes: reason || "" });
       console.log('❌ Item request rejected:', response);
-      
+
       // Close modal first
       setShowRejectionModal(false);
-      
+
       // Show success message and reload data after alert closes
       showAlert("Sukses", "Request item barang ditolak!", "success", () => {
         loadItemRequests(false);
       });
-      
+
     } catch (error) {
       console.error('❌ Error rejecting request:', error);
       showAlert("Error", "Gagal menolak request", "error");
@@ -171,6 +182,8 @@ export default function ApprovalPage() {
     switch (status) {
       case 'pending':
         return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
+      case 'reviewed':
+        return <Badge className="bg-blue-100 text-blue-800"><Clock className="w-3 h-3 mr-1" />Reviewed</Badge>;
       case 'approved':
         return <Badge className="bg-green-100 text-green-800"><Check className="w-3 h-3 mr-1" />Disetujui</Badge>;
       case 'rejected':
@@ -196,179 +209,179 @@ export default function ApprovalPage() {
                 <TabsTrigger value="sales-order">Sales Order</TabsTrigger>
               )}
             </TabsList>
-            
+
             {canUpdateItemRequest && (
-            <TabsContent value="item-barang-request" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Permintaan Item Barang Request</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {loading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                      <span className="ml-2">Loading data...</span>
-                    </div>
-                  ) : itemRequests.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      Tidak ada request item barang
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-gray-50">
-                            <TableHead className="font-semibold">No Request</TableHead>
-                            <TableHead className="font-semibold">Item</TableHead>
-                            <TableHead className="font-semibold">Quantity</TableHead>
-                            <TableHead className="font-semibold">Gudang Asal</TableHead>
-                            <TableHead className="font-semibold">Gudang Tujuan</TableHead>
-                            <TableHead className="font-semibold">Diminta Oleh</TableHead>
-                            <TableHead className="font-semibold">Tanggal Request</TableHead>
-                            <TableHead className="font-semibold">Keterangan</TableHead>
-                            <TableHead className="font-semibold">Status</TableHead>
-                            <TableHead className="font-semibold text-center">Aksi</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {itemRequests.map((request) => (
-                            <TableRow key={request.id} className="hover:bg-gray-50">
-                              <TableCell className="font-medium">{request.nomor_request}</TableCell>
-                              <TableCell>
-                                <div className="flex flex-col">
-                                  <span className="font-medium">{request.item}</span>
-                                  <span className="text-xs text-gray-500">{request.kode_item || '-'}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell>{request.quantity}</TableCell>
-                              <TableCell>{request.gudang_asal || '-'}</TableCell>
-                              <TableCell>{request.gudang_tujuan || '-'}</TableCell>
-                              <TableCell>{request.requested_by}</TableCell>
-                              <TableCell>{formatDate(request.requested_at)}</TableCell>
-                              <TableCell className="max-w-xs truncate" title={request.keterangan}>
-                                {request.keterangan}
-                              </TableCell>
-                              <TableCell>{getStatusBadge(request.status)}</TableCell>
-                              <TableCell>
-                                <div className="flex flex-col sm:flex-row gap-2 justify-center">
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline" 
-                                    onClick={() => navigate(`/item-barang-request/view/${request.id}`, { state: { fromApproval: true } })}
-                                    title="Lihat Request"
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </Button>
-                                  {request.status === 'pending' && (
-                                    <>
-                                      <Button 
-                                        size="sm" 
-                                        className="bg-green-600 hover:bg-green-700" 
-                                        onClick={() => handleApprove(request)}
-                                        title="Setujui"
-                                      >
-                                        {approvingId === request.id ? (
-                                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                        ) : (
-                                          <Check className="w-4 h-4" />
-                                        )}
-                                      </Button>
-                                      <Button 
-                                        size="sm" 
-                                        variant="destructive" 
-                                        onClick={() => handleReject(request)}
-                                        title="Tolak"
-                                      >
-                                        {rejectingId === request.id ? (
-                                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                        ) : (
-                                          <X className="w-4 h-4" />
-                                        )}
-                                      </Button>
-                                    </>
-                                  )}
-                                </div>
-                              </TableCell>
+              <TabsContent value="item-barang-request" className="mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Permintaan Item Barang Request</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {loading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <span className="ml-2">Loading data...</span>
+                      </div>
+                    ) : itemRequests.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        Tidak ada request item barang
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50">
+                              <TableHead className="font-semibold">No Request</TableHead>
+                              <TableHead className="font-semibold">Item</TableHead>
+                              <TableHead className="font-semibold">Quantity</TableHead>
+                              <TableHead className="font-semibold">Gudang Asal</TableHead>
+                              <TableHead className="font-semibold">Gudang Tujuan</TableHead>
+                              <TableHead className="font-semibold">Diminta Oleh</TableHead>
+                              <TableHead className="font-semibold">Tanggal Request</TableHead>
+                              <TableHead className="font-semibold">Keterangan</TableHead>
+                              <TableHead className="font-semibold">Status</TableHead>
+                              <TableHead className="font-semibold text-center">Aksi</TableHead>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+                          </TableHeader>
+                          <TableBody>
+                            {itemRequests.map((request) => (
+                              <TableRow key={request.id} className="hover:bg-gray-50">
+                                <TableCell className="font-medium">{request.nomor_request}</TableCell>
+                                <TableCell>
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{request.item}</span>
+                                    <span className="text-xs text-gray-500">{request.kode_item || '-'}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>{request.quantity}</TableCell>
+                                <TableCell>{request.gudang_asal || '-'}</TableCell>
+                                <TableCell>{request.gudang_tujuan || '-'}</TableCell>
+                                <TableCell>{request.requested_by}</TableCell>
+                                <TableCell>{formatDate(request.requested_at)}</TableCell>
+                                <TableCell className="max-w-xs truncate" title={request.keterangan}>
+                                  {request.keterangan}
+                                </TableCell>
+                                <TableCell>{getStatusBadge(request.status)}</TableCell>
+                                <TableCell>
+                                  <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => navigate(`/item-barang-request/view/${request.id}`, { state: { fromApproval: true } })}
+                                      title="Lihat Request"
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </Button>
+                                    {request.status === 'pending' && (
+                                      <>
+                                        <Button
+                                          size="sm"
+                                          className="bg-green-600 hover:bg-green-700"
+                                          onClick={() => handleApprove(request)}
+                                          title="Setujui"
+                                        >
+                                          {approvingId === request.id ? (
+                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                          ) : (
+                                            <Check className="w-4 h-4" />
+                                          )}
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="destructive"
+                                          onClick={() => handleReject(request)}
+                                          title="Tolak"
+                                        >
+                                          {rejectingId === request.id ? (
+                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                          ) : (
+                                            <X className="w-4 h-4" />
+                                          )}
+                                        </Button>
+                                      </>
+                                    )}
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
             )}
 
             {canUpdateSOApproval && (
-            <TabsContent value="sales-order" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Permintaan Hapus Sales Order</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {loading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                      <span className="ml-2">Loading data...</span>
-                    </div>
-                  ) : soDeleteRequests.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">Tidak ada permintaan hapus Sales Order</div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-gray-50">
-                            <TableHead className="font-semibold">No SO</TableHead>
-                            <TableHead className="font-semibold">Pelanggan</TableHead>
-                            <TableHead className="font-semibold">Diminta Oleh</TableHead>
-                            <TableHead className="font-semibold">Tanggal Request</TableHead>
-                            <TableHead className="font-semibold">Alasan</TableHead>
-                            <TableHead className="font-semibold">Status</TableHead>
-                            <TableHead className="font-semibold text-center">Aksi</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {soDeleteRequests.map((r) => (
-                            <TableRow key={r.id} className="hover:bg-gray-50">
-                              <TableCell className="font-medium">{r.no_so}</TableCell>
-                              <TableCell>{r.pelanggan}</TableCell>
-                              <TableCell>{r.requested_by}</TableCell>
-                              <TableCell>{formatDate(r.requested_at)}</TableCell>
-                              <TableCell className="max-w-xs truncate" title={r.reason}>{r.reason}</TableCell>
-                              <TableCell>{getStatusBadge(r.status)}</TableCell>
-                              <TableCell>
-                                <div className="flex flex-col sm:flex-row gap-2 justify-center">
-                                  <Button size="sm" variant="outline" onClick={() => navigate(`/sales-order/view/${r.id}`)} title="Lihat SO">
-                                    <Eye className="w-4 h-4" />
-                                  </Button>
-                                  <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={async () => {
-                                    try { await salesOrderService.approveDelete(r.id); showAlert("Sukses", "Permintaan hapus disetujui", "success", () => loadSalesOrderDeleteRequests(false)); } catch (e) { showAlert("Error", "Gagal menyetujui", "error"); }
-                                  }} title="Setujui">
-                                    <Check className="w-4 h-4" />
-                                  </Button>
-                                  <Button size="sm" variant="destructive" onClick={() => {
-                                    setSelectedRequest(r);
-                                    setShowRejectionModal(true);
-                                  }} title="Tolak">
-                                    <X className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              </TableCell>
+              <TabsContent value="sales-order" className="mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Permintaan Hapus Sales Order</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {loading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <span className="ml-2">Loading data...</span>
+                      </div>
+                    ) : soDeleteRequests.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">Tidak ada permintaan hapus Sales Order</div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50">
+                              <TableHead className="font-semibold">No SO</TableHead>
+                              <TableHead className="font-semibold">Pelanggan</TableHead>
+                              <TableHead className="font-semibold">Diminta Oleh</TableHead>
+                              <TableHead className="font-semibold">Tanggal Request</TableHead>
+                              <TableHead className="font-semibold">Alasan</TableHead>
+                              <TableHead className="font-semibold">Status</TableHead>
+                              <TableHead className="font-semibold text-center">Aksi</TableHead>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+                          </TableHeader>
+                          <TableBody>
+                            {soDeleteRequests.map((r) => (
+                              <TableRow key={r.id} className="hover:bg-gray-50">
+                                <TableCell className="font-medium">{r.no_so}</TableCell>
+                                <TableCell>{r.pelanggan}</TableCell>
+                                <TableCell>{r.requested_by}</TableCell>
+                                <TableCell>{formatDate(r.requested_at)}</TableCell>
+                                <TableCell className="max-w-xs truncate" title={r.reason}>{r.reason}</TableCell>
+                                <TableCell>{getStatusBadge(r.status)}</TableCell>
+                                <TableCell>
+                                  <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                                    <Button size="sm" variant="outline" onClick={() => navigate(`/sales-order/view/${r.id}`)} title="Lihat SO">
+                                      <Eye className="w-4 h-4" />
+                                    </Button>
+                                    <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={async () => {
+                                      try { await salesOrderService.approveDelete(r.id); showAlert("Sukses", "Permintaan hapus disetujui", "success", () => loadSalesOrderDeleteRequests(false)); } catch (e) { showAlert("Error", "Gagal menyetujui", "error"); }
+                                    }} title="Setujui">
+                                      <Check className="w-4 h-4" />
+                                    </Button>
+                                    <Button size="sm" variant="destructive" onClick={() => {
+                                      setSelectedRequest(r);
+                                      setShowRejectionModal(true);
+                                    }} title="Tolak">
+                                      <X className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
             )}
           </Tabs>
         </CardContent>
       </Card>
-      
+
       {/* Rejection Modal */}
       <RejectionModal
         open={showRejectionModal}
@@ -400,7 +413,7 @@ export default function ApprovalPage() {
           </div>
         )}
       />
-      
+
       {/* Alert Modal Component */}
       <AlertComponent />
     </SalesOrderLayout>

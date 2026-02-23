@@ -91,5 +91,13 @@ export const itemBarangRequestService = {
             method: 'GET',
             params
         });
+    },
+
+    // Assign specific item to a request detail (admin only)
+    assignItem: async (detailId, itemBarangId) => {
+        return await request(`${API_ENDPOINTS.itemBarangRequest}/detail/${detailId}/assign-item`, {
+            method: 'PATCH',
+            body: JSON.stringify({ id_item_barang: itemBarangId })
+        });
     }
 };
