@@ -38,7 +38,8 @@ import PurchaseOrderPage from "@/pages/purchase-order";
 import AddPurchaseOrderPage from "@/pages/purchase-order/add";
 import ViewPurchaseOrderPage from "@/pages/purchase-order/view";
 import FinanceInvoicePodPage from "@/pages/finance-invoice-pod";
-import PembayaranPage from "@/pages/pembayaran";
+import PembayaranPOPage from "@/pages/pembayaran/PembayaranPO";
+import PenerimaanKasPage from "@/pages/pembayaran/PenerimaanKas";
 import FinancialReportPage from "@/pages/financial-report";
 import SystemLogPage from "@/pages/SystemLog";
 
@@ -103,7 +104,8 @@ const AppRouter = () => {
       <Route path="/dashboard/workshop" element={<DashboardWorkshopPage />} />
 
       <Route path="/finance-invoice-pod" element={<FinanceInvoicePodPage />} />
-      <Route path="/pembayaran" element={<PembayaranPage />} />
+      <Route path="/pembayaran-po" element={<PembayaranPOPage />} />
+      <Route path="/penerimaan-kas" element={<PenerimaanKasPage />} />
       <Route path="/financial-report" element={<FinancialReportPage />} />
       <Route path="/mutasi-stock" element={<MutasiStockPage />} />
       <Route path="/mutasi-stock/add" element={<AddMutasiStockPage />} />

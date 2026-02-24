@@ -202,7 +202,7 @@ export function useAlert() {
     cancelText: 'Batal',
   })
 
-  const showAlert = (title, message, type = 'info', onConfirm = null) => {
+  const showAlert = React.useCallback((title, message, type = 'info', onConfirm = null) => {
     setAlertState({
       isOpen: true,
       title,
@@ -219,9 +219,9 @@ export function useAlert() {
       confirmText: 'OK',
       cancelText: 'Batal',
     })
-  }
+  }, [])
 
-  const showConfirm = (title, message, onConfirm, onCancel = null, confirmText = 'Ya', cancelText = 'Batal') => {
+  const showConfirm = React.useCallback((title, message, onConfirm, onCancel = null, confirmText = 'Ya', cancelText = 'Batal') => {
     setAlertState({
       isOpen: true,
       title,
@@ -239,13 +239,13 @@ export function useAlert() {
       confirmText,
       cancelText,
     })
-  }
+  }, [])
 
-  const closeAlert = () => {
+  const closeAlert = React.useCallback(() => {
     setAlertState(prev => ({ ...prev, isOpen: false }))
-  }
+  }, [])
 
-  const AlertComponent = () => (
+  const AlertComponent = React.useCallback(() => (
     <AlertModal
       open={alertState.isOpen}
       onOpenChange={(open) => setAlertState(prev => ({ ...prev, isOpen: open }))}
@@ -258,7 +258,7 @@ export function useAlert() {
       confirmText={alertState.confirmText}
       cancelText={alertState.cancelText}
     />
-  )
+  ), [alertState.isOpen, alertState.title, alertState.message, alertState.type, alertState.onConfirm, alertState.onCancel, alertState.showCancel, alertState.confirmText, alertState.cancelText])
 
   return {
     showAlert,
