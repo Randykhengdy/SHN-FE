@@ -1,6 +1,7 @@
 import React from "react";
 import MasterDataLayout from "@/components/MasterDataLayout";
 import { tipeBarangService } from "@/services/master-data";
+import { Download } from "lucide-react";
 
 const CheckIcon = () => (
     <span className="text-green-600 font-bold">✓</span>
@@ -39,6 +40,20 @@ export default function TipeBarangPage() {
             subtitle="Master Data"
             service={tipeBarangService}
             preprocess={preprocessTipeBarang}
+            customHeaderButtons={[
+                {
+                    label: "Download Template",
+                    icon: <Download className="h-4 w-4" />,
+                    onClick: async () => {
+                        try {
+                            await tipeBarangService.downloadTemplate();
+                        } catch (error) {
+                            console.error("Download template failed:", error);
+                        }
+                    },
+                    className: "bg-green-600 hover:bg-green-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
+                }
+            ]}
             fields={[
                 { name: "name", label: "Nama Tipe", maxLength: 255, colSpan: 2 },
                 { name: "desc", label: "Deskripsi", maxLength: 500, colSpan: 2 },

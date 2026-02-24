@@ -11,11 +11,11 @@ export const supplierService = {
       page: page.toString(),
       per_page: perPage.toString()
     });
-    
+
     if (sortBy && sortDir) {
       params.append('sort', `${sortBy},${sortDir}`);
     }
-    
+
     return request(`/supplier?${params}`, { method: "GET" });
   },
 
@@ -73,11 +73,41 @@ export const supplierService = {
       page: page.toString(),
       per_page: perPage.toString()
     });
-    
+
     if (sortBy && sortDir) {
       params.append('sort', `${sortBy},${sortDir}`);
     }
-    
+
     return request(`/supplier/with-trashed/trashed?${params}`, { method: "GET" });
+  },
+
+  async downloadTemplate() {
+    const { getAuthHeader } = await import("../../api/GetAuthHeader");
+    const apiConfig = (await import("../../config/api")).default;
+
+    let base = apiConfig.baseUrl || '';
+    if (!/^https?:\/\//i.test(base)) {
+      base = `http://${base}`;
+    }
+    const url = `${base}/supplier/download-template`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { ...getAuthHeader() },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = downloadUrl;
+    a.download = "Template_Supplier.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(downloadUrl);
   }
 };

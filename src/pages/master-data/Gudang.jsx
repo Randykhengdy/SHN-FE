@@ -8,6 +8,7 @@ import {
   DialogTitle
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
 
 export default function GudangPage() {
   const [rakDialogOpen, setRakDialogOpen] = useState(false);
@@ -47,6 +48,20 @@ export default function GudangPage() {
         title="Gudang"
         subtitle="Master Data"
         service={gudangService}
+        customHeaderButtons={[
+          {
+            label: "Download Template",
+            icon: <Download className="h-4 w-4" />,
+            onClick: async () => {
+              try {
+                await gudangService.downloadTemplate();
+              } catch (error) {
+                console.error("Download template failed:", error);
+              }
+            },
+            className: "bg-green-600 hover:bg-green-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
+          }
+        ]}
         validate={(form) => {
           const errs = [];
           if (errs.length) return `Field wajib: ${errs.join(", ")}`;

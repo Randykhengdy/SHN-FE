@@ -10,6 +10,7 @@ import {
   gudangService,
   rakService
 } from "@/services/master-data";
+import { Download } from "lucide-react";
 
 // Module-level variable untuk menyimpan mapping dimensi bentuk barang
 let bentukBarangDimensiMap = {};
@@ -60,6 +61,20 @@ export default function ItemBarangPage() {
             </label>
           </div>
         }
+        customHeaderButtons={[
+          {
+            label: "Download Template",
+            icon: <Download className="h-4 w-4" />,
+            onClick: async () => {
+              try {
+                await itemBarangService.downloadTemplate();
+              } catch (error) {
+                console.error("Download template failed:", error);
+              }
+            },
+            className: "bg-green-600 hover:bg-green-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
+          }
+        ]}
         customActions={[
           {
             label: "Edit Canvas",

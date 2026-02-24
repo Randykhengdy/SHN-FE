@@ -1,6 +1,7 @@
 import React from "react";
 import MasterDataLayout from "@/components/MasterDataLayout";
 import { supplierService } from "@/services/master-data";
+import { Download } from "lucide-react";
 
 export default function SupplierPage() {
   return (
@@ -8,6 +9,20 @@ export default function SupplierPage() {
       title="Supplier"
       subtitle="Master Data"
       service={supplierService}
+      customHeaderButtons={[
+        {
+          label: "Download Template",
+          icon: <Download className="h-4 w-4" />,
+          onClick: async () => {
+            try {
+              await supplierService.downloadTemplate();
+            } catch (error) {
+              console.error("Download template failed:", error);
+            }
+          },
+          className: "bg-green-600 hover:bg-green-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
+        }
+      ]}
       fields={[
         { name: "kode", label: "Kode", maxLength: 16, disabledOnEdit: true },
         { name: "nama_supplier", label: "Nama Supplier", maxLength: 64 },

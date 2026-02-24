@@ -1,6 +1,7 @@
 import React from "react";
 import MasterDataLayout from "@/components/MasterDataLayout";
 import { bentukBarangService, tipeBarangService } from "@/services/master-data";
+import { Download } from "lucide-react";
 
 // Preprocess to convert tipe_barang_id from string to number
 const preprocessBentukBarang = (formData) => {
@@ -24,6 +25,20 @@ export default function BentukBarangPage() {
       subtitle="Master Data"
       service={bentukBarangService}
       preprocess={preprocessBentukBarang}
+      customHeaderButtons={[
+        {
+          label: "Download Template",
+          icon: <Download className="h-4 w-4" />,
+          onClick: async () => {
+            try {
+              await bentukBarangService.downloadTemplate();
+            } catch (error) {
+              console.error("Download template failed:", error);
+            }
+          },
+          className: "bg-green-600 hover:bg-green-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
+        }
+      ]}
       fields={[
         { name: "kode", label: "Kode", maxLength: 8, disabledOnEdit: true },
         { name: "nama_bentuk", label: "Nama Bentuk", maxLength: 32 },

@@ -1,6 +1,7 @@
 import React from "react";
 import MasterDataLayout from "@/components/MasterDataLayout";
 import { pelaksanaService } from "@/services/master-data";
+import { Download } from "lucide-react";
 
 export default function PelaksanaPage() {
   return (
@@ -8,6 +9,20 @@ export default function PelaksanaPage() {
       title="Pelaksana"
       subtitle="Master Data"
       service={pelaksanaService}
+      customHeaderButtons={[
+        {
+          label: "Download Template",
+          icon: <Download className="h-4 w-4" />,
+          onClick: async () => {
+            try {
+              await pelaksanaService.downloadTemplate();
+            } catch (error) {
+              console.error("Download template failed:", error);
+            }
+          },
+          className: "bg-green-600 hover:bg-green-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
+        }
+      ]}
       fields={[
         { name: "kode", label: "Kode", maxLength: 8, disabledOnEdit: true },
         { name: "nama_pelaksana", label: "Nama Pelaksana", maxLength: 64 },

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import MasterDataLayout from "@/components/MasterDataLayout";
 import { rakService, gudangService } from "@/services/master-data";
+import { Download } from "lucide-react";
 
 export default function RakPage() {
   const [selectedRaks, setSelectedRaks] = useState([]);
@@ -10,6 +11,20 @@ export default function RakPage() {
       title="Rak"
       subtitle="Master Data"
       service={rakService}
+      customHeaderButtons={[
+        {
+          label: "Download Template",
+          icon: <Download className="h-4 w-4" />,
+          onClick: async () => {
+            try {
+              await rakService.downloadTemplate();
+            } catch (error) {
+              console.error("Download template failed:", error);
+            }
+          },
+          className: "bg-green-600 hover:bg-green-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
+        }
+      ]}
       selection={{
         visible: () => true,
         isSelected: (item) => !!selectedRaks.find((r) => r.id === item.id),

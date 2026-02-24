@@ -3,7 +3,7 @@ import MasterDataLayout from "@/components/MasterDataLayout";
 import { beratJenisService, bentukBarangService, itemBarangGroupService } from "@/services/master-data";
 import { getJenisBarangOptions, getGradeBarangOptions } from "@/services/masterDataService";
 import { useAlert } from "@/hooks/useAlert";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Download } from "lucide-react";
 
 export default function BeratJenisPage() {
   const [activeTab, setActiveTab] = useState('1D'); // Tab state: '1D' or '2D'
@@ -188,6 +188,18 @@ export default function BeratJenisPage() {
             className: generating
               ? "bg-gray-400 cursor-not-allowed text-white font-medium shadow-sm transition-all duration-200"
               : "bg-green-600 hover:bg-green-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
+          },
+          {
+            label: "Download Template",
+            icon: <Download className="h-4 w-4" />,
+            onClick: async () => {
+              try {
+                await beratJenisService.downloadTemplate();
+              } catch (error) {
+                console.error("Download template failed:", error);
+              }
+            },
+            className: "bg-green-600 hover:bg-green-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
           }
         ]}
         validate={(form) => {

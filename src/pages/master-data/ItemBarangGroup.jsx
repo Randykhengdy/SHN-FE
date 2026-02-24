@@ -3,6 +3,7 @@ import MasterDataLayout from "@/components/MasterDataLayout";
 import { Button } from "@/components/ui/button";
 import { itemBarangGroupService, jenisBarangService, bentukBarangService, gradeBarangService } from "@/services/master-data";
 import { useAlert } from "@/hooks/useAlert";
+import { Download } from "lucide-react";
 
 // Module-level variable untuk menyimpan mapping dimensi bentuk barang
 let bentukBarangDimensiMap = {};
@@ -86,6 +87,20 @@ export default function ItemBarangGroupPage() {
                     </Button>
                 </div>
             }
+            customHeaderButtons={[
+                {
+                    label: "Download Template",
+                    icon: <Download className="h-4 w-4" />,
+                    onClick: async () => {
+                        try {
+                            await itemBarangGroupService.downloadTemplate();
+                        } catch (error) {
+                            console.error("Download template failed:", error);
+                        }
+                    },
+                    className: "bg-green-600 hover:bg-green-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
+                }
+            ]}
             fields={[
                 {
                     name: "jenis_barang_id",
