@@ -40,6 +40,7 @@ import ViewPurchaseOrderPage from "@/pages/purchase-order/view";
 import FinanceInvoicePodPage from "@/pages/finance-invoice-pod";
 import PembayaranPage from "@/pages/pembayaran";
 import FinancialReportPage from "@/pages/financial-report";
+import SystemLogPage from "@/pages/SystemLog";
 
 import DashboardWorkshopPage from "@/pages/dashboard/workshop";
 import MutasiStockPage from "@/pages/mutasi-stock";
@@ -116,6 +117,7 @@ const AppRouter = () => {
 
       <Route path="/notifications" element={<NotificationsPage />} />
       <Route path="/input-harga-barang-datang" element={<InputHargaBarangDatangPage />} />
+      <Route path="/system-log" element={<SystemLogPage />} />
 
       <Route path="/wo-actual" element={<WOActualPage />} />
       <Route path="/wo-actual/add" element={<AddWOActualPage />} />

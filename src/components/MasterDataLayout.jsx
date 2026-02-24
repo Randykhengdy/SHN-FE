@@ -326,7 +326,7 @@ export default function MasterDataLayout({
                   {customHeaderButtons && customHeaderButtons.map((button, index) => (
                     <Button
                       key={index}
-                      onClick={button.onClick}
+                      onClick={(e) => button.onClick(e, fetchData)}
                       disabled={button.disabled}
                       className={button.className || "bg-green-600 hover:bg-green-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"}
                     >

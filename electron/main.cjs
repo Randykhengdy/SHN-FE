@@ -540,6 +540,10 @@ function createWindow() {
           }
         },
         {
+          label: 'System Log',
+          click: () => mainWindow.webContents.send('navigate-to', '/system-log')
+        },
+        {
           label: 'Check for Updates…',
           enabled: true,
           click: async () => {
