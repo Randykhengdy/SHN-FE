@@ -109,5 +109,15 @@ export const tipeBarangService = {
         a.click();
         a.remove();
         window.URL.revokeObjectURL(downloadUrl);
+    },
+
+    async importData(file) {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        return request("/tipe-barang/import", {
+            method: "POST",
+            body: formData,
+        });
     }
 };

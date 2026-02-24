@@ -8,9 +8,28 @@ import {
   DialogTitle
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { Download, Upload } from "lucide-react";
+import { useAlert } from "@/hooks/useAlert";
 
 export default function GudangPage() {
+  const fileInputRef = React.useRef(null);
+  const { showAlert, AlertComponent } = useAlert();
+
+  const handleImport = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      const result = await gudangService.importData(file);
+      showAlert("Import Berhasil", result.message, "success");
+      window.location.reload();
+    } catch (error) {
+      showAlert("Import Gagal", error.message || "Terjadi kesalahan saat mengimport data", "error");
+    } finally {
+      event.target.value = ""; // Reset input
+    }
+  };
+
   const [rakDialogOpen, setRakDialogOpen] = useState(false);
   const [rakList, setRakList] = useState([]);
   const [rakLoading, setRakLoading] = useState(false);
@@ -44,6 +63,14 @@ export default function GudangPage() {
 
   return (
     <>
+      <AlertComponent />
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        accept=".csv"
+        onChange={handleImport}
+      />
       <MasterDataLayout
         title="Gudang"
         subtitle="Master Data"
@@ -60,6 +87,12 @@ export default function GudangPage() {
               }
             },
             className: "bg-green-600 hover:bg-green-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
+          },
+          {
+            label: "Import Data",
+            icon: <Upload className="h-4 w-4" />,
+            onClick: () => fileInputRef.current?.click(),
+            className: "bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
           }
         ]}
         validate={(form) => {

@@ -103,7 +103,7 @@ export default function JenisBarangPage() {
             onClick: handleImportClick,
             disabled: importLoading,
             icon: <Upload size={16} />,
-            className: "bg-orange-600 hover:bg-orange-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200",
+            className: "bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200",
           },
         ]}
       />

@@ -115,5 +115,15 @@ export const gudangService = {
     a.click();
     a.remove();
     window.URL.revokeObjectURL(downloadUrl);
+  },
+
+  async importData(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    return request("/gudang/import", {
+      method: "POST",
+      body: formData,
+    });
   }
 };

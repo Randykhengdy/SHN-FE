@@ -111,5 +111,18 @@ export const gradeBarangService = {
     a.click();
     a.remove();
     window.URL.revokeObjectURL(downloadUrl);
+  },
+
+  async importData(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    return request("/grade-barang/import", {
+      method: "POST",
+      body: formData,
+      headers: {
+        // request.js should handle Content-Type when body is FormData
+      },
+    });
   }
 };

@@ -116,5 +116,15 @@ export const pelangganService = {
     a.click();
     a.remove();
     window.URL.revokeObjectURL(downloadUrl);
+  },
+
+  async importData(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    return request("/api/pelanggan/import", {
+      method: "POST",
+      body: formData,
+    });
   }
 };

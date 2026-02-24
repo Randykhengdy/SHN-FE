@@ -109,5 +109,15 @@ export const pelaksanaService = {
     a.click();
     a.remove();
     window.URL.revokeObjectURL(downloadUrl);
+  },
+
+  async importData(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    return request("/pelaksana/import", {
+      method: "POST",
+      body: formData,
+    });
   }
 };

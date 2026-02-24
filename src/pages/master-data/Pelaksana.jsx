@@ -1,39 +1,72 @@
 import React from "react";
 import MasterDataLayout from "@/components/MasterDataLayout";
 import { pelaksanaService } from "@/services/master-data";
-import { Download } from "lucide-react";
+import { Download, Upload } from "lucide-react";
+import { useAlert } from "@/hooks/useAlert";
 
 export default function PelaksanaPage() {
+  const fileInputRef = React.useRef(null);
+  const { showAlert, AlertComponent } = useAlert();
+
+  const handleImport = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      const result = await pelaksanaService.importData(file);
+      showAlert("Import Berhasil", result.message, "success");
+      window.location.reload();
+    } catch (error) {
+      showAlert("Import Gagal", error.message || "Terjadi kesalahan saat mengimport data", "error");
+    } finally {
+      event.target.value = ""; // Reset input
+    }
+  };
+
   return (
-    <MasterDataLayout
-      title="Pelaksana"
-      subtitle="Master Data"
-      service={pelaksanaService}
-      customHeaderButtons={[
-        {
-          label: "Download Template",
-          icon: <Download className="h-4 w-4" />,
-          onClick: async () => {
-            try {
-              await pelaksanaService.downloadTemplate();
-            } catch (error) {
-              console.error("Download template failed:", error);
-            }
+    <>
+      <AlertComponent />
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        accept=".csv"
+        onChange={handleImport}
+      />
+      <MasterDataLayout
+        title="Pelaksana"
+        subtitle="Master Data"
+        service={pelaksanaService}
+        customHeaderButtons={[
+          {
+            label: "Download Template",
+            icon: <Download className="h-4 w-4" />,
+            onClick: async () => {
+              try {
+                await pelaksanaService.downloadTemplate();
+              } catch (error) {
+                console.error("Download template failed:", error);
+              }
+            },
+            className: "bg-green-600 hover:bg-green-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
           },
-          className: "bg-green-600 hover:bg-green-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
-        }
-      ]}
-      fields={[
-        { name: "kode", label: "Kode", maxLength: 8, disabledOnEdit: true },
-        { name: "nama_pelaksana", label: "Nama Pelaksana", maxLength: 64 },
-        { name: "level", label: "Level", maxLength: 16 },
-      ]}
-      columns={[
-        { key: "id", label: "ID", align: "center", width: "5rem", maxWidth: "5rem" },
-        { key: "kode", label: "Kode", align: "center", width: "8rem", maxWidth: "8rem" },
-        { key: "nama_pelaksana", label: "Nama Pelaksana", align: "left", minWidth: "15rem", maxWidth: "20rem" },
-        { key: "level", label: "Level", align: "center", width: "8rem", maxWidth: "8rem" },
-      ]}
-    />
+          {
+            label: "Import Data",
+            icon: <Upload className="h-4 w-4" />,
+            onClick: () => fileInputRef.current?.click(),
+            className: "bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
+          }
+        ]}
+        fields={[
+          { name: "kode", label: "Kode", maxLength: 8, disabledOnEdit: true },
+          { name: "nama_pelaksana", label: "Nama Pelaksana", maxLength: 64 },
+        ]}
+        columns={[
+          { key: "id", label: "ID", align: "center", width: "5rem", maxWidth: "5rem" },
+          { key: "kode", label: "Kode", align: "center", width: "8rem", maxWidth: "8rem" },
+          { key: "nama_pelaksana", label: "Nama Pelaksana", align: "left", minWidth: "15rem", maxWidth: "20rem" },
+        ]}
+      />
+    </>
   );
 }
