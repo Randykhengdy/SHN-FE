@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAlert } from "@/hooks/useAlert";
-import { Download, Eye, Plus, RefreshCw, Trash2, Check, X, Edit } from "lucide-react";
+import { Download, Eye, Plus, RefreshCw, Trash2, Check, X, Edit, UserPlus } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getGudangOptions } from "@/services/masterDataService";
 import { useNavigate } from "react-router-dom";
@@ -18,6 +18,7 @@ import { useAppContext } from "@/context/AppContext";
 const statusOptions = [
     { value: "all", label: "Semua Status" },
     { value: "pending", label: "Pending" },
+    { value: "reviewed", label: "Reviewed/Assigned" },
     { value: "approved", label: "Approved" },
     { value: "rejected", label: "Rejected" },
 ];
@@ -32,6 +33,7 @@ export default function ItemBarangRequestPage() {
     const canRead = hasPermission && hasPermission('ITEM_BARANG_REQUEST', 'Read');
     const canCreate = hasPermission && hasPermission('ITEM_BARANG_REQUEST', 'Create');
     const canDelete = hasPermission && hasPermission('ITEM_BARANG_REQUEST', 'Delete');
+    const isAdminUser = isAdmin();
     const showAlertRef = useRef(showAlert);
     useEffect(() => { showAlertRef.current = showAlert; }, [showAlert]);
 
@@ -163,6 +165,7 @@ export default function ItemBarangRequestPage() {
     const getStatusBadge = (status) => {
         const statusConfig = {
             pending: { variant: "secondary", label: "Pending" },
+            reviewed: { variant: "outline", label: "Reviewed" },
             approved: { variant: "default", label: "Approved" },
             rejected: { variant: "destructive", label: "Rejected" },
         };
@@ -302,6 +305,16 @@ export default function ItemBarangRequestPage() {
                                                             >
                                                                 <Eye className="h-4 w-4" />
                                                             </Button>
+                                                            {isAdminUser && (request.status === 'pending' || request.status === 'reviewed') && (
+                                                                <Button
+                                                                    size="sm"
+                                                                    onClick={() => navigate(`/item-barang-request/view/${request.id}`)}
+                                                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                                                    title="Assign Item"
+                                                                >
+                                                                    <UserPlus className="h-4 w-4" />
+                                                                </Button>
+                                                            )}
                                                             {canDelete && request.status === 'pending' ? (
                                                                 <Button
                                                                     size="sm"

@@ -1,8 +1,12 @@
 import { request } from "../../lib/request";
 
 export const itemBarangService = {
-  async getAll() {
-    return request("/item-barang", { method: "GET" });
+  async getAll(params = {}) {
+    const filteredParams = Object.fromEntries(
+      Object.entries(params).filter(([_, v]) => v !== undefined && v !== null)
+    );
+    const queryString = new URLSearchParams(filteredParams).toString();
+    return request(`/item-barang?${queryString}`, { method: "GET" });
   },
 
   async getPaginated(page = 1, perPage = 10, search = "", sortBy = "", sortDir = "asc") {

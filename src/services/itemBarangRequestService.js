@@ -4,10 +4,14 @@ import { API_ENDPOINTS } from "@/config/api";
 export const itemBarangRequestService = {
     // Get all item barang requests
     getAll: async (params = {}) => {
-        const queryString = new URLSearchParams(params).toString();
+        // Filter out undefined/null values
+        const filteredParams = Object.fromEntries(
+            Object.entries(params).filter(([_, v]) => v !== undefined && v !== null)
+        );
+        const queryString = new URLSearchParams(filteredParams).toString();
         return await request(`${API_ENDPOINTS.itemBarangRequest}?${queryString}`, {
             method: 'GET',
-            params
+            params: filteredParams
         });
     },
 
@@ -94,10 +98,10 @@ export const itemBarangRequestService = {
     },
 
     // Assign specific item to a request detail (admin only)
-    assignItem: async (detailId, itemBarangId) => {
+    assignItem: async (detailId, itemAssignments) => {
         return await request(`${API_ENDPOINTS.itemBarangRequest}/detail/${detailId}/assign-item`, {
             method: 'PATCH',
-            body: JSON.stringify({ id_item_barang: itemBarangId })
+            body: JSON.stringify({ item_assignments: itemAssignments })
         });
     }
 };

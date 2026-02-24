@@ -1344,19 +1344,29 @@ export const generateItemRequestPrintContent = (req) => {
       <table>
         <thead>
           <tr>
-            <th>Nama Item Barang</th>
-            <th>Kode Item Barang</th>
-            <th>Quantity</th>
+            <th>No</th>
+            <th>Nama Item Group</th>
+            <th>Allocated Physical items</th>
+            <th>Total Qty</th>
             <th>Keterangan</th>
           </tr>
         </thead>
         <tbody>
+          ${(req.details || []).map((detail, idx) => `
           <tr>
-            <td>${safe(req.nama_item_barang)}</td>
-            <td>${safe(req.kode_barang)}</td>
-            <td>${safe(req.quantity)}</td>
-            <td>${safe(req.keterangan)}</td>
+            <td style="text-align: center;">${idx + 1}</td>
+            <td>${safe(detail.item_name)}</td>
+            <td>
+              ${(detail.assigned_items || []).map(ai => `
+                <div style="font-size: 11px; margin-bottom: 2px;">
+                  <b>${ai.kode_barang}</b> (qty: ${ai.quantity})
+                </div>
+              `).join('') || '<span style="color: #999; font-style: italic;">No items allocated</span>'}
+            </td>
+            <td style="text-align: center;">${safe(detail.quantity)}</td>
+            <td>${safe(detail.notes)}</td>
           </tr>
+          `).join('')}
         </tbody>
       </table>
       <div class="footer">Dokumen ini dicetak pada: ${new Date().toLocaleString('id-ID')}</div>

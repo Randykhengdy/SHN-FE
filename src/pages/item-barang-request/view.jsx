@@ -15,6 +15,7 @@ import { itemBarangService } from "@/services/master-data/itemBarangService";
 import SearchSelect from "@/components/ui/search-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { isAdmin } from "@/lib/utils";
 
 export default function ViewItemBarangRequestPage() {
     const { id } = useParams();
@@ -23,7 +24,7 @@ export default function ViewItemBarangRequestPage() {
     const { showAlert, AlertComponent } = useAlert();
     const { hasPermission, user } = useAppContext();
     const canRead = hasPermission && hasPermission('ITEM_BARANG_REQUEST', 'Read');
-    const isAdminUser = user?.role?.name?.toLowerCase() === 'admin' || user?.role?.name?.toLowerCase() === 'superadmin';
+    const isAdminUser = isAdmin();
 
     const [request, setRequest] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -33,6 +34,7 @@ export default function ViewItemBarangRequestPage() {
     const [showAssignModal, setShowAssignModal] = useState(false);
     const [selectedDetail, setSelectedDetail] = useState(null);
     const [selectedItemBarangId, setSelectedItemBarangId] = useState("");
+    const [selectedItemAssignments, setSelectedItemAssignments] = useState([]); // [{id_item_barang, kode_barang, quantity}]
     const [itemOptions, setItemOptions] = useState([]);
     const [loadingItems, setLoadingItems] = useState(false);
 
@@ -67,8 +69,15 @@ export default function ViewItemBarangRequestPage() {
             requested_by: request.requested_by || request.user,
             asal_gudang: request.asal_gudang,
             tujuan_gudang: request.tujuan_gudang,
-            nama_item_barang: request.details?.[0]?.item_name || '-',
-            quantity: request.details?.reduce((sum, d) => sum + (d.quantity || 0), 0) || 0,
+            details: request.details?.map(d => ({
+                item_name: d.item_barang_group?.nama_group_barang || d.item_name || "-",
+                quantity: d.quantity,
+                notes: d.notes,
+                assigned_items: d.assigned_items?.map(ai => ({
+                    kode_barang: ai.kode_barang,
+                    quantity: ai.pivot?.quantity || ai.quantity || 1
+                })) || []
+            })) || [],
             keterangan: request.keterangan || request.notes,
         };
         const html = generateItemRequestPrintContent(printData);
@@ -90,13 +99,23 @@ export default function ViewItemBarangRequestPage() {
     const handleOpenAssignModal = async (detail) => {
         setSelectedDetail(detail);
         setSelectedItemBarangId("");
+
+        // Populate existing assignments
+        const existing = detail.assigned_items?.map(item => ({
+            id_item_barang: item.id,
+            kode_barang: item.kode_barang,
+            quantity: item.pivot?.quantity || 1
+        })) || [];
+        setSelectedItemAssignments(existing);
+
         setShowAssignModal(true);
 
         try {
             setLoadingItems(true);
             const response = await itemBarangService.getAll({
                 item_barang_group_id: detail.item_barang_group_id,
-                status: 'utuh',
+                gudang_id: request.gudang_asal_id,
+                jenis_potongan: 'utuh',
                 per_page: 50
             });
 
@@ -114,15 +133,52 @@ export default function ViewItemBarangRequestPage() {
         }
     };
 
+    const handleAddItemToAssignment = () => {
+        if (!selectedItemBarangId) return;
+
+        const item = itemOptions.find(o => o.value === selectedItemBarangId);
+        if (!item) return;
+
+        if (selectedItemAssignments.some(a => a.id_item_barang.toString() === selectedItemBarangId)) {
+            showAlert("error", "Item ini sudah ada dalam daftar");
+            return;
+        }
+
+        const totalAssigned = selectedItemAssignments.reduce((sum, a) => sum + a.quantity, 0);
+        if (totalAssigned >= selectedDetail.quantity) {
+            showAlert("error", "Quantity sudah mencukupi");
+            return;
+        }
+
+        setSelectedItemAssignments([...selectedItemAssignments, {
+            id_item_barang: parseInt(selectedItemBarangId),
+            kode_barang: item.label.split(' - ')[0],
+            quantity: 1 // Default to 1, can be adjusted if needed
+        }]);
+        setSelectedItemBarangId("");
+    };
+
+    const handleRemoveItemFromAssignment = (id) => {
+        setSelectedItemAssignments(selectedItemAssignments.filter(a => a.id_item_barang !== id));
+    };
+
     const handleAssignItem = async () => {
-        if (!selectedItemBarangId) {
-            showAlert("error", "Pilih item barang terlebih dahulu");
+        if (selectedItemAssignments.length === 0) {
+            showAlert("error", "Pilih setidaknya satu item barang");
+            return;
+        }
+
+        const totalAssigned = selectedItemAssignments.reduce((sum, a) => sum + a.quantity, 0);
+        if (totalAssigned !== selectedDetail.quantity) {
+            showAlert("warning", `Total quantity yang di-assign (${totalAssigned}) tidak sama dengan requested quantity (${selectedDetail.quantity})`);
+            // We allow it but warn, or should we block? Usually must be exact.
+            // Let's block for now as per usual inventory rules.
             return;
         }
 
         try {
             setSubmitting(true);
-            const response = await itemBarangRequestService.assignItem(selectedDetail.id, selectedItemBarangId);
+            const response = await itemBarangRequestService.assignItem(selectedDetail.id, selectedItemAssignments);
 
             if (response.success) {
                 showAlert("success", "Item berhasil di-assign");
@@ -140,7 +196,7 @@ export default function ViewItemBarangRequestPage() {
     };
 
     const handleApprove = async () => {
-        const unassigned = request.details.some(d => !d.id_item_barang);
+        const unassigned = request.details.some(d => !d.assigned_items || d.assigned_items.length === 0);
         if (unassigned) {
             showAlert("error", "Semua item harus di-assign terlebih dahulu sebelum approve");
             return;
@@ -302,10 +358,14 @@ export default function ViewItemBarangRequestPage() {
                                                 <TableCell className="text-center">{detail.quantity}</TableCell>
                                                 <TableCell className="text-gray-500 italic max-w-xs truncate">{detail.notes || "-"}</TableCell>
                                                 <TableCell>
-                                                    {detail.item_barang ? (
-                                                        <div className="space-y-0.5">
-                                                            <div className="font-semibold text-green-700">{detail.item_barang.kode_barang}</div>
-                                                            <div className="text-xs text-gray-500">{detail.item_barang.nama_item_barang}</div>
+                                                    {detail.assigned_items && detail.assigned_items.length > 0 ? (
+                                                        <div className="space-y-1">
+                                                            {detail.assigned_items.map(item => (
+                                                                <div key={item.id} className="p-2 bg-green-50 rounded border border-green-100 flex justify-between items-center text-xs">
+                                                                    <div className="font-semibold text-green-700">{item.kode_barang}</div>
+                                                                    <div className="text-gray-600 font-bold">qty: {item.pivot?.quantity || item.quantity || 1}</div>
+                                                                </div>
+                                                            ))}
                                                         </div>
                                                     ) : (
                                                         <span className="text-orange-500 text-sm font-medium italic">Belum di-assign</span>
@@ -320,7 +380,7 @@ export default function ViewItemBarangRequestPage() {
                                                             className="text-blue-600 border-blue-200 hover:bg-blue-50"
                                                         >
                                                             <UserPlus className="h-4 w-4 mr-2" />
-                                                            {detail.id_item_barang ? "Ganti Item" : "Assign"}
+                                                            {detail.assigned_items?.length > 0 ? "Edit Assignment" : "Assign"}
                                                         </Button>
                                                     </TableCell>
                                                 )}
@@ -380,35 +440,107 @@ export default function ViewItemBarangRequestPage() {
 
             {/* Assignment Modal */}
             <Dialog open={showAssignModal} onOpenChange={setShowAssignModal}>
-                <DialogContent className="sm:max-w-[500px]">
-                    <DialogHeader>
+                <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col p-0">
+                    <DialogHeader className="p-6 pb-0">
                         <DialogTitle>Assign Item Fisik</DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
-                            <Label className="text-xs text-gray-500 uppercase tracking-wider">Item Group yang Diminta</Label>
-                            <div className="font-bold text-gray-900">{selectedDetail?.item_name}</div>
-                            <div className="text-sm text-gray-600">Quantity: {selectedDetail?.quantity}</div>
+                    <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+                        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <Label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-2 block">Item Group yang Diminta</Label>
+                            <div className="font-bold text-gray-900 leading-tight mb-2">
+                                {selectedDetail?.item_name || selectedDetail?.item_barang_group?.nama_group_barang}
+                            </div>
+                            <div className="flex justify-between items-center bg-white/50 p-2 rounded border border-gray-100">
+                                <div className="text-xs text-gray-600 font-medium font-mono">
+                                    Req Qty: <span className="font-bold text-gray-900">{selectedDetail?.quantity}</span>
+                                </div>
+                                <div className={`text-xs font-bold px-2 py-1 rounded-full ${selectedItemAssignments.reduce((sum, a) => sum + a.quantity, 0) === selectedDetail?.quantity ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                                    Assigned: {selectedItemAssignments.reduce((sum, a) => sum + a.quantity, 0)}
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <Label>Pilih Item Spesifik (Serial/Kode)</Label>
-                            <SearchSelect
-                                placeholder="Cari item..."
-                                value={selectedItemBarangId}
-                                onValueChange={setSelectedItemBarangId}
-                                options={itemOptions}
-                                loading={loadingItems}
-                            />
-                            <p className="text-[10px] text-gray-500 italic">
-                                * Hanya menampilkan item dengan status "Utuh" dalam group ini.
-                            </p>
+                        {selectedItemAssignments.length > 0 && (
+                            <div className="space-y-3">
+                                <Label className="text-xs font-bold text-gray-700 flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                    Item Terpilih:
+                                </Label>
+                                <div className="max-h-[250px] overflow-y-auto space-y-2 border rounded-lg p-3 bg-gray-50/30 shadow-inner">
+                                    {selectedItemAssignments.map((assignment) => (
+                                        <div key={assignment.id_item_barang} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 shadow-sm gap-4">
+                                            <div className="flex flex-col min-w-0 flex-1">
+                                                <span className="text-xs font-mono font-bold text-gray-800 break-all leading-relaxed">
+                                                    {assignment.kode_barang}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-3 shrink-0">
+                                                <div className="flex items-center">
+                                                    <input
+                                                        type="number"
+                                                        min="1"
+                                                        value={assignment.quantity}
+                                                        onChange={(e) => {
+                                                            const val = parseInt(e.target.value) || 1;
+                                                            setSelectedItemAssignments(selectedItemAssignments.map(a =>
+                                                                a.id_item_barang === assignment.id_item_barang ? { ...a, quantity: val } : a
+                                                            ));
+                                                        }}
+                                                        className="w-16 h-9 text-center border-y border-x rounded-md text-sm font-bold bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                                                    />
+                                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                                    onClick={() => handleRemoveItemFromAssignment(assignment.id_item_barang)}
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="space-y-3">
+                            <Label className="text-xs font-bold text-gray-700">Tambah Item (Serial/Kode)</Label>
+                            <div className="flex gap-2">
+                                <div className="flex-1 min-w-0">
+                                    <SearchSelect
+                                        placeholder="Cari item..."
+                                        value={selectedItemBarangId}
+                                        onValueChange={setSelectedItemBarangId}
+                                        options={itemOptions.filter(opt => !selectedItemAssignments.some(a => a.id_item_barang.toString() === opt.value))}
+                                        loading={loadingItems}
+                                    />
+                                </div>
+                                <Button
+                                    type="button"
+                                    className="bg-gray-900 hover:bg-black text-white px-4 shrink-0 shadow-sm"
+                                    onClick={handleAddItemToAssignment}
+                                    disabled={!selectedItemBarangId}
+                                >
+                                    Tambah
+                                </Button>
+                            </div>
+                            <div className="flex items-start gap-2 text-[10px] text-gray-500 bg-blue-50/50 p-2 rounded border border-blue-100/50">
+                                <div className="mt-0.5 mt-0.5 p-0.5 bg-blue-500 rounded-full text-white text-[8px]">
+                                    <Check className="h-2 w-2" />
+                                </div>
+                                <span className="italic">Item yang dipilih dipastikan dari Warehouse Asal ({request?.asal_gudang?.nama_gudang}).</span>
+                            </div>
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowAssignModal(false)} disabled={submitting}>Batal</Button>
-                        <Button onClick={handleAssignItem} disabled={submitting || !selectedItemBarangId} className="bg-blue-600">
-                            {submitting ? "Processing..." : "Assign Item"}
+                    <DialogFooter className="p-6 pt-2 gap-2 sm:gap-0">
+                        <Button variant="ghost" onClick={() => setShowAssignModal(false)} disabled={submitting} className="font-semibold text-gray-600">Batal</Button>
+                        <Button
+                            onClick={handleAssignItem}
+                            disabled={submitting || selectedItemAssignments.length === 0}
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-200 min-w-[150px]"
+                        >
+                            {submitting ? "Processing..." : "Simpan Assignment"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
