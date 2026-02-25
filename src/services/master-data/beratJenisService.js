@@ -151,6 +151,12 @@ export const beratJenisService = {
     a.click();
     a.remove();
     window.URL.revokeObjectURL(downloadUrl);
+  },
+
+  async importData(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+    return request("/berat-jenis/import", { method: "POST", body: formData });
   }
 };
 

@@ -3,7 +3,7 @@ import MasterDataLayout from "@/components/MasterDataLayout";
 import { beratJenisService, bentukBarangService, itemBarangGroupService } from "@/services/master-data";
 import { getJenisBarangOptions, getGradeBarangOptions } from "@/services/masterDataService";
 import { useAlert } from "@/hooks/useAlert";
-import { Sparkles, Download } from "lucide-react";
+import { Sparkles, Download, Upload } from "lucide-react";
 
 export default function BeratJenisPage() {
   const [activeTab, setActiveTab] = useState('1D'); // Tab state: '1D' or '2D'
@@ -13,6 +13,7 @@ export default function BeratJenisPage() {
   const { showAlert, showConfirm, AlertComponent } = useAlert();
   const fetchDataRef = useRef(null);
   const editDataRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Function untuk mendapatkan fetchData dari MasterDataLayout
   // Kita akan menggunakan callback atau ref untuk memanggil refresh
@@ -127,6 +128,35 @@ export default function BeratJenisPage() {
   };
 
 
+  const handleImport = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      const result = await beratJenisService.importData(file);
+      if (result.success) {
+        let msg = result.message || 'Import berhasil';
+        if (result.data?.errors && result.data.errors.length > 0) {
+          msg += '\n\nDetail error:\n' + result.data.errors.join('\n');
+        }
+        showAlert(msg, 'success');
+        // Refresh data
+        if (fetchDataRef.current) {
+          fetchDataRef.current();
+        }
+      } else {
+        showAlert(result.message || 'Import gagal', 'error');
+      }
+    } catch (error) {
+      console.error('Import failed:', error);
+      showAlert(error.message || 'Import gagal. Periksa console untuk detail.', 'error');
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = null;
+      }
+    }
+  };
+
   return (
     <>
       <AlertComponent />
@@ -200,6 +230,12 @@ export default function BeratJenisPage() {
               }
             },
             className: "bg-green-600 hover:bg-green-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
+          },
+          {
+            label: "Import Data",
+            icon: <Upload className="h-4 w-4" />,
+            onClick: () => fileInputRef.current?.click(),
+            className: "bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
           }
         ]}
         validate={(form) => {
@@ -222,7 +258,7 @@ export default function BeratJenisPage() {
             if (!form.grade_barang_id) errs.push('Grade Barang');
 
             if (!form.berat_per_luas || parseFloat(form.berat_per_luas) <= 0) {
-              errs.push('Berat per luas (wajib untuk plat 2D)');
+              errs.push('Berat per volume (wajib untuk plat 2D)');
             }
           } else {
             // Fallback validation if dimension unknown
@@ -488,7 +524,7 @@ export default function BeratJenisPage() {
           },
           {
             name: "berat_per_luas",
-            label: "Berat per luas (kg/m³)",
+            label: "Berat per volume (kg/m³)",
             type: "number",
             step: "0.0001",
             required: true,
@@ -599,7 +635,7 @@ export default function BeratJenisPage() {
           // Only show in 2D tab
           ...(activeTab === '2D' ? [{
             key: "berat_per_luas",
-            label: "Berat per luas (kg/m³)",
+            label: "Berat per volume (kg/m³)",
             align: "right",
             width: "12rem",
             getValue: (item) => {
@@ -624,6 +660,13 @@ export default function BeratJenisPage() {
             }
           }] : [])
         ]}
+      />
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleImport}
+        accept=".csv,.txt"
+        style={{ display: 'none' }}
       />
     </>
   );
