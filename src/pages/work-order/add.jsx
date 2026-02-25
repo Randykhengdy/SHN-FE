@@ -248,6 +248,7 @@ export default function AddWorkOrderPage() {
       const response = await request('/work-order-planning/get-saran-plat-utuh', {
         method: 'POST',
         body: JSON.stringify({
+          // Required fields
           jenis_barang_id: item.jenis_barang_id,
           bentuk_barang_id: item.bentuk_barang_id,
           grade_barang_id: item.grade_barang_id,
@@ -255,7 +256,14 @@ export default function AddWorkOrderPage() {
           panjang: parseFloat(item.panjang) || 0,
           lebar: parseFloat(item.lebar) || 0,
           qty: parseInt(item.qty) || 1,
-          item_barang_group_id: item.item_barang_group_id || null
+          
+          // Optional fields
+          item_barang_group_id: item.item_barang_group_id || null,
+          diameter_luar: parseFloat(item.diameter_luar) || 0,
+          diameter_dalam: parseFloat(item.diameter_dalam) || 0,
+          diameter: parseFloat(item.diameter) || 0,
+          sisi1: parseFloat(item.sisi1) || 0,
+          sisi2: parseFloat(item.sisi2) || 0
         })
       });
 
@@ -522,6 +530,11 @@ export default function AddWorkOrderPage() {
             panjang: (item.panjang ?? item.length ?? item.p ?? 0),
             lebar: (item.lebar ?? item.width ?? item.l ?? 0),
             tebal: (item.tebal  ?? 0),
+            diameter_luar: (item.diameter_luar ?? 0),
+            diameter_dalam: (item.diameter_dalam ?? 0),
+            diameter: (item.diameter ?? 0),
+            sisi1: (item.sisi1 ?? 0),
+            sisi2: (item.sisi2 ?? 0),
             berat: (item.berat ?? item.weight ?? 0),
             qty: (item.sisa_qty ?? item.remaining_qty ?? item.available_qty ?? item.qty ?? item.qty_so ?? 1),
             qty_planning: 0,
@@ -698,7 +711,12 @@ export default function AddWorkOrderPage() {
           lebar: parseFloat(item.lebar) || 0,
           per_page: SARAN_PER_PAGE,
           page: 1,
-          item_barang_group_id: item.item_barang_group_id || null
+          item_barang_group_id: item.item_barang_group_id || null,
+          diameter_luar: parseFloat(item.diameter_luar) || 0,
+          diameter_dalam: parseFloat(item.diameter_dalam) || 0,
+          diameter: parseFloat(item.diameter) || 0,
+          sisi1: parseFloat(item.sisi1) || 0,
+          sisi2: parseFloat(item.sisi2) || 0
         })
       });
       
@@ -1730,7 +1748,7 @@ export default function AddWorkOrderPage() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => openPlatPreviewModal(item)}
-                                disabled={!item.jenis_barang_id || !item.bentuk_barang_id || !item.grade_barang_id || !item.tebal}
+                                disabled={!item.jenis_barang_id || !item.bentuk_barang_id || !item.grade_barang_id}
                                 className={`text-xs ${isQuantityAvailable(item) ? "bg-green-50 border-green-200 text-green-700 hover:bg-green-100" : ""}`}
                               >
                                 <Grid3X3 className="w-3 h-3 mr-1" />
@@ -1742,7 +1760,7 @@ export default function AddWorkOrderPage() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => openUtuhModal(item)}
-                                disabled={!item.jenis_barang_id || !item.bentuk_barang_id || !item.grade_barang_id || !item.tebal}
+                                disabled={!item.jenis_barang_id || !item.bentuk_barang_id || !item.grade_barang_id}
                                 className="text-xs bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
                               >
                                 <Package className="w-3 h-3 mr-1" />

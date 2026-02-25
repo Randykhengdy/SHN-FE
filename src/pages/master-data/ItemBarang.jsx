@@ -326,6 +326,7 @@ export default function ItemBarangPage() {
           { key: "id", label: "ID", align: "center", width: "5rem", maxWidth: "5rem" },
           { key: "kode_barang", label: "Kode Barang", align: "center", width: "10rem", maxWidth: "10rem" },
           { key: "nama_item_barang", label: "Nama Item Barang", align: "left", minWidth: "15rem", maxWidth: "20rem" },
+          { key: "item_barang_group.nama_group_barang", label: "Group Barang", align: "left", minWidth: "15rem", maxWidth: "20rem" },
           // Dimension columns - conditionally shown
           ...(showDimensions ? [
             { key: "diameter_luar", label: "DL", align: "center", width: "6rem", maxWidth: "6rem", format: "number" },

@@ -262,20 +262,52 @@ export default function SelectPlatShaftDasar({
       const response = await request(`/work-order-planning/get-saran-plat-dasar?per_page=${perPage}&page=1`, {
         method: 'POST',
         body: JSON.stringify({
+          // Required fields
           jenis_barang_id: jenisBarangId,
           bentuk_barang_id: bentukBarangId,
           grade_barang_id: gradeBarangId,
           tebal: tebal,
           panjang: parseFloat(workOrderItem?.panjang || 0),
           lebar: parseFloat(workOrderItem?.lebar || 0),
+          
+          // Optional fields - pass full dimensions from item attributes if available
+          item_barang_group_id: workOrderItem?.item_barang_group_id || null,
+          diameter_luar: parseFloat(workOrderItem?.diameter_luar || 0),
+          diameter_dalam: parseFloat(workOrderItem?.diameter_dalam || 0),
+          diameter: parseFloat(workOrderItem?.diameter || 0),
+          sisi1: parseFloat(workOrderItem?.sisi1 || 0),
+          sisi2: parseFloat(workOrderItem?.sisi2 || 0),
+          
+          // Pagination
           per_page: perPage,
-          page: 1,
-          item_barang_group_id: workOrderItem?.item_barang_group_id || null
+          page: 1
         })
       });
 
       if (response.success) {
-        const allSaranItems = (response.data || []).slice(0, perPage);
+        let allSaranItems = (response.data || []).slice(0, perPage);
+
+        // Filter items that are smaller than required dimensions
+        if (workOrderItem) {
+          const reqPanjang = parseFloat(workOrderItem.panjang || 0);
+          const reqLebar = parseFloat(workOrderItem.lebar || 0);
+
+          if (reqPanjang > 0) {
+            allSaranItems = allSaranItems.filter(item => {
+              const itemPanjang = parseFloat(item.panjang || 0);
+              const itemLebar = parseFloat(item.lebar || 0);
+
+              // If request has no width (1D like Shaft), only check length
+              if (reqLebar === 0) {
+                return itemPanjang >= reqPanjang;
+              }
+
+              // For 2D (Plat), check dimensions with rotation
+              return (itemPanjang >= reqPanjang && itemLebar >= reqLebar) || 
+                     (itemPanjang >= reqLebar && itemLebar >= reqPanjang);
+            });
+          }
+        }
         
         // Use the passed usedIds parameter
         const currentUsedIds = usedIds || [];
