@@ -132,6 +132,15 @@ export const rakService = {
     a.click();
     a.remove();
     window.URL.revokeObjectURL(downloadUrl);
-  }
+  },
+
+  async importData(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+    return request("/rak/import", {
+      method: "POST",
+      body: formData,
+    });
+  },
 };
 
