@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import MasterDataLayout from "@/components/MasterDataLayout";
 import { Button } from "@/components/ui/button";
 import ItemBarangCanvasPage from "./ItemBarangCanvasPage";
@@ -10,7 +10,8 @@ import {
   gudangService,
   rakService
 } from "@/services/master-data";
-import { Download } from "lucide-react";
+import { Download, Upload } from "lucide-react";
+import { useAlert } from "@/hooks/useAlert";
 
 // Module-level variable untuk menyimpan mapping dimensi bentuk barang
 let bentukBarangDimensiMap = {};
@@ -23,6 +24,54 @@ export default function ItemBarangPage() {
   const [isCanvasOpen, setIsCanvasOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [showDimensions, setShowDimensions] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const fileInputRef = useRef(null);
+  const { showAlert, AlertComponent } = useAlert();
+
+  const handleImportClick = (e, fetchData) => {
+    fileInputRef.current._fetchData = fetchData;
+    fileInputRef.current.click();
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = "";
+
+    if (!file.name.toLowerCase().endsWith(".csv")) {
+      showAlert("Error", "File harus berformat CSV", "error");
+      return;
+    }
+
+    setImportLoading(true);
+    try {
+      const result = await itemBarangService.importData(file);
+      const data = result.data;
+
+      let message = result.message || "Import selesai";
+      let type = "success";
+
+      if (data?.error_details?.length > 0) {
+        message += "\n\nDetail:\n" + data.error_details.join("\n");
+        if (data.imported === 0) {
+          type = "error";
+        } else {
+          type = "warning";
+        }
+      }
+
+      showAlert("Hasil Import", message, type);
+
+      if (fileInputRef.current?._fetchData) {
+        fileInputRef.current._fetchData();
+      }
+    } catch (error) {
+      console.error("Import error:", error);
+      showAlert("Error", "Gagal import data: " + error.message, "error");
+    } finally {
+      setImportLoading(false);
+    }
+  };
 
   const handleOpenCanvas = (item) => {
     setSelectedItem(item);
@@ -31,6 +80,14 @@ export default function ItemBarangPage() {
 
   return (
     <>
+      <AlertComponent />
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept=".csv"
+        style={{ display: "none" }}
+        onChange={handleFileChange}
+      />
       {isCanvasOpen && selectedItem && (
         <div className="fixed inset-0 z-[100] bg-white w-screen h-screen">
           <ItemBarangCanvasPage
@@ -70,9 +127,17 @@ export default function ItemBarangPage() {
                 await itemBarangService.downloadTemplate();
               } catch (error) {
                 console.error("Download template failed:", error);
+                showAlert("Gagal", "Gagal mendownload template: " + error.message, "error");
               }
             },
             className: "bg-green-600 hover:bg-green-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
+          },
+          {
+            label: importLoading ? "Importing..." : "Import Data",
+            onClick: handleImportClick,
+            disabled: importLoading,
+            icon: <Upload size={16} />,
+            className: "bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
           }
         ]}
         customActions={[
