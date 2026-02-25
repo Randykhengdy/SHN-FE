@@ -123,6 +123,7 @@ export default function ViewWorkOrderPage() {
           jenisBarang: item.jenisBarang,
           bentukBarang: item.bentukBarang,
           gradeBarang: item.gradeBarang,
+          groupBarangName: item.item_barang_group_name || item.item_barang_group?.nama_group_barang || item.groupBarangName || '-',
           dimensi: item.bentukBarang?.dimensi || `${item.panjang || 0}x${item.lebar || 0}x${item.ketebalan || 0}mm`,
           qtyPlanning: item.qty_planning?? 0,
           jenisPotongan: item.jenisPotongan || item.jenis_potongan,
@@ -354,6 +355,13 @@ export default function ViewWorkOrderPage() {
               catatan: item.catatan || item.note || item.notes || "",
               total: item.total || item.subtotal || total || 0,
               jenis_potongan: item.jenis_potongan || 'potongan',
+              item_barang_group: item.item_barang_group || item.itemBarangGroup || null,
+              item_barang_group_name: (item.item_barang_group && (item.item_barang_group.nama_group_barang || item.item_barang_group.nama)) 
+                || (item.itemBarangGroup && (item.itemBarangGroup.nama_group_barang || item.itemBarangGroup.nama))
+                || item.item_barang_group_nama
+                || item.group_barang_nama
+                || (item.group_barang && (item.group_barang.nama_group_barang || item.group_barang.nama))
+                || null,
               // Include pelaksana and saran data from API
               pelaksana: item.pelaksana || [],
               saran_plat_dasar: item.saran_plat_dasar || []

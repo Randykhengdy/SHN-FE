@@ -696,15 +696,16 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
     `;
   })();
 
-  // Render Before/After images per item (Planning vs Actual) using mapped arrays
+  // Render Before/After/Sisa images per item (Planning vs Actual) using mapped arrays
   const beforeAfterSectionHtml = includeImages && (woActualData.items || []).length > 0
     ? (() => {
       const itemSections = (woActualData.items || []).map((item, idx) => {
         const it = { ...item, no: idx + 1 };
         const beforeImages = Array.isArray(it.beforeImages) ? it.beforeImages : [];
         const afterImages = Array.isArray(it.afterImages) ? it.afterImages : [];
+        const sisaImages = Array.isArray(it.sisaImages) ? it.sisaImages : [];
 
-        const maxRows = Math.max(beforeImages.length, afterImages.length);
+        const maxRows = Math.max(beforeImages.length, afterImages.length, sisaImages.length);
 
         let rowsHtml = '';
         if (maxRows === 0) {
@@ -713,6 +714,7 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
           for (let i = 0; i < maxRows; i++) {
             const beforeImg = beforeImages[i];
             const afterImg = afterImages[i];
+            const sisaImg = sisaImages[i];
 
             const renderImgTile = (img, label, idx) => {
               if (!img) return '<div style="height: 100%;"></div>'; // Empty placeholder
@@ -734,7 +736,7 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
             };
 
             rowsHtml += `
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; page-break-inside: avoid;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; page-break-inside: avoid;">
                   <div>
                     ${i === 0 ? '<div style="font-weight: bold; margin-bottom: 6px;">Before (WO Planning)</div>' : ''}
                     ${renderImgTile(beforeImg, 'Before', i)}
@@ -742,6 +744,10 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
                   <div>
                     ${i === 0 ? '<div style="font-weight: bold; margin-bottom: 6px;">After (WO Actual)</div>' : ''}
                     ${renderImgTile(afterImg, 'After', i)}
+                  </div>
+                  <div>
+                    ${i === 0 ? '<div style="font-weight: bold; margin-bottom: 6px;">Sisa Barang</div>' : ''}
+                    ${renderImgTile(sisaImg, 'Sisa', i)}
                   </div>
                 </div>
               `;
@@ -871,12 +877,13 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
       <td style="border: 1px solid #ddd; padding: 6px;">${item.jenisBarang?.nama_jenis_barang || item.jenisBarang?.nama || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.bentukBarang?.nama_bentuk_barang || item.bentukBarang?.nama_bentuk || item.bentukBarang?.nama || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.gradeBarang?.nama_grade_barang || item.gradeBarang?.nama_grade || item.gradeBarang?.nama || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 6px;">${item.groupBarangName || item.item_barang_group_name || item.item_barang_group?.nama_group_barang || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.bentukBarang?.dimensi || item.dimensi || `${item.panjang || 0}x${item.lebar || 0}x${item.ketebalan || 0}mm`}</td>
       <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">${item.qtyPlanning ?? item.qty ?? 0}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.jenisPotongan || item.jenis_potongan || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 6px;">${item.keterangan || item.catatan || '-'}</td>
     </tr>
-  `).join('') || '<tr><td colspan="8" style="text-align: center; padding: 12px;">Tidak ada item</td></tr>';
+  `).join('') || '<tr><td colspan="9" style="text-align: center; padding: 12px;">Tidak ada item</td></tr>';
 
   // Render canvas images with robust item-based grouping and naming
   const canvasImagesHtml = includeImages && (woPlanningData.canvasImages || []).length > 0
@@ -1039,6 +1046,7 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
             <th>Jenis</th>
             <th>Bentuk</th>
             <th>Grade</th>
+            <th>Group Barang</th>
             <th>Dimensi</th>
             <th>Qty Planning</th>
             <th>Jenis Potongan</th>

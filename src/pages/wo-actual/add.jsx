@@ -163,6 +163,8 @@ export default function AddWOActualPage() {
           catatan: p?.catatan || p?.notes || ''
         }));
 
+        const groupData = item.item_barang_group || item.itemBarangGroup || null;
+
         return {
           id: item.id,
           jenis_barang: item.jenis_barang || item.jenisBarang || {},
@@ -177,7 +179,11 @@ export default function AddWOActualPage() {
           panjang: item.panjang,
           lebar: item.lebar,
           tebal: item.tebal || item.ketebalan,
-          dimensi: item.dimensi
+          dimensi: item.dimensi,
+          // Group barang info dari WO Planning
+          item_barang_group_id: item.item_barang_group_id || groupData?.id || null,
+          item_barang_group: groupData,
+          item_barang_group_name: (groupData && (groupData.nama_group_barang || groupData.nama)) || null
         };
       });
 
@@ -366,6 +372,31 @@ export default function AddWOActualPage() {
     reader.readAsDataURL(file);
   };
 
+  // Upload foto sisa barang per item (base64)
+  const handleItemFotoSisaChange = (itemId, file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showAlert('File tidak valid', 'Silakan pilih file gambar', 'error');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showAlert('Ukuran file terlalu besar', 'Maksimal 5MB', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target.result;
+      setActualItems(prev => ({
+        ...prev,
+        [itemId]: {
+          ...prev[itemId],
+          foto_sisa_barang: base64
+        }
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Save WO Actual
   const handleSave = async () => {
     try {
@@ -410,6 +441,7 @@ export default function AddWOActualPage() {
 
       // Siapkan data sesuai format keyed-object: items di-key oleh ID item
       const itemsForSave = Object.fromEntries(Object.entries(actualItems).map(([id, item]) => {
+        const planningItem = (selectedWOPlanning?.items || []).find(pi => String(pi.id) === String(id));
         const assignmentsOut = (item.assignments || []).map(r => ({
           id: r.id,
           pelaksana_id: r.pelaksana_id ?? r.pelaksanaInfo?.id ?? r.pelaksana?.id ?? r.pelaksana_info?.id ?? null,
@@ -440,8 +472,18 @@ export default function AddWOActualPage() {
             status: a.status || null
           }))
         };
+
+        if (planningItem?.item_barang_group_id || planningItem?.item_barang_group?.id) {
+          value.item_barang_group_id = parseInt(
+            planningItem.item_barang_group_id || planningItem.item_barang_group?.id,
+            10
+          );
+        }
         if (item?.foto_bukti) {
           value.foto_bukti = item.foto_bukti;
+        }
+        if (item?.foto_sisa_barang) {
+          value.foto_sisa_barang = item.foto_sisa_barang;
         }
         return [id, value];
       }));
@@ -538,6 +580,7 @@ export default function AddWOActualPage() {
 
           // AFTER: gunakan foto bukti item yang baru diupload (data URL)
           const afterImages = actualItem.foto_bukti ? [{ src: actualItem.foto_bukti }] : [];
+          const sisaImages = actualItem.foto_sisa_barang ? [{ src: actualItem.foto_sisa_barang }] : [];
 
           return {
             no: idx + 1,
@@ -570,6 +613,7 @@ export default function AddWOActualPage() {
             pelaksanas,
             beforeImages,
             afterImages,
+            sisaImages,
             woPlanItemId: planningItem.id
           };
         });
@@ -852,35 +896,40 @@ export default function AddWOActualPage() {
                     {/* Foto Bukti Upload */}
                     <div>
                       <Label htmlFor="foto_bukti">Foto Bukti</Label>
-                      <div className="space-y-2">
-                        <Input
-                          id="foto_bukti"
-                          type="file"
-                          accept="image/*"
-                          onChange={handleFotoBuktiChange}
-                          className="cursor-pointer"
-                        />
+                      <div className="mt-2 flex items-center gap-4">
+                        <div>
+                          <input
+                            id="foto_bukti"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleFotoBuktiChange}
+                            className="hidden"
+                          />
+                          <label
+                            htmlFor="foto_bukti"
+                            className="inline-flex items-center rounded-md border px-4 py-2 text-xs font-medium hover:bg-gray-50 cursor-pointer"
+                          >
+                            Upload Foto
+                          </label>
+                        </div>
                         {formData.foto_bukti_preview && (
                           <div className="relative inline-block">
                             <img
                               src={formData.foto_bukti_preview}
                               alt="Preview foto bukti"
-                              className="w-32 h-32 object-cover rounded-lg border"
+                              className="w-20 h-20 object-cover rounded border"
                             />
                             <Button
                               type="button"
                               variant="destructive"
-                              size="sm"
+                              size="icon"
                               onClick={removeFotoBukti}
-                              className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                              className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0"
                             >
                               ×
                             </Button>
                           </div>
                         )}
-                        <p className="text-sm text-gray-500">
-                          Format: JPG, PNG, GIF. Maksimal 5MB.
-                        </p>
                       </div>
                     </div>
                   </CardContent>
@@ -917,6 +966,7 @@ export default function AddWOActualPage() {
                           <TableHead className="text-center">Status</TableHead>
                           <TableHead className="text-center">Pelaksana</TableHead>
                           <TableHead className="text-center">Foto Bukti (Item)</TableHead>
+                          <TableHead className="text-center">Foto Sisa</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -977,13 +1027,50 @@ export default function AddWOActualPage() {
                                     Upload
                                   </label>
                                   {actualItem.foto_bukti ? (
-                                    <button
-                                      type="button"
-                                      className="text-xs text-blue-600 hover:underline"
-                                      onClick={() => { setPreviewSrc(actualItem.foto_bukti); setPreviewTitle(`Foto Bukti Item #${planningItem.id}`); setPreviewOpen(true); }}
-                                    >
-                                      Lihat
-                                    </button>
+                                    <img
+                                      src={actualItem.foto_bukti}
+                                      alt={`Foto Bukti Item #${planningItem.id}`}
+                                      className="w-12 h-12 object-cover rounded border cursor-pointer"
+                                      onClick={() => {
+                                        setPreviewSrc(actualItem.foto_bukti);
+                                        setPreviewTitle(`Foto Bukti Item #${planningItem.id}`);
+                                        setPreviewOpen(true);
+                                      }}
+                                    />
+                                  ) : (
+                                    <span className="text-xs text-gray-500">Belum ada</span>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <div className="flex items-center justify-center gap-2">
+                                  <input
+                                    id={`item-foto-sisa-${planningItem.id}`}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) handleItemFotoSisaChange(planningItem.id, file);
+                                    }}
+                                    className="hidden"
+                                  />
+                                  <label
+                                    htmlFor={`item-foto-sisa-${planningItem.id}`}
+                                    className="inline-flex items-center rounded-md border px-3 py-1 text-xs font-medium hover:bg-gray-50 cursor-pointer"
+                                  >
+                                    Upload
+                                  </label>
+                                  {actualItem.foto_sisa_barang ? (
+                                    <img
+                                      src={actualItem.foto_sisa_barang}
+                                      alt={`Foto Sisa Item #${planningItem.id}`}
+                                      className="w-12 h-12 object-cover rounded border cursor-pointer"
+                                      onClick={() => {
+                                        setPreviewSrc(actualItem.foto_sisa_barang);
+                                        setPreviewTitle(`Foto Sisa Item #${planningItem.id}`);
+                                        setPreviewOpen(true);
+                                      }}
+                                    />
                                   ) : (
                                     <span className="text-xs text-gray-500">Belum ada</span>
                                   )}
