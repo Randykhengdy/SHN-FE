@@ -238,7 +238,7 @@ export default function AddWorkOrderPage() {
 
   // Fetch saran plat utuh
   const fetchSaranUtuh = async (item) => {
-    if (!item.jenis_barang_id || !item.bentuk_barang_id || !item.grade_barang_id || !item.tebal) {
+    if (!item.jenis_barang_id || !item.bentuk_barang_id || !item.grade_barang_id) {
       showAlert('Error', 'Data item belum lengkap untuk mencari saran plat utuh', 'error');
       return;
     }
