@@ -97,4 +97,10 @@ export const itemBarangGroupService = {
         a.remove();
         window.URL.revokeObjectURL(downloadUrl);
     },
+
+    async importData(file) {
+        const formData = new FormData();
+        formData.append("file", file);
+        return request("/item-barang/group/import", { method: "POST", body: formData });
+    },
 };
