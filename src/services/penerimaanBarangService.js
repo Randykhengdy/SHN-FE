@@ -16,5 +16,13 @@ export const penerimaanBarangService = {
             method: 'PATCH',
             body: JSON.stringify(data)
         });
+    },
+
+    // Get all processed Non-PO details for the 'Sudah Diinput' tab
+    getProcessedNonPoItems: async (params = {}) => {
+        const queryString = new URLSearchParams(params).toString();
+        return await request(`${API_ENDPOINTS.penerimaanBarang}/processed-nonpo?${queryString}`, {
+            method: 'GET'
+        });
     }
 };

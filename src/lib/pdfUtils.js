@@ -36,17 +36,17 @@ export const generateSalesOrderPDF = async (salesOrderData) => {
     iframe.style.width = '210mm';
     iframe.style.height = '297mm';
     iframe.style.border = 'none';
-    
+
     document.body.appendChild(iframe);
-    
+
     // Wait for iframe to load
     await new Promise(resolve => {
       iframe.onload = resolve;
       iframe.src = 'about:blank';
     });
-    
+
     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-    
+
     // Write clean HTML with inline styles only
     iframeDoc.open();
     iframeDoc.write(`
@@ -197,13 +197,13 @@ export const generateSalesOrderPDF = async (salesOrderData) => {
 
           <!-- Footer -->
           <div class="footer">
-            <p>Dokumen ini dibuat pada ${new Date().toLocaleDateString('id-ID', { 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            })}</p>
+            <p>Dokumen ini dibuat pada ${new Date().toLocaleDateString('id-ID', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })}</p>
           </div>
         </div>
       </body>
@@ -231,7 +231,7 @@ export const generateSalesOrderPDF = async (salesOrderData) => {
     // Create PDF
     const imgData = canvas.toDataURL('image/png', 0.9);
     const pdf = new jsPDF('p', 'mm', 'a4');
-    
+
     const imgWidth = 210; // A4 width in mm
     const pageHeight = 295; // A4 height in mm
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
@@ -252,20 +252,20 @@ export const generateSalesOrderPDF = async (salesOrderData) => {
 
     // Save PDF with proper async handling
     const fileName = `Sales_Order_${salesOrderData.nomor_so || 'Draft'}_${new Date().toISOString().split('T')[0]}.pdf`;
-    
+
     // Create a promise to handle the save completion
     return new Promise((resolve, reject) => {
       try {
         // Create a blob URL and trigger download manually for better control
         const pdfBlob = pdf.output('blob');
         const url = URL.createObjectURL(pdfBlob);
-        
+
         // Create a temporary link element
         const link = document.createElement('a');
         link.href = url;
         link.download = fileName;
         link.style.display = 'none';
-        
+
         // Append to body and trigger click
         document.body.appendChild(link);
         link.click();
@@ -278,7 +278,7 @@ export const generateSalesOrderPDF = async (salesOrderData) => {
 
         console.log('✅ PDF download initiated:', fileName);
         resolve(true); // Resolve immediately
-        
+
       } catch (error) {
         console.error('❌ Error saving PDF:', error);
         reject(error);
@@ -418,31 +418,31 @@ export const generateWorkOrderPDF = async (workOrderData) => {
           <div class="images-section" style="margin-top: 30px;">
             <h3 style="margin-bottom: 20px; font-size: 16px; color: #333333;">Canvas Preview Images</h3>
             ${(() => {
-              // Group images by work order item or item barang
-              const groupedImages = {};
-              let itemCounter = 1;
-              
-              workOrderData.canvasImages.forEach((image, index) => {
-                // Use wo_item_id, item_barang_id, or item_barang_name as grouping key
-                const groupKey = image.wo_item_id || image.item_barang_id || image.item_barang_name || `Item_${itemCounter}`;
-                
-                if (!groupedImages[groupKey]) {
-                  groupedImages[groupKey] = {
-                    itemNumber: itemCounter++,
-                    itemName: image.item_barang_name || `Item ${itemCounter - 1}`,
-                    images: []
-                  };
-                }
-                
-                groupedImages[groupKey].images.push({
-                  ...image,
-                  originalIndex: index
-                });
-              });
-              
-              // Generate HTML for grouped images
-              return Object.entries(groupedImages).map(([groupKey, group]) => {
-                return group.images.map((image, imageIndex) => `
+          // Group images by work order item or item barang
+          const groupedImages = {};
+          let itemCounter = 1;
+
+          workOrderData.canvasImages.forEach((image, index) => {
+            // Use wo_item_id, item_barang_id, or item_barang_name as grouping key
+            const groupKey = image.wo_item_id || image.item_barang_id || image.item_barang_name || `Item_${itemCounter}`;
+
+            if (!groupedImages[groupKey]) {
+              groupedImages[groupKey] = {
+                itemNumber: itemCounter++,
+                itemName: image.item_barang_name || `Item ${itemCounter - 1}`,
+                images: []
+              };
+            }
+
+            groupedImages[groupKey].images.push({
+              ...image,
+              originalIndex: index
+            });
+          });
+
+          // Generate HTML for grouped images
+          return Object.entries(groupedImages).map(([groupKey, group]) => {
+            return group.images.map((image, imageIndex) => `
                   <div class="image-item" style="margin-bottom: 25px; page-break-inside: avoid;">
                     <h4 style="margin-bottom: 10px; font-size: 14px; color: #555555; font-weight: bold;">
                       WO Item ${group.itemNumber} - Image ${imageIndex + 1}
@@ -473,20 +473,20 @@ export const generateWorkOrderPDF = async (workOrderData) => {
                     ` : ''}
                   </div>
                 `).join('');
-              }).join('');
-            })()}
+          }).join('');
+        })()}
           </div>
           ` : ''}
 
           <!-- Footer -->
           <div class="footer">
-            <p>Dokumen ini dibuat pada ${new Date().toLocaleDateString('id-ID', { 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            })}</p>
+            <p>Dokumen ini dibuat pada ${new Date().toLocaleDateString('id-ID', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })}</p>
           </div>
         </div>
       </body>
@@ -514,7 +514,7 @@ export const generateWorkOrderPDF = async (workOrderData) => {
     // Create PDF
     const imgData = canvas.toDataURL('image/png', 0.9);
     const pdf = new jsPDF('p', 'mm', 'a4');
-    
+
     const imgWidth = 210; // A4 width in mm
     const pageHeight = 295; // A4 height in mm
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
@@ -535,20 +535,20 @@ export const generateWorkOrderPDF = async (workOrderData) => {
 
     // Save PDF with proper async handling
     const fileName = `Work_Order_${workOrderData.nomor_wo || 'Draft'}_${new Date().toISOString().split('T')[0]}.pdf`;
-    
+
     // Create a promise to handle the save completion
     return new Promise((resolve, reject) => {
       try {
         // Create a blob URL and trigger download manually for better control
         const pdfBlob = pdf.output('blob');
         const url = URL.createObjectURL(pdfBlob);
-        
+
         // Create a temporary link element
         const link = document.createElement('a');
         link.href = url;
         link.download = fileName;
         link.style.display = 'none';
-        
+
         // Append to body and trigger click
         document.body.appendChild(link);
         link.click();
@@ -561,7 +561,7 @@ export const generateWorkOrderPDF = async (workOrderData) => {
 
         console.log('✅ Work Order PDF download initiated:', fileName);
         resolve(true); // Resolve immediately
-        
+
       } catch (error) {
         console.error('❌ Error saving Work Order PDF:', error);
         reject(error);
@@ -600,7 +600,7 @@ export const openItemQRPDFPreview = async (item) => {
       reader.onload = () => resolve(reader.result);
       reader.readAsDataURL(blob);
     });
-  } catch (_) {}
+  } catch (_) { }
 
   const pdf = new jsPDF("p", "mm", [pageSizeMM, pageSizeMM]);
   pdf.addImage(dataUrl, "PNG", qrX, qrY, qrBoxMM, qrBoxMM, undefined, "FAST");
@@ -639,7 +639,7 @@ export const openItemQRPDFPreview = async (item) => {
   pdf.text("Date Printed:", marginMM, y);
   pdf.setFont("helvetica", "normal");
   const d = new Date();
-  const dateStr = `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+  const dateStr = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
   pdf.text(dateStr, marginMM + 28, y);
   y += 5;
   pdf.setDrawColor(180);
@@ -652,7 +652,7 @@ export const openItemQRPDFPreview = async (item) => {
   const win = window.open(blobUrl, "_blank");
   if (win) {
     setTimeout(() => {
-      try { win.focus(); win.print(); } catch (_) {}
+      try { win.focus(); win.print(); } catch (_) { }
     }, 600);
     return true;
   }
@@ -704,7 +704,7 @@ export const openRackQRPDFPreview = async (rakItem, parentGudang) => {
       reader.onload = () => resolve(reader.result);
       reader.readAsDataURL(blob);
     });
-  } catch (_) {}
+  } catch (_) { }
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(20);
@@ -738,7 +738,7 @@ export const openRackQRPDFPreview = async (rakItem, parentGudang) => {
   const blobUrl = pdf.output("bloburl");
   const win = window.open(blobUrl, "_blank");
   if (win) {
-    setTimeout(() => { try { win.focus(); win.print(); } catch (_) {} }, 600);
+    setTimeout(() => { try { win.focus(); win.print(); } catch (_) { } }, 600);
     return true;
   }
   const blob = pdf.output("blob");
@@ -781,7 +781,7 @@ export const openRackQRPDFBatch = async (rakItems) => {
           parentGudang = resp?.data || resp;
         }
       }
-    } catch (_) {}
+    } catch (_) { }
 
     const payload = encodeURIComponent(JSON.stringify({
       kode_rak: rakItem.kode || rakItem.kode_barang || "",
@@ -800,7 +800,7 @@ export const openRackQRPDFBatch = async (rakItems) => {
         reader.onload = () => resolve(reader.result);
         reader.readAsDataURL(blob);
       });
-    } catch (_) {}
+    } catch (_) { }
 
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(20);
@@ -833,7 +833,113 @@ export const openRackQRPDFBatch = async (rakItems) => {
   const blobUrl = pdf.output("bloburl");
   const win = window.open(blobUrl, "_blank");
   if (win) {
-    setTimeout(() => { try { win.focus(); win.print(); } catch (_) {} }, 600);
+    setTimeout(() => { try { win.focus(); win.print(); } catch (_) { } }, 600);
+    return true;
+  }
+  const blob = pdf.output("blob");
+  const pdfUrl = URL.createObjectURL(blob);
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  document.body.appendChild(iframe);
+  iframe.onload = () => {
+    try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } finally {
+      setTimeout(() => { URL.revokeObjectURL(pdfUrl); document.body.removeChild(iframe); }, 500);
+    }
+  };
+  iframe.src = pdfUrl;
+  return true;
+};
+
+// Generate Batch Item QR PDF (10x10 cm per page) and open preview
+export const openItemQRPDFBatch = async (items) => {
+  const pageSizeMM = 100;
+  const qrBoxMM = 50;
+  const marginMM = 6;
+  const qrX = (pageSizeMM - qrBoxMM) / 2;
+  const qrY = marginMM;
+
+  const pdf = new jsPDF("p", "mm", [pageSizeMM, pageSizeMM]);
+
+  for (let idx = 0; idx < items.length; idx++) {
+    const item = items[idx];
+    if (idx > 0) pdf.addPage([pageSizeMM, pageSizeMM], "p");
+
+    const payload = encodeURIComponent(
+      JSON.stringify({
+        id: item.id,
+        kode: item.kode_barang || item.kode || "",
+        nama: item.nama_item_barang || item.nama_item || "",
+      })
+    );
+    const sizePx = 600;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${sizePx}x${sizePx}&data=${payload}`;
+
+    let dataUrl = qrUrl;
+    try {
+      const resp = await fetch(qrUrl, { mode: "cors" });
+      const blob = await resp.blob();
+      dataUrl = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+    } catch (_) { }
+
+    pdf.addImage(dataUrl, "PNG", qrX, qrY, qrBoxMM, qrBoxMM, undefined, "FAST");
+
+    let y = qrY + qrBoxMM + 5;
+    pdf.setDrawColor(180);
+    pdf.line(marginMM, y, pageSizeMM - marginMM, y);
+    y += 5;
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(8);
+    pdf.text("Kode Barang:", marginMM, y);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(String(item.kode_barang || item.kode || "-"), marginMM + 28, y);
+    y += 5;
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Nama Item:", marginMM, y);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(String(item.nama_item_barang || item.nama_item || "-"), marginMM + 28, y);
+    y += 5;
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Jenis:", marginMM, y);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(String((item.jenis_barang && item.jenis_barang.nama_jenis) || item.jenis || "-"), marginMM + 28, y);
+    y += 5;
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Bentuk:", marginMM, y);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(String((item.bentuk_barang && item.bentuk_barang.nama_bentuk) || item.bentuk || "-"), marginMM + 28, y);
+    y += 5;
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Grade:", marginMM, y);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(String((item.grade_barang && item.grade_barang.nama) || item.grade || "-"), marginMM + 28, y);
+    y += 4;
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Date Printed:", marginMM, y);
+    pdf.setFont("helvetica", "normal");
+    const d = new Date();
+    const dateStr = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+    pdf.text(dateStr, marginMM + 28, y);
+    y += 5;
+    pdf.setDrawColor(180);
+    pdf.line(marginMM, y, pageSizeMM - marginMM, y);
+    pdf.setFontSize(7);
+    pdf.setTextColor(120);
+    pdf.text("SURYA LOGAM JAYA - Warehouse Management System", pageSizeMM / 2, pageSizeMM - 5, { align: "center" });
+  }
+
+  const blobUrl = pdf.output("bloburl");
+  const win = window.open(blobUrl, "_blank");
+  if (win) {
+    setTimeout(() => { try { win.focus(); win.print(); } catch (_) { } }, 600);
     return true;
   }
   const blob = pdf.output("blob");
