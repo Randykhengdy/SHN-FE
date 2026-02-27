@@ -15,7 +15,7 @@ export default function ViewPurchaseOrderPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { showAlert, AlertComponent } = useAlert();
-  
+
   const [purchaseOrder, setPurchaseOrder] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -70,6 +70,26 @@ export default function ViewPurchaseOrderPage() {
     navigate('/purchase-order');
   };
 
+  const getDimensiString = (item) => {
+    const formatDim = (val) => {
+      if (!val) return "";
+      const parsed = parseFloat(val);
+      return isNaN(parsed) ? val : parsed.toString();
+    };
+
+    let dimensiParts = [];
+    if (item.diameter_luar) dimensiParts.push(formatDim(item.diameter_luar));
+    if (item.diameter_dalam) dimensiParts.push(formatDim(item.diameter_dalam));
+    if (item.diameter) dimensiParts.push(formatDim(item.diameter));
+    if (item.sisi1) dimensiParts.push(formatDim(item.sisi1));
+    if (item.sisi2) dimensiParts.push(formatDim(item.sisi2));
+    if (item.tebal) dimensiParts.push(formatDim(item.tebal));
+    if (item.lebar) dimensiParts.push(formatDim(item.lebar));
+    if (item.panjang) dimensiParts.push(formatDim(item.panjang));
+
+    return dimensiParts.length > 0 ? dimensiParts.join(' x ') : '-';
+  };
+
   const handlePrint = () => {
     if (!purchaseOrder) return;
 
@@ -78,9 +98,7 @@ export default function ViewPurchaseOrderPage() {
         bentuk_barang: item.bentuk_barang?.nama_bentuk || "",
         jenis_barang: item.jenis_barang?.nama_jenis || "",
         grade_barang: item.grade_barang?.nama || "",
-        dimensi: item.panjang && item.lebar
-          ? `${item.panjang} x ${item.lebar} x ${item.tebal || 0}`
-          : "-",
+        dimensi: getDimensiString(item),
         qty: item.qty || 0,
         harga_display: formatCurrency(parseFloat(item.harga || 0)),
         diskon_display: `${item.diskon || 0}%`,
@@ -194,7 +212,7 @@ export default function ViewPurchaseOrderPage() {
               </div>
             </div>
           </div>
-          
+
           {purchaseOrder.catatan && (
             <div className="mt-4">
               <Label className="text-sm font-medium text-gray-600">Catatan</Label>
@@ -231,7 +249,7 @@ export default function ViewPurchaseOrderPage() {
                   purchaseOrder.purchase_order_items.map((item, index) => {
                     // Calculate subtotal: qty * harga
                     const subtotal = item.qty * parseFloat(item.harga);
-                    
+
                     return (
                       <TableRow key={item.id} className="hover:bg-gray-50">
                         <TableCell>{index + 1}</TableCell>
@@ -239,7 +257,7 @@ export default function ViewPurchaseOrderPage() {
                           {/* Display item info using relation data from API */}
                           <div>
                             <div className="font-medium">
-                             {item.bentuk_barang?.nama_bentuk || 'N/A'} {item.jenis_barang?.nama_jenis || 'N/A'}
+                              {item.bentuk_barang?.nama_bentuk || 'N/A'} {item.jenis_barang?.nama_jenis || 'N/A'}
                             </div>
                             <div className="text-sm text-gray-500">
                               Grade: {item.grade_barang?.nama || 'N/A'}
@@ -251,10 +269,7 @@ export default function ViewPurchaseOrderPage() {
                           {formatCurrency(parseFloat(item.harga))}
                         </TableCell>
                         <TableCell>
-                          {item.panjang && item.lebar 
-                            ? `${item.panjang} x ${item.lebar} x ${item.tebal || 0}`
-                            : 'N/A'
-                          }
+                          {getDimensiString(item)}
                         </TableCell>
                         <TableCell>
                           {/* Calculate weight if needed or show N/A */}
