@@ -808,7 +808,7 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
         <div class="info-row"><span class="info-label">Tanggal WO</span><span class="info-value">${formatDate(woActualData.workOrderPlanning?.tanggal_wo)}</span></div>
         <div class="info-row"><span class="info-label">Prioritas</span><span class="info-value">${woActualData.workOrderPlanning?.prioritas || 'N/A'}</span></div>
         <div class="info-row"><span class="info-label">Status WO</span><span class="info-value">${woActualData.workOrderPlanning?.status || 'N/A'}</span></div>
-        <div class="info-row"><span class="info-label">Tanggal Actual</span><span class="info-value">${formatDate(woActualData.woActual?.tanggal_actual || woActualData.woActual?.created_at)}</span></div>
+        <div class="info-row"><span class="info-label">Tanggal Actual</span><span class="info-value">${formatDate(woActualData.woActual?.tanggal_actual || woActualData.woActual?.created_at || new Date().toISOString())}</span></div>
       </div>
 
       ${(woActualData.customer || woActualData.warehouse) ? `

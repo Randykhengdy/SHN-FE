@@ -89,14 +89,14 @@ export default function ViewWOActualPage() {
 
         // If planning relation exists but missing nested objects (pelanggan/gudang) or items, fetch full planning details
         if (planningRel && planningRel.id && (!planningRel.pelanggan || !planningRel.gudang || !planningRel.items || planningRel.items.length === 0)) {
-           try {
-             const planningRes = await workOrderService.getWorkOrderById(planningRel.id);
-             if (planningRes?.data) {
-                planningRel = { ...planningRel, ...planningRes.data };
-             }
-           } catch (err) {
-             console.warn('Gagal memuat detail WO Planning:', err);
-           }
+          try {
+            const planningRes = await workOrderService.getWorkOrderById(planningRel.id);
+            if (planningRes?.data) {
+              planningRel = { ...planningRel, ...planningRes.data };
+            }
+          } catch (err) {
+            console.warn('Gagal memuat detail WO Planning:', err);
+          }
         }
 
         setWoActual(actual);
@@ -137,7 +137,7 @@ export default function ViewWOActualPage() {
         if (headerImageBase64 && headerImageBase64.startsWith('blob:')) {
           URL.revokeObjectURL(headerImageBase64);
         }
-      } catch (_) {}
+      } catch (_) { }
     };
   }, [id]);
 
@@ -226,8 +226,8 @@ export default function ViewWOActualPage() {
       const pelaksanaArr = Array.isArray(it.work_order_planning_item?.pelaksana)
         ? it.work_order_planning_item.pelaksana
         : (Array.isArray(it.work_order_planning_item?.work_order_item_pelaksanas)
-            ? it.work_order_planning_item.work_order_item_pelaksanas
-            : []);
+          ? it.work_order_planning_item.work_order_item_pelaksanas
+          : []);
       const beratPlan = it.berat_planning ?? pelaksanaArr.reduce((acc, p) => acc + (parseFloat(p.weight ?? p.berat) || 0), 0);
       return sum + (parseFloat(beratPlan) || 0);
     }, 0);
@@ -237,189 +237,200 @@ export default function ViewWOActualPage() {
   const handlePrint = async () => {
     try {
       setPrintLoading(true);
-      
+
       // Fetch all planning images first if we have a planning ID
       let planningImagesMap = {};
       if (planning?.id) {
-         try {
-           const imagesRes = await workOrderService.getWorkOrderImages(planning.id);
-           const images = imagesRes?.data?.images || [];
+        try {
+          const imagesRes = await workOrderService.getWorkOrderImages(planning.id);
+          const images = imagesRes?.data?.images || [];
 
-           if (Array.isArray(images)) {
-             images.forEach(img => {
-               // Try multiple ID fields to match item
-               const itemIds = [
-                 img.wo_item_id,
-                 img.wo_item_unique_id
-               ].filter(Boolean);
-               
-               // Use a Set to avoid duplicate processing for the same ID
-               const uniqueIds = [...new Set(itemIds)];
-               
-               uniqueIds.forEach(id => {
-                  const key = String(id);
-                  if (!planningImagesMap[key]) {
-                    planningImagesMap[key] = [];
+          if (Array.isArray(images)) {
+            images.forEach(img => {
+              // Try multiple ID fields to match item
+              const itemIds = [
+                img.wo_item_id,
+                img.wo_item_unique_id
+              ].filter(Boolean);
+
+              // Use a Set to avoid duplicate processing for the same ID
+              const uniqueIds = [...new Set(itemIds)];
+
+              uniqueIds.forEach(id => {
+                const key = String(id);
+                if (!planningImagesMap[key]) {
+                  planningImagesMap[key] = [];
+                }
+                // Check if image already added to this key to prevent duplicates
+                // Use saran_id because 'id' field might not exist in the response
+                const exists = planningImagesMap[key].some(existing => {
+                  if (img.saran_id && existing.saran_id) {
+                    return existing.saran_id === img.saran_id;
                   }
-                  // Check if image already added to this key to prevent duplicates
-                  // Use saran_id because 'id' field might not exist in the response
-                  const exists = planningImagesMap[key].some(existing => {
-                    if (img.saran_id && existing.saran_id) {
-                      return existing.saran_id === img.saran_id;
-                    }
-                    // Fallback to strict object equality if no ID available
-                    return existing === img;
-                  });
-                  
-                  if (!exists) {
-                    planningImagesMap[key].push(img);
-                  }
-               });
-             });
-           }
-         } catch (err) {
-           console.warn('Gagal memuat gambar WO Planning untuk print:', err);
-         }
+                  // Fallback to strict object equality if no ID available
+                  return existing === img;
+                });
+
+                if (!exists) {
+                  planningImagesMap[key].push(img);
+                }
+              });
+            });
+          }
+        } catch (err) {
+          console.warn('Gagal memuat gambar WO Planning untuk print:', err);
+        }
       }
-      
+
       const printData = {
         workOrderPlanning: planning,
         woActual: woActual,
         customer: planning?.pelanggan,
         warehouse: planning?.gudang,
-        
+
         // Keep these for backward compatibility if needed, though printUtils uses structure above
         nomor_wo: planning?.nomor_wo || 'N/A',
         tanggal_wo: planning?.created_at || 'N/A',
         status_planning: planning?.status || 'N/A',
         pelanggan: planning?.pelanggan,
         gudang: planning?.gudang,
-        
+
         tanggal_actual: woActual?.tanggal_actual || woActual?.created_at,
         jam_mulai: woActual?.jam_mulai,
         jam_selesai: woActual?.jam_selesai,
         status_actual: woActual?.status,
         prioritas: woActual?.prioritas,
         catatan: woActual?.catatan,
-        
+
         items: items.map(item => {
-           const planningItem = item.work_order_planning_item || {};
-           
-           // Resolve Pelaksana from Actual Assignments (prioritized) or Planning
-           let pelaksanaArr = [];
-           // First check has_many_pelaksana (new API format)
-           if (Array.isArray(item.has_many_pelaksana) && item.has_many_pelaksana.length > 0) {
-             pelaksanaArr = item.has_many_pelaksana;
-           }
-           // Then check actual assignments (if available and is array)
-           else if (Array.isArray(item.assignments) && item.assignments.length > 0) {
-             pelaksanaArr = item.assignments;
-           } 
-           // Then check item.pelaksana (sometimes actual data is here)
-           else if (Array.isArray(item.pelaksana) && item.pelaksana.length > 0) {
-             pelaksanaArr = item.pelaksana;
-           }
-           // Fallback to planning pelaksana if no actual execution data found
-           else if (Array.isArray(planningItem.pelaksana)) {
-             pelaksanaArr = planningItem.pelaksana;
-           } else if (Array.isArray(planningItem.work_order_item_pelaksanas)) {
-             pelaksanaArr = planningItem.work_order_item_pelaksanas;
-           }
+          const planningItem = item.work_order_planning_item || {};
 
-           const beratPlanning = item.berat_planning ?? pelaksanaArr
-              .reduce((a, p) => a + (parseFloat(p.weight ?? p.berat) || 0), 0);
+          // Resolve Pelaksana from Actual Assignments (prioritized) or Planning
+          let pelaksanaArr = [];
+          // First check has_many_pelaksana (new API format)
+          if (Array.isArray(item.has_many_pelaksana) && item.has_many_pelaksana.length > 0) {
+            pelaksanaArr = item.has_many_pelaksana;
+          }
+          // Then check actual assignments (if available and is array)
+          else if (Array.isArray(item.assignments) && item.assignments.length > 0) {
+            pelaksanaArr = item.assignments;
+          }
+          // Then check item.pelaksana (sometimes actual data is here)
+          else if (Array.isArray(item.pelaksana) && item.pelaksana.length > 0) {
+            pelaksanaArr = item.pelaksana;
+          }
+          // Fallback to planning pelaksana if no actual execution data found
+          else if (Array.isArray(planningItem.pelaksana)) {
+            pelaksanaArr = planningItem.pelaksana;
+          } else if (Array.isArray(planningItem.work_order_item_pelaksanas)) {
+            pelaksanaArr = planningItem.work_order_item_pelaksanas;
+          }
 
-           // Resolve Dimensions
-           // 1. Try pre-formatted dimension strings
-           let dimString = item.dimensi || item.dimensi_actual || planningItem.dimensi;
-           
-           // 2. If no string or it looks invalid (0x0x0mm), try to construct from numeric values
-           if (!dimString || dimString === '0x0x0mm') {
-              const p = parseFloat(planningItem.panjang || item.panjang || 0);
-              const l = parseFloat(planningItem.lebar || item.lebar || 0);
-              const t = parseFloat(planningItem.tebal || item.tebal || item.ketebalan || 0);
-              
-              if (p > 0 || l > 0 || t > 0) {
-                 dimString = `${p}x${l}x${t}mm`;
-              } else {
-                 dimString = '-';
-              }
-           }
+          const beratPlanning = item.berat_planning ?? pelaksanaArr
+            .reduce((a, p) => a + (parseFloat(p.weight ?? p.berat) || 0), 0);
 
-           // Resolve Before Images (Planning)
-           // 1. Try from fetched images API (prioritized)
-           let beforeImages = [];
-           
-           // Collect possible IDs for this item to match against images
-           const possibleIds = [
-              planningItem.id,
-              item.work_order_planning_item_id,
-              planningItem.wo_item_unique_id,
-              item.wo_item_unique_id
-           ].filter(Boolean);
+          // Resolve Dimensions
+          let dimString = '';
+          const tb = planningItem.bentuk_barang?.tipe_barang || planningItem.bentuk_barang?.tipeBarang || item.bentuk_barang?.tipe_barang || item.bentuk_barang?.tipeBarang;
+          if (tb) {
+            const formatInt = (val) => Math.round(parseFloat(val) || 0);
+            const dims = [];
+            const src = planningItem.panjang ? planningItem : item;
+            if (tb.diameter_luar && tb.diameter_dalam && tb.panjang) {
+              dims.push(formatInt(src.diameter_luar), formatInt(src.diameter_dalam), formatInt(src.panjang));
+            } else if (tb.sisi1 && tb.sisi2 && tb.tebal && tb.panjang) {
+              dims.push(formatInt(src.sisi1), formatInt(src.sisi2), formatInt(src.tebal), formatInt(src.panjang));
+            } else if (tb.tebal && tb.lebar && tb.panjang) {
+              dims.push(formatInt(src.tebal || src.ketebalan), formatInt(src.lebar), formatInt(src.panjang));
+            } else if (tb.diameter && tb.panjang) {
+              dims.push(formatInt(src.diameter), formatInt(src.panjang));
+            } else {
+              if (tb.tebal) dims.push(formatInt(src.tebal || src.ketebalan));
+              if (tb.lebar) dims.push(formatInt(src.lebar));
+              if (tb.panjang) dims.push(formatInt(src.panjang));
+            }
+            if (dims.length > 0) dimString = dims.join('x');
+          }
 
-           possibleIds.forEach(pid => {
-               const key = String(pid);
-               if (planningImagesMap[key]) {
-                   planningImagesMap[key].forEach(img => {
-                       // Prioritize base64, fallback to file path (simplified based on JSON structure)
-                       const rawVal = img.canvas_image_base64 || img.canvas_file_path;
-                       
-                       const src = resolveImageSrc(rawVal);
+          // Fallback to strict properties or provided string
+          if (!dimString) {
+            dimString = item.dimensi || item.dimensi_actual || planningItem.dimensi || `${Math.round(parseFloat(planningItem.panjang || item.panjang || 0))}x${Math.round(parseFloat(planningItem.lebar || item.lebar || 0))}x${Math.round(parseFloat(planningItem.tebal || item.tebal || item.ketebalan || 0))}`;
+          }
 
-                       if (src && !beforeImages.some(existing => existing.src === src)) {
-                           beforeImages.push({ src });
-                       }
-                   });
-               }
-           });
+          // Resolve Before Images (Planning)
+          // 1. Try from fetched images API (prioritized)
+          let beforeImages = [];
 
-           // 2. Fallback REMOVED as per request - only use API fetched images
+          // Collect possible IDs for this item to match against images
+          const possibleIds = [
+            planningItem.id,
+            item.work_order_planning_item_id,
+            planningItem.wo_item_unique_id,
+            item.wo_item_unique_id
+          ].filter(Boolean);
+
+          possibleIds.forEach(pid => {
+            const key = String(pid);
+            if (planningImagesMap[key]) {
+              planningImagesMap[key].forEach(img => {
+                // Prioritize base64, fallback to file path (simplified based on JSON structure)
+                const rawVal = img.canvas_image_base64 || img.canvas_file_path;
+
+                const src = resolveImageSrc(rawVal);
+
+                if (src && !beforeImages.some(existing => existing.src === src)) {
+                  beforeImages.push({ src });
+                }
+              });
+            }
+          });
+
+          // 2. Fallback REMOVED as per request - only use API fetched images
           // if (beforeImages.length === 0) { ... }
 
           return {
-           jenisBarang: item.jenis_barang?.nama_jenis || item.jenis_barang_nama || planningItem.jenis_barang?.nama_jenis_barang || planningItem.jenis_barang?.nama,
-           bentukBarang: item.bentuk_barang?.nama_bentuk || item.bentuk_barang_nama || planningItem.bentuk_barang?.nama_bentuk_barang || planningItem.bentuk_barang?.nama,
-           gradeBarang: item.grade_barang?.nama || item.grade_barang_nama || planningItem.grade_barang?.nama_grade_barang || planningItem.grade_barang?.nama,
-           dimensi: dimString,
-           jenisPotongan: planningItem.jenis_potongan || item.jenis_potongan || 'N/A',
-           
-           qtyPlanning: item.qty_planning ?? planningItem.qty_planning ?? planningItem.qty ?? 0,
-           beratPlanning: Math.round(beratPlanning),
-           
-           qtyActual: item.qty_actual ?? 0,
-           beratActual: Math.round(item.berat ?? item.berat_actual ?? 0),
-           
-           beforeImages: beforeImages,
+            jenisBarang: item.jenis_barang?.nama_jenis || item.jenis_barang_nama || planningItem.jenis_barang?.nama_jenis_barang || planningItem.jenis_barang?.nama,
+            bentukBarang: item.bentuk_barang?.nama_bentuk || item.bentuk_barang_nama || planningItem.bentuk_barang?.nama_bentuk_barang || planningItem.bentuk_barang?.nama,
+            gradeBarang: item.grade_barang?.nama || item.grade_barang_nama || planningItem.grade_barang?.nama_grade_barang || planningItem.grade_barang?.nama,
+            dimensi: dimString,
+            jenisPotongan: planningItem.jenis_potongan || item.jenis_potongan || 'N/A',
 
-           pelaksanas: pelaksanaArr.map(p => {
-               // Normalize to { pelaksana: { nama_pelaksana: '...' }, qty: ..., berat: ... } for printUtils
-               const name = p.pelaksana?.nama_pelaksana || 
-                          p.pelaksana?.nama || 
-                          p.pelaksana_info?.nama_pelaksana || 
-                          (typeof p.pelaksana === 'string' ? p.pelaksana : null) || 
-                          p.nama_pelaksana || 
-                          '-';
-               
-               // Extract qty and weight from pelaksana assignment
-               const qty = p.qty_actual ?? p.qty ?? p.quantity ?? 0;
-               const berat = Math.round(p.berat_actual ?? p.berat ?? p.weight ?? 0);
+            qtyPlanning: item.qty_planning ?? planningItem.qty_planning ?? planningItem.qty ?? 0,
+            beratPlanning: Math.round(beratPlanning),
 
-               return { 
-                 pelaksana: { nama_pelaksana: name },
-                 qty: qty,
-                 berat: berat
-               };
+            qtyActual: item.qty_actual ?? 0,
+            beratActual: Math.round(item.berat ?? item.berat_actual ?? 0),
+
+            beforeImages: beforeImages,
+
+            pelaksanas: pelaksanaArr.map(p => {
+              // Normalize to { pelaksana: { nama_pelaksana: '...' }, qty: ..., berat: ... } for printUtils
+              const name = p.pelaksana?.nama_pelaksana ||
+                p.pelaksana?.nama ||
+                p.pelaksana_info?.nama_pelaksana ||
+                (typeof p.pelaksana === 'string' ? p.pelaksana : null) ||
+                p.nama_pelaksana ||
+                '-';
+
+              // Extract qty and weight from pelaksana assignment
+              const qty = p.qty_actual ?? p.qty ?? p.quantity ?? 0;
+              const berat = Math.round(p.berat_actual ?? p.berat ?? p.weight ?? 0);
+
+              return {
+                pelaksana: { nama_pelaksana: name },
+                qty: qty,
+                berat: berat
+              };
             }),
-           status: item.status || woActual?.status || 'PENDING',
-           
-           // Add images
-           afterImages: itemImagesMap[item.id] ? [{ src: itemImagesMap[item.id] }] : [],
-           sisaImages: itemSisaImagesMap[item.id] ? [{ src: itemSisaImagesMap[item.id] }] : [],
-           beforeImages: beforeImages
-         };
+            status: item.status || woActual?.status || 'PENDING',
+
+            // Add images
+            afterImages: itemImagesMap[item.id] ? [{ src: itemImagesMap[item.id] }] : [],
+            sisaImages: itemSisaImagesMap[item.id] ? [{ src: itemSisaImagesMap[item.id] }] : [],
+            beforeImages: beforeImages
+          };
         }),
-        
+
         headerImage: headerImageBase64,
         parentImages: headerImageBase64 ? [{ src: headerImageBase64 }] : []
       };
@@ -452,8 +463,8 @@ export default function ViewWOActualPage() {
         <div className="space-y-6">
           <AlertComponent />
           <div className="flex items-center gap-4 mb-6">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => navigate('/wo-actual')}
               className="flex items-center gap-2"
             >
@@ -473,19 +484,19 @@ export default function ViewWOActualPage() {
 
   return (
     <>
-    <PageLayout title="Detail WO Actual" subtitle="PRODUKSI">
+      <PageLayout title="Detail WO Actual" subtitle="PRODUKSI">
         <AlertComponent />
 
         {/* Header - Aligned with Work Order View */}
         <div className="flex items-center gap-4 mb-6">
-            <Button 
-              variant="outline" 
-              onClick={() => navigate('/wo-actual')}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Kembali
-            </Button>
+          <Button
+            variant="outline"
+            onClick={() => navigate('/wo-actual')}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Kembali
+          </Button>
         </div>
 
         {/* Informasi WO Planning */}
@@ -542,10 +553,10 @@ export default function ViewWOActualPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <Label className="text-sm font-medium text-gray-700">Tanggal Actual</Label>
-                <Input value={(woActual.tanggal_actual || woActual.created_at || '').toString().substring(0,10)} disabled className="bg-gray-50" />
+                <Input value={(woActual.tanggal_actual || woActual.created_at || '').toString().substring(0, 10)} disabled className="bg-gray-50" />
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">Jam Mulai</Label>
@@ -563,9 +574,9 @@ export default function ViewWOActualPage() {
                 <Label className="text-sm font-medium text-gray-700">Prioritas</Label>
                 <Input value={woActual.prioritas || 'MEDIUM'} disabled className="bg-gray-50" />
               </div>
-             </div>
+            </div>
 
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
               <div>
                 <Label className="text-sm font-medium text-gray-700">Catatan</Label>
                 <Textarea value={woActual.catatan || ''} disabled rows={4} className="bg-gray-50 mt-1.5" />
@@ -634,11 +645,11 @@ export default function ViewWOActualPage() {
                         const pelaksanaArr = Array.isArray(planningItem.pelaksana)
                           ? planningItem.pelaksana
                           : (Array.isArray(planningItem.work_order_item_pelaksanas)
-                              ? planningItem.work_order_item_pelaksanas
-                              : []);
+                            ? planningItem.work_order_item_pelaksanas
+                            : []);
                         const beratPlanning = actualItem.berat_planning ?? pelaksanaArr
                           .reduce((a, p) => a + (parseFloat(p.weight ?? p.berat) || 0), 0);
-                        
+
                         const qtyActual = actualItem.qty_actual ?? 0;
                         const beratActual = actualItem.berat ?? actualItem.berat_actual ?? 0;
                         const status = actualItem.status || woActual?.status || 'PENDING';
@@ -646,17 +657,17 @@ export default function ViewWOActualPage() {
                         const planningPelaksanaArr = Array.isArray(planningItem.pelaksana)
                           ? planningItem.pelaksana
                           : (Array.isArray(planningItem.work_order_item_pelaksanas)
-                              ? planningItem.work_order_item_pelaksanas
-                              : []);
+                            ? planningItem.work_order_item_pelaksanas
+                            : []);
 
                         // Determine Actual Pelaksana Array with fallback priority
                         let actualPelaksanaArr = [];
                         if (Array.isArray(actualItem.has_many_pelaksana) && actualItem.has_many_pelaksana.length > 0) {
-                            actualPelaksanaArr = actualItem.has_many_pelaksana;
+                          actualPelaksanaArr = actualItem.has_many_pelaksana;
                         } else if (Array.isArray(actualItem.assignments) && actualItem.assignments.length > 0) {
-                            actualPelaksanaArr = actualItem.assignments;
+                          actualPelaksanaArr = actualItem.assignments;
                         } else if (Array.isArray(actualItem.pelaksana) && actualItem.pelaksana.length > 0) {
-                            actualPelaksanaArr = actualItem.pelaksana;
+                          actualPelaksanaArr = actualItem.pelaksana;
                         }
 
                         // Untuk display di tabel: Prioritas Actual, fallback Planning
@@ -665,7 +676,7 @@ export default function ViewWOActualPage() {
                         const bentukNama = actualItem.bentuk_barang?.nama_bentuk || actualItem.bentuk_barang_nama || planningItem.bentuk_barang?.nama_bentuk_barang || planningItem.bentuk_barang?.nama;
                         const gradeNama = actualItem.grade_barang?.nama || actualItem.grade_barang_nama || planningItem.grade_barang?.nama_grade_barang || planningItem.grade_barang?.nama;
                         const jenisPotongan = planningItem.jenis_potongan || actualItem.jenis_potongan || 'N/A';
-                        
+
                         const openPelaksanaModal = () => {
                           setPelaksanaModalData(actualPelaksanaArr);
                           setPelaksanaPlanningData(planningPelaksanaArr);
@@ -787,7 +798,7 @@ export default function ViewWOActualPage() {
           </Button>
 
           <RoleGuard roles={['admin', 'manager', 'supervisor']}>
-            <Button 
+            <Button
               size="lg"
               className="border-blue-600 text-blue-600 hover:bg-blue-50"
               variant="outline"
@@ -848,7 +859,7 @@ export default function ViewWOActualPage() {
             </div>
           )}
         />
-    </PageLayout>
+      </PageLayout>
     </>
   );
 }

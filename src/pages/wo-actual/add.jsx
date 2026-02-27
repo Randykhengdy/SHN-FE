@@ -297,8 +297,8 @@ export default function AddWOActualPage() {
       ...prev,
       [itemId]: {
         ...prev[itemId],
-        assignments: prev[itemId].assignments.map((assignment, index) => 
-          index === assignmentIndex 
+        assignments: prev[itemId].assignments.map((assignment, index) =>
+          index === assignmentIndex
             ? { ...assignment, [field]: value }
             : assignment
         )
@@ -339,7 +339,7 @@ export default function AddWOActualPage() {
       if (formData?.foto_bukti_preview) {
         URL.revokeObjectURL(formData.foto_bukti_preview);
       }
-    } catch (_) {}
+    } catch (_) { }
     setFormData(prev => ({
       ...prev,
       foto_bukti: null,
@@ -507,12 +507,12 @@ export default function AddWOActualPage() {
           // Add timeout to prevent hanging indefinitely, though axios usually handles this
           const imagesResp = await workOrderService.getWorkOrderImages(parseInt(formData.planningWorkOrderId, 10));
           const imagesData = imagesResp?.data || imagesResp || [];
-          
+
           let planningCanvasImages = [];
           if (Array.isArray(imagesData)) {
-             planningCanvasImages = imagesData;
+            planningCanvasImages = imagesData;
           } else if (imagesData.images && Array.isArray(imagesData.images)) {
-             planningCanvasImages = imagesData.images;
+            planningCanvasImages = imagesData.images;
           }
 
           // Build robust map keyed by item IDs
@@ -525,7 +525,7 @@ export default function AddWOActualPage() {
               img.item_id,
               img.wo_item_unique_id
             ].filter(Boolean);
-            
+
             const uniqueIds = [...new Set(itemIds)];
             uniqueIds.forEach(id => {
               const key = String(id);
@@ -557,21 +557,21 @@ export default function AddWOActualPage() {
 
           // BEFORE: Get images from map (prioritized) or fallback to item details
           let beforeImages = [];
-          
+
           // 1. Try from fetched map using planningItem.id
           if (planningItem.id && planningCanvasImagesMap[String(planningItem.id)]) {
-             beforeImages = planningCanvasImagesMap[String(planningItem.id)].map(img => {
-               const rawVal = img.canvas_image_base64 || img.image_base64 || img.image_url || img.src || img.url || img.canvas_file_path;
-               return { src: resolveImageSrc(rawVal) || '' };
-             });
+            beforeImages = planningCanvasImagesMap[String(planningItem.id)].map(img => {
+              const rawVal = img.canvas_image_base64 || img.image_base64 || img.image_url || img.src || img.url || img.canvas_file_path;
+              return { src: resolveImageSrc(rawVal) || '' };
+            });
           }
-          
+
           // 2. Try from fetched map using wo_item_unique_id
           if (beforeImages.length === 0 && planningItem.wo_item_unique_id && planningCanvasImagesMap[String(planningItem.wo_item_unique_id)]) {
-             beforeImages = planningCanvasImagesMap[String(planningItem.wo_item_unique_id)].map(img => {
-               const rawVal = img.canvas_image_base64 || img.image_base64 || img.image_url || img.src || img.url || img.canvas_file_path;
-               return { src: resolveImageSrc(rawVal) || '' };
-             });
+            beforeImages = planningCanvasImagesMap[String(planningItem.wo_item_unique_id)].map(img => {
+              const rawVal = img.canvas_image_base64 || img.image_base64 || img.image_url || img.src || img.url || img.canvas_file_path;
+              return { src: resolveImageSrc(rawVal) || '' };
+            });
           }
 
           // 3. Fallback REMOVED as per request - only use API fetched images
@@ -589,22 +589,28 @@ export default function AddWOActualPage() {
             bentukBarang: planningItem.bentuk_barang?.nama || planningItem.bentuk_barang?.nama_bentuk_barang || '-',
             gradeBarang: planningItem.grade_barang?.nama || planningItem.grade_barang?.nama_grade_barang || '-',
             dimensi: (() => {
-               // 1. Try pre-formatted dimension strings
-               let dimString = planningItem.dimensi;
-               
-               // 2. If no string or it looks invalid (0x0x0mm), try to construct from numeric values
-               if (!dimString || dimString === '0x0x0mm') {
-                  const p = parseFloat(planningItem.panjang || 0);
-                  const l = parseFloat(planningItem.lebar || 0);
-                  const t = parseFloat(planningItem.tebal || planningItem.ketebalan || 0);
-                  
-                  if (p > 0 || l > 0 || t > 0) {
-                     dimString = `${p}x${l}x${t}mm`;
-                  } else {
-                     dimString = '-';
-                  }
-               }
-               return dimString;
+              const tb = planningItem.bentuk_barang?.tipe_barang || planningItem.bentuk_barang?.tipeBarang;
+              if (tb) {
+                const formatInt = (val) => Math.round(parseFloat(val) || 0);
+                const dims = [];
+                if (tb.diameter_luar && tb.diameter_dalam && tb.panjang) {
+                  dims.push(formatInt(planningItem.diameter_luar), formatInt(planningItem.diameter_dalam), formatInt(planningItem.panjang));
+                } else if (tb.sisi1 && tb.sisi2 && tb.tebal && tb.panjang) {
+                  dims.push(formatInt(planningItem.sisi1), formatInt(planningItem.sisi2), formatInt(planningItem.tebal), formatInt(planningItem.panjang));
+                } else if (tb.tebal && tb.lebar && tb.panjang) {
+                  dims.push(formatInt(planningItem.tebal || planningItem.ketebalan), formatInt(planningItem.lebar), formatInt(planningItem.panjang));
+                } else if (tb.diameter && tb.panjang) {
+                  dims.push(formatInt(planningItem.diameter), formatInt(planningItem.panjang));
+                } else {
+                  // Fallback using available standard properties
+                  if (tb.tebal) dims.push(formatInt(planningItem.tebal || planningItem.ketebalan));
+                  if (tb.lebar) dims.push(formatInt(planningItem.lebar));
+                  if (tb.panjang) dims.push(formatInt(planningItem.panjang));
+                }
+                if (dims.length > 0) return dims.join('x');
+              }
+              // Strict fallback if Tipe Barang is missing
+              return planningItem.dimensi || `${Math.round(parseFloat(planningItem.panjang) || 0)}x${Math.round(parseFloat(planningItem.lebar) || 0)}x${Math.round(parseFloat(planningItem.ketebalan || planningItem.tebal) || 0)}`;
             })(),
             qtyPlanning: planningItem.qty_planning || planningItem.jumlah || 0,
             qtyActual: qtyActualComputed,
@@ -653,7 +659,7 @@ export default function AddWOActualPage() {
             }
           });
         }
-      } catch (_) {}
+      } catch (_) { }
       if (detailsList.length > 0) {
         setSaveErrorMessage(errMsg);
         setSaveErrorDetails(detailsList);
@@ -769,8 +775,8 @@ export default function AddWOActualPage() {
             </div>
           )}
         />
-        
-        
+
+
 
         {/* Main Form */}
         <div className="space-y-6">
@@ -837,334 +843,334 @@ export default function AddWOActualPage() {
                       />
                     </div>
 
-                      <div>
-                        {/* Removed Actual WO ID field as requested */}
-                      </div>
+                    <div>
+                      {/* Removed Actual WO ID field as requested */}
+                    </div>
 
-                      {/* Tanggal/Jam dihapus sesuai permintaan */}
+                    {/* Tanggal/Jam dihapus sesuai permintaan */}
 
-                      <div>
-                        <Label htmlFor="status">Status</Label>
-                        <Select
-                          value={formData.status}
-                          onValueChange={(value) => handleInputChange('status', value)}
-                          disabled
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Pilih Status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Pending">Pending</SelectItem>
-                            <SelectItem value="On Progress">On Progress</SelectItem>
-                            <SelectItem value="Completed">Completed</SelectItem>
-                            <SelectItem value="Cancelled">Cancelled</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div>
-                        <Label htmlFor="prioritas">Prioritas</Label>
-                        <Select
-                          value={formData.prioritas}
-                          onValueChange={(value) => handleInputChange('prioritas', value)}
-                          disabled
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Pilih Prioritas" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="LOW">Low</SelectItem>
-                            <SelectItem value="MEDIUM">Medium</SelectItem>
-                            <SelectItem value="HIGH">High</SelectItem>
-                            <SelectItem value="URGENT">Urgent</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                    <div>
+                      <Label htmlFor="status">Status</Label>
+                      <Select
+                        value={formData.status}
+                        onValueChange={(value) => handleInputChange('status', value)}
+                        disabled
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Pending">Pending</SelectItem>
+                          <SelectItem value="On Progress">On Progress</SelectItem>
+                          <SelectItem value="Completed">Completed</SelectItem>
+                          <SelectItem value="Cancelled">Cancelled</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div>
-                      <Label htmlFor="catatan">Catatan</Label>
-                      <Textarea
-                        id="catatan"
-                        value={formData.catatan}
-                        onChange={(e) => handleInputChange('catatan', e.target.value)}
-                        placeholder="Catatan tambahan..."
-                        rows={3}
-                      />
+                      <Label htmlFor="prioritas">Prioritas</Label>
+                      <Select
+                        value={formData.prioritas}
+                        onValueChange={(value) => handleInputChange('prioritas', value)}
+                        disabled
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih Prioritas" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="LOW">Low</SelectItem>
+                          <SelectItem value="MEDIUM">Medium</SelectItem>
+                          <SelectItem value="HIGH">High</SelectItem>
+                          <SelectItem value="URGENT">Urgent</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
+                  </div>
 
-                    {/* Foto Bukti Upload */}
-                    <div>
-                      <Label htmlFor="foto_bukti">Foto Bukti</Label>
-                      <div className="mt-2 flex items-center gap-4">
-                        <div>
-                          <input
-                            id="foto_bukti"
-                            type="file"
-                            accept="image/*"
-                            onChange={handleFotoBuktiChange}
-                            className="hidden"
+                  <div>
+                    <Label htmlFor="catatan">Catatan</Label>
+                    <Textarea
+                      id="catatan"
+                      value={formData.catatan}
+                      onChange={(e) => handleInputChange('catatan', e.target.value)}
+                      placeholder="Catatan tambahan..."
+                      rows={3}
+                    />
+                  </div>
+
+                  {/* Foto Bukti Upload */}
+                  <div>
+                    <Label htmlFor="foto_bukti">Foto Bukti</Label>
+                    <div className="mt-2 flex items-center gap-4">
+                      <div>
+                        <input
+                          id="foto_bukti"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFotoBuktiChange}
+                          className="hidden"
+                        />
+                        <label
+                          htmlFor="foto_bukti"
+                          className="inline-flex items-center rounded-md border px-4 py-2 text-xs font-medium hover:bg-gray-50 cursor-pointer"
+                        >
+                          Upload Foto
+                        </label>
+                      </div>
+                      {formData.foto_bukti_preview && (
+                        <div className="relative inline-block">
+                          <img
+                            src={formData.foto_bukti_preview}
+                            alt="Preview foto bukti"
+                            className="w-20 h-20 object-cover rounded border"
                           />
-                          <label
-                            htmlFor="foto_bukti"
-                            className="inline-flex items-center rounded-md border px-4 py-2 text-xs font-medium hover:bg-gray-50 cursor-pointer"
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            onClick={removeFotoBukti}
+                            className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0"
                           >
-                            Upload Foto
-                          </label>
+                            ×
+                          </Button>
                         </div>
-                        {formData.foto_bukti_preview && (
-                          <div className="relative inline-block">
-                            <img
-                              src={formData.foto_bukti_preview}
-                              alt="Preview foto bukti"
-                              className="w-20 h-20 object-cover rounded border"
-                            />
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="icon"
-                              onClick={removeFotoBukti}
-                              className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0"
-                            >
-                              ×
-                            </Button>
-                          </div>
-                        )}
-                      </div>
+                      )}
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
+        </div>
 
-          {/* Items table */}
+        {/* Items table */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Item WO (Actual)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-0">
+            {!selectedWOPlanning || (selectedWOPlanning.items || []).length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                {!selectedWOPlanning ? 'Pilih WO Planning terlebih dahulu' : 'Tidak ada item di WO Planning ini'}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="overflow-x-auto">
+                  <Table className="w-full">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Item</TableHead>
+                        <TableHead className="text-center">Jenis Potongan</TableHead>
+                        <TableHead className="text-center">Qty Planning</TableHead>
+                        <TableHead className="text-center">Berat Planning (kg)</TableHead>
+                        <TableHead className="text-center">Qty Actual</TableHead>
+                        <TableHead className="text-center">Berat Actual (kg)</TableHead>
+                        <TableHead className="text-center">Status</TableHead>
+                        <TableHead className="text-center">Pelaksana</TableHead>
+                        <TableHead className="text-center">Foto Bukti (Item)</TableHead>
+                        <TableHead className="text-center">Foto Sisa</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedWOPlanning.items.map((planningItem) => {
+                        const actualItem = actualItems[planningItem.id] || {};
+                        const assignments = actualItem.assignments || [];
+                        const beratPlanningComputed = parseFloat(planningItem.berat || 0);
+                        const qtyActualComputed = assignments.reduce((a, r) => a + (parseInt(r.qty) || 0), 0);
+                        const beratActualComputed = assignments.reduce((a, r) => a + (parseFloat(r.berat ?? r.weight) || 0), 0);
+                        return (
+                          <TableRow key={planningItem.id}>
+                            <TableCell>
+                              <div className="font-medium">
+                                {planningItem.jenis_barang?.nama || planningItem.jenis_barang?.nama_jenis_barang || 'Item'}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {(planningItem.bentuk_barang?.nama || planningItem.bentuk_barang?.nama_bentuk_barang || 'Bentuk')} - {(planningItem.grade_barang?.nama || planningItem.grade_barang?.nama_grade_barang || 'Grade')}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center">{planningItem.jenis_potongan || '-'}</TableCell>
+                            <TableCell className="text-center">{planningItem.qty_planning || planningItem.jumlah || 0}</TableCell>
+                            <TableCell className="text-center">{Math.round(beratPlanningComputed)}</TableCell>
+                            <TableCell className="text-center">{qtyActualComputed}</TableCell>
+                            <TableCell className="text-center">{Math.round(beratActualComputed)}</TableCell>
+                            <TableCell className="text-center">
+                              <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
+                                {(actualItem.status || 'PENDING')}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setPelaksanaModalItemId(planningItem.id);
+                                  setPelaksanaModalOpen(true);
+                                }}
+                              >
+                                Pelaksana ({assignments.length})
+                              </Button>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <div className="flex items-center justify-center gap-2">
+                                <input
+                                  id={`item-foto-${planningItem.id}`}
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handleItemFotoBuktiChange(planningItem.id, file);
+                                  }}
+                                  className="hidden"
+                                />
+                                <label
+                                  htmlFor={`item-foto-${planningItem.id}`}
+                                  className="inline-flex items-center rounded-md border px-3 py-1 text-xs font-medium hover:bg-gray-50 cursor-pointer"
+                                >
+                                  Upload
+                                </label>
+                                {actualItem.foto_bukti ? (
+                                  <img
+                                    src={actualItem.foto_bukti}
+                                    alt={`Foto Bukti Item #${planningItem.id}`}
+                                    className="w-12 h-12 object-cover rounded border cursor-pointer"
+                                    onClick={() => {
+                                      setPreviewSrc(actualItem.foto_bukti);
+                                      setPreviewTitle(`Foto Bukti Item #${planningItem.id}`);
+                                      setPreviewOpen(true);
+                                    }}
+                                  />
+                                ) : (
+                                  <span className="text-xs text-gray-500">Belum ada</span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <div className="flex items-center justify-center gap-2">
+                                <input
+                                  id={`item-foto-sisa-${planningItem.id}`}
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handleItemFotoSisaChange(planningItem.id, file);
+                                  }}
+                                  className="hidden"
+                                />
+                                <label
+                                  htmlFor={`item-foto-sisa-${planningItem.id}`}
+                                  className="inline-flex items-center rounded-md border px-3 py-1 text-xs font-medium hover:bg-gray-50 cursor-pointer"
+                                >
+                                  Upload
+                                </label>
+                                {actualItem.foto_sisa_barang ? (
+                                  <img
+                                    src={actualItem.foto_sisa_barang}
+                                    alt={`Foto Sisa Item #${planningItem.id}`}
+                                    className="w-12 h-12 object-cover rounded border cursor-pointer"
+                                    onClick={() => {
+                                      setPreviewSrc(actualItem.foto_sisa_barang);
+                                      setPreviewTitle(`Foto Sisa Item #${planningItem.id}`);
+                                      setPreviewOpen(true);
+                                    }}
+                                  />
+                                ) : (
+                                  <span className="text-xs text-gray-500">Belum ada</span>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+                {/* Totals Bar: Actual */}
+
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Info & Summary below */}
+        <div className="space-y-6">
+          {selectedWOPlanning && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Info WO Planning
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">No. WO</Label>
+                  <p className="text-sm">{selectedWOPlanning.nomor_wo}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Pelanggan</Label>
+                  <p className="text-sm">
+                    {selectedWOPlanning.pelanggan?.nama_pelanggan || selectedWOPlanning.pelanggan?.nama || selectedWOPlanning.customer?.name || 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Gudang</Label>
+                  <p className="text-sm">
+                    {selectedWOPlanning.gudang?.nama_gudang || selectedWOPlanning.gudang?.nama || 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Tanggal WO</Label>
+                  <p className="text-sm">
+                    {selectedWOPlanning.tanggal_wo ? format(new Date(selectedWOPlanning.tanggal_wo), 'dd MMM yyyy') : 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Status</Label>
+                  <Badge variant="outline" className="text-xs">
+                    {selectedWOPlanning.status}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
-                Item WO (Actual)
+                Ringkasan
               </CardTitle>
             </CardHeader>
-            <CardContent className="px-0">
-              {!selectedWOPlanning || (selectedWOPlanning.items || []).length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  {!selectedWOPlanning ? 'Pilih WO Planning terlebih dahulu' : 'Tidak ada item di WO Planning ini'}
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="overflow-x-auto">
-                    <Table className="w-full">
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Item</TableHead>
-                          <TableHead className="text-center">Jenis Potongan</TableHead>
-                          <TableHead className="text-center">Qty Planning</TableHead>
-                          <TableHead className="text-center">Berat Planning (kg)</TableHead>
-                          <TableHead className="text-center">Qty Actual</TableHead>
-                          <TableHead className="text-center">Berat Actual (kg)</TableHead>
-                          <TableHead className="text-center">Status</TableHead>
-                          <TableHead className="text-center">Pelaksana</TableHead>
-                          <TableHead className="text-center">Foto Bukti (Item)</TableHead>
-                          <TableHead className="text-center">Foto Sisa</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {selectedWOPlanning.items.map((planningItem) => {
-                          const actualItem = actualItems[planningItem.id] || {};
-                          const assignments = actualItem.assignments || [];
-                          const beratPlanningComputed = parseFloat(planningItem.berat || 0);
-                          const qtyActualComputed = assignments.reduce((a, r) => a + (parseInt(r.qty) || 0), 0);
-                          const beratActualComputed = assignments.reduce((a, r) => a + (parseFloat(r.berat ?? r.weight) || 0), 0);
-                          return (
-                            <TableRow key={planningItem.id}>
-                              <TableCell>
-                                <div className="font-medium">
-                                  {planningItem.jenis_barang?.nama || planningItem.jenis_barang?.nama_jenis_barang || 'Item'}
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                  {(planningItem.bentuk_barang?.nama || planningItem.bentuk_barang?.nama_bentuk_barang || 'Bentuk')} - {(planningItem.grade_barang?.nama || planningItem.grade_barang?.nama_grade_barang || 'Grade')}
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-center">{planningItem.jenis_potongan || '-'}</TableCell>
-                              <TableCell className="text-center">{planningItem.qty_planning || planningItem.jumlah || 0}</TableCell>
-                              <TableCell className="text-center">{Math.round(beratPlanningComputed)}</TableCell>
-                              <TableCell className="text-center">{qtyActualComputed}</TableCell>
-                              <TableCell className="text-center">{Math.round(beratActualComputed)}</TableCell>
-                              <TableCell className="text-center">
-                                <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
-                                  {(actualItem.status || 'PENDING')}
-                                </span>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setPelaksanaModalItemId(planningItem.id);
-                                    setPelaksanaModalOpen(true);
-                                  }}
-                                >
-                                  Pelaksana ({assignments.length})
-                                </Button>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <div className="flex items-center justify-center gap-2">
-                                  <input
-                                    id={`item-foto-${planningItem.id}`}
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={(e) => {
-                                      const file = e.target.files?.[0];
-                                      if (file) handleItemFotoBuktiChange(planningItem.id, file);
-                                    }}
-                                    className="hidden"
-                                  />
-                                  <label
-                                    htmlFor={`item-foto-${planningItem.id}`}
-                                    className="inline-flex items-center rounded-md border px-3 py-1 text-xs font-medium hover:bg-gray-50 cursor-pointer"
-                                  >
-                                    Upload
-                                  </label>
-                                  {actualItem.foto_bukti ? (
-                                    <img
-                                      src={actualItem.foto_bukti}
-                                      alt={`Foto Bukti Item #${planningItem.id}`}
-                                      className="w-12 h-12 object-cover rounded border cursor-pointer"
-                                      onClick={() => {
-                                        setPreviewSrc(actualItem.foto_bukti);
-                                        setPreviewTitle(`Foto Bukti Item #${planningItem.id}`);
-                                        setPreviewOpen(true);
-                                      }}
-                                    />
-                                  ) : (
-                                    <span className="text-xs text-gray-500">Belum ada</span>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <div className="flex items-center justify-center gap-2">
-                                  <input
-                                    id={`item-foto-sisa-${planningItem.id}`}
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={(e) => {
-                                      const file = e.target.files?.[0];
-                                      if (file) handleItemFotoSisaChange(planningItem.id, file);
-                                    }}
-                                    className="hidden"
-                                  />
-                                  <label
-                                    htmlFor={`item-foto-sisa-${planningItem.id}`}
-                                    className="inline-flex items-center rounded-md border px-3 py-1 text-xs font-medium hover:bg-gray-50 cursor-pointer"
-                                  >
-                                    Upload
-                                  </label>
-                                  {actualItem.foto_sisa_barang ? (
-                                    <img
-                                      src={actualItem.foto_sisa_barang}
-                                      alt={`Foto Sisa Item #${planningItem.id}`}
-                                      className="w-12 h-12 object-cover rounded border cursor-pointer"
-                                      onClick={() => {
-                                        setPreviewSrc(actualItem.foto_sisa_barang);
-                                        setPreviewTitle(`Foto Sisa Item #${planningItem.id}`);
-                                        setPreviewOpen(true);
-                                      }}
-                                    />
-                                  ) : (
-                                    <span className="text-xs text-gray-500">Belum ada</span>
-                                  )}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                  {/* Totals Bar: Actual */}
-              
-                </div>
-              )}
+            <CardContent className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Total Item:</span>
+                <span className="text-sm font-medium">{Object.keys(actualItems).length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Total Qty Actual:</span>
+                <span className="text-sm font-medium">
+                  {Object.values(actualItems).reduce((sum, item) => {
+                    const assignQty = (item.assignments || []).reduce((a, r) => a + (parseInt(r.qty) || 0), 0);
+                    return sum + assignQty;
+                  }, 0)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Total Berat Actual:</span>
+                <span className="text-sm font-medium text-blue-600">
+                  {Object.values(actualItems).reduce((sum, item) => {
+                    const assignBerat = (item.assignments || []).reduce((a, r) => a + (parseFloat(r.weight) || 0), 0);
+                    return sum + assignBerat;
+                  }, 0)} kg
+                </span>
+              </div>
             </CardContent>
           </Card>
-
-          {/* Info & Summary below */}
-          <div className="space-y-6">
-            {selectedWOPlanning && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="h-5 w-5" />
-                    Info WO Planning
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">No. WO</Label>
-                    <p className="text-sm">{selectedWOPlanning.nomor_wo}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Pelanggan</Label>
-                    <p className="text-sm">
-                      {selectedWOPlanning.pelanggan?.nama_pelanggan || selectedWOPlanning.pelanggan?.nama || selectedWOPlanning.customer?.name || 'N/A'}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Gudang</Label>
-                    <p className="text-sm">
-                      {selectedWOPlanning.gudang?.nama_gudang || selectedWOPlanning.gudang?.nama || 'N/A'}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Tanggal WO</Label>
-                    <p className="text-sm">
-                      {selectedWOPlanning.tanggal_wo ? format(new Date(selectedWOPlanning.tanggal_wo), 'dd MMM yyyy') : 'N/A'}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Status</Label>
-                    <Badge variant="outline" className="text-xs">
-                      {selectedWOPlanning.status}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5" />
-                  Ringkasan
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Total Item:</span>
-                  <span className="text-sm font-medium">{Object.keys(actualItems).length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Total Qty Actual:</span>
-                  <span className="text-sm font-medium">
-                    {Object.values(actualItems).reduce((sum, item) => {
-                      const assignQty = (item.assignments || []).reduce((a, r) => a + (parseInt(r.qty) || 0), 0);
-                      return sum + assignQty;
-                    }, 0)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Total Berat Actual:</span>
-                  <span className="text-sm font-medium text-blue-600">
-                    {Object.values(actualItems).reduce((sum, item) => {
-                      const assignBerat = (item.assignments || []).reduce((a, r) => a + (parseFloat(r.weight) || 0), 0);
-                      return sum + assignBerat;
-                    }, 0)} kg
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        </div>
       </div>
 
       {/* Footer Action: Simpan di bawah kanan */}
