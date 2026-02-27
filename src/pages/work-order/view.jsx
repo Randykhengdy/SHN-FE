@@ -333,7 +333,7 @@ export default function ViewWorkOrderPage() {
         setDueDate(formatDateForInput(woData.tanggal_target || woData.due_date));
         setPriority(woData.prioritas || woData.priority || "");
         setStatus(woData.status || "");
-        setAssignedTo(woData.handover_method || woData.assignedTo || "");
+        setAssignedTo(woData.handover_method || salesOrderData?.handover_method || woData.assignedTo || "");
 
         // Process items with included master data
         if (itemsData && itemsData.length > 0) {
@@ -754,7 +754,29 @@ export default function ViewWorkOrderPage() {
                       const luasPerItem = panjang * lebar;
 
                       // Format dimensi
-                      const dimensi = `${panjang} x ${lebar} mm`;
+                      const dimensi = (() => {
+                        const tb = item.bentukBarang?.tipe_barang || item.bentukBarang?.tipeBarang;
+                        if (tb) {
+                          const formatInt = (val) => Math.round(parseFloat(val) || 0);
+                          const dims = [];
+                          if (tb.diameter_luar && tb.diameter_dalam && tb.panjang) {
+                            dims.push(formatInt(item.diameter_luar), formatInt(item.diameter_dalam), formatInt(item.panjang));
+                          } else if (tb.sisi1 && tb.sisi2 && tb.tebal && tb.panjang) {
+                            dims.push(formatInt(item.sisi1), formatInt(item.sisi2), formatInt(item.tebal), formatInt(item.panjang));
+                          } else if (tb.tebal && tb.lebar && tb.panjang) {
+                            dims.push(formatInt(item.tebal), formatInt(item.lebar), formatInt(item.panjang));
+                          } else if (tb.diameter && tb.panjang) {
+                            dims.push(formatInt(item.diameter), formatInt(item.panjang));
+                          } else {
+                            // Fallback using available standard properties
+                            if (tb.tebal) dims.push(formatInt(item.tebal));
+                            if (tb.lebar) dims.push(formatInt(item.lebar));
+                            if (tb.panjang) dims.push(formatInt(item.panjang));
+                          }
+                          if (dims.length > 0) return dims.join(' x ');
+                        }
+                        return item.bentukBarang?.dimensi || `${Math.round(parseFloat(item.panjang) || 0)} x ${Math.round(parseFloat(item.lebar) || 0)} x ${Math.round(parseFloat(item.ketebalan || item.tebal) || 0)}`;
+                      })();
 
                       // Get pelaksana data for this item
                       const itemPelaksana = pelaksanaData.find(p => p.id === item.pelaksana_id) || null;
