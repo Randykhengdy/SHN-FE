@@ -1095,7 +1095,12 @@ export default function AddWorkOrderPage() {
           qty_planning: parseInt(item.qty_planning) || 0,
           panjang: parseFloat(item.panjang) || 0,
           lebar: parseFloat(item.lebar) || 0,
-          tebal: parseFloat(item.tebal) || 0,
+          tebal: parseFloat(item.ketebalan || item.tebal) || 0,
+          diameter: parseFloat(item.diameter) || 0,
+          diameter_luar: parseFloat(item.diameter_luar) || 0,
+          diameter_dalam: parseFloat(item.diameter_dalam) || 0,
+          sisi1: parseFloat(item.sisi1) || 0,
+          sisi2: parseFloat(item.sisi2) || 0,
           jenis_barang_id: item.jenis_barang_id,
           bentuk_barang_id: item.bentuk_barang_id,
           grade_barang_id: item.grade_barang_id,
@@ -1712,10 +1717,10 @@ export default function AddWorkOrderPage() {
                           </TableCell>
                           <TableCell className="text-left">
                             <div className={`px-3 py-2 rounded text-sm font-medium ${(item.qty_planning || 0) === parseInt(item.qty || 0)
-                                ? 'bg-green-50 text-green-700'
-                                : (item.qty_planning || 0) > parseInt(item.qty || 0)
-                                  ? 'bg-yellow-50 text-yellow-700'
-                                  : 'bg-gray-50'
+                              ? 'bg-green-50 text-green-700'
+                              : (item.qty_planning || 0) > parseInt(item.qty || 0)
+                                ? 'bg-yellow-50 text-yellow-700'
+                                : 'bg-gray-50'
                               }`}>
                               {item.qty_planning || '0'}
                             </div>
@@ -2012,8 +2017,8 @@ export default function AddWorkOrderPage() {
                           <div
                             key={saran.id}
                             className={`p-3 border rounded-lg transition-colors ${isSelected
-                                ? 'border-green-500 bg-green-50'
-                                : 'border-gray-200 hover:border-gray-300'
+                              ? 'border-green-500 bg-green-50'
+                              : 'border-gray-200 hover:border-gray-300'
                               }`}
                           >
                             <div className="flex justify-between items-start">

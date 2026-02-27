@@ -4,16 +4,16 @@ import { Input } from '@/components/ui/input';
 import SearchSelect from '@/components/ui/search-select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { X } from 'lucide-react';
-import { 
-  getJenisBarangOptions, 
-  getBentukBarangOptions, 
+import {
+  getJenisBarangOptions,
+  getBentukBarangOptions,
   getGradeBarangOptions
 } from '@/services/masterDataService';
 
-export default function WorkOrderItemEditModal({ 
-  isOpen, 
-  onClose, 
-  item, 
+export default function WorkOrderItemEditModal({
+  isOpen,
+  onClose,
+  item,
   onSave,
   isNewItem = false
 }) {
@@ -21,6 +21,11 @@ export default function WorkOrderItemEditModal({
     panjang: '0',
     lebar: '0',
     tebal: '0',
+    diameter: '0',
+    diameter_luar: '0',
+    diameter_dalam: '0',
+    sisi1: '0',
+    sisi2: '0',
     qty: '0',
     jenis_barang_id: '',
     bentuk_barang_id: '',
@@ -34,6 +39,9 @@ export default function WorkOrderItemEditModal({
   const [bentukBarangList, setBentukBarangList] = useState([]);
   const [gradeBarangList, setGradeBarangList] = useState([]);
 
+  // Active Dimension Rules State
+  const [activeTipeBarang, setActiveTipeBarang] = useState(null);
+
   // Loading State
   const [loadingJenisBarang, setLoadingJenisBarang] = useState(false);
   const [loadingBentukBarang, setLoadingBentukBarang] = useState(false);
@@ -45,7 +53,12 @@ export default function WorkOrderItemEditModal({
       setFormData({
         panjang: item.panjang || '0',
         lebar: item.lebar || '0',
-        tebal: item.tebal || '0',
+        tebal: item.tebal || item.ketebalan || '0',
+        diameter: item.diameter || '0',
+        diameter_luar: item.diameter_luar || '0',
+        diameter_dalam: item.diameter_dalam || '0',
+        sisi1: item.sisi1 || '0',
+        sisi2: item.sisi2 || '0',
         qty: item.qty || '0',
         jenis_barang_id: item.jenis_barang_id || '',
         bentuk_barang_id: item.bentuk_barang_id || '',
@@ -55,6 +68,20 @@ export default function WorkOrderItemEditModal({
       });
     }
   }, [item]);
+
+  // Update activeTipeBarang when bentuk_barang_id or master data changes
+  useEffect(() => {
+    if (formData.bentuk_barang_id && bentukBarangList.length > 0) {
+      const selectedBentuk = bentukBarangList.find(b => b.value === formData.bentuk_barang_id || b.id === formData.bentuk_barang_id);
+      if (selectedBentuk && (selectedBentuk.tipe_barang || selectedBentuk.tipeBarang)) {
+        setActiveTipeBarang(selectedBentuk.tipe_barang || selectedBentuk.tipeBarang);
+      } else {
+        setActiveTipeBarang(null);
+      }
+    } else {
+      setActiveTipeBarang(null);
+    }
+  }, [formData.bentuk_barang_id, bentukBarangList]);
 
   // Load master data when modal opens
   useEffect(() => {
@@ -120,49 +147,53 @@ export default function WorkOrderItemEditModal({
               </Button>
             </div>
           </CardHeader>
-          
+
           <CardContent className="space-y-6">
             {/* Dimensi Section */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Panjang (mm) *
-                </label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={formData.panjang}
-                  onChange={(e) => handleInputChange('panjang', e.target.value)}
-                  className="h-9"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Lebar (mm) *
-                </label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={formData.lebar}
-                  onChange={(e) => handleInputChange('lebar', e.target.value)}
-                  className="h-9"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tebal (mm) *
-                </label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={formData.tebal}
-                  onChange={(e) => handleInputChange('tebal', e.target.value)}
-                  className="h-9"
-                />
-              </div>
+              {(() => {
+                const renderInput = (field, label) => (
+                  <div key={field}>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {label} (mm) *
+                    </label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={formData[field]}
+                      onChange={(e) => handleInputChange(field, e.target.value)}
+                      className="h-9"
+                    />
+                  </div>
+                );
+
+                const inputs = [];
+
+                if (activeTipeBarang) {
+                  // Render based on activeTipeBarang rules
+                  if (activeTipeBarang.diameter_luar) inputs.push(renderInput('diameter_luar', 'Diameter Luar'));
+                  if (activeTipeBarang.diameter_dalam) inputs.push(renderInput('diameter_dalam', 'Diameter Dalam'));
+                  if (activeTipeBarang.diameter) inputs.push(renderInput('diameter', 'Diameter'));
+                  if (activeTipeBarang.sisi1) inputs.push(renderInput('sisi1', 'Sisi 1'));
+                  if (activeTipeBarang.sisi2) inputs.push(renderInput('sisi2', 'Sisi 2'));
+                  if (activeTipeBarang.tebal) inputs.push(renderInput('tebal', 'Tebal'));
+                  if (activeTipeBarang.lebar) inputs.push(renderInput('lebar', 'Lebar'));
+                  if (activeTipeBarang.panjang) inputs.push(renderInput('panjang', 'Panjang'));
+                } else {
+                  // Fallback to default
+                  inputs.push(renderInput('panjang', 'Panjang'));
+                  inputs.push(renderInput('lebar', 'Lebar'));
+                  inputs.push(renderInput('tebal', 'Tebal'));
+                }
+
+                // Ensure panjang is always there just in case
+                if (!inputs.find(el => el.key === 'panjang') && (!activeTipeBarang || activeTipeBarang.panjang !== false)) {
+                  inputs.push(renderInput('panjang', 'Panjang'));
+                }
+
+                return inputs;
+              })()}
             </div>
 
             {/* Qty and Master Data Section */}
