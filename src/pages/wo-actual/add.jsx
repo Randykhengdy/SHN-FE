@@ -179,6 +179,11 @@ export default function AddWOActualPage() {
           panjang: item.panjang,
           lebar: item.lebar,
           tebal: item.tebal || item.ketebalan,
+          diameter: item.diameter,
+          diameter_luar: item.diameter_luar,
+          diameter_dalam: item.diameter_dalam,
+          sisi1: item.sisi1,
+          sisi2: item.sisi2,
           dimensi: item.dimensi,
           // Group barang info dari WO Planning
           item_barang_group_id: item.item_barang_group_id || groupData?.id || null,
