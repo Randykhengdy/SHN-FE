@@ -27,10 +27,10 @@ import {
 // Import test utilities for development
 import '@/lib/canvasPreviewTest';
 import '@/lib/canvasPreviewDemo';
-import { 
-  getGudangOptions, 
-  getJenisBarangOptions, 
-  getBentukBarangOptions, 
+import {
+  getGudangOptions,
+  getJenisBarangOptions,
+  getBentukBarangOptions,
   getGradeBarangOptions,
   getPelaksanaOptions,
   getPelangganOptions,
@@ -43,7 +43,7 @@ export default function AddWorkOrderPage() {
   const navigate = useNavigate();
   const { showAlert, showConfirm, AlertComponent } = useAlert();
   const SARAN_PER_PAGE = 6;
-  
+
   // Work Order Planning State
   const [workOrderData, setWorkOrderData] = useState({
     nomor_wo: '',
@@ -74,12 +74,12 @@ export default function AddWorkOrderPage() {
     if (storedWorkOrderId) {
       return storedWorkOrderId;
     }
-    
+
     // Generate new if none exists
     const timestamp = Date.now();
     const random = Math.random().toString(36).substring(2, 8);
     const newWorkOrderId = `wo_${timestamp}_${random}`;
-    
+
     // Store the new ID in localStorage for this session
     localStorage.setItem('WO_current_work_order_id', newWorkOrderId);
     return newWorkOrderId;
@@ -102,7 +102,7 @@ export default function AddWorkOrderPage() {
   const [showPlatDasarModal, setShowPlatDasarModal] = useState(false);
   const [currentItemData, setCurrentItemData] = useState(null);
   const [selectedPlatDasar, setSelectedPlatDasar] = useState({});
-  
+
   // Plat Preview Modal State
   const [showPlatPreviewModal, setShowPlatPreviewModal] = useState(false);
   const [previewItems, setPreviewItems] = useState([]);
@@ -132,8 +132,8 @@ export default function AddWorkOrderPage() {
       const keys = Object.keys(localStorage);
       const woKeys = keys.filter(key => key.startsWith('WO_'));
       woKeys.forEach(key => localStorage.removeItem(key));
-    } catch (_) {}
-    try { clearCanvasPreviews(); } catch (_) {}
+    } catch (_) { }
+    try { clearCanvasPreviews(); } catch (_) { }
     setWorkOrderItems([]);
     setSelectedSalesOrder(null);
     setSelectedPlatDasar({});
@@ -176,7 +176,7 @@ export default function AddWorkOrderPage() {
   const [loadingSaranUtuh, setLoadingSaranUtuh] = useState(false);
   const [selectedSaranUtuhItems, setSelectedSaranUtuhItems] = useState([]);
   const [saranUtuhQuantities, setSaranUtuhQuantities] = useState({});
-  
+
   // State untuk WO_total_quantity
   const [woTotalQuantity, setWoTotalQuantity] = useState(() => {
     const savedData = localStorage.getItem('WO_total_quantity');
@@ -193,11 +193,11 @@ export default function AddWorkOrderPage() {
         // Find matching entry in woTotalQuantity
         // woTotalQuantity stores WoItemID which matches item.id
         const entry = woTotalQuantity.find(e => e.WoItemID === item.id || e.WoItemID === parseInt(item.id));
-        
+
         if (entry && entry.WOQuantity) {
           // Calculate sum of Quantity in WOQuantity array
           const plannedQty = entry.WOQuantity.reduce((sum, q) => sum + (parseInt(q.Quantity) || 0), 0);
-          
+
           // Only update if different to avoid infinite loop
           if (item.qty_planning !== plannedQty) {
             isChanged = true;
@@ -206,7 +206,7 @@ export default function AddWorkOrderPage() {
         }
         return item;
       });
-      
+
       return isChanged ? newItems : prevItems;
     });
   }, [woTotalQuantity]);
@@ -219,11 +219,11 @@ export default function AddWorkOrderPage() {
   const openUtuhModal = async (item) => {
     setSelectedUtuhItem(item);
     setUtuhModalOpen(true);
-    
+
     // Reset selection terlebih dahulu
     setSelectedSaranUtuhItems([]);
     setSaranUtuhQuantities({});
-    
+
     // Hit API saran plat utuh
     await fetchSaranUtuh(item);
   };
@@ -256,7 +256,7 @@ export default function AddWorkOrderPage() {
           panjang: parseFloat(item.panjang) || 0,
           lebar: parseFloat(item.lebar) || 0,
           qty: parseInt(item.qty) || 1,
-          
+
           // Optional fields
           item_barang_group_id: item.item_barang_group_id || null,
           diameter_luar: parseFloat(item.diameter_luar) || 0,
@@ -269,18 +269,18 @@ export default function AddWorkOrderPage() {
 
       console.log('Saran plat utuh response:', response);
       setSaranUtuhData(response.data || []);
-      
+
       // Ambil data dari localStorage
       const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
-      
+
       // Cek apakah item sudah ada di localStorage, gunakan selectedUtuhItem.id untuk konsistensi
       const existingEntry = totalQuantityData.find(entry => entry.WoItemID === item.id);
-      
+
       if (existingEntry && response.data && response.data.length > 0) {
         // Jika sudah ada data di localStorage, otomatis check item yang sesuai
         const selectedIds = [];
         const quantities = {};
-        
+
         // Untuk setiap item di WOQuantity, cari di response data dan check jika ada
         existingEntry.WOQuantity.forEach(woItem => {
           const matchingItem = response.data.find(saranItem => saranItem.id === woItem.ItemId);
@@ -289,11 +289,11 @@ export default function AddWorkOrderPage() {
             quantities[woItem.ItemId] = woItem.Quantity;
           }
         });
-        
+
         // Update state dengan data yang sudah ada
         setSelectedSaranUtuhItems(selectedIds);
         setSaranUtuhQuantities(quantities);
-        
+
         console.log('Auto-checked items:', selectedIds);
         console.log('Auto-set quantities:', quantities);
       }
@@ -329,10 +329,10 @@ export default function AddWorkOrderPage() {
 
   const saveItemEdit = (updatedItemData) => {
     if (!editingItem) return;
-    
+
     // Check if this is a new item (not in workOrderItems yet)
     const existingItem = workOrderItems.find(item => item.id === editingItem.id);
-    
+
     if (existingItem) {
       // Update existing item
       updateWorkOrderItem(editingItem.id, null, updatedItemData);
@@ -413,11 +413,11 @@ export default function AddWorkOrderPage() {
         setBentukBarangList(bentukBarang);
         setGradeBarangList(gradeBarang);
         setPelaksanaList(pelaksana);
-        
+
         // Load pelanggan separately since it needs different handling
         try {
           setLoadingPelanggan(true);
-          
+
           const pelangganResponse = await getPelangganOptions();
           // getPelangganOptions sudah mengembalikan data yang sudah di-map
           if (pelangganResponse && Array.isArray(pelangganResponse)) {
@@ -431,15 +431,15 @@ export default function AddWorkOrderPage() {
             }));
             setPelangganList(pelangganOptions);
           }
-          
+
           setSalesOrderList([]);
-          
+
         } catch (error) {
           console.error('Error loading additional data:', error);
         } finally {
           setLoadingPelanggan(false);
         }
-        
+
         // Debug: Log semua state setelah di-set
         setTimeout(() => {
           console.log('=== DEBUG STATE AFTER SET ===');
@@ -466,16 +466,16 @@ export default function AddWorkOrderPage() {
   // Function to load Sales Order detail and populate items
   const loadSalesOrderDetail = async (salesOrderId) => {
     if (!salesOrderId) return;
-    
+
     setLoadingSalesOrderDetail(true);
     try {
       console.log('Loading Sales Order detail for ID:', salesOrderId);
-      
+
       const [salesOrderItemsResponse, woNumberResponse] = await Promise.all([
         request(`/sales-order/sales-order-for-woplanning?sales_order_id=${salesOrderId}`, { method: 'GET' }),
         documentSequenceService.generateWONumber()
       ]);
-      
+
       console.log('Sales Order for woplanning response:', salesOrderItemsResponse);
       console.log('Generated WO number:', woNumberResponse);
       try {
@@ -484,11 +484,11 @@ export default function AddWorkOrderPage() {
       } catch (e) {
         console.warn('Failed to persist generated WO number to storage/state', e);
       }
-      
+
       // Gunakan struktur response yang dikirim API (data)
       const soData = salesOrderItemsResponse?.data || null;
-      
-      
+
+
       const extractItems = (resp) => {
         if (!resp) return [];
         const candidates = [
@@ -514,7 +514,7 @@ export default function AddWorkOrderPage() {
         ...(soData || {}),
         sales_order_items: Array.isArray(itemsData) ? itemsData : [],
       });
-      
+
       if (itemsData && itemsData.length > 0) {
         // Transform Sales Order items to Work Order items
         const transformedItems = itemsData.map((item, index) => {
@@ -522,14 +522,14 @@ export default function AddWorkOrderPage() {
           const timestamp = Date.now() + index;
           const random = Math.random().toString(36).substring(2, 8);
           const woItemUniqueId = `wo_item_${timestamp}_${random}`;
-          
+
           return {
             id: timestamp,
             wo_item_unique_id: woItemUniqueId,
             sales_order_item_id: item.id || item.sales_order_item_id,
             panjang: (item.panjang ?? item.length ?? item.p ?? 0),
             lebar: (item.lebar ?? item.width ?? item.l ?? 0),
-            tebal: (item.tebal  ?? 0),
+            tebal: (item.tebal ?? 0),
             diameter_luar: (item.diameter_luar ?? 0),
             diameter_dalam: (item.diameter_dalam ?? 0),
             diameter: (item.diameter ?? 0),
@@ -549,15 +549,15 @@ export default function AddWorkOrderPage() {
             pelaksana: []
           };
         });
-        
+
         console.log('Transformed Work Order items:', transformedItems);
         setWorkOrderItems(transformedItems);
-        
+
         // Store WO item IDs for canvas color logic
         const woItemIds = transformedItems.map(item => item.id);
         localStorage.setItem('WO_item_unique_ids', JSON.stringify(woItemIds));
         console.log('Stored WO_item_unique_ids:', woItemIds);
-        
+
         // Auto-fill other fields from Sales Order and set generated WO number
         setWorkOrderData(prev => ({
           ...prev,
@@ -568,7 +568,7 @@ export default function AddWorkOrderPage() {
           handover_method: soData?.handover_method ?? prev.handover_method ?? 'pickup',
           tanggal_target: soData?.tanggal_pengiriman ?? workOrderData.tanggal_wo
         }));
-        
+
         showAlert('Sukses', `${itemsData.length} item berhasil diambil dari Sales Order\nNomor WO: ${woNumberResponse}`, 'success');
       } else {
         showAlert('Info', 'Sales Order tidak memiliki item. Silakan pilih Sales Order lain.', 'info');
@@ -585,7 +585,7 @@ export default function AddWorkOrderPage() {
           tanggal_target: soData?.tanggal_pengiriman ?? workOrderData.tanggal_wo
         }));
       }
-      
+
     } catch (error) {
       console.error('Error loading Sales Order detail:', error);
       showAlert('Error', 'Gagal memuat detail Sales Order', 'error');
@@ -630,12 +630,12 @@ export default function AddWorkOrderPage() {
   const updateWorkOrderItem = (itemId, field, value) => {
     if (field === null && typeof value === 'object') {
       // Update entire item
-      setWorkOrderItems(workOrderItems.map(item => 
+      setWorkOrderItems(workOrderItems.map(item =>
         item.id === itemId ? { ...item, ...value } : item
       ));
     } else {
       // Update specific field
-      setWorkOrderItems(workOrderItems.map(item => 
+      setWorkOrderItems(workOrderItems.map(item =>
         item.id === itemId ? { ...item, [field]: value } : item
       ));
     }
@@ -668,7 +668,7 @@ export default function AddWorkOrderPage() {
   const updatePelaksana = (itemId, pelaksanaId, field, value) => {
     const item = workOrderItems.find(item => item.id === itemId);
     if (item) {
-      const updatedPelaksana = item.pelaksana.map(p => 
+      const updatedPelaksana = item.pelaksana.map(p =>
         p.id === pelaksanaId ? { ...p, [field]: value } : p
       );
       updateWorkOrderItem(itemId, 'pelaksana', updatedPelaksana);
@@ -682,7 +682,7 @@ export default function AddWorkOrderPage() {
       workOrderId: workOrderId,
       workOrderUniqueId: item.workOrderUniqueId
     });
-    
+
     setCurrentItemData(item);
     setShowPlatDasarModal(true);
   };
@@ -697,7 +697,7 @@ export default function AddWorkOrderPage() {
     setCurrentItemData(item);
     setShowPlatPreviewModal(true);
     setLoadingPreview(true);
-    
+
     try {
       // Hit same API as regular Pilih button
       const response = await request(`/work-order-planning/get-saran-plat-dasar?per_page=${SARAN_PER_PAGE}&page=1`, {
@@ -719,7 +719,7 @@ export default function AddWorkOrderPage() {
           sisi2: parseFloat(item.sisi2) || 0
         })
       });
-      
+
       console.log('Preview API response:', response.data);
       setPreviewItems((response.data || []).slice(0, SARAN_PER_PAGE));
     } catch (error) {
@@ -735,7 +735,7 @@ export default function AddWorkOrderPage() {
     setShowPlatPreviewModal(false);
     setCurrentItemData(null);
     setPreviewItems([]);
-    
+
     // Refresh woTotalQuantity from localStorage
     const savedData = localStorage.getItem('WO_total_quantity');
     setWoTotalQuantity(savedData ? JSON.parse(savedData) : []);
@@ -759,10 +759,10 @@ export default function AddWorkOrderPage() {
   const calculateRequiredArea = (item) => {
     const panjang = parseFloat(item.panjang || 0);
     const lebar = parseFloat(item.lebar || 0);
-    
+
     // Get bentuk barang info to determine dimension
     const bentukBarang = bentukBarangList.find(b => b.value === item.bentuk_barang_id);
-    
+
     if (bentukBarang && bentukBarang.dimensi === '1D') {
       // For 1D (shaft), only use panjang (no quantity multiplication)
       return panjang;
@@ -783,7 +783,7 @@ export default function AddWorkOrderPage() {
     return entry && (entry.WOQuantity && entry.WOQuantity.some(q => q.Quantity > 0));
   };
 
-   
+
 
   const buildSaranPlatCanvasData = () => {
     try {
@@ -792,68 +792,68 @@ export default function AddWorkOrderPage() {
       // Get used saran plats from localStorage
       const usedSaranPlats = JSON.parse(localStorage.getItem('WO_used_saran_plats') || '[]');
       console.log('Used saran plats:', usedSaranPlats);
-      
+
       if (usedSaranPlats.length === 0) {
         console.log('❌ No saran plats to save - usedSaranPlats is empty');
         console.log('usedSaranPlats:', usedSaranPlats);
         return;
       }
-      
+
       const saranPlatData = [];
-      
+
       for (const saranItemId of usedSaranPlats) {
         console.log(`Processing saran plat ${saranItemId}...`);
-        
+
         const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
-        const woItemsUsingThisSaranPlat = totalQuantityData.filter(woItem => 
-          woItem.WOQuantity && woItem.WOQuantity.some(saranItem => 
+        const woItemsUsingThisSaranPlat = totalQuantityData.filter(woItem =>
+          woItem.WOQuantity && woItem.WOQuantity.some(saranItem =>
             saranItem.ItemId === parseInt(saranItemId) || saranItem.ItemId === saranItemId
           )
         );
-        
+
         console.log(`Saran plat ${saranItemId} is used in WO items:`, woItemsUsingThisSaranPlat.map(item => item.WoItemID));
-        
+
         if (woItemsUsingThisSaranPlat.length === 0) {
           console.log(`❌ No WO items found using saran plat ${saranItemId} - skipping to preserve existing data`);
           continue;
         }
-        
+
         const woItemUniqueIds = JSON.parse(localStorage.getItem('WO_item_unique_ids') || '[]');
-        
+
         if (woItemUniqueIds.length === 0) {
           console.log('❌ No woItemUniqueIds found in localStorage');
           continue;
         }
-        
+
         console.log(`=== SAVING SARAN PLAT ${saranItemId} ===`);
         console.log(`woItemUniqueIds:`, woItemUniqueIds);
         console.log(`WO items using this saran plat:`, woItemsUsingThisSaranPlat.map(item => item.WoItemID));
-        
+
         const workOrderUniqueId = localStorage.getItem('WO_current_work_order_id');
         const canvasLayoutKey = `WO_canvas_layout_${saranItemId}_${workOrderUniqueId}`;
         const canvasLayoutData = localStorage.getItem(canvasLayoutKey);
-        
+
         console.log(`Canvas layout key: ${canvasLayoutKey}`);
         console.log(`Canvas data exists:`, !!canvasLayoutData);
-        
+
         let processedCanvasData = null;
         if (canvasLayoutData) {
           const canvasLayout = JSON.parse(canvasLayoutData);
-          
+
           const currentWoItemIds = JSON.parse(localStorage.getItem('WO_item_unique_ids') || '[]');
           const currentWOBoxes = canvasLayout.boxes ? canvasLayout.boxes.filter(box => {
             const boxWoItemId = box.woItemId;
-            return currentWoItemIds.includes(boxWoItemId) || 
-                   currentWoItemIds.includes(String(boxWoItemId)) || 
-                   currentWoItemIds.includes(parseInt(boxWoItemId));
+            return currentWoItemIds.includes(boxWoItemId) ||
+              currentWoItemIds.includes(String(boxWoItemId)) ||
+              currentWoItemIds.includes(parseInt(boxWoItemId));
           }) : [];
-          
+
           console.log(`🔍 DEBUG: Checking boxes for saran item ${saranItemId}:`, {
             currentWoItemIds: currentWoItemIds,
             totalBoxes: canvasLayout.boxes ? canvasLayout.boxes.length : 0,
             currentWOBoxes: currentWOBoxes.length,
-            allBoxes: canvasLayout.boxes ? canvasLayout.boxes.map(box => ({ 
-              woItemId: box.woItemId, 
+            allBoxes: canvasLayout.boxes ? canvasLayout.boxes.map(box => ({
+              woItemId: box.woItemId,
               workOrderId: box.workOrderId
             })) : [],
             localStorage: {
@@ -861,41 +861,41 @@ export default function AddWorkOrderPage() {
               WO_item_unique_ids: localStorage.getItem('WO_item_unique_ids')
             }
           });
-          
+
           // Only process canvas data if there are boxes from current work order
           if (currentWOBoxes.length > 0) {
             if (canvasLayout.boxes && Array.isArray(canvasLayout.boxes)) {
               canvasLayout.boxes = canvasLayout.boxes.map(box => {
                 const boxWoItemId = box.woItemId;
-                const isFromCurrentWO = currentWoItemIds.includes(boxWoItemId) || 
-                                        currentWoItemIds.includes(String(boxWoItemId)) || 
-                                        currentWoItemIds.includes(parseInt(boxWoItemId));
-                
-              if (isFromCurrentWO) {
-                return {
-                  ...box,
-                  color: "#ef4444", // Red color for saved boxes from current WO
-                  isDisabled: true, // Mark as disabled/saved
-                  isSave: true, // Mark as saved to database
-                  workOrderId: workOrderUniqueId
-                };
-              } else {
-                return {
-                  ...box,
-                };
-              }
+                const isFromCurrentWO = currentWoItemIds.includes(boxWoItemId) ||
+                  currentWoItemIds.includes(String(boxWoItemId)) ||
+                  currentWoItemIds.includes(parseInt(boxWoItemId));
+
+                if (isFromCurrentWO) {
+                  return {
+                    ...box,
+                    color: "#ef4444", // Red color for saved boxes from current WO
+                    isDisabled: true, // Mark as disabled/saved
+                    isSave: true, // Mark as saved to database
+                    workOrderId: workOrderUniqueId
+                  };
+                } else {
+                  return {
+                    ...box,
+                  };
+                }
               });
-              
+
               console.log(`Changed ${currentWOBoxes.length} boxes to red color for saran item ${saranItemId} (preserved ${canvasLayout.boxes.length - currentWOBoxes.length} boxes from other WO items)`);
             }
-            
+
             processedCanvasData = JSON.stringify(canvasLayout);
           } else {
             console.log(`No boxes from current WO for saran item ${saranItemId} - skipping canvas save to preserve existing data`);
             processedCanvasData = null;
           }
         }
-        
+
         if (processedCanvasData) {
           let canvasImageBase64 = null;
           try {
@@ -916,24 +916,24 @@ export default function AddWorkOrderPage() {
             is_selected: true,
             canvas_data: processedCanvasData // Use processed canvas data with red boxes
           };
-          
+
           // Add canvas_image if available
           if (canvasImageBase64) {
             saranData.canvas_image = canvasImageBase64;
           }
-          
+
           console.log(`📷 Canvas image included for item ${saranItemId}:`, !!canvasImageBase64);
-          
+
           saranPlatData.push(saranData);
-          
+
           console.log(`✅ Added saran plat data for saran item ${saranItemId} with ${woItemUniqueIds.length} WO items`);
           console.log(`📷 Canvas image included:`, !!saranData.canvas_image);
-          
+
         } else {
           console.log(`⏭️ Skipped saran plat data for saran item ${saranItemId} - no canvas data from current WO (preserving existing data)`);
         }
       }
-      
+
       console.log('Saran plat data to save:', saranPlatData);
       return saranPlatData;
     } catch (error) {
@@ -997,19 +997,19 @@ export default function AddWorkOrderPage() {
             if (!woItemData || !woItemData.WOQuantity) return [];
             return woItemData.WOQuantity.map(woq => {
               // Get timestamp from stored WOQuantity
-               let saveDate = woq.save_date;
-               
-               // Fallback to ancient date if no timestamp found
-               if (!saveDate) {
-                  saveDate = "2000-01-01 00:00:00";
-               }
- 
-               return {
-                 item_barang_id: woq.ItemId,
-                 quantity: woq.Quantity,
-                 is_selected: true,
-                 save_date: saveDate
-               };
+              let saveDate = woq.save_date;
+
+              // Fallback to ancient date if no timestamp found
+              if (!saveDate) {
+                saveDate = "2000-01-01 00:00:00";
+              }
+
+              return {
+                item_barang_id: woq.ItemId,
+                quantity: woq.Quantity,
+                is_selected: true,
+                save_date: saveDate
+              };
             });
           })(),
           pelaksana: item.pelaksana.map(p => ({
@@ -1023,15 +1023,15 @@ export default function AddWorkOrderPage() {
           }))
         }))
       };
-      
+
       console.log('=== DUMMY JSON PAYLOAD ===');
       console.log(JSON.stringify(dummyPayload, null, 2));
       console.log('=== END DUMMY JSON ===');
-      
+
       // Copy to clipboard
       navigator.clipboard.writeText(JSON.stringify(dummyPayload, null, 2));
       showAlert('Sukses', 'Dummy JSON generated and copied to clipboard! Check console for full output.', 'success');
-      
+
     } catch (error) {
       console.error('Error generating dummy JSON:', error);
       showAlert('Error', 'Error generating dummy JSON. Check console for details.', 'error');
@@ -1116,7 +1116,7 @@ export default function AddWorkOrderPage() {
                 quantity: woq.Quantity,
                 is_selected: true
               };
-              
+
               // Try specific image first (WO Item specific)
               const woItemUniqueId = item.wo_item_unique_id || item.id;
               let specificImage = null;
@@ -1125,17 +1125,17 @@ export default function AddWorkOrderPage() {
                   const specificKey = `WO_canvas_preview_woitem_${woItemUniqueId}_item_${woq.ItemId}`;
                   specificImage = localStorage.getItem(specificKey);
                   if (specificImage) console.log('Found specific canvas for payload:', specificKey);
-                } catch (_) {}
+                } catch (_) { }
               }
 
               // Get timestamp from stored WOQuantity
               let saveDate = woq.save_date;
-              
+
               // Fallback to ancient date if no timestamp found (so it loses against other updates)
               if (!saveDate) {
-                 saveDate = '2000-01-01 00:00:00';
+                saveDate = '2000-01-01 00:00:00';
               }
-              
+
               base.save_date = saveDate;
 
               if (specificImage) {
@@ -1143,7 +1143,7 @@ export default function AddWorkOrderPage() {
               } else if (entry && entry.canvas_image) {
                 base.canvas_image = entry.canvas_image;
               }
-              
+
               if (entry && entry.canvas_data) {
                 base.canvas_layout = entry.canvas_data;
               }
@@ -1180,20 +1180,20 @@ export default function AddWorkOrderPage() {
             // Get used plats from totalQuantityData (Source of Truth for Logic)
             const itemUsage = totalQuantityData.find(u => u.WoItemID === item.id || u.WoItemID === parseInt(item.id));
             const usedPlatIds = itemUsage ? itemUsage.WOQuantity.map(q => q.ItemId) : [];
-            
+
             // Get used plats from selectedPlatDasar (Source of Truth for UI Selection)
             const selectedPlats = selectedPlatDasar[item.id] || [];
             const selectedPlatIds = selectedPlats.map(p => p.id || p.item_barang_id).filter(Boolean);
-            
+
             // Merge unique IDs
             const allPlatIds = [...new Set([...usedPlatIds, ...selectedPlatIds])];
-            
+
             for (const itemId of allPlatIds) {
               if (!itemId) continue;
 
               let src = null;
               const woItemUniqueId = item.wo_item_unique_id || item.id;
-              
+
               // 0. Try to find specific WoItemId preview in localStorage first (Fastest & Newest)
               if (woItemUniqueId) {
                 try {
@@ -1203,29 +1203,29 @@ export default function AddWorkOrderPage() {
                     src = cachedSpecific;
                     console.log('Found specific canvas in localStorage:', specificKey);
                   }
-                } catch (_) {}
+                } catch (_) { }
               }
 
               // 1. (Removed) Try to find WoItemId specific file first
               // We removed this because we are now relying solely on localStorage for previews
               // to avoid file system errors in EXE environment
-              
+
               // 2. Fallback to localStorage (Legacy/Cached generic item)
               if (!src) {
                 try {
                   src = getStoredPreviewDataUrl(itemId);
-                } catch (_) {}
+                } catch (_) { }
               }
 
               // 3. (Removed) Fallback to generic file on disk
               // Removed for the same reason as above
 
               // Add image with explicit link to WO Item ID
-              images.push({ 
+              images.push({
                 item_id: itemId, // Inventory Item ID
                 wo_item_id: item.id, // WO Item ID (Client side ID)
                 wo_item_unique_id: item.wo_item_unique_id || item.id,
-                src 
+                src
               });
             }
           }
@@ -1236,14 +1236,14 @@ export default function AddWorkOrderPage() {
             for (const id of used) {
               const itemId = parseInt(id);
               if (!itemId) continue;
-              
+
               // Check if this image is already added
               if (images.some(img => img.item_id === itemId)) continue;
 
               let src = null;
               try {
                 src = getStoredPreviewDataUrl(itemId);
-              } catch (_) {}
+              } catch (_) { }
 
               if (!src) {
                 const fileName = `canvas-preview-ItemId-${itemId}.jpg`;
@@ -1253,7 +1253,7 @@ export default function AddWorkOrderPage() {
               images.push({ item_id: itemId, src });
             }
           }
-          
+
           return images;
         } catch (e) {
           console.error('Error preparing canvas images:', e);
@@ -1285,8 +1285,31 @@ export default function AddWorkOrderPage() {
           bentukBarang: { nama_bentuk_barang: mapLabel(bentukBarangList, item.bentuk_barang_id), nama_bentuk: mapLabel(bentukBarangList, item.bentuk_barang_id), nama: mapLabel(bentukBarangList, item.bentuk_barang_id) },
           gradeBarang: { nama_grade_barang: mapLabel(gradeBarangList, item.grade_barang_id), nama_grade: mapLabel(gradeBarangList, item.grade_barang_id), nama: mapLabel(gradeBarangList, item.grade_barang_id) },
           groupBarangName: item.item_barang_group_name || '-',
-          dimensi: `${item.panjang || 0}x${item.lebar || 0}x${item.tebal || 0}mm`,
-          qtyPlanning: item.qty_planning ??  0,
+          dimensi: (() => {
+            const bB = bentukBarangList.find(b => String(b.value) === String(item.bentuk_barang_id));
+            const tb = bB?.tipe_barang;
+            if (tb) {
+              const formatInt = (val) => Math.round(parseFloat(val) || 0);
+              const dims = [];
+              if (tb.diameter_luar && tb.diameter_dalam && tb.panjang) {
+                dims.push(formatInt(item.diameter_luar), formatInt(item.diameter_dalam), formatInt(item.panjang));
+              } else if (tb.sisi1 && tb.sisi2 && tb.tebal && tb.panjang) {
+                dims.push(formatInt(item.sisi1), formatInt(item.sisi2), formatInt(item.tebal), formatInt(item.panjang));
+              } else if (tb.tebal && tb.lebar && tb.panjang) {
+                dims.push(formatInt(item.tebal), formatInt(item.lebar), formatInt(item.panjang));
+              } else if (tb.diameter && tb.panjang) {
+                dims.push(formatInt(item.diameter), formatInt(item.panjang));
+              } else {
+                // Fallback using available standard properties
+                if (tb.tebal) dims.push(formatInt(item.tebal));
+                if (tb.lebar) dims.push(formatInt(item.lebar));
+                if (tb.panjang) dims.push(formatInt(item.panjang));
+              }
+              if (dims.length > 0) return dims.join('x');
+            }
+            return `${Math.round(parseFloat(item.panjang) || 0)}x${Math.round(parseFloat(item.lebar) || 0)}x${Math.round(parseFloat(item.tebal) || 0)}`;
+          })(),
+          qtyPlanning: item.qty_planning ?? 0,
           jenisPotongan: item.jenis_potongan || 'potongan',
           keterangan: item.catatan || '-'
         })),
@@ -1310,7 +1333,7 @@ export default function AddWorkOrderPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validation
     if (!workOrderData.nomor_wo || !workOrderData.gudang_id || !workOrderData.pelanggan_id || !workOrderData.sales_order_id) {
       showAlert('Error', 'Mohon lengkapi data Work Order', 'error');
@@ -1321,7 +1344,7 @@ export default function AddWorkOrderPage() {
     if (workOrderData.estimate_done) {
       const estimateDoneDate = new Date(workOrderData.estimate_done);
       const currentDate = new Date();
-      
+
       if (estimateDoneDate <= currentDate) {
         showAlert('Error', 'Estimate Done harus lebih besar dari tanggal dan waktu saat ini', 'error');
         return;
@@ -1334,25 +1357,25 @@ export default function AddWorkOrderPage() {
       const itemNumber = index + 1;
       const itemQty = parseInt(item.qty_planning) || 0;
       const pelaksanaCount = item.pelaksana ? item.pelaksana.length : 0;
-      
+
       // Cek apakah ada pelaksana
       if (!item.pelaksana || item.pelaksana.length === 0) {
         pelaksanaValidationErrors.push(`Item ${itemNumber}: Belum memiliki pelaksana`);
         return;
       }
-      
+
       // Hitung total quantity dari semua pelaksana
       const totalPelaksanaQty = item.pelaksana.reduce((total, pelaksana) => {
         return total + (parseInt(pelaksana.qty) || 0);
       }, 0);
-      
+
       // Cek apakah total quantity pelaksana sesuai dengan quantity item
       if (totalPelaksanaQty !== itemQty) {
         pelaksanaValidationErrors.push(
           `Item ${itemNumber}: Total quantity pelaksana (${totalPelaksanaQty}) harus sama dengan quantity planning (${itemQty})`
         );
       }
-      
+
       // Cek apakah ada pelaksana yang tidak lengkap
       item.pelaksana.forEach((pelaksana, pelaksanaIndex) => {
         if (!pelaksana.pelaksana_id) {
@@ -1370,8 +1393,8 @@ export default function AddWorkOrderPage() {
 
     if (pelaksanaValidationErrors.length > 0) {
       showAlert(
-        'Validasi Pelaksana', 
-        `Terdapat kesalahan dalam data pelaksana:\n\n${pelaksanaValidationErrors.join('\n')}\n\nTotal quantity pelaksana harus sama dengan quantity planning.`, 
+        'Validasi Pelaksana',
+        `Terdapat kesalahan dalam data pelaksana:\n\n${pelaksanaValidationErrors.join('\n')}\n\nTotal quantity pelaksana harus sama dengan quantity planning.`,
         'warning'
       );
       return;
@@ -1436,11 +1459,11 @@ export default function AddWorkOrderPage() {
           <CardHeader className="section-header">
             <div className="flex items-center justify-between">
               <CardTitle className="page-title flex items-center gap-2">
-     
+
                 Input Work Order Planning
               </CardTitle>
               <div className="flex items-center gap-2 shrink-0">
-                <Button type="button" variant="default" size="sm" onClick={() => handleSubmit({ preventDefault: () => {} })} className="btn-primary">
+                <Button type="button" variant="default" size="sm" onClick={() => handleSubmit({ preventDefault: () => { } })} className="btn-primary">
                   Simpan Work Order
                 </Button>
                 <Button type="button" variant="secondary" size="sm" onClick={() => { runWOCleansing(); navigate('/work-order'); }}>
@@ -1474,7 +1497,7 @@ export default function AddWorkOrderPage() {
                     const resp = await request(`/sales-order/header?${params.toString()}`, { method: 'GET' });
                     const rows = Array.isArray(resp?.data) ? resp.data : [];
                     return rows.map(so => {
-                      const formattedDate = so.tanggal_so 
+                      const formattedDate = so.tanggal_so
                         ? new Date(so.tanggal_so).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
                         : '';
                       return {
@@ -1493,7 +1516,7 @@ export default function AddWorkOrderPage() {
                   valueKey="value"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Nomor WO *
@@ -1508,7 +1531,7 @@ export default function AddWorkOrderPage() {
                   Nomor WO otomatis di-generate dari sistem saat memilih Sales Order
                 </p>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Tanggal WO *
@@ -1516,11 +1539,11 @@ export default function AddWorkOrderPage() {
                 <Input
                   type="date"
                   value={workOrderData.tanggal_wo}
-                  onChange={(e) => setWorkOrderData({...workOrderData, tanggal_wo: e.target.value})}
+                  onChange={(e) => setWorkOrderData({ ...workOrderData, tanggal_wo: e.target.value })}
                   required
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Tanggal Target
@@ -1528,31 +1551,31 @@ export default function AddWorkOrderPage() {
                 <Input
                   type="date"
                   value={workOrderData.tanggal_target}
-                  onChange={(e) => setWorkOrderData({...workOrderData, tanggal_target: e.target.value})}
+                  onChange={(e) => setWorkOrderData({ ...workOrderData, tanggal_target: e.target.value })}
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Gudang *</label>
                 <div className="flex h-10 items-center justify-between rounded-md border px-3 py-2 bg-gray-50 text-gray-600 cursor-default">
                   <span>{selectedSalesOrder?.gudang?.nama_gudang ? selectedSalesOrder.gudang.nama_gudang : (gudangList.find(g => String(g.value) === String(workOrderData.gudang_id))?.label || 'Belum dipilih')}</span>
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Pelanggan *</label>
                 <div className="flex h-10 items-center justify-between rounded-md border px-3 py-2 bg-gray-50 text-gray-600 cursor-default">
                   <span>{selectedSalesOrder?.pelanggan?.nama_pelanggan ? selectedSalesOrder.pelanggan.nama_pelanggan : (pelangganList.find(p => String(p.value) === String(workOrderData.pelanggan_id))?.label || 'Belum dipilih')}</span>
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Prioritas
                 </label>
                 <select
                   value={workOrderData.prioritas}
-                  onChange={(e) => setWorkOrderData({...workOrderData, prioritas: e.target.value})}
+                  onChange={(e) => setWorkOrderData({ ...workOrderData, prioritas: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                 >
                   <option value="LOW">Rendah</option>
@@ -1561,7 +1584,7 @@ export default function AddWorkOrderPage() {
                   <option value="URGENT">Mendesak</option>
                 </select>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Metode Penyerahan
@@ -1570,7 +1593,7 @@ export default function AddWorkOrderPage() {
                   <span>{workOrderData.handover_method === 'delivery' ? 'Delivery' : 'Pickup'}</span>
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Perkiraan Selesai
@@ -1578,10 +1601,10 @@ export default function AddWorkOrderPage() {
                 <Input
                   type="datetime-local"
                   value={workOrderData.estimate_done}
-                  onChange={(e) => setWorkOrderData({...workOrderData, estimate_done: e.target.value})}
+                  onChange={(e) => setWorkOrderData({ ...workOrderData, estimate_done: e.target.value })}
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Catatan
@@ -1590,7 +1613,7 @@ export default function AddWorkOrderPage() {
                   placeholder="Catatan tambahan..."
                   value={workOrderData.catatan}
                   onChange={(e) => {
-                    setWorkOrderData({...workOrderData, catatan: e.target.value});
+                    setWorkOrderData({ ...workOrderData, catatan: e.target.value });
                     if (e.target.value && e.target.value.trim().length > 0) setCatatanError(false);
                   }}
                   className={catatanError ? "border-red-500" : undefined}
@@ -1648,94 +1671,93 @@ export default function AddWorkOrderPage() {
                     </TableRow>
                   ) : (
                     workOrderItems.map((item, index) => (
-                    <React.Fragment key={item.id}>
-                      <TableRow>
-                        <TableCell className="text-left">#{index + 1}</TableCell>
-                        <TableCell className="text-left">
-                          <div className="px-3 py-2 bg-gray-50 rounded text-sm">
-                            {item.panjang ? `${item.panjang} mm` : '0 mm'}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-left">
-                          <div className="px-3 py-2 bg-gray-50 rounded text-sm">
-                            {item.lebar ? `${item.lebar} mm` : '0 mm'}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-left">
-                          <div className="px-3 py-2 bg-gray-50 rounded text-sm">
-                            {item.tebal ? `${item.tebal} mm` : '0 mm'}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-left">
-                          <div className="flex items-center gap-2">
+                      <React.Fragment key={item.id}>
+                        <TableRow>
+                          <TableCell className="text-left">#{index + 1}</TableCell>
+                          <TableCell className="text-left">
                             <div className="px-3 py-2 bg-gray-50 rounded text-sm">
-                              {item.qty || '0'}
+                              {item.panjang ? `${item.panjang} mm` : '0 mm'}
                             </div>
-                            {item.qty_planning_log && item.qty_planning_log.length > 0 && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0"
-                                onClick={() => {
-                                  setSelectedQtyLog(item.qty_planning_log);
-                                  setQtyLogModalOpen(true);
-                                }}
-                              >
-                                <Info className="w-4 h-4 text-blue-500" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-left">
-                          <div className={`px-3 py-2 rounded text-sm font-medium ${
-                            (item.qty_planning || 0) === parseInt(item.qty || 0) 
-                              ? 'bg-green-50 text-green-700' 
-                              : (item.qty_planning || 0) > parseInt(item.qty || 0)
-                                ? 'bg-yellow-50 text-yellow-700'
-                                : 'bg-gray-50'
-                          }`}>
-                            {item.qty_planning || '0'}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-left">
-                          <div className="px-3 py-2 bg-gray-50 rounded text-sm">
-                            {item.berat ? `${parseFloat(item.berat).toFixed(2)}` : '0.00'}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-left">
-                          <div className="px-3 py-2 bg-gray-50 rounded text-sm">
-                            {getJenisBarangName(item.jenis_barang_id)}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-left">
-                          <div className="px-3 py-2 bg-gray-50 rounded text-sm">
-                            {getBentukBarangName(item.bentuk_barang_id)}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-left">
-                          <div className="px-3 py-2 bg-gray-50 rounded text-sm">
-                            {getGradeBarangName(item.grade_barang_id)}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-left">
-                          <div className="px-3 py-2 bg-gray-50 rounded text-sm">
-                            {item.item_barang_group_name || '-'}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-left">
-                          <div className="px-3 py-2 bg-gray-50 rounded text-sm capitalize">
-                            {item.jenis_potongan || '-'}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-left">
-                          <div className="px-3 py-2 bg-gray-50 rounded text-sm">
-                            {item.catatan || '-'}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-left">
-                          <div className="flex items-center gap-2">
-                            {/* Hidden Pilih button as requested by user
+                          </TableCell>
+                          <TableCell className="text-left">
+                            <div className="px-3 py-2 bg-gray-50 rounded text-sm">
+                              {item.lebar ? `${item.lebar} mm` : '0 mm'}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-left">
+                            <div className="px-3 py-2 bg-gray-50 rounded text-sm">
+                              {item.tebal ? `${item.tebal} mm` : '0 mm'}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-left">
+                            <div className="flex items-center gap-2">
+                              <div className="px-3 py-2 bg-gray-50 rounded text-sm">
+                                {item.qty || '0'}
+                              </div>
+                              {item.qty_planning_log && item.qty_planning_log.length > 0 && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => {
+                                    setSelectedQtyLog(item.qty_planning_log);
+                                    setQtyLogModalOpen(true);
+                                  }}
+                                >
+                                  <Info className="w-4 h-4 text-blue-500" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-left">
+                            <div className={`px-3 py-2 rounded text-sm font-medium ${(item.qty_planning || 0) === parseInt(item.qty || 0)
+                                ? 'bg-green-50 text-green-700'
+                                : (item.qty_planning || 0) > parseInt(item.qty || 0)
+                                  ? 'bg-yellow-50 text-yellow-700'
+                                  : 'bg-gray-50'
+                              }`}>
+                              {item.qty_planning || '0'}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-left">
+                            <div className="px-3 py-2 bg-gray-50 rounded text-sm">
+                              {item.berat ? `${parseFloat(item.berat).toFixed(2)}` : '0.00'}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-left">
+                            <div className="px-3 py-2 bg-gray-50 rounded text-sm">
+                              {getJenisBarangName(item.jenis_barang_id)}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-left">
+                            <div className="px-3 py-2 bg-gray-50 rounded text-sm">
+                              {getBentukBarangName(item.bentuk_barang_id)}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-left">
+                            <div className="px-3 py-2 bg-gray-50 rounded text-sm">
+                              {getGradeBarangName(item.grade_barang_id)}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-left">
+                            <div className="px-3 py-2 bg-gray-50 rounded text-sm">
+                              {item.item_barang_group_name || '-'}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-left">
+                            <div className="px-3 py-2 bg-gray-50 rounded text-sm capitalize">
+                              {item.jenis_potongan || '-'}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-left">
+                            <div className="px-3 py-2 bg-gray-50 rounded text-sm">
+                              {item.catatan || '-'}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-left">
+                            <div className="flex items-center gap-2">
+                              {/* Hidden Pilih button as requested by user
                             <Button
                               type="button"
                               variant="outline"
@@ -1748,67 +1770,67 @@ export default function AddWorkOrderPage() {
                               Pilih
                             </Button>
                             */}
-                            {item.jenis_potongan !== 'utuh' ? (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => openPlatPreviewModal(item)}
-                                disabled={!item.jenis_barang_id || !item.bentuk_barang_id || !item.grade_barang_id}
-                                className={`text-xs ${isQuantityAvailable(item) ? "bg-green-50 border-green-200 text-green-700 hover:bg-green-100" : ""}`}
-                              >
-                                <Grid3X3 className="w-3 h-3 mr-1" />
-                                Pilih Preview
-                              </Button>
-                            ) : (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => openUtuhModal(item)}
-                                disabled={!item.jenis_barang_id || !item.bentuk_barang_id || !item.grade_barang_id}
-                                className="text-xs bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
-                              >
-                                <Package className="w-3 h-3 mr-1" />
-                                Utuh
-                              </Button>
-                            )}
-                            {selectedPlatDasar[item.id] && selectedPlatDasar[item.id].length > 0 && (
-                              <Badge variant="secondary" className="text-xs whitespace-nowrap">
-                                {(() => {
-                                  const totalDibutuhkan = calculateRequiredArea(item);
-                                  const isCukup = isLuasCukup(item.id, totalDibutuhkan);
-                                  return `${selectedPlatDasar[item.id].length} • ${isCukup ? 'Cukup' : 'Kurang'}`;
-                                })()}
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-left">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openPelaksanaModal(item.id)}
-                            className="text-xs"
-                          >
-                            <Users className="w-3 h-3 mr-1" />
-                            {`Kelola (${item.pelaksana.length})`}
-                          </Button>
-                        </TableCell>
-                        <TableCell className="text-left">
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => removeWorkOrderItem(item.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                      
-                    </React.Fragment>
+                              {item.jenis_potongan !== 'utuh' ? (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openPlatPreviewModal(item)}
+                                  disabled={!item.jenis_barang_id || !item.bentuk_barang_id || !item.grade_barang_id}
+                                  className={`text-xs ${isQuantityAvailable(item) ? "bg-green-50 border-green-200 text-green-700 hover:bg-green-100" : ""}`}
+                                >
+                                  <Grid3X3 className="w-3 h-3 mr-1" />
+                                  Pilih Preview
+                                </Button>
+                              ) : (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openUtuhModal(item)}
+                                  disabled={!item.jenis_barang_id || !item.bentuk_barang_id || !item.grade_barang_id}
+                                  className="text-xs bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                                >
+                                  <Package className="w-3 h-3 mr-1" />
+                                  Utuh
+                                </Button>
+                              )}
+                              {selectedPlatDasar[item.id] && selectedPlatDasar[item.id].length > 0 && (
+                                <Badge variant="secondary" className="text-xs whitespace-nowrap">
+                                  {(() => {
+                                    const totalDibutuhkan = calculateRequiredArea(item);
+                                    const isCukup = isLuasCukup(item.id, totalDibutuhkan);
+                                    return `${selectedPlatDasar[item.id].length} • ${isCukup ? 'Cukup' : 'Kurang'}`;
+                                  })()}
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-left">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openPelaksanaModal(item.id)}
+                              className="text-xs"
+                            >
+                              <Users className="w-3 h-3 mr-1" />
+                              {`Kelola (${item.pelaksana.length})`}
+                            </Button>
+                          </TableCell>
+                          <TableCell className="text-left">
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => removeWorkOrderItem(item.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+
+                      </React.Fragment>
                     ))
                   )}
                 </TableBody>
@@ -1911,11 +1933,11 @@ export default function AddWorkOrderPage() {
           <div className="space-y-4">
             <Table>
               <TableHeader>
-                 <TableRow>
-                   <TableHead>No. WO</TableHead>
-                   <TableHead>Tanggal</TableHead>
-                   <TableHead>Qty</TableHead>
-                 </TableRow>
+                <TableRow>
+                  <TableHead>No. WO</TableHead>
+                  <TableHead>Tanggal</TableHead>
+                  <TableHead>Qty</TableHead>
+                </TableRow>
               </TableHeader>
               <TableBody>
                 {selectedQtyLog.map((log, idx) => (
@@ -1949,7 +1971,7 @@ export default function AddWorkOrderPage() {
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-              
+
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
                   <div>
@@ -1987,78 +2009,78 @@ export default function AddWorkOrderPage() {
                       {saranUtuhData.map((saran, index) => {
                         const isSelected = selectedSaranUtuhItems.includes(saran.id);
                         return (
-                        <div
-                          key={saran.id}
-                          className={`p-3 border rounded-lg transition-colors ${
-                            isSelected
-                              ? 'border-green-500 bg-green-50'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          <div className="flex justify-between items-start">
-                            <div className="flex items-start gap-2">
-                              <input 
-                                type="checkbox" 
-                                checked={isSelected}
-                                onChange={() => {
-                                  if (isSelected) {
-                                    setSelectedSaranUtuhItems(prev => prev.filter(id => id !== saran.id));
-                                    setSaranUtuhQuantities(prev => {
-                                      const newQuantities = {...prev};
-                                      delete newQuantities[saran.id];
-                                      return newQuantities;
-                                    });
-                                  } else {
-                                    setSelectedSaranUtuhItems(prev => [...prev, saran.id]);
-                                    setSaranUtuhQuantities(prev => ({
-                                      ...prev,
-                                      [saran.id]: 1
-                                    }));
-                                  }
-                                }}
-                                className="mt-1"
-                              />
-                              <div>
-                                <p className="font-medium text-sm">{saran.nama}</p>
-                                <p className="text-xs text-gray-600">{saran.ukuran}</p>
-                              </div>
-                            </div>
-                            <div className="text-right flex items-center gap-2">
-                              <div className="flex flex-col items-end">
-                                <p className="text-sm font-medium text-green-600">{saran.sisa_luas} m²</p>
-                                <p className="text-xs text-gray-500">Sisa: {parseInt(saran.sisa_quantity ?? saran.qty ?? 0)} pcs</p>
-                              </div>
-                              {isSelected && (
-                                <div className="flex items-center">
-                                  <label className="text-xs text-gray-600 mr-1">Qty:</label>
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    max={Math.min(parseInt(saran.sisa_quantity ?? saran.qty ?? 999999), selectedUtuhItem.qty)}
-                                    value={saranUtuhQuantities[saran.id] || 1}
-                                    onChange={(e) => {
-                                      const sisaQty = parseInt(saran.sisa_quantity ?? saran.qty ?? 999999);
-                                      const requiredQty = selectedUtuhItem.qty;
-                                      const maxQty = Math.min(sisaQty, requiredQty);
-                                      
-                                      let value = parseInt(e.target.value) || 0;
-                                      if (value > maxQty) value = maxQty;
-                                      if (value < 1) value = 1;
-                                      
+                          <div
+                            key={saran.id}
+                            className={`p-3 border rounded-lg transition-colors ${isSelected
+                                ? 'border-green-500 bg-green-50'
+                                : 'border-gray-200 hover:border-gray-300'
+                              }`}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div className="flex items-start gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => {
+                                    if (isSelected) {
+                                      setSelectedSaranUtuhItems(prev => prev.filter(id => id !== saran.id));
+                                      setSaranUtuhQuantities(prev => {
+                                        const newQuantities = { ...prev };
+                                        delete newQuantities[saran.id];
+                                        return newQuantities;
+                                      });
+                                    } else {
+                                      setSelectedSaranUtuhItems(prev => [...prev, saran.id]);
                                       setSaranUtuhQuantities(prev => ({
                                         ...prev,
-                                        [saran.id]: value
+                                        [saran.id]: 1
                                       }));
-                                    }}
-                                    className="w-16 text-sm border rounded px-1 py-0.5"
-                                    onClick={(e) => e.stopPropagation()}
-                                  />
+                                    }
+                                  }}
+                                  className="mt-1"
+                                />
+                                <div>
+                                  <p className="font-medium text-sm">{saran.nama}</p>
+                                  <p className="text-xs text-gray-600">{saran.ukuran}</p>
                                 </div>
-                              )}
+                              </div>
+                              <div className="text-right flex items-center gap-2">
+                                <div className="flex flex-col items-end">
+                                  <p className="text-sm font-medium text-green-600">{saran.sisa_luas} m²</p>
+                                  <p className="text-xs text-gray-500">Sisa: {parseInt(saran.sisa_quantity ?? saran.qty ?? 0)} pcs</p>
+                                </div>
+                                {isSelected && (
+                                  <div className="flex items-center">
+                                    <label className="text-xs text-gray-600 mr-1">Qty:</label>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      max={Math.min(parseInt(saran.sisa_quantity ?? saran.qty ?? 999999), selectedUtuhItem.qty)}
+                                      value={saranUtuhQuantities[saran.id] || 1}
+                                      onChange={(e) => {
+                                        const sisaQty = parseInt(saran.sisa_quantity ?? saran.qty ?? 999999);
+                                        const requiredQty = selectedUtuhItem.qty;
+                                        const maxQty = Math.min(sisaQty, requiredQty);
+
+                                        let value = parseInt(e.target.value) || 0;
+                                        if (value > maxQty) value = maxQty;
+                                        if (value < 1) value = 1;
+
+                                        setSaranUtuhQuantities(prev => ({
+                                          ...prev,
+                                          [saran.id]: value
+                                        }));
+                                      }}
+                                      className="w-16 text-sm border rounded px-1 py-0.5"
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )})}
+                        )
+                      })}
                     </div>
                   ) : (
                     <div className="p-4 text-center text-gray-500 bg-gray-50 rounded-lg">
@@ -2070,7 +2092,7 @@ export default function AddWorkOrderPage() {
                 <div className="p-4 bg-blue-50 rounded-lg">
                   <h3 className="text-sm font-medium text-blue-900 mb-2">Informasi Item Utuh</h3>
                   <p className="text-sm text-blue-800">
-                    Item ini adalah item utuh yang tidak memerlukan proses pemotongan. 
+                    Item ini adalah item utuh yang tidak memerlukan proses pemotongan.
                     Item akan digunakan langsung sesuai dengan dimensi yang telah ditentukan.
                   </p>
                 </div>
@@ -2099,22 +2121,22 @@ export default function AddWorkOrderPage() {
                       selectedSaranUtuhItems.forEach(saranId => {
                         totalSelectedQuantity += saranUtuhQuantities[saranId] || 1;
                       });
-                      
+
                       // Cek apakah total quantity melebihi target quantity
                       if (totalSelectedQuantity > selectedUtuhItem.qty) {
                         showAlert('Warning', `Total quantity (${totalSelectedQuantity}) melebihi target quantity (${selectedUtuhItem.qty})`, 'warning');
                         return;
                       }
-                      
+
                       // Save selected saran utuh items to localStorage WO_total_quantity
                       const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
-                      
+
                       // Cek apakah item sudah ada di woTotalQuantity
                       const existingEntryIndex = totalQuantityData.findIndex(entry => entry.WoItemID === selectedUtuhItem.id);
-                      
+
                       // Gunakan selectedUtuhItem.id sebagai WoItemID untuk konsistensi
                       const woItemID = selectedUtuhItem.id;
-                      
+
                       // Create a new entry for plat dasar utuh
                       const newUtuhEntry = {
                         WoItemID: woItemID,
@@ -2122,31 +2144,31 @@ export default function AddWorkOrderPage() {
                         WOQuantity: [],
                         PreviousQuantity: 0
                       };
-                      
+
                       // Process each selected item
                       selectedSaranUtuhItems.forEach(saranId => {
                         const quantity = saranUtuhQuantities[saranId] || 1;
-                        
+
                         // Add to the new entry's WOQuantity
                         newUtuhEntry.WOQuantity.push({
                           ItemId: saranId,
                           Quantity: quantity
                         });
                       });
-                      
+
                       // Update atau tambahkan entry
                       if (existingEntryIndex >= 0) {
                         totalQuantityData[existingEntryIndex] = newUtuhEntry;
                       } else {
                         totalQuantityData.push(newUtuhEntry);
                       }
-                      
+
                       // Update localStorage
                       localStorage.setItem('WO_total_quantity', JSON.stringify(totalQuantityData));
-                      
+
                       // Update state
                       setWoTotalQuantity(totalQuantityData);
-                      
+
                       showAlert('Success', `${selectedSaranUtuhItems.length} saran plat utuh telah disimpan`, 'success');
                     } else {
                       showAlert('Warning', 'Pilih minimal satu saran plat utuh terlebih dahulu', 'warning');
@@ -2184,7 +2206,7 @@ export default function AddWorkOrderPage() {
         selectedSalesOrder={selectedSalesOrder}
         isNewItem={editingItem ? isNewItem(editingItem) : false}
       />
-      
+
       {/* Alert Component */}
       <CustomAlert
         open={confirmSaveOpen}
@@ -2238,15 +2260,15 @@ export default function AddWorkOrderPage() {
                   const soItem = selectedSalesOrder?.sales_order_items?.find(i => String(i.id) === String(m.sales_order_item_id));
                   const itemIndex = selectedSalesOrder?.sales_order_items?.findIndex(i => String(i.id) === String(m.sales_order_item_id));
                   const itemNumber = itemIndex !== -1 ? itemIndex + 1 : m.sales_order_item_id;
-                  
+
                   let itemName = '';
                   if (soItem) {
-                     const jb = soItem.jenis_barang?.nama_jenis_barang || soItem.jenis_barang?.nama || '';
-                     const bb = soItem.bentuk_barang?.nama_bentuk_barang || soItem.bentuk_barang?.nama || '';
-                     const dim = `${parseFloat(soItem.panjang || 0)}x${parseFloat(soItem.lebar || 0)}x${parseFloat(soItem.tebal || 0)}`;
-                     itemName = `${jb} ${bb} ${dim}`.trim();
+                    const jb = soItem.jenis_barang?.nama_jenis_barang || soItem.jenis_barang?.nama || '';
+                    const bb = soItem.bentuk_barang?.nama_bentuk_barang || soItem.bentuk_barang?.nama || '';
+                    const dim = `${parseFloat(soItem.panjang || 0)}x${parseFloat(soItem.lebar || 0)}x${parseFloat(soItem.tebal || 0)}`;
+                    itemName = `${jb} ${bb} ${dim}`.trim();
                   }
-                  
+
                   return (
                     <li key={idx}>
                       {`Item #${itemNumber}${itemName ? ` (${itemName})` : ''} membutuhkan ${m.expected_qty}, sekarang ${m.incoming_qty}${(m.existing_planned_qty && Number(m.existing_planned_qty) > 0) ? `, sebelumnya ${m.existing_planned_qty}` : ''}`}

@@ -25,12 +25,12 @@ export default function ViewWorkOrderPage() {
   const navigate = useNavigate();
   const { showAlert, AlertComponent } = useAlert();
   const { isUserAdmin, hasRole } = useRole();
-  
+
   // Loading states
   const [loading, setLoading] = useState(false);
   const [printOptionsOpen, setPrintOptionsOpen] = useState(false);
   const [includeImages, setIncludeImages] = useState(true);
-  
+
   // Prevent multiple API calls
   const isLoadingRef = useRef(false);
 
@@ -53,12 +53,12 @@ export default function ViewWorkOrderPage() {
   const [priority, setPriority] = useState("");
   const [status, setStatus] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
-  
+
   // Item List
   const [items, setItems] = useState([]);
   const [pelaksanaData, setPelaksanaData] = useState([]);
   const [saranData, setSaranData] = useState([]);
-  
+
   // Modal states
   const [pelaksanaModalOpen, setPelaksanaModalOpen] = useState(false);
   const [saranModalOpen, setSaranModalOpen] = useState(false);
@@ -67,7 +67,7 @@ export default function ViewWorkOrderPage() {
   const [selectedItemInfo, setSelectedItemInfo] = useState(null);
   const [loadingPelaksana, setLoadingPelaksana] = useState(false);
   const [loadingSaran, setLoadingSaran] = useState(false);
-  
+
   // Modal handlers
   const handlePelaksanaClick = (item) => {
     setSelectedItemInfo(item);
@@ -95,14 +95,14 @@ export default function ViewWorkOrderPage() {
 
   // Handle Print WO (Planning)
   const doPrint = async () => {
-    try { 
+    try {
       setLoading(true);
       let canvasImages = [];
       try {
         const imagesResponse = await workOrderService.getWorkOrderImages(id);
         const imagesData = imagesResponse?.data || imagesResponse;
-        canvasImages = Array.isArray(imagesData) 
-          ? imagesData 
+        canvasImages = Array.isArray(imagesData)
+          ? imagesData
           : (imagesData?.images && Array.isArray(imagesData.images) ? imagesData.images : []);
       } catch (err) {
         console.warn('Gagal load images for print:', err);
@@ -124,8 +124,30 @@ export default function ViewWorkOrderPage() {
           bentukBarang: item.bentukBarang,
           gradeBarang: item.gradeBarang,
           groupBarangName: item.item_barang_group_name || item.item_barang_group?.nama_group_barang || item.groupBarangName || '-',
-          dimensi: item.bentukBarang?.dimensi || `${item.panjang || 0}x${item.lebar || 0}x${item.ketebalan || 0}mm`,
-          qtyPlanning: item.qty_planning?? 0,
+          dimensi: (() => {
+            const tb = item.bentukBarang?.tipe_barang || item.bentukBarang?.tipeBarang;
+            if (tb) {
+              const formatInt = (val) => Math.round(parseFloat(val) || 0);
+              const dims = [];
+              if (tb.diameter_luar && tb.diameter_dalam && tb.panjang) {
+                dims.push(formatInt(item.diameter_luar), formatInt(item.diameter_dalam), formatInt(item.panjang));
+              } else if (tb.sisi1 && tb.sisi2 && tb.tebal && tb.panjang) {
+                dims.push(formatInt(item.sisi1), formatInt(item.sisi2), formatInt(item.tebal), formatInt(item.panjang));
+              } else if (tb.tebal && tb.lebar && tb.panjang) {
+                dims.push(formatInt(item.tebal), formatInt(item.lebar), formatInt(item.panjang));
+              } else if (tb.diameter && tb.panjang) {
+                dims.push(formatInt(item.diameter), formatInt(item.panjang));
+              } else {
+                // Fallback using available standard properties
+                if (tb.tebal) dims.push(formatInt(item.tebal));
+                if (tb.lebar) dims.push(formatInt(item.lebar));
+                if (tb.panjang) dims.push(formatInt(item.panjang));
+              }
+              if (dims.length > 0) return dims.join('x');
+            }
+            return item.bentukBarang?.dimensi || `${Math.round(parseFloat(item.panjang) || 0)}x${Math.round(parseFloat(item.lebar) || 0)}x${Math.round(parseFloat(item.ketebalan || item.tebal) || 0)}`;
+          })(),
+          qtyPlanning: item.qty_planning ?? 0,
           jenisPotongan: item.jenisPotongan || item.jenis_potongan,
           keterangan: item.catatan || item.keterangan || '-'
         })),
@@ -140,7 +162,7 @@ export default function ViewWorkOrderPage() {
       setLoading(false);
     }
   };
-  
+
 
 
   // Load work order data (includes all master data)
@@ -151,27 +173,27 @@ export default function ViewWorkOrderPage() {
         console.log('🔧 Skipping loadData - already loading (ref check)');
         return;
       }
-      
+
       isLoadingRef.current = true;
-      
+
       try {
         setLoading(true);
 
         // Load work order data using workOrderService
         console.log('🔧 Fetching work order data for ID:', id);
-        
+
         const response = await workOrderService.getWorkOrderById(id);
 
         console.log('🔍 Work Order API Response:', response);
-        
+
         // Handle different response structures
         let woData = response.data || response;
-        
+
         // If response is an array, take the first item
         if (Array.isArray(woData)) {
           woData = woData[0];
         }
-        
+
         // If still no data, try different possible structures
         if (!woData && response.work_order) {
           woData = response.work_order;
@@ -179,16 +201,16 @@ export default function ViewWorkOrderPage() {
         if (!woData && response.workOrder) {
           woData = response.workOrder;
         }
-        
+
         console.log('🔍 Work Order Data:', woData);
-        
+
         if (!woData) {
           throw new Error('Work order data not found in response');
         }
 
         // Extract master data from work order response
         console.log('🔧 Extracting master data from work order response...');
-        
+
         // Get customer data from work order
         const customerData = woData.pelanggan || woData.customer || woData.client || woData.salesOrder?.pelanggan;
         if (customerData) {
@@ -206,7 +228,7 @@ export default function ViewWorkOrderPage() {
         // Get sales order data from work order
         const salesOrderData = woData.sales_order || woData.salesOrder;
         console.log('🔍 Sales Order data found:', salesOrderData);
-        
+
         setWorkOrder({
           ...woData,
           sales_order: salesOrderData,
@@ -219,7 +241,7 @@ export default function ViewWorkOrderPage() {
 
         // Process saran data to show item ID and quantities
         const processedSaranData = [];
-        
+
         if (woData.workOrderPlanningItems && Array.isArray(woData.workOrderPlanningItems)) {
           woData.workOrderPlanningItems.forEach(item => {
             if (item.saran_plat_dasar && Array.isArray(item.saran_plat_dasar)) {
@@ -236,14 +258,14 @@ export default function ViewWorkOrderPage() {
             }
           });
         }
-        
+
         setSaranData(processedSaranData);
 
 
         // Extract master data from items
         const itemsData = woData.workOrderPlanningItems || woData.workOrderItems || woData.items || woData.work_order_items || woData.orderItems || [];
         console.log('🔍 Items data:', itemsData);
-        
+
         // Collect unique master data from items
         const masterData = {
           jenisBarang: [],
@@ -257,12 +279,12 @@ export default function ViewWorkOrderPage() {
           if (item.jenisBarang && !masterData.jenisBarang.find(jb => jb.id === item.jenisBarang.id)) {
             masterData.jenisBarang.push(item.jenisBarang);
           }
-          
+
           // Add bentuk barang if exists and not already added
           if (item.bentukBarang && !masterData.bentukBarang.find(bb => bb.id === item.bentukBarang.id)) {
             masterData.bentukBarang.push(item.bentukBarang);
           }
-          
+
           // Add grade barang if exists and not already added
           if (item.gradeBarang && !masterData.gradeBarang.find(gb => gb.id === item.gradeBarang.id)) {
             masterData.gradeBarang.push(item.gradeBarang);
@@ -304,7 +326,7 @@ export default function ViewWorkOrderPage() {
           sales_order: salesOrderData,
           nomor_so: salesOrderData?.nomor_so
         });
-        
+
         const currentWoNumber = woData.nomor_wo || woData.wo_number || woData.order_number || "";
         setWoNumber(currentWoNumber);
         setWoDate(formatDateForInput(woData.tanggal_wo || woData.wo_date || woData.order_date));
@@ -317,7 +339,7 @@ export default function ViewWorkOrderPage() {
         if (itemsData && itemsData.length > 0) {
           const mappedItems = itemsData.map(item => {
             console.log('🔍 Mapping item:', item);
-            
+
             // Calculate total if not provided
             const qty = parseFloat(item.qty_planning || item.qty || item.quantity || item.jumlah || 0);
             const harga = parseFloat(item.harga || item.price || 0);
@@ -325,7 +347,7 @@ export default function ViewWorkOrderPage() {
             const subtotal = qty * harga;
             const discountAmount = subtotal * (diskon / 100);
             const total = subtotal - discountAmount;
-            
+
             console.log('🔍 Item calculations:', {
               qty,
               harga,
@@ -335,7 +357,7 @@ export default function ViewWorkOrderPage() {
               total,
               originalTotal: item.total || item.subtotal
             });
-            
+
             return {
               id: item.id,
               wo_item_unique_id: item.wo_item_unique_id || item.work_order_planning_item_id || item.wo_item_id || item.item_id || item.id,
@@ -356,7 +378,7 @@ export default function ViewWorkOrderPage() {
               total: item.total || item.subtotal || total || 0,
               jenis_potongan: item.jenis_potongan || 'potongan',
               item_barang_group: item.item_barang_group || item.itemBarangGroup || null,
-              item_barang_group_name: (item.item_barang_group && (item.item_barang_group.nama_group_barang || item.item_barang_group.nama)) 
+              item_barang_group_name: (item.item_barang_group && (item.item_barang_group.nama_group_barang || item.item_barang_group.nama))
                 || (item.itemBarangGroup && (item.itemBarangGroup.nama_group_barang || item.itemBarangGroup.nama))
                 || item.item_barang_group_nama
                 || item.group_barang_nama
@@ -418,13 +440,13 @@ export default function ViewWorkOrderPage() {
   // Memoized calculations
   const { subtotal, totalDiscount, ppnAmount, grandTotal } = useMemo(() => {
     console.log('🔍 Calculating totals for items:', items);
-    
+
     const subtotal = items.reduce((sum, item) => {
       const itemTotal = parseFloat(item.total) || 0;
       console.log('🔍 Item total:', { item: item.jenisBarang, total: itemTotal });
       return sum + itemTotal;
     }, 0);
-    
+
     const totalDiscount = items.reduce((sum, item) => {
       const itemTotal = parseFloat(item.total) || 0;
       const itemDiscount = parseFloat(item.diskon) || 0;
@@ -432,10 +454,10 @@ export default function ViewWorkOrderPage() {
       console.log('🔍 Item discount:', { item: item.jenisBarang, total: itemTotal, discount: itemDiscount, discountAmount });
       return sum + discountAmount;
     }, 0);
-    
+
     const ppnAmount = (subtotal - totalDiscount) * 0.11; // 11% PPN
     const grandTotal = subtotal - totalDiscount + ppnAmount;
-    
+
     console.log('🔍 Final calculations:', {
       subtotal,
       totalDiscount,
@@ -443,7 +465,7 @@ export default function ViewWorkOrderPage() {
       grandTotal,
       itemsCount: items.length
     });
-    
+
     return { subtotal, totalDiscount, ppnAmount, grandTotal };
   }, [items]);
 
@@ -475,17 +497,17 @@ export default function ViewWorkOrderPage() {
 
   return (
     <>
-    <PageLayout title="Detail Work Order" subtitle="PRODUKSI">
-      <div className="flex items-center gap-4 mb-6">
-        <Button 
-          variant="outline" 
-          onClick={() => navigate('/work-order')}
-          className="flex items-center gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Kembali
-        </Button>
-      </div>
+      <PageLayout title="Detail Work Order" subtitle="PRODUKSI">
+        <div className="flex items-center gap-4 mb-6">
+          <Button
+            variant="outline"
+            onClick={() => navigate('/work-order')}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Kembali
+          </Button>
+        </div>
 
         {/* Work Order Information */}
         <Card className="mb-6">
@@ -501,49 +523,49 @@ export default function ViewWorkOrderPage() {
                 <Label className="text-sm font-medium text-gray-700">
                   Nomor WO
                 </Label>
-                <Input 
-                  value={woNumber} 
-                  disabled 
+                <Input
+                  value={woNumber}
+                  disabled
                   className="bg-gray-50"
                 />
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">Tanggal WO</Label>
-                <Input 
-                  value={woDate} 
-                  disabled 
+                <Input
+                  value={woDate}
+                  disabled
                   className="bg-gray-50"
                 />
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">Tanggal Target</Label>
-                <Input 
-                  value={dueDate} 
-                  disabled 
+                <Input
+                  value={dueDate}
+                  disabled
                   className="bg-gray-50"
                 />
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">Prioritas</Label>
-                <Input 
-                  value={priority || 'N/A'} 
-                  disabled 
+                <Input
+                  value={priority || 'N/A'}
+                  disabled
                   className="bg-gray-50"
                 />
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">Status</Label>
-                <Input 
-                  value={status || 'N/A'} 
-                  disabled 
+                <Input
+                  value={status || 'N/A'}
+                  disabled
                   className="bg-gray-50"
                 />
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">Metode Handover</Label>
-                <Input 
-                  value={assignedTo || 'N/A'} 
-                  disabled 
+                <Input
+                  value={assignedTo || 'N/A'}
+                  disabled
                   className="bg-gray-50"
                 />
               </div>
@@ -551,62 +573,62 @@ export default function ViewWorkOrderPage() {
           </CardContent>
         </Card>
 
-                 {/* Customer Information */}
-         <Card className="mb-6">
-           <CardHeader>
-             <CardTitle>Informasi Pelanggan</CardTitle>
-           </CardHeader>
-                       <CardContent>
-              {customerData ? (
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div>
-                   <Label className="text-sm font-medium text-gray-700">Kode Pelanggan</Label>
-                   <Input 
-                     value={customerData.kode || 'N/A'} 
-                     disabled 
-                     className="bg-gray-50"
-                   />
-                 </div>
-                 <div>
-                   <Label className="text-sm font-medium text-gray-700">Nama Pelanggan</Label>
-                   <Input 
-                     value={customerData.nama_pelanggan || customerData.nama || customerData.name || 'N/A'} 
-                     disabled 
-                     className="bg-gray-50"
-                   />
-                 </div>
-                 <div>
-                   <Label className="text-sm font-medium text-gray-700">Kota</Label>
-                   <Input 
-                     value={customerData.kota || 'N/A'} 
-                     disabled 
-                     className="bg-gray-50"
-                   />
-                 </div>
-                 <div>
-                   <Label className="text-sm font-medium text-gray-700">Telepon/HP</Label>
-                   <Input 
-                     value={customerData.telepon_hp || customerData.telepon || customerData.phone || 'N/A'} 
-                     disabled 
-                     className="bg-gray-50"
-                   />
-                 </div>
-                 <div className="md:col-span-2">
-                   <Label className="text-sm font-medium text-gray-700">Contact Person</Label>
-                   <Input 
-                     value={customerData.contact_person || 'N/A'} 
-                     disabled 
-                     className="bg-gray-50"
-                   />
-                 </div>
-               </div>
-             ) : (
-               <div className="text-center py-8 text-gray-500">
-                 Data pelanggan tidak ditemukan
-               </div>
-             )}
-           </CardContent>
-         </Card>
+        {/* Customer Information */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Informasi Pelanggan</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {customerData ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Kode Pelanggan</Label>
+                  <Input
+                    value={customerData.kode || 'N/A'}
+                    disabled
+                    className="bg-gray-50"
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Nama Pelanggan</Label>
+                  <Input
+                    value={customerData.nama_pelanggan || customerData.nama || customerData.name || 'N/A'}
+                    disabled
+                    className="bg-gray-50"
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Kota</Label>
+                  <Input
+                    value={customerData.kota || 'N/A'}
+                    disabled
+                    className="bg-gray-50"
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Telepon/HP</Label>
+                  <Input
+                    value={customerData.telepon_hp || customerData.telepon || customerData.phone || 'N/A'}
+                    disabled
+                    className="bg-gray-50"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label className="text-sm font-medium text-gray-700">Contact Person</Label>
+                  <Input
+                    value={customerData.contact_person || 'N/A'}
+                    disabled
+                    className="bg-gray-50"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                Data pelanggan tidak ditemukan
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Warehouse Information */}
         <Card className="mb-6">
@@ -618,17 +640,17 @@ export default function ViewWorkOrderPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-gray-700">Nama Gudang</Label>
-                  <Input 
-                    value={warehouseOptions[0]?.nama_gudang || warehouseOptions[0]?.nama || 'N/A'} 
-                    disabled 
+                  <Input
+                    value={warehouseOptions[0]?.nama_gudang || warehouseOptions[0]?.nama || 'N/A'}
+                    disabled
                     className="bg-gray-50"
                   />
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-700">Alamat</Label>
-                  <Input 
-                    value={warehouseOptions[0]?.alamat || 'N/A'} 
-                    disabled 
+                  <Input
+                    value={warehouseOptions[0]?.alamat || 'N/A'}
+                    disabled
                     className="bg-gray-50"
                   />
                 </div>
@@ -651,33 +673,33 @@ export default function ViewWorkOrderPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-gray-700">Nomor SO</Label>
-                  <Input 
-                    value={workOrder.sales_order.nomor_so || workOrder.nomor_so || 'N/A'} 
-                    disabled 
+                  <Input
+                    value={workOrder.sales_order.nomor_so || workOrder.nomor_so || 'N/A'}
+                    disabled
                     className="bg-gray-50"
                   />
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-700">Tanggal SO</Label>
-                  <Input 
-                    value={workOrder.sales_order.tanggal_so ? formatDate(workOrder.sales_order.tanggal_so) : 'N/A'} 
-                    disabled 
+                  <Input
+                    value={workOrder.sales_order.tanggal_so ? formatDate(workOrder.sales_order.tanggal_so) : 'N/A'}
+                    disabled
                     className="bg-gray-50"
                   />
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-700">Tanggal Pengiriman</Label>
-                  <Input 
-                    value={workOrder.sales_order.tanggal_pengiriman ? formatDate(workOrder.sales_order.tanggal_pengiriman) : 'N/A'} 
-                    disabled 
+                  <Input
+                    value={workOrder.sales_order.tanggal_pengiriman ? formatDate(workOrder.sales_order.tanggal_pengiriman) : 'N/A'}
+                    disabled
                     className="bg-gray-50"
                   />
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-700">Metode Handover</Label>
-                  <Input 
-                    value={workOrder.sales_order.handover_method || 'N/A'} 
-                    disabled 
+                  <Input
+                    value={workOrder.sales_order.handover_method || 'N/A'}
+                    disabled
                     className="bg-gray-50"
                   />
                 </div>
@@ -730,13 +752,13 @@ export default function ViewWorkOrderPage() {
                       const panjang = parseFloat(item.panjang) || 0;
                       const lebar = parseFloat(item.lebar) || 0;
                       const luasPerItem = panjang * lebar;
-                      
+
                       // Format dimensi
                       const dimensi = `${panjang} x ${lebar} mm`;
-                      
+
                       // Get pelaksana data for this item
                       const itemPelaksana = pelaksanaData.find(p => p.id === item.pelaksana_id) || null;
-                      
+
                       // Get saran relasi data from API response (saran_plat_dasar)
                       const itemSaranRelasi = (item.saran_plat_dasar || []).map(saran => ({
                         saranItemId: saran.item_barang?.id || saran.id,
@@ -746,10 +768,10 @@ export default function ViewWorkOrderPage() {
                         woItemId: item.id || index,
                         isSelected: saran.is_selected
                       }));
-                      
+
                       // Prepare pelaksana data for modal
                       const itemPelaksanaArray = itemPelaksana ? [itemPelaksana] : (item.pelaksana || []);
-                      
+
                       return (
                         <TableRow key={item.id || index} className="hover:bg-gray-50">
                           <TableCell className="font-medium">{index + 1}</TableCell>
@@ -763,11 +785,10 @@ export default function ViewWorkOrderPage() {
                           <TableCell>{formatCurrency(item.harga)}</TableCell>
                           <TableCell>{item.satuan}</TableCell>
                           <TableCell>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              item.jenis_potongan === 'potongan' 
-                                ? 'bg-orange-100 text-orange-800' 
-                                : 'bg-green-100 text-green-800'
-                            }`}>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.jenis_potongan === 'potongan'
+                              ? 'bg-orange-100 text-orange-800'
+                              : 'bg-green-100 text-green-800'
+                              }`}>
                               {item.jenis_potongan === 'potongan' ? 'Potongan' : 'Utuh'}
                             </span>
                           </TableCell>
@@ -778,7 +799,7 @@ export default function ViewWorkOrderPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handlePelaksanaClick({...item, pelaksana: itemPelaksanaArray})}
+                                onClick={() => handlePelaksanaClick({ ...item, pelaksana: itemPelaksanaArray })}
                                 className="text-blue-600 hover:text-blue-800"
                               >
                                 <Eye className="h-4 w-4 mr-1" />
@@ -793,7 +814,7 @@ export default function ViewWorkOrderPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleSaranClick({...item, saran_plat_dasar: itemSaranRelasi})}
+                                onClick={() => handleSaranClick({ ...item, saran_plat_dasar: itemSaranRelasi })}
                                 className="text-green-600 hover:text-green-800"
                               >
                                 <Eye className="h-4 w-4 mr-1" />
@@ -841,16 +862,16 @@ export default function ViewWorkOrderPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         {/* Action Buttons */}
         <div className="flex justify-center gap-4 mt-6">
           <Button size="lg" variant="outline" onClick={() => navigate('/work-order')}>
             Kembali ke List
           </Button>
-          
+
           <RoleGuard roles={['admin', 'manager', 'supervisor']}>
-            <Button 
-              size="lg" 
+            <Button
+              size="lg"
               className="border-blue-600 text-blue-600 hover:bg-blue-50"
               variant="outline"
               onClick={() => setPrintOptionsOpen(true)}
@@ -860,9 +881,9 @@ export default function ViewWorkOrderPage() {
             </Button>
           </RoleGuard>
         </div>
-        
+
         <AlertComponent />
-        
+
         {/* Modals */}
         <PelaksanaViewModal
           isOpen={pelaksanaModalOpen}
@@ -870,7 +891,7 @@ export default function ViewWorkOrderPage() {
           pelaksanaData={selectedItemPelaksana}
           itemInfo={selectedItemInfo}
         />
-        
+
         <SaranViewModal
           isOpen={saranModalOpen}
           onClose={closeSaranModal}
@@ -878,27 +899,27 @@ export default function ViewWorkOrderPage() {
           itemInfo={selectedItemInfo}
         />
       </PageLayout>
-    <CustomAlert
-      open={printOptionsOpen}
-      onOpenChange={setPrintOptionsOpen}
-      title="Opsi Cetak WO Planning"
-      message={null}
-      type="info"
-      showCancel={true}
-      confirmText="Cetak"
-      cancelText="Batal"
-      onConfirm={doPrint}
-      extraContent={(
-        <div className="w-full flex items-center justify-between gap-4 bg-gray-50 rounded-md px-3 py-2 border">
-          <span className="text-sm text-gray-800">Sertakan gambar untuk print</span>
-          <Switch
-            checked={includeImages}
-            onCheckedChange={setIncludeImages}
-            aria-label="Sertakan gambar untuk print"
-          />
-        </div>
-      )}
-    />
+      <CustomAlert
+        open={printOptionsOpen}
+        onOpenChange={setPrintOptionsOpen}
+        title="Opsi Cetak WO Planning"
+        message={null}
+        type="info"
+        showCancel={true}
+        confirmText="Cetak"
+        cancelText="Batal"
+        onConfirm={doPrint}
+        extraContent={(
+          <div className="w-full flex items-center justify-between gap-4 bg-gray-50 rounded-md px-3 py-2 border">
+            <span className="text-sm text-gray-800">Sertakan gambar untuk print</span>
+            <Switch
+              checked={includeImages}
+              onCheckedChange={setIncludeImages}
+              aria-label="Sertakan gambar untuk print"
+            />
+          </div>
+        )}
+      />
     </>
   );
 }
