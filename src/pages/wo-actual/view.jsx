@@ -335,7 +335,18 @@ export default function ViewWOActualPage() {
           if (tb) {
             const formatInt = (val) => Math.round(parseFloat(val) || 0);
             const dims = [];
-            const src = planningItem.panjang ? planningItem : item;
+            const src = {
+              diameter_luar: item.diameter_luar_actual ?? planningItem.diameter_luar ?? item.diameter_luar,
+              diameter_dalam: item.diameter_dalam_actual ?? planningItem.diameter_dalam ?? item.diameter_dalam,
+              panjang: item.panjang_actual ?? planningItem.panjang ?? item.panjang,
+              sisi1: item.sisi1_actual ?? planningItem.sisi1 ?? item.sisi1,
+              sisi2: item.sisi2_actual ?? planningItem.sisi2 ?? item.sisi2,
+              tebal: item.tebal_actual ?? planningItem.tebal ?? item.tebal,
+              lebar: item.lebar_actual ?? planningItem.lebar ?? item.lebar,
+              ketebalan: item.tebal_actual ?? planningItem.ketebalan ?? item.ketebalan,
+              diameter: item.diameter_actual ?? planningItem.diameter ?? item.diameter
+            };
+
             if (tb.diameter_luar && tb.diameter_dalam && tb.panjang) {
               dims.push(formatInt(src.diameter_luar), formatInt(src.diameter_dalam), formatInt(src.panjang));
             } else if (tb.sisi1 && tb.sisi2 && tb.tebal && tb.panjang) {

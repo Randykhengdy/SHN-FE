@@ -125,7 +125,18 @@ export default function WOActualDetailPage() {
             if (tb) {
               const formatInt = (val) => Math.round(parseFloat(val) || 0);
               const dims = [];
-              const src = planningItem;
+              const src = {
+                diameter_luar: actualItem.diameter_luar_actual ?? planningItem.diameter_luar,
+                diameter_dalam: actualItem.diameter_dalam_actual ?? planningItem.diameter_dalam,
+                panjang: actualItem.panjang_actual ?? planningItem.panjang,
+                sisi1: actualItem.sisi1_actual ?? planningItem.sisi1,
+                sisi2: actualItem.sisi2_actual ?? planningItem.sisi2,
+                tebal: actualItem.tebal_actual ?? planningItem.tebal,
+                lebar: actualItem.lebar_actual ?? planningItem.lebar,
+                ketebalan: actualItem.tebal_actual ?? planningItem.ketebalan,
+                diameter: actualItem.diameter_actual ?? planningItem.diameter
+              };
+
               if (tb.diameter_luar && tb.diameter_dalam && tb.panjang) {
                 dims.push(formatInt(src.diameter_luar), formatInt(src.diameter_dalam), formatInt(src.panjang));
               } else if (tb.sisi1 && tb.sisi2 && tb.tebal && tb.panjang) {
