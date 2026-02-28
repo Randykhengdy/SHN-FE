@@ -6,6 +6,7 @@ export const generatePodPrintContent = (podData) => {
   const itemsHtml = podData.invoice_pod_items.map(item => `
     <tr>
       <td style="border: 1px solid #ddd; padding: 8px;">${item.nama_item}</td>
+      <td style="border: 1px solid #ddd; padding: 8px;">${item.item_barang_group || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 8px;">${item.unit}</td>
       <td style="border: 1px solid #ddd; padding: 8px;">${item.dimensi_potong}</td>
       <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.qty}</td>
@@ -85,6 +86,7 @@ export const generatePodPrintContent = (podData) => {
         <thead>
           <tr>
             <th>Nama Item</th>
+            <th>Master Barang</th>
             <th>Unit</th>
             <th>Dimensi Potong</th>
             <th>Qty</th>
@@ -293,6 +295,7 @@ export const generateInvoicePrintContent = (invoiceData) => {
   const itemsHtml = invoiceData.invoice_pod_items.map(item => `
     <tr>
       <td style="border: 1px solid #ddd; padding: 8px;">${item.nama_item}</td>
+      <td style="border: 1px solid #ddd; padding: 8px;">${item.item_barang_group || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 8px;">${item.unit}</td>
       <td style="border: 1px solid #ddd; padding: 8px;">${item.dimensi_potong}</td>
       <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.qty}</td>
@@ -385,6 +388,7 @@ export const generateInvoicePrintContent = (invoiceData) => {
         <thead>
           <tr>
             <th>Nama Item</th>
+            <th>Master Barang</th>
             <th>Unit</th>
             <th>Dimensi Potong</th>
             <th>Qty</th>
