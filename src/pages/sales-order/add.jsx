@@ -78,22 +78,40 @@ export default function AddSalesOrderPage() {
         setLoadingWarehouse(true);
         setLoadingItemType(true);
         setLoadingItemShape(true);
-
+        setLoadingItemGrade(true);
         setLoadingUnit(true);
 
         const [
           terms,
           bentukBarang,
-          soNumber
+          soNumber,
+          jenisBarangResp,
+          gradeBarangResp
         ] = await Promise.all([
           getTermOptions(),
           getBentukBarangOptions(),
-          documentSequenceService.generateSONumber()
+          documentSequenceService.generateSONumber(),
+          jenisBarangService.getPaginated(1, 100, ""),
+          gradeBarangService.getPaginated(1, 100, "")
         ]);
 
         setTermOptions(terms);
         setItemShapeOptions(bentukBarang);
         // Unit options akan dimuat oleh useEffect berdasarkan itemCutType
+
+        // Load Jenis Barang options
+        const jenisRows = Array.isArray(jenisBarangResp?.data) ? jenisBarangResp.data : (Array.isArray(jenisBarangResp) ? jenisBarangResp : []);
+        setItemTypeOptions(jenisRows.map((item) => ({
+          value: item.id?.toString(),
+          label: item.nama_jenis || item.nama || item.label || "Unknown",
+        })));
+
+        // Load Grade Barang options
+        const gradeRows = Array.isArray(gradeBarangResp?.data) ? gradeBarangResp.data : (Array.isArray(gradeBarangResp) ? gradeBarangResp : []);
+        setItemGradeOptions(gradeRows.map((item) => ({
+          value: item.id?.toString(),
+          label: item.nama || item.nama_grade || item.label || "Unknown",
+        })));
 
         // Set generated SO number
         setSoNumber(soNumber);
@@ -106,6 +124,7 @@ export default function AddSalesOrderPage() {
         setLoadingWarehouse(false);
         setLoadingItemType(false);
         setLoadingItemShape(false);
+        setLoadingItemGrade(false);
 
         // loadingUnit akan dihandle oleh useEffect untuk unit options
       }
@@ -1618,75 +1637,35 @@ export default function AddSalesOrderPage() {
               </div>
             </div>
             <div>
-              <AsyncSearchSelect
+              <SearchSelect
                 label="Jenis Barang"
                 placeholder="Pilih Jenis Barang"
                 searchPlaceholder="Cari jenis barang..."
                 value={itemType}
-                onValueChange={(val, option) => {
+                onValueChange={(val) => {
                   setItemType(val);
-                  if (option && option.label) {
-                    setItemTypeLabel(option.label);
-                  } else {
-                    // Fallback if option not provided (should not happen on selection)
-                    if (!val) {
-                      setItemTypeLabel("");
-                      return;
-                    }
-                    // Try to fetch if no option passed
-                    jenisBarangService.getById(val).then(resp => {
-                      const data = resp?.data || resp;
-                      const label = data?.nama_jenis || data?.nama || data?.label || String(val);
-                      setItemTypeLabel(label);
-                    }).catch(() => {
-                      setItemTypeLabel(String(val));
-                    });
-                  }
+                  const found = itemTypeOptions.find(opt => opt.value === val);
+                  setItemTypeLabel(found?.label || "");
                 }}
+                options={itemTypeOptions}
+                loading={loadingItemType}
                 required
-                fetchOptions={async (q, page) => {
-                  const resp = await jenisBarangService.getPaginated(page || 1, 50, q || "");
-                  const rows = Array.isArray(resp?.data) ? resp.data : (Array.isArray(resp) ? resp : []);
-                  return rows.map((item) => ({
-                    value: item.id?.toString(),
-                    label: item.nama_jenis || item.nama || item.label || "Unknown",
-                  }));
-                }}
               />
             </div>
             <div>
-              <AsyncSearchSelect
+              <SearchSelect
                 label="Grade Barang"
                 placeholder="Pilih Grade"
                 searchPlaceholder="Cari grade..."
                 value={itemGrade}
-                onValueChange={(val, option) => {
+                onValueChange={(val) => {
                   setItemGrade(val);
-                  if (option && option.label) {
-                    setItemGradeLabel(option.label);
-                  } else {
-                    if (!val) {
-                      setItemGradeLabel("");
-                      return;
-                    }
-                    gradeBarangService.getById(val).then(resp => {
-                      const data = resp?.data || resp;
-                      const label = data?.nama || data?.nama_grade || data?.label || String(val);
-                      setItemGradeLabel(label);
-                    }).catch(() => {
-                      setItemGradeLabel(String(val));
-                    });
-                  }
+                  const found = itemGradeOptions.find(opt => opt.value === val);
+                  setItemGradeLabel(found?.label || "");
                 }}
+                options={itemGradeOptions}
+                loading={loadingItemGrade}
                 required
-                fetchOptions={async (q, page) => {
-                  const resp = await gradeBarangService.getPaginated(page || 1, 50, q || "");
-                  const rows = Array.isArray(resp?.data) ? resp.data : (Array.isArray(resp) ? resp : []);
-                  return rows.map((item) => ({
-                    value: item.id?.toString(),
-                    label: item.nama || item.nama_grade || item.label || "Unknown",
-                  }));
-                }}
               />
             </div>
 
