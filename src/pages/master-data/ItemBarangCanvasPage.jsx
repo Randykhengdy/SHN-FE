@@ -156,15 +156,20 @@ const ItemBarangCanvasPage = ({ item, onClose }) => {
     }
 
     // Map to a clean JSON structure for "children"
-    const childrenJson = targetBoxes.map(box => ({
-        id: box.id,
-        width: box.width,
-        height: box.height,
-        x: box.x,
-        y: box.y,
-        type: box.type || 'Saved',
-        rotation: box.isRotated ? 90 : 0
-    }));
+    const childrenJson = targetBoxes.map(box => {
+        // Determine if item is 1D (only length matters)
+        const is1D = item?.lebar === null || parseFloat(item?.lebar) === 0;
+        
+        return {
+            id: box.id,
+            width: box.width,
+            height: is1D ? 0 : box.height, // For 1D, height/width in cross direction is irrelevant/0
+            x: box.x,
+            y: is1D ? 0 : box.y, // For 1D, Y position is always 0
+            type: box.type || 'Saved',
+            rotation: box.isRotated ? 90 : 0
+        };
+    });
 
     console.log('--- SIMULATE SPLIT JSON ---');
     console.log(JSON.stringify(childrenJson, null, 2));
@@ -690,6 +695,7 @@ const ItemBarangCanvasPage = ({ item, onClose }) => {
           gridSize,
           zoom, // Note: This might be pre-zoomFit value, but acceptable for data restoration
           panOffset,
+          sisa_luas: parseFloat(item?.sisa_luas) || 0,
           metadata: {
             containerArea,
             totalArea: totalBoxArea,
@@ -959,10 +965,7 @@ const ItemBarangCanvasPage = ({ item, onClose }) => {
         const hasCollision = boxes.some(box => {
             if (box.id === draggedBoxId) return false;
             
-            const isDraggedSplit = draggedBox.type === 'Split' || draggedBox.type === 'SplitProcessed';
-            const isTargetSplit = box.type === 'Split' || box.type === 'SplitProcessed';
-            if (isDraggedSplit !== isTargetSplit) return false;
-
+            // Collision check against ALL boxes (including normal and split boxes)
             const otherBoxWidth = box.isRotated ? box.height : box.width;
             const otherBoxHeight = box.isRotated ? box.width : box.height;
             return !(tempBox.x >= box.x + otherBoxWidth ||
@@ -1037,10 +1040,7 @@ const ItemBarangCanvasPage = ({ item, onClose }) => {
     const hasCollision = boxes.some(box => {
       if (box.id === draggedBoxId) return false;
 
-      const isDraggedSplit = draggedBox.type === 'Split' || draggedBox.type === 'SplitProcessed';
-      const isTargetSplit = box.type === 'Split' || box.type === 'SplitProcessed';
-      if (isDraggedSplit !== isTargetSplit) return false;
-
+      // Collision check against ALL boxes (including normal and split boxes)
       const otherBoxWidth = box.isRotated ? box.height : box.width;
       const otherBoxHeight = box.isRotated ? box.width : box.height;
       return !(clampedX >= box.x + otherBoxWidth ||
@@ -1300,7 +1300,7 @@ const ItemBarangCanvasPage = ({ item, onClose }) => {
   // Box operations
   const addBox = () => {
     const w = newBoxSize.width;
-    const h = newBoxSize.height;
+    const h = is1D ? baseContainer.height : newBoxSize.height;
     
     // Find free space
     const checkCollision = (cx, cy, cw, ch) => {
@@ -1308,7 +1308,7 @@ const ItemBarangCanvasPage = ({ item, onClose }) => {
           cx + cw > baseContainer.x + baseContainer.width || 
           cy + ch > baseContainer.y + baseContainer.height) return true;
       for (const other of boxes) {
-        if (other.type === 'Split' || other.type === 'SplitProcessed') continue;
+        // Collision check against ALL boxes (including Split types)
         const ow = other.isRotated ? other.height : other.width;
         const oh = other.isRotated ? other.width : other.height;
         if (!(cx >= other.x + ow || cx + cw <= other.x || cy >= other.y + oh || cy + ch <= other.y)) return true;
@@ -1341,7 +1341,7 @@ const ItemBarangCanvasPage = ({ item, onClose }) => {
 
   const addSplitBox = () => {
     const w = splitBoxSize.width;
-    const h = splitBoxSize.height;
+    const h = is1D ? baseContainer.height : splitBoxSize.height;
 
     // Find free space logic (Same as addBox)
     const checkCollision = (cx, cy, cw, ch) => {
@@ -1349,7 +1349,7 @@ const ItemBarangCanvasPage = ({ item, onClose }) => {
             cx + cw > baseContainer.x + baseContainer.width || 
             cy + ch > baseContainer.y + baseContainer.height) return true;
         for (const other of boxes) {
-            if (other.type !== 'Split' && other.type !== 'SplitProcessed') continue;
+            // Collision check against ALL boxes (including normal boxes)
             const ow = other.isRotated ? other.height : other.width;
             const oh = other.isRotated ? other.width : other.height;
             if (!(cx >= other.x + ow || cx + cw <= other.x || cy >= other.y + oh || cy + ch <= other.y)) return true;
@@ -1455,6 +1455,9 @@ const ItemBarangCanvasPage = ({ item, onClose }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, [draw]);
 
+  // Determine if item is 1D (only length matters)
+  const is1D = item?.lebar === null || parseFloat(item?.lebar) === 0;
+
   return (
     <div className="flex flex-col h-screen w-screen bg-gray-50 overflow-hidden">
       {/* Header */}
@@ -1495,9 +1498,11 @@ const ItemBarangCanvasPage = ({ item, onClose }) => {
                         <label className="text-xs text-gray-500">Height</label>
                         <input 
                             type="number" 
-                            className="w-full border rounded px-2 py-1 text-sm"
-                            value={newBoxSize.height}
-                            onChange={e => setNewBoxSize(p => ({ ...p, height: parseInt(e.target.value) || 0 }))}
+                            className={`w-full border rounded px-2 py-1 text-sm ${is1D ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
+                            value={is1D ? baseContainer.height : newBoxSize.height}
+                            onChange={e => !is1D && setNewBoxSize(p => ({ ...p, height: parseInt(e.target.value) || 0 }))}
+                            disabled={is1D}
+                            title={is1D ? "Height is fixed for 1D items (same as container height)" : ""}
                         />
                     </div>
                 </div>
@@ -1522,9 +1527,11 @@ const ItemBarangCanvasPage = ({ item, onClose }) => {
                         <label className="text-xs text-gray-500">Height</label>
                         <input 
                             type="number" 
-                            className="w-full border rounded px-2 py-1 text-sm border-blue-200 focus:border-blue-500"
-                            value={splitBoxSize.height}
-                            onChange={e => setSplitBoxSize(p => ({ ...p, height: parseInt(e.target.value) || 0 }))}
+                            className={`w-full border rounded px-2 py-1 text-sm border-blue-200 focus:border-blue-500 ${is1D ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
+                            value={is1D ? baseContainer.height : splitBoxSize.height}
+                            onChange={e => !is1D && setSplitBoxSize(p => ({ ...p, height: parseInt(e.target.value) || 0 }))}
+                            disabled={is1D}
+                            title={is1D ? "Height is fixed for 1D items (same as container height)" : ""}
                         />
                     </div>
                 </div>
