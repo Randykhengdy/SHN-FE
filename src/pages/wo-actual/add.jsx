@@ -63,6 +63,7 @@ export default function AddWOActualPage() {
     foto_bukti: [], // Will store array of base64 encoded images
     foto_bukti_preview: [] // For preview display array
   });
+  const [planningCanvasImagesMap, setPlanningCanvasImagesMap] = useState({});
 
   // WO Planning Options
   const [woPlanningList, setWoPlanningList] = useState([]);
@@ -126,6 +127,7 @@ export default function AddWOActualPage() {
     if (!planningId) {
       setSelectedWOPlanning(null);
       setActualItems({});
+      setPlanningCanvasImagesMap({});
       setFormData(prev => ({ ...prev, planningWorkOrderId: '' }));
       return;
     }
@@ -206,6 +208,43 @@ export default function AddWOActualPage() {
         ...prev,
         planningWorkOrderId: planningId
       }));
+
+      // Fetch canvas/design images for this WO Planning
+      try {
+        const imagesResp = await workOrderService.getWorkOrderImages(planningId);
+        const imagesData = imagesResp?.data || imagesResp || [];
+
+        let planningCanvasImages = [];
+        if (Array.isArray(imagesData)) {
+          planningCanvasImages = imagesData;
+        } else if (imagesData.images && Array.isArray(imagesData.images)) {
+          planningCanvasImages = imagesData.images;
+        }
+
+        const newImagesMap = {};
+        planningCanvasImages.forEach(img => {
+          const itemIds = [
+            img.work_order_planning_item_id,
+            img.wo_plan_item_id,
+            img.wo_item_id,
+            img.work_order_item_id,
+            img.item_id,
+            img.wo_item_unique_id
+          ].filter(Boolean);
+
+          const uniqueIds = [...new Set(itemIds)];
+          uniqueIds.forEach(id => {
+            const key = String(id);
+            if (!newImagesMap[key]) newImagesMap[key] = [];
+            if (!newImagesMap[key].some(existing => existing.id === img.id)) {
+              newImagesMap[key].push(img);
+            }
+          });
+        });
+        setPlanningCanvasImagesMap(newImagesMap);
+      } catch (err) {
+        console.warn('Gagal mengambil gambar referensi WO Planning:', err);
+      }
 
       // Inisialisasi actualItems berdasarkan items planning (prefill assignments dari planning, hanya pelaksana yang editable)
       const initialItems = {};
@@ -1002,6 +1041,7 @@ export default function AddWOActualPage() {
                         <TableHead className="text-center">Berat Actual (kg)</TableHead>
                         <TableHead className="text-center">Status</TableHead>
                         <TableHead className="text-center">Pelaksana</TableHead>
+                        <TableHead className="text-center">Visual Planning</TableHead>
                         <TableHead className="text-center">Foto Bukti (Item)</TableHead>
                         <TableHead className="text-center">Foto Sisa</TableHead>
                       </TableRow>
@@ -1044,6 +1084,32 @@ export default function AddWOActualPage() {
                               >
                                 Pelaksana ({assignments.length})
                               </Button>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {(() => {
+                                const canvases = planningCanvasImagesMap[planningItem.id];
+                                if (canvases && canvases.length > 0) {
+                                  // Prefer canvas_image_base64, or fallback to file path
+                                  const thumbnailSrc = canvases[0].canvas_image_base64 ||
+                                    (canvases[0].image_path && canvases[0].image_path.startsWith('http')
+                                      ? canvases[0].image_path
+                                      : `${apiConfig.baseUrl}/storage/${canvases[0].image_path?.replace('public/', '')}`);
+
+                                  return thumbnailSrc ? (
+                                    <img
+                                      src={thumbnailSrc}
+                                      alt={`Preview Item #${planningItem.id}`}
+                                      className="w-12 h-12 object-cover rounded border cursor-pointer mx-auto hover:opacity-80"
+                                      onClick={() => {
+                                        setPreviewSrc(thumbnailSrc);
+                                        setPreviewTitle(`Desain Planning Item #${planningItem.id}`);
+                                        setPreviewOpen(true);
+                                      }}
+                                    />
+                                  ) : <span className="text-xs text-gray-500">Render x</span>;
+                                }
+                                return <span className="text-xs text-gray-400">-</span>;
+                              })()}
                             </TableCell>
                             <TableCell className="text-center">
                               <div className="flex items-center justify-center gap-2">
