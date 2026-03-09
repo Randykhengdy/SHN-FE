@@ -116,13 +116,22 @@ export default function ViewWOActualPage() {
   // Load images for WO Actual header and items
   useEffect(() => {
     const loadImages = async () => {
-      if (!id) return;
+      if (!id || !woActual) return;
       try {
         setImagesLoading(true);
         try {
-          const blob = await woActualService.getWOActualHeaderImageBlob(id);
-          const url = URL.createObjectURL(blob);
-          setHeaderImageBase64(url);
+          if (Array.isArray(woActual.foto_bukti) && woActual.foto_bukti.length > 0) {
+            const urls = await Promise.all(woActual.foto_bukti.map(async (_, idx) => {
+              const blob = await woActualService.getWOActualHeaderImageBlob(id, idx);
+              return URL.createObjectURL(blob);
+            }));
+            setHeaderImageBase64(urls);
+          } else if (woActual.foto_bukti && typeof woActual.foto_bukti === 'string') {
+            const blob = await woActualService.getWOActualHeaderImageBlob(id, 0);
+            setHeaderImageBase64([URL.createObjectURL(blob)]);
+          } else {
+            setHeaderImageBase64([]);
+          }
         } catch (e) {
           console.warn('Gagal mengambil header image WO Actual:', e?.message || e);
         }
@@ -134,12 +143,18 @@ export default function ViewWOActualPage() {
     loadImages();
     return () => {
       try {
-        if (headerImageBase64 && headerImageBase64.startsWith('blob:')) {
+        if (Array.isArray(headerImageBase64)) {
+          headerImageBase64.forEach(url => {
+            if (url && typeof url === 'string' && url.startsWith('blob:')) {
+              URL.revokeObjectURL(url);
+            }
+          });
+        } else if (headerImageBase64 && typeof headerImageBase64 === 'string' && headerImageBase64.startsWith('blob:')) {
           URL.revokeObjectURL(headerImageBase64);
         }
       } catch (_) { }
     };
-  }, [id]);
+  }, [id, woActual]);
 
   // Load item images separately when items change
   useEffect(() => {
@@ -442,10 +457,10 @@ export default function ViewWOActualPage() {
           };
         }),
 
-        headerImage: headerImageBase64,
-        parentImages: Array.isArray(woActual?.foto_bukti) && woActual.foto_bukti.length > 0
-          ? woActual.foto_bukti.map(path => ({ src: resolveImageSrc(path) })).filter(img => img.src)
-          : (headerImageBase64 ? [{ src: headerImageBase64 }] : [])
+        headerImage: Array.isArray(headerImageBase64) && headerImageBase64.length > 0 ? headerImageBase64[0] : null,
+        parentImages: Array.isArray(headerImageBase64) && headerImageBase64.length > 0
+          ? headerImageBase64.map(blobUrl => ({ src: blobUrl }))
+          : []
       };
 
       const html = generateWOActualPrintContent(printData, { includeImages });
@@ -598,13 +613,7 @@ export default function ViewWOActualPage() {
                 <Label className="text-sm font-medium text-gray-700">Foto Bukti</Label>
                 <div className="mt-1.5">
                   {(() => {
-                    let srcs = [];
-                    if (Array.isArray(woActual.foto_bukti) && woActual.foto_bukti.length > 0) {
-                      srcs = woActual.foto_bukti.map(src => resolveImageSrc(src)).filter(Boolean);
-                    } else {
-                      const singleSrc = resolveImageSrc(headerImageBase64 || woActual.foto_bukti);
-                      if (singleSrc) srcs = [singleSrc];
-                    }
+                    let srcs = Array.isArray(headerImageBase64) ? headerImageBase64 : [];
 
                     return srcs.length > 0 ? (
                       <div className="flex flex-wrap gap-4">
