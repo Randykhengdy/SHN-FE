@@ -120,6 +120,7 @@ export default function AddWorkOrderPage() {
   const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
   const [confirmSaveMessage, setConfirmSaveMessage] = useState('');
   const [includeImages, setIncludeImages] = useState(true);
+  const [hideCustomerName, setHideCustomerName] = useState(true);
   const [validationOpen, setValidationOpen] = useState(false);
   const [validationMismatches, setValidationMismatches] = useState([]);
   const [catatanError, setCatatanError] = useState(false);
@@ -1356,7 +1357,7 @@ export default function AddWorkOrderPage() {
         })),
         canvasImages: canvasImages
       };
-      const html = generateWOPlanningPrintContent(printData, { includeImages });
+      const html = generateWOPlanningPrintContent(printData, { includeImages, hideCustomerName });
       openPrintDialog(html);
       navigate('/work-order');
     } catch (error) {
@@ -1885,33 +1886,43 @@ export default function AddWorkOrderPage() {
 
 
         {/* Submit Button */}
-        <div className="flex justify-end gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => navigate('/work-order')}
-            disabled={loading}
-          >
-            Batal
-          </Button>
-          {false && (
+        <div className="flex items-center justify-between gap-4 w-full">
+          <div className="flex items-center gap-2 bg-gray-50 rounded-md px-3 py-2 border">
+            <span className="text-sm text-gray-800">Sembunyikan nama pelanggan saat Print</span>
+            <Switch
+              checked={hideCustomerName}
+              onCheckedChange={setHideCustomerName}
+              aria-label="Sembunyikan nama pelanggan saat Print"
+            />
+          </div>
+          <div className="flex gap-3">
             <Button
               type="button"
-              variant="secondary"
-              onClick={handleGenerateDummyJson}
+              variant="outline"
+              onClick={() => navigate('/work-order')}
               disabled={loading}
             >
-              Generate Dummy JSON
+              Batal
             </Button>
-          )}
-          <Button
-            type="submit"
-            disabled={loading}
-            className="flex items-center gap-2"
-          >
-            <Save className="w-4 h-4" />
-            {loading ? 'Menyimpan...' : 'Simpan Work Order'}
-          </Button>
+            {false && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleGenerateDummyJson}
+                disabled={loading}
+              >
+                Generate Dummy JSON
+              </Button>
+            )}
+            <Button
+              type="submit"
+              disabled={loading}
+              className="flex items-center gap-2"
+            >
+              <Save className="w-4 h-4" />
+              {loading ? 'Menyimpan...' : 'Simpan Work Order'}
+            </Button>
+          </div>
         </div>
       </form>
 

@@ -1032,9 +1032,9 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
         <div class="info-row"><span class="info-label">Metode Handover</span><span class="info-value">${woPlanningData.assigned_to || woPlanningData.handover_method || 'N/A'}</span></div>
       </div>
 
-      ${(woPlanningData.customer || woPlanningData.warehouse) ? `
+      ${((woPlanningData.customer && !options.hideCustomerName) || woPlanningData.warehouse) ? `
       <div class="section" style="padding: 12px; border: 1px solid #ddd; background-color: #fafafa;">
-        ${woPlanningData.customer ? `
+        ${(woPlanningData.customer && !options.hideCustomerName) ? `
         <div class="info-row"><span class="info-label">Pelanggan</span><span class="info-value">${woPlanningData.customer?.nama_pelanggan || woPlanningData.customer?.nama || '-'}</span></div>
         ` : ''}
         ${woPlanningData.warehouse ? `
