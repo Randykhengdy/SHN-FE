@@ -731,7 +731,6 @@ export default function ViewWorkOrderPage() {
                     <TableHead className="table-header-cell-standard">Qty</TableHead>
                     <TableHead className="table-header-cell-standard">Qty Planning</TableHead>
                     <TableHead className="table-header-cell-standard">Luas/item</TableHead>
-                    <TableHead className="table-header-cell-standard">Harga</TableHead>
                     <TableHead className="table-header-cell-standard">Satuan</TableHead>
                     <TableHead className="table-header-cell-standard">Tipe Potongan</TableHead>
                     <TableHead className="table-header-cell-standard">Pelaksana</TableHead>
@@ -803,7 +802,6 @@ export default function ViewWorkOrderPage() {
                           <TableCell>{item.qty}</TableCell>
                           <TableCell>{item.qty_planning || item.qty}</TableCell>
                           <TableCell>{luasPerItem.toFixed(2)} mm²</TableCell>
-                          <TableCell>{formatCurrency(item.harga)}</TableCell>
                           <TableCell>{item.satuan}</TableCell>
                           <TableCell>
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.jenis_potongan === 'potongan'
