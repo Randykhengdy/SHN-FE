@@ -60,8 +60,8 @@ export default function AddWOActualPage() {
     status: 'Pending', // Default status
     prioritas: 'MEDIUM', // Default priority
     catatan: '',
-    foto_bukti: null, // Will store base64 encoded image
-    foto_bukti_preview: null // For preview display
+    foto_bukti: [], // Will store array of base64 encoded images
+    foto_bukti_preview: [] // For preview display array
   });
 
   // WO Planning Options
@@ -311,44 +311,63 @@ export default function AddWOActualPage() {
     }));
   };
 
-  // Handle foto bukti upload (kirim sebagai string base64 sesuai validasi BE)
+  // Handle foto bukti upload (kirim sebagai string base64 array sesuai validasi BE)
   const handleFotoBuktiChange = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      showAlert('File tidak valid', 'Silakan pilih file gambar', 'error');
-      return;
-    }
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      showAlert('Ukuran file terlalu besar', 'Maksimal 5MB', 'error');
-      return;
-    }
-    const objectUrl = URL.createObjectURL(file);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const base64 = e.target.result; // data URL string
-      setFormData(prev => ({
-        ...prev,
-        foto_bukti: base64,
-        foto_bukti_preview: objectUrl
-      }));
-    };
-    reader.readAsDataURL(file);
+    const files = Array.from(event.target.files);
+    if (!files || files.length === 0) return;
+
+    const base64Array = [];
+    const previewArray = [];
+    let loadedCount = 0;
+
+    files.forEach((file) => {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        showAlert('File tidak valid', `File ${file.name} bukan gambar`, 'error');
+        loadedCount++;
+        return;
+      }
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        showAlert('Ukuran terlalu besar', `Maksimal 5MB untuk ${file.name}`, 'error');
+        loadedCount++;
+        return;
+      }
+
+      const objectUrl = URL.createObjectURL(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        base64Array.push(e.target.result);
+        previewArray.push(objectUrl);
+        loadedCount++;
+        if (loadedCount === files.length) {
+          setFormData(prev => ({
+            ...prev,
+            foto_bukti: [...(prev.foto_bukti || []), ...base64Array],
+            foto_bukti_preview: [...(prev.foto_bukti_preview || []), ...previewArray]
+          }));
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // reset input
+    event.target.value = '';
   };
 
-  // Remove foto bukti
-  const removeFotoBukti = () => {
+  // Remove foto bukti by index
+  const removeFotoBukti = (indexToRemove) => {
     try {
-      if (formData?.foto_bukti_preview) {
-        URL.revokeObjectURL(formData.foto_bukti_preview);
+      const previewUrl = formData.foto_bukti_preview[indexToRemove];
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
       }
     } catch (_) { }
+
     setFormData(prev => ({
       ...prev,
-      foto_bukti: null,
-      foto_bukti_preview: ''
+      foto_bukti: (prev.foto_bukti || []).filter((_, index) => index !== indexToRemove),
+      foto_bukti_preview: (prev.foto_bukti_preview || []).filter((_, index) => index !== indexToRemove)
     }));
   };
 
@@ -420,8 +439,8 @@ export default function AddWOActualPage() {
       if (totalActualQty <= 0) {
         messages.push('Qty Actual harus lebih dari 0');
       }
-      if (!formData.foto_bukti) {
-        messages.push('Gambar foto bukti header belum ada');
+      if (!formData.foto_bukti || formData.foto_bukti.length === 0) {
+        messages.push('Gambar foto bukti header belum ada (Minimal 1)');
       }
       const plannedItems = selectedWOPlanning?.items || [];
       const missingItemImages = [];
@@ -497,7 +516,7 @@ export default function AddWOActualPage() {
         // Jangan kirim actualWorkOrderId saat create; BE minta integer jika ada
         actualWorkOrderId: null,
         planningWorkOrderId: parseInt(formData.planningWorkOrderId, 10),
-        foto_bukti: typeof formData.foto_bukti === 'string' ? formData.foto_bukti : '',
+        foto_bukti: Array.isArray(formData.foto_bukti) ? formData.foto_bukti : [],
         items: itemsForSave
       };
 
@@ -637,7 +656,7 @@ export default function AddWOActualPage() {
           customer: selectedWOPlanning?.pelanggan || null,
           warehouse: selectedWOPlanning?.gudang || null,
           items: printItems,
-          parentImages: formData.foto_bukti ? [{ src: formData.foto_bukti }] : [],
+          parentImages: Array.isArray(formData.foto_bukti) ? formData.foto_bukti.map(b64 => ({ src: b64 })) : [],
         };
 
         setPendingPrintData(printData);
@@ -907,12 +926,13 @@ export default function AddWOActualPage() {
                   {/* Foto Bukti Upload */}
                   <div>
                     <Label htmlFor="foto_bukti">Foto Bukti</Label>
-                    <div className="mt-2 flex items-center gap-4">
+                    <div className="mt-2 flex flex-col gap-4">
                       <div>
                         <input
                           id="foto_bukti"
                           type="file"
                           accept="image/*"
+                          multiple
                           onChange={handleFotoBuktiChange}
                           className="hidden"
                         />
@@ -920,25 +940,31 @@ export default function AddWOActualPage() {
                           htmlFor="foto_bukti"
                           className="inline-flex items-center rounded-md border px-4 py-2 text-xs font-medium hover:bg-gray-50 cursor-pointer"
                         >
-                          Upload Foto
+                          Upload Foto (Bisa lebih dari 1)
                         </label>
                       </div>
-                      {formData.foto_bukti_preview && (
-                        <div className="relative inline-block">
-                          <img
-                            src={formData.foto_bukti_preview}
-                            alt="Preview foto bukti"
-                            className="w-20 h-20 object-cover rounded border"
-                          />
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="icon"
-                            onClick={removeFotoBukti}
-                            className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0"
-                          >
-                            ×
-                          </Button>
+
+                      {/* Tampilan Grid Preview */}
+                      {formData.foto_bukti_preview && formData.foto_bukti_preview.length > 0 && (
+                        <div className="flex flex-wrap gap-4">
+                          {formData.foto_bukti_preview.map((preview, idx) => (
+                            <div key={idx} className="relative inline-block">
+                              <img
+                                src={preview}
+                                alt={`Preview foto bukti ${idx + 1}`}
+                                className="w-20 h-20 object-cover rounded border"
+                              />
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                onClick={() => removeFotoBukti(idx)}
+                                className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0"
+                              >
+                                ×
+                              </Button>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>

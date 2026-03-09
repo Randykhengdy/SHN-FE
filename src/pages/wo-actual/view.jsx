@@ -443,7 +443,9 @@ export default function ViewWOActualPage() {
         }),
 
         headerImage: headerImageBase64,
-        parentImages: headerImageBase64 ? [{ src: headerImageBase64 }] : []
+        parentImages: Array.isArray(woActual?.foto_bukti) && woActual.foto_bukti.length > 0
+          ? woActual.foto_bukti.map(path => ({ src: resolveImageSrc(path) })).filter(img => img.src)
+          : (headerImageBase64 ? [{ src: headerImageBase64 }] : [])
       };
 
       const html = generateWOActualPrintContent(printData, { includeImages });
@@ -596,15 +598,25 @@ export default function ViewWOActualPage() {
                 <Label className="text-sm font-medium text-gray-700">Foto Bukti</Label>
                 <div className="mt-1.5">
                   {(() => {
-                    const hdrSrc = resolveImageSrc(headerImageBase64 || woActual.foto_bukti);
-                    return hdrSrc ? (
-                      <div className="space-y-2">
-                        <img
-                          src={hdrSrc}
-                          alt="Foto Bukti"
-                          className="w-32 h-32 object-cover rounded-lg border cursor-pointer hover:opacity-90 transition-opacity"
-                          onClick={() => { setPreviewSrc(hdrSrc); setPreviewTitle('Foto Bukti WO Actual'); setPreviewOpen(true); }}
-                        />
+                    let srcs = [];
+                    if (Array.isArray(woActual.foto_bukti) && woActual.foto_bukti.length > 0) {
+                      srcs = woActual.foto_bukti.map(src => resolveImageSrc(src)).filter(Boolean);
+                    } else {
+                      const singleSrc = resolveImageSrc(headerImageBase64 || woActual.foto_bukti);
+                      if (singleSrc) srcs = [singleSrc];
+                    }
+
+                    return srcs.length > 0 ? (
+                      <div className="flex flex-wrap gap-4">
+                        {srcs.map((src, idx) => (
+                          <img
+                            key={idx}
+                            src={src}
+                            alt={`Foto Bukti ${idx + 1}`}
+                            className="w-32 h-32 object-cover rounded-lg border cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => { setPreviewSrc(src); setPreviewTitle(`Foto Bukti WO Actual ${idx + 1}`); setPreviewOpen(true); }}
+                          />
+                        ))}
                       </div>
                     ) : (
                       <div className="flex items-center justify-center w-32 h-32 bg-gray-100 rounded-lg border border-dashed border-gray-300">
