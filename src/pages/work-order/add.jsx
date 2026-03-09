@@ -379,6 +379,42 @@ export default function AddWorkOrderPage() {
     return grade ? grade.label : 'Belum dipilih';
   };
 
+  // Helper function to get dimensi potong display based on TipeBarang cancut_ flags
+  const getDimensiPotong = (item) => {
+    const bB = bentukBarangList.find(b => String(b.value) === String(item.bentuk_barang_id));
+    const tb = bB?.tipe_barang;
+    if (!tb) return '-';
+
+    const formatVal = (val) => {
+      const num = parseFloat(val) || 0;
+      return num % 1 === 0 ? num.toString() : num.toFixed(2);
+    };
+    const hasVal = (val) => (parseFloat(val) || 0) !== 0;
+    const dims = [];
+
+    // Ordered combination checks (cancut_ flag OR non-zero value)
+    if ((tb.cancut_diameter_luar || hasVal(item.diameter_luar)) && (tb.cancut_diameter_dalam || hasVal(item.diameter_dalam)) && (tb.cancut_panjang || hasVal(item.panjang))) {
+      dims.push(formatVal(item.diameter_luar), formatVal(item.diameter_dalam), formatVal(item.panjang));
+    } else if ((tb.cancut_sisi1 || hasVal(item.sisi1)) && (tb.cancut_sisi2 || hasVal(item.sisi2)) && (tb.cancut_tebal || hasVal(item.tebal)) && (tb.cancut_panjang || hasVal(item.panjang))) {
+      dims.push(formatVal(item.sisi1), formatVal(item.sisi2), formatVal(item.tebal), formatVal(item.panjang));
+    } else if ((tb.cancut_tebal || hasVal(item.tebal)) && (tb.cancut_lebar || hasVal(item.lebar)) && (tb.cancut_panjang || hasVal(item.panjang))) {
+      dims.push(formatVal(item.tebal), formatVal(item.lebar), formatVal(item.panjang));
+    } else if ((tb.cancut_diameter || hasVal(item.diameter)) && (tb.cancut_panjang || hasVal(item.panjang))) {
+      dims.push(formatVal(item.diameter), formatVal(item.panjang));
+    } else {
+      // Fallback: include any dimension with cancut_ flag OR non-zero value
+      if (tb.cancut_diameter_luar || hasVal(item.diameter_luar)) dims.push(formatVal(item.diameter_luar));
+      if (tb.cancut_diameter_dalam || hasVal(item.diameter_dalam)) dims.push(formatVal(item.diameter_dalam));
+      if (tb.cancut_diameter || hasVal(item.diameter)) dims.push(formatVal(item.diameter));
+      if (tb.cancut_sisi1 || hasVal(item.sisi1)) dims.push(formatVal(item.sisi1));
+      if (tb.cancut_sisi2 || hasVal(item.sisi2)) dims.push(formatVal(item.sisi2));
+      if (tb.cancut_tebal || hasVal(item.tebal)) dims.push(formatVal(item.tebal));
+      if (tb.cancut_lebar || hasVal(item.lebar)) dims.push(formatVal(item.lebar));
+      if (tb.cancut_panjang || hasVal(item.panjang)) dims.push(formatVal(item.panjang));
+    }
+
+    return dims.length > 0 ? dims.join(' x ') : '-';
+  };
 
 
   // Sync workOrderId with localStorage on component mount
@@ -1650,9 +1686,7 @@ export default function AddWorkOrderPage() {
                 <TableHead>
                   <TableRow>
                     <TableHeader className="text-left w-10"></TableHeader>
-                    <TableHeader className="text-left">Panjang (mm)</TableHeader>
-                    <TableHeader className="text-left">Lebar (mm)</TableHeader>
-                    <TableHeader className="text-left">Tebal (mm)</TableHeader>
+                    <TableHeader className="text-left">Dimensi Potong (mm)</TableHeader>
                     <TableHeader className="text-left">Qty</TableHeader>
                     <TableHeader className="text-left">Qty Planning</TableHeader>
                     <TableHeader className="text-left">Berat (kg)</TableHeader>
@@ -1670,7 +1704,7 @@ export default function AddWorkOrderPage() {
                 <TableBody>
                   {workOrderItems.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan="12" className="px-4 py-8 text-center text-gray-500">
+                      <TableCell colSpan="10" className="px-4 py-8 text-center text-gray-500">
                         Sales Order tidak memiliki item. Silakan pilih Sales Order lain.
                       </TableCell>
                     </TableRow>
@@ -1680,18 +1714,8 @@ export default function AddWorkOrderPage() {
                         <TableRow>
                           <TableCell className="text-left">#{index + 1}</TableCell>
                           <TableCell className="text-left">
-                            <div className="px-3 py-2 bg-gray-50 rounded text-sm">
-                              {item.panjang ? `${item.panjang} mm` : '0 mm'}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-left">
-                            <div className="px-3 py-2 bg-gray-50 rounded text-sm">
-                              {item.lebar ? `${item.lebar} mm` : '0 mm'}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-left">
-                            <div className="px-3 py-2 bg-gray-50 rounded text-sm">
-                              {item.tebal ? `${item.tebal} mm` : '0 mm'}
+                            <div className="px-3 py-2 bg-gray-50 rounded text-sm whitespace-nowrap">
+                              {getDimensiPotong(item)}
                             </div>
                           </TableCell>
                           <TableCell className="text-left">
