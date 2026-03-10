@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Package, FileText, User, Printer, Calendar, Clock } from 'lucide-react';
+import { ArrowLeft, Package, FileText, User, Printer, Calendar, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import CustomAlert from '@/components/modals/CustomAlert';
 import PelaksanaActualModal from '@/components/modals/PelaksanaActualModal';
@@ -32,8 +32,10 @@ export default function ViewWOActualPage() {
   const [itemImagesMap, setItemImagesMap] = useState({});
   const [imagesLoading, setImagesLoading] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewSrc, setPreviewSrc] = useState(null);
+  const [previewImages, setPreviewImages] = useState([]);
+  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [previewTitle, setPreviewTitle] = useState('');
+  const [previewDetails, setPreviewDetails] = useState('');
   const [pelaksanaModalOpen, setPelaksanaModalOpen] = useState(false);
   const [pelaksanaModalData, setPelaksanaModalData] = useState([]);
   const [pelaksanaPlanningData, setPelaksanaPlanningData] = useState([]);
@@ -69,6 +71,50 @@ export default function ViewWOActualPage() {
       return `data:image/jpeg;base64,${trimmed}`;
     }
     return buildStorageUrl(trimmed);
+  };
+
+  const getItemDetailsText = (planningItem) => {
+    if (!planningItem) return '';
+    let dimStr = planningItem.dimensi || '-';
+    // Gunakan tipe barang bila tersedia
+    const tb = planningItem.bentuk_barang?.tipe_barang || planningItem.bentuk_barang?.tipeBarang;
+    if (tb) {
+      const formatInt = (val) => Math.round(parseFloat(val) || 0);
+      const dims = [];
+      if (tb.diameter_luar && tb.diameter_dalam && tb.panjang) {
+        dims.push(formatInt(planningItem.diameter_luar), formatInt(planningItem.diameter_dalam), formatInt(planningItem.panjang));
+      } else if (tb.sisi1 && tb.sisi2 && tb.tebal && tb.panjang) {
+        dims.push(formatInt(planningItem.sisi1), formatInt(planningItem.sisi2), formatInt(planningItem.tebal), formatInt(planningItem.panjang));
+      } else if (tb.tebal && tb.lebar && tb.panjang) {
+        dims.push(formatInt(planningItem.tebal || planningItem.ketebalan), formatInt(planningItem.lebar), formatInt(planningItem.panjang));
+      } else if (tb.diameter && tb.panjang) {
+        dims.push(formatInt(planningItem.diameter), formatInt(planningItem.panjang));
+      } else {
+        if (tb.tebal) dims.push(formatInt(planningItem.tebal || planningItem.ketebalan));
+        if (tb.lebar) dims.push(formatInt(planningItem.lebar));
+        if (tb.panjang) dims.push(formatInt(planningItem.panjang));
+      }
+      if (dims.length > 0) dimStr = dims.join('x');
+    } else if (!planningItem.dimensi) {
+      dimStr = `${Math.round(parseFloat(planningItem.panjang) || 0)}x${Math.round(parseFloat(planningItem.lebar) || 0)}x${Math.round(parseFloat(planningItem.ketebalan || planningItem.tebal) || 0)}`;
+    }
+
+    let kodeBarang = '-';
+    if (planningItem.item_barang_group && planningItem.item_barang_group.kode_barang) {
+      kodeBarang = planningItem.item_barang_group.kode_barang;
+    } else if (planningItem.item_barang_group_name) {
+      kodeBarang = planningItem.item_barang_group_name;
+    } else if (planningItem.jenis_barang && planningItem.jenis_barang.kode_barang) {
+      kodeBarang = planningItem.jenis_barang.kode_barang;
+    } else if (planningItem.kode_barang) {
+      kodeBarang = planningItem.kode_barang;
+    }
+
+    const bentuk = planningItem.bentuk_barang?.nama || planningItem.bentuk_barang?.nama_bentuk_barang || '-';
+    const grade = planningItem.grade_barang?.nama || planningItem.grade_barang?.nama_grade_barang || '-';
+    const potong = planningItem.jenis_potongan || '-';
+
+    return `Kode Barang: ${kodeBarang} | Bentuk: ${bentuk} | Grade: ${grade} | Dimensi: ${dimStr} | Potong: ${potong}`;
   };
 
   useEffect(() => {
@@ -623,7 +669,13 @@ export default function ViewWOActualPage() {
                             src={src}
                             alt={`Foto Bukti ${idx + 1}`}
                             className="w-32 h-32 object-cover rounded-lg border cursor-pointer hover:opacity-90 transition-opacity"
-                            onClick={() => { setPreviewSrc(src); setPreviewTitle(`Foto Bukti WO Actual ${idx + 1}`); setPreviewOpen(true); }}
+                            onClick={() => {
+                              setPreviewImages(srcs);
+                              setCurrentPreviewIndex(idx);
+                              setPreviewTitle(`Foto Bukti WO Actual ${idx + 1}`);
+                              setPreviewDetails('');
+                              setPreviewOpen(true);
+                            }}
                           />
                         ))}
                       </div>
@@ -756,7 +808,13 @@ export default function ViewWOActualPage() {
                                       src={displaySrc}
                                       alt="Foto Item"
                                       className="w-10 h-10 object-cover rounded border cursor-pointer"
-                                      onClick={() => { setPreviewSrc(displaySrc); setPreviewTitle(`Foto Item: ${jenisNama}`); setPreviewOpen(true); }}
+                                      onClick={() => {
+                                        setPreviewImages([displaySrc]);
+                                        setCurrentPreviewIndex(0);
+                                        setPreviewTitle(`Foto Item: ${jenisNama}`);
+                                        setPreviewDetails(getItemDetailsText(planningItem));
+                                        setPreviewOpen(true);
+                                      }}
                                     />
                                   </div>
                                 ) : (
@@ -776,7 +834,13 @@ export default function ViewWOActualPage() {
                                       src={displaySrc}
                                       alt="Foto Sisa Item"
                                       className="w-10 h-10 object-cover rounded border cursor-pointer"
-                                      onClick={() => { setPreviewSrc(displaySrc); setPreviewTitle(`Foto Sisa Item: ${jenisNama}`); setPreviewOpen(true); }}
+                                      onClick={() => {
+                                        setPreviewImages([displaySrc]);
+                                        setCurrentPreviewIndex(0);
+                                        setPreviewTitle(`Foto Sisa Item: ${jenisNama}`);
+                                        setPreviewDetails(getItemDetailsText(planningItem));
+                                        setPreviewOpen(true);
+                                      }}
                                     />
                                   </div>
                                 ) : (
@@ -854,17 +918,58 @@ export default function ViewWOActualPage() {
 
         {/* Image Preview Modal */}
         {previewOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setPreviewOpen(false)}>
-            <div className="relative max-w-4xl w-full max-h-[90vh] bg-white rounded-lg p-2" onClick={e => e.stopPropagation()}>
-              <div className="flex justify-between items-center mb-2 px-2">
-                <h3 className="font-semibold">{previewTitle}</h3>
-                <Button variant="ghost" size="sm" onClick={() => setPreviewOpen(false)}>
-                  <span className="text-xl">&times;</span>
-                </Button>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm">
+            <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 overflow-hidden flex flex-col max-h-[90vh]">
+              <div className="flex items-center justify-between p-4 border-b">
+                <h3 className="text-base font-semibold text-gray-900">{previewTitle || 'Preview Foto'}</h3>
+                <button type="button" className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-2 rounded-full transition-colors" onClick={() => setPreviewOpen(false)}>✕</button>
               </div>
-              <div className="flex justify-center bg-gray-100 rounded overflow-hidden" style={{ maxHeight: 'calc(90vh - 60px)' }}>
-                <img src={previewSrc} alt="Preview" className="max-w-full max-h-full object-contain" />
+
+              <div className="p-4 relative flex-1 flex flex-col justify-center items-center bg-gray-50/50 min-h-[400px]">
+                {previewImages && previewImages.length > 0 ? (
+                  <>
+                    <div className="relative group w-full flex justify-center items-center">
+                      <img src={previewImages[currentPreviewIndex]} alt="Preview Foto" className="max-h-[60vh] max-w-full object-contain rounded-md shadow-sm border border-gray-200" />
+
+                      {previewImages.length > 1 && (
+                        <>
+                          <button
+                            className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white border border-gray-200 rounded-full p-2.5 shadow-md flex items-center justify-center transition-transform hover:scale-105"
+                            onClick={() => setCurrentPreviewIndex(prev => prev > 0 ? prev - 1 : previewImages.length - 1)}
+                          >
+                            <ChevronLeft className="w-6 h-6 text-gray-800" />
+                          </button>
+                          <button
+                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white border border-gray-200 rounded-full p-2.5 shadow-md flex items-center justify-center transition-transform hover:scale-105"
+                            onClick={() => setCurrentPreviewIndex(prev => prev < previewImages.length - 1 ? prev + 1 : 0)}
+                          >
+                            <ChevronRight className="w-6 h-6 text-gray-800" />
+                          </button>
+                          <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs font-medium px-3 py-1.5 rounded-full">
+                            {currentPreviewIndex + 1} / {previewImages.length}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center text-gray-500 flex flex-col items-center justify-center gap-2">
+                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                      <FileText className="w-6 h-6 text-gray-400" />
+                    </div>
+                    <span>Tidak ada gambar</span>
+                  </div>
+                )}
               </div>
+
+              {previewDetails && (
+                <div className="p-4 bg-gray-50 border-t border-gray-200">
+                  <div className="text-sm text-gray-700 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                    <div className="font-semibold text-gray-900 mb-1 border-b pb-1">Detail Barang:</div>
+                    <div className="leading-relaxed whitespace-pre-wrap">{previewDetails.replace(/ \| /g, '\n')}</div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
