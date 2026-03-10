@@ -223,10 +223,12 @@ export default function AddWOActualPage() {
 
         const newImagesMap = {};
         planningCanvasImages.forEach(img => {
+          // Identify which item this image belongs to. 
+          // The API returns wo_item_id which is the WorkOrderPlanningItem ID.
           const itemIds = [
+            img.wo_item_id,
             img.work_order_planning_item_id,
             img.wo_plan_item_id,
-            img.wo_item_id,
             img.work_order_item_id,
             img.item_id,
             img.wo_item_unique_id
@@ -236,7 +238,11 @@ export default function AddWOActualPage() {
           uniqueIds.forEach(id => {
             const key = String(id);
             if (!newImagesMap[key]) newImagesMap[key] = [];
-            if (!newImagesMap[key].some(existing => existing.id === img.id)) {
+            // Use saran_id or id for uniqueness check
+            const imgId = img.saran_id || img.id;
+            const exists = newImagesMap[key].some(existing => (existing.saran_id || existing.id) === imgId);
+
+            if (!exists || !imgId) {
               newImagesMap[key].push(img);
             }
           });
@@ -1087,25 +1093,32 @@ export default function AddWOActualPage() {
                             </TableCell>
                             <TableCell className="text-center">
                               {(() => {
-                                const canvases = planningCanvasImagesMap[planningItem.id];
+                                const canvases = planningCanvasImagesMap[String(planningItem.id)];
                                 if (canvases && canvases.length > 0) {
                                   // Prefer canvas_image_base64, or fallback to file path
-                                  const thumbnailSrc = canvases[0].canvas_image_base64 ||
-                                    (canvases[0].image_path && canvases[0].image_path.startsWith('http')
-                                      ? canvases[0].image_path
-                                      : `${apiConfig.baseUrl}/storage/${canvases[0].image_path?.replace('public/', '')}`);
+                                  const imgObj = canvases[0];
+                                  const thumbnailSrc = imgObj.canvas_image_base64 ||
+                                    imgObj.image_base64 ||
+                                    (imgObj.canvas_file_path || imgObj.image_path) ? (
+                                    (imgObj.canvas_file_path || imgObj.image_path).startsWith('http')
+                                      ? (imgObj.canvas_file_path || imgObj.image_path)
+                                      : `${apiConfig.baseUrl}/storage/${(imgObj.canvas_file_path || imgObj.image_path).replace('public/', '')}`
+                                  ) : null;
 
                                   return thumbnailSrc ? (
-                                    <img
-                                      src={thumbnailSrc}
-                                      alt={`Preview Item #${planningItem.id}`}
-                                      className="w-12 h-12 object-cover rounded border cursor-pointer mx-auto hover:opacity-80"
-                                      onClick={() => {
-                                        setPreviewSrc(thumbnailSrc);
-                                        setPreviewTitle(`Desain Planning Item #${planningItem.id}`);
-                                        setPreviewOpen(true);
-                                      }}
-                                    />
+                                    <div className="flex flex-col items-center gap-1">
+                                      <img
+                                        src={thumbnailSrc}
+                                        alt={`Preview Item #${planningItem.id}`}
+                                        className="w-12 h-12 object-cover rounded border cursor-pointer mx-auto hover:opacity-80"
+                                        onClick={() => {
+                                          setPreviewSrc(thumbnailSrc);
+                                          setPreviewTitle(`Desain Planning Item #${planningItem.id}`);
+                                          setPreviewOpen(true);
+                                        }}
+                                      />
+                                      {canvases.length > 1 && <span className="text-[10px] text-gray-500">+{canvases.length - 1} gambar</span>}
+                                    </div>
                                   ) : <span className="text-xs text-gray-500">Render x</span>;
                                 }
                                 return <span className="text-xs text-gray-400">-</span>;

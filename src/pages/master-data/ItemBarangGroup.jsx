@@ -118,12 +118,6 @@ export default function ItemBarangGroupPage() {
                 }
                 customHeaderButtons={[
                     {
-                        label: "Import Data",
-                        icon: <Upload className="h-4 w-4" />,
-                        onClick: () => fileInputRef.current?.click(),
-                        className: "bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
-                    },
-                    {
                         label: "Download Template",
                         icon: <Download className="h-4 w-4" />,
                         onClick: async () => {
@@ -134,6 +128,12 @@ export default function ItemBarangGroupPage() {
                             }
                         },
                         className: "bg-green-600 hover:bg-green-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
+                    },
+                    {
+                        label: "Import Data",
+                        icon: <Upload className="h-4 w-4" />,
+                        onClick: () => fileInputRef.current?.click(),
+                        className: "bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
                     }
                 ]}
                 fields={[
