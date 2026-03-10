@@ -1097,13 +1097,7 @@ export default function AddWOActualPage() {
                                 if (canvases && canvases.length > 0) {
                                   // Prefer canvas_image_base64, or fallback to file path
                                   const imgObj = canvases[0];
-                                  const thumbnailSrc = imgObj.canvas_image_base64 ||
-                                    imgObj.image_base64 ||
-                                    (imgObj.canvas_file_path || imgObj.image_path) ? (
-                                    (imgObj.canvas_file_path || imgObj.image_path).startsWith('http')
-                                      ? (imgObj.canvas_file_path || imgObj.image_path)
-                                      : `${apiConfig.baseUrl}/storage/${(imgObj.canvas_file_path || imgObj.image_path).replace('public/', '')}`
-                                  ) : null;
+                                  const thumbnailSrc = resolveImageSrc(imgObj.canvas_image_base64 || imgObj.image_base64 || imgObj.canvas_file_path || imgObj.image_path);
 
                                   return thumbnailSrc ? (
                                     <div className="flex flex-col items-center gap-1">
