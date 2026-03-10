@@ -258,14 +258,24 @@ export default function MasterDataLayout({
                 Master Data
               </div>
               <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 mb-6">
-                <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2 whitespace-nowrap">
-                  <span className="bg-blue-100 text-blue-700 p-1.5 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                    </svg>
-                  </span>
-                  {title}
-                </h1>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2 whitespace-nowrap">
+                    <span className="bg-blue-100 text-blue-700 p-1.5 rounded-lg">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                      </svg>
+                    </span>
+                    {title}
+                  </h1>
+
+                  {/* Custom Header Content (e.g. Tabs/Toggles) */}
+                  {customHeaderContent && (
+                    <div className="mt-2 sm:mt-0 sm:ml-2">
+                      {customHeaderContent}
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
                   <input
                     type="text"
@@ -360,26 +370,7 @@ export default function MasterDataLayout({
                         Refresh
                       </button>
 
-                      {/* Divider */}
-                      {(customHeaderContent || (customHeaderButtons && customHeaderButtons.length > 0)) && (
-                        <div className="h-px bg-gray-200 my-2 mx-2" role="separator" />
-                      )}
-
-                      {/* 3. Custom Header Content Menu (e.g. Generate Group) */}
-                      {customHeaderContent && (
-                        <div className="px-2 py-1 flex flex-col w-full">
-                          <div className="flex flex-col gap-1 w-full [&>div]:flex-col [&>div]:items-start [&>div]:gap-1 [&_button]:w-full [&_button]:justify-start [&_button]:bg-transparent [&_button]:text-gray-700 [&_button:hover]:bg-blue-50 [&_button:hover]:text-blue-700 [&_button]:shadow-none [&_button]:font-medium [&_button_svg]:text-gray-600 [&_button:hover_svg]:text-blue-600">
-                            {customHeaderContent}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Divider between custom content and custom buttons */}
-                      {customHeaderContent && customHeaderButtons && customHeaderButtons.length > 0 && (
-                        <div className="h-px bg-gray-200 my-2 mx-2" role="separator" />
-                      )}
-
-                      {/* 4. Custom Header Buttons */}
+                      {/* Custom Header Buttons loop */}
                       {customHeaderButtons && customHeaderButtons.map((button, index) => (
                         <button
                           key={index}
@@ -410,6 +401,7 @@ export default function MasterDataLayout({
                           {button.label}
                         </button>
                       ))}
+
                     </div>
                   </div>
                 </div>
@@ -821,47 +813,49 @@ export default function MasterDataLayout({
       </div>
 
       {/* Modal */}
-      {customEditComponent === "RolePermissionEditor" ? (
-        <div className={`fixed inset-0 bg-black/50 z-50 ${isModalOpen ? 'flex' : 'hidden'} items-center justify-center p-4`}>
-          <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex-1 overflow-y-auto p-6">
-              <RolePermissionEditor
-                role={editData}
-                onSave={(updatedRole) => {
-                  setIsModalOpen(false);
-                  setEditData(null);
-                  fetchData();
-                }}
-                onCancel={() => {
-                  setIsModalOpen(false);
-                  setEditData(null);
-                }}
-              />
+      {
+        customEditComponent === "RolePermissionEditor" ? (
+          <div className={`fixed inset-0 bg-black/50 z-50 ${isModalOpen ? 'flex' : 'hidden'} items-center justify-center p-4`}>
+            <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="flex-1 overflow-y-auto p-6">
+                <RolePermissionEditor
+                  role={editData}
+                  onSave={(updatedRole) => {
+                    setIsModalOpen(false);
+                    setEditData(null);
+                    fetchData();
+                  }}
+                  onCancel={() => {
+                    setIsModalOpen(false);
+                    setEditData(null);
+                  }}
+                />
+              </div>
             </div>
           </div>
-        </div>
-      ) : (
-        <MasterFormModal
-          key={editData ? `edit-${editData.id}` : 'add'}
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setEditData(null);
-            setError(null);
-            setSaveLoading(false);
-          }}
-          onSave={handleSave}
-          editData={editData}
-          fields={fields}
-          title={editData ? `Edit ${title}` : `Tambah ${title}`}
-          saveLoading={saveLoading}
-          error={error}
-          size={modalSize}
-        />
-      )}
+        ) : (
+          <MasterFormModal
+            key={editData ? `edit-${editData.id}` : 'add'}
+            isOpen={isModalOpen}
+            onClose={() => {
+              setIsModalOpen(false);
+              setEditData(null);
+              setError(null);
+              setSaveLoading(false);
+            }}
+            onSave={handleSave}
+            editData={editData}
+            fields={fields}
+            title={editData ? `Edit ${title}` : `Tambah ${title}`}
+            saveLoading={saveLoading}
+            error={error}
+            size={modalSize}
+          />
+        )
+      }
 
       {/* Alert Component */}
       <AlertComponent />
-    </div>
+    </div >
   );
 }
