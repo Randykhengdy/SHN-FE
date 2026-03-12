@@ -78,6 +78,29 @@ export default function ItemBarangPage() {
     setIsCanvasOpen(true);
   };
 
+  const handleDestroyItem = async (item) => {
+    if (!window.confirm(`Apakah Anda yakin ingin mengubah status item "${item.nama_item_barang}" menjadi Destroy?`)) {
+      return;
+    }
+
+    try {
+      const response = await request(`/item-barang/${item.id}/status`, {
+        method: "PUT",
+        body: JSON.stringify({ status: "destroy" })
+      });
+
+      if (response.success) {
+        // MasterDataLayout akan otomatis me-refresh data jika service.getAll dipanggil lagi
+        // Namun kita bisa memicu refresh manual jika MasterDataLayout mendukungnya, 
+        // atau biarkan user me-refresh sendiri. 
+        // Karena MasterDataLayout biasanya punya internal state untuk refresh.
+        window.location.reload(); // Cara cepat untuk refresh data di MasterDataLayout
+      }
+    } catch (error) {
+      console.error("Error updating item status:", error);
+    }
+  };
+
   return (
     <>
       <AlertComponent />
@@ -147,6 +170,7 @@ export default function ItemBarangPage() {
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-layout-dashboard"><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></svg>
             ),
             onClick: (item) => handleOpenCanvas(item),
+            visible: (item) => item.jenis_potongan !== "utuh",
             className: "bg-indigo-500 hover:bg-indigo-600 text-white border-indigo-500"
           },
           {
@@ -183,6 +207,14 @@ export default function ItemBarangPage() {
                 await openItemQRPDFPreview(item);
               }
             }
+          },
+          {
+            label: "Destroy",
+            icon: (
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trash-2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+            ),
+            onClick: (item) => handleDestroyItem(item),
+            className: "bg-red-500 hover:bg-red-600 text-white border-red-500"
           }
         ]}
         fields={[
@@ -329,6 +361,7 @@ export default function ItemBarangPage() {
             hidden: (form) => form._tipe_barang?.panjang !== true
           },
           { name: "quantity", label: "Quantity", type: "number", step: 0.01, required: true },
+          { name: "sisa_luas", label: "Sisa Luas", type: "number", step: 0.01 },
           {
             name: "jenis_potongan",
             label: "Jenis Potongan",
@@ -446,6 +479,8 @@ export default function ItemBarangPage() {
           { key: "jenis_potongan", label: "Jenis Potongan", align: "center", width: "12rem", maxWidth: "12rem" },
           { key: "gudang.nama_gudang", label: "Gudang", align: "center", width: "12rem", maxWidth: "12rem" },
           { key: "rak.nama_rak", label: "Rak", align: "center", width: "12rem", maxWidth: "12rem" },
+          { key: "status", label: "Status", align: "center", width: "10rem", maxWidth: "10rem" },
+          { key: "created_at", label: "Dibuat Pada", align: "center", width: "12rem", maxWidth: "12rem", format: "datetime" },
           // { key: "is_edit", label: "Is Edit", align: "center", width: "8rem", maxWidth: "8rem", format: "boolean" },
           { key: "jenis_barang.nama_jenis", label: "Jenis Barang", align: "center", width: "12rem", maxWidth: "12rem" },
           { key: "bentuk_barang.nama_bentuk", label: "Bentuk Barang", align: "center", width: "12rem", maxWidth: "12rem" },
