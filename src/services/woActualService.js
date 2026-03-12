@@ -164,5 +164,31 @@ export const woActualService = {
     if (params.search) queryParams.append('search', params.search);
     const url = `${BASE_URL}/${actualId}/item-images${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     return request(url, { method: 'GET' });
-  }
+  },
+
+  // Return item barang ke rak
+  returnToRack: async (data) => {
+    return request(`${BASE_URL}/return-to-rack`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  // Get daftar item yang belum dikembalikan ke rak
+  getPendingReturns: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.work_order_actual_id) queryParams.append('work_order_actual_id', params.work_order_actual_id);
+    const url = `${BASE_URL}/pending-returns${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return request(url, { method: 'GET' });
+  },
+
+  // Get riwayat pengembalian barang ke rak
+  getReturnHistory: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.work_order_actual_id) queryParams.append('work_order_actual_id', params.work_order_actual_id);
+    if (params.page) queryParams.append('page', params.page);
+    if (params.per_page) queryParams.append('per_page', params.per_page);
+    const url = `${BASE_URL}/return-history${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return request(url, { method: 'GET' });
+  },
 };

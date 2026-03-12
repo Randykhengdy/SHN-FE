@@ -59,6 +59,7 @@ import AddItemBarangRequestPage from "@/pages/item-barang-request/add";
 import ViewItemBarangRequestPage from "@/pages/item-barang-request/view";
 import NotificationsPage from "@/pages/notifications";
 import InputHargaBarangDatangPage from "@/pages/input-harga-barang-datang";
+import ReturnToRackPage from "@/pages/return-to-rack";
 
 const AppRouter = () => {
   return (
@@ -125,6 +126,7 @@ const AppRouter = () => {
       <Route path="/wo-actual/add" element={<AddWOActualPage />} />
       <Route path="/wo-actual/detail/:id" element={<WOActualDetailPage />} />
       <Route path="/wo-actual/view/:id" element={<ViewWOActualPage />} />
+      <Route path="/return-to-rack" element={<ReturnToRackPage />} />
     </Routes>
   );
 };

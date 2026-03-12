@@ -1301,6 +1301,33 @@ export default function AddWOActualPage() {
             </Card>
           )}
 
+          {/* Return to Rack - Shortcut */}
+          {selectedWOPlanning && (
+            <Card className="border-dashed border-blue-300 bg-blue-50/50">
+              <CardContent className="py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                      <Package className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-blue-900">Kembalikan Barang ke Rak</p>
+                      <p className="text-xs text-blue-600">Scan item barang dan rak untuk mencatat pengembalian</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                    onClick={() => navigate('/return-to-rack')}
+                  >
+                    Buka Menu →
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

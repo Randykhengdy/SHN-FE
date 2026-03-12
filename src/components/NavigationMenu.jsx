@@ -1,18 +1,19 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { 
-  Home, 
-  ShoppingCart, 
-  FileText, 
-  Users, 
-  Settings, 
+import {
+  Home,
+  ShoppingCart,
+  FileText,
+  Users,
+  Settings,
   CheckSquare,
   Warehouse,
   Wrench,
   ClipboardList,
   Edit3,
-  Activity
+  Activity,
+  CornerDownLeft
 } from "lucide-react";
 
 export default function NavigationMenu() {
@@ -48,6 +49,12 @@ export default function NavigationMenu() {
       label: "WO Actual",
       path: "/wo-actual",
       icon: Activity,
+      category: "transaksi"
+    },
+    {
+      label: "Kembalikan Barang",
+      path: "/return-to-rack",
+      icon: CornerDownLeft,
       category: "transaksi"
     },
     {
@@ -103,12 +110,12 @@ export default function NavigationMenu() {
 
   const isActive = (path) => {
     if (path === "/work-order") {
-      return location.pathname === "/work-order" || 
-             location.pathname.startsWith("/work-order/");
+      return location.pathname === "/work-order" ||
+        location.pathname.startsWith("/work-order/");
     }
     if (path === "/wo-actual") {
-      return location.pathname === "/wo-actual" || 
-             location.pathname.startsWith("/wo-actual/");
+      return location.pathname === "/wo-actual" ||
+        location.pathname.startsWith("/wo-actual/");
     }
     return location.pathname === path || location.pathname.startsWith(path + "/");
   };
