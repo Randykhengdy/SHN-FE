@@ -17,6 +17,7 @@ import { generateWOActualPrintContent, openPrintDialog } from '@/lib/printUtils'
 import CustomAlert from '@/components/modals/CustomAlert';
 import { Switch } from '@/components/ui/switch';
 import PelaksanaActualModal from '@/components/modals/PelaksanaActualModal';
+import ReturnToRackModal from '@/components/modals/ReturnToRackModal';
 import { getPelaksanaOptions } from '@/services/masterDataService';
 import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
@@ -140,6 +141,7 @@ export default function AddWOActualPage() {
   const [saveErrorDetails, setSaveErrorDetails] = useState([]);
   const [preValidateOpen, setPreValidateOpen] = useState(false);
   const [preValidateMessages, setPreValidateMessages] = useState([]);
+  const [returnToRackModalOpen, setReturnToRackModalOpen] = useState(false);
 
   // Load WO Planning options
   const loadWOPlanningOptions = useCallback(async () => {
@@ -1318,10 +1320,10 @@ export default function AddWOActualPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="border-blue-300 text-blue-700 hover:bg-blue-100"
-                    onClick={() => navigate('/return-to-rack')}
+                    className="border-blue-300 text-blue-700 hover:bg-blue-100 items-center transition-colors"
+                    onClick={() => setReturnToRackModalOpen(true)}
                   >
-                    Buka Menu →
+                    Buka Scan →
                   </Button>
                 </div>
               </CardContent>
@@ -1410,6 +1412,11 @@ export default function AddWOActualPage() {
             }
           }));
         }}
+      />
+
+      <ReturnToRackModal
+        open={returnToRackModalOpen}
+        onOpenChange={setReturnToRackModalOpen}
       />
 
       {previewOpen && (
