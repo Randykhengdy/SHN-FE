@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import MasterDataLayout from "@/components/MasterDataLayout";
 import { Button } from "@/components/ui/button";
 import ItemBarangCanvasPage from "./ItemBarangCanvasPage";
+import ItemBarangHistoryModal from "./ItemBarangHistoryModal";
 import {
   itemBarangService,
   jenisBarangService,
@@ -10,6 +11,7 @@ import {
   gudangService,
   rakService
 } from "@/services/master-data";
+import { request } from "@/lib/request";
 
 // Module-level variable untuk menyimpan mapping dimensi bentuk barang
 let bentukBarangDimensiMap = {};
@@ -20,12 +22,18 @@ let rakOptionsCache = {};
 
 export default function ItemBarangPage() {
   const [isCanvasOpen, setIsCanvasOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [showDimensions, setShowDimensions] = useState(false);
 
   const handleOpenCanvas = (item) => {
     setSelectedItem(item);
     setIsCanvasOpen(true);
+  };
+
+  const handleOpenHistory = (item) => {
+    setSelectedItem(item);
+    setIsHistoryOpen(true);
   };
 
   const handleDestroyItem = async (item) => {
@@ -65,6 +73,16 @@ export default function ItemBarangPage() {
         </div>
       )}
 
+      {isHistoryOpen && selectedItem && (
+        <ItemBarangHistoryModal
+          onClose={() => {
+            setIsHistoryOpen(false);
+            setSelectedItem(null);
+          }}
+          item={selectedItem}
+        />
+      )}
+
       <MasterDataLayout
         title="Item Barang"
         subtitle="Master Data"
@@ -84,6 +102,14 @@ export default function ItemBarangPage() {
           </div>
         }
         customActions={[
+          {
+            label: "History",
+            icon: (
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-history"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+            ),
+            onClick: (item) => handleOpenHistory(item),
+            className: "bg-blue-500 hover:bg-blue-600 text-white border-blue-500"
+          },
           {
             label: "Edit Canvas",
             icon: (
