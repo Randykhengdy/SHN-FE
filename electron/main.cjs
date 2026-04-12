@@ -511,7 +511,6 @@ function createWindow() {
         // ...(canShow('PENERIMAAN_KAS') ? [{ label: 'Penerimaan Kas', click: () => mainWindow.webContents.send('navigate-to', '/penerimaan-kas') }] : []),
         { label: 'Pembayaran PO', click: () => mainWindow.webContents.send('navigate-to', '/pembayaran-po') },
         { label: 'Penerimaan Kas', click: () => mainWindow.webContents.send('navigate-to', '/penerimaan-kas') },
-        { label: 'Financial Report', click: () => mainWindow.webContents.send('navigate-to', '/financial-report') },
         { type: 'separator' },
         { label: 'Mutasi Stock', accelerator: 'CmdOrCtrl+M', click: () => mainWindow.webContents.send('navigate-to', '/mutasi-stock') },
         { label: 'Item Barang Request', accelerator: 'CmdOrCtrl+I', click: () => mainWindow.webContents.send('navigate-to', '/item-barang-request') },
@@ -521,6 +520,67 @@ function createWindow() {
         { label: 'Konversi Barang', accelerator: 'CmdOrCtrl+K', click: () => mainWindow.webContents.send('navigate-to', '/konversi-barang') },
         { label: 'Split Barang', accelerator: 'CmdOrCtrl+Shift+S', click: () => mainWindow.webContents.send('navigate-to', '/split-barang') },
         { label: 'Merge Barang', accelerator: 'CmdOrCtrl+Shift+M', click: () => mainWindow.webContents.send('navigate-to', '/merge-barang') }
+      ]
+    },
+    {
+      label: 'Report',
+      submenu: [
+        {
+          label: 'Sales',
+          submenu: [
+            { label: 'SO / Tanggal', click: () => mainWindow.webContents.send('open-report-so-tanggal') },
+            { label: 'Realisasi WO / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Realisasi WO / Tanggal sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Invoice Penjualan / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Invoice Penjualan / Tanggal sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Analisa SO, WO & Invoice / Periode', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Analisa SO, WO & Invoice / Periode sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Penjualan / Gudang / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Penjualan / Gudang / Tanggal sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Penjualan / Gudang / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Penjualan / Gudang / Barang sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Penjualan / Barang - Global', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Penjualan / Barang - Global sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Penjualan / Pelanggan / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Penjualan / Pelanggan / Barang sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Penjualan / Pelanggan / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Penjualan / Pelanggan / Tanggal sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Invoice Piutang / Pelanggan', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Invoice Piutang / Pelanggan sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Pembayaran Penjualan Uang Muka & Piutang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Pembayaran Penjualan Uang Muka & Piutang sedang dalam pengembangan.', type: 'info' }) },
+          ]
+        },
+        {
+          label: 'Purchasing',
+          submenu: [
+            { label: 'Faktur Pembelian / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Faktur Pembelian / Tanggal sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Pembelian / Gudang / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Pembelian / Gudang / Tanggal sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Pembelian / Gudang / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Pembelian / Gudang / Barang sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Pembelian Barang Global', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Pembelian Barang Global sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Invoice Hutang / Supplier', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Invoice Hutang / Supplier sedang dalam pengembangan.', type: 'info' }) },
+          ]
+        },
+        {
+          label: 'Inventory',
+          submenu: [
+            { label: 'Mutasi Stock / Gudang / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Mutasi Stock / Gudang / Tanggal sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Mutasi Antar Gudang / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Mutasi Antar Gudang / Tanggal sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Rubah Status Barang (Utuh ke Potongan) / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Rubah Status Barang / Tanggal sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Kartu Stock / Gudang / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Kartu Stock / Gudang / Barang sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Stock / Gudang / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Stock / Gudang / Barang sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Stock / Barang / Gudang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Stock / Barang / Gudang sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Stock Barang Global / Semua Gudang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Stock Barang Global sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Stock Opname / Gudang / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Stock Opname / Gudang / Barang sedang dalam pengembangan.', type: 'info' }) },
+          ]
+        },
+        {
+          label: 'Finance',
+          submenu: [
+            { label: 'Financial Report', click: () => mainWindow.webContents.send('navigate-to', '/financial-report') },
+            { label: 'Pemakaian Kas / Barang / Jenis Biaya', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Pemakaian Kas sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Rincian Keuangan dan Laba Operasional / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Rincian Keuangan sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Rekap Laba Operasional & Keuangan', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Rekap Laba Operasional sedang dalam pengembangan.', type: 'info' }) },
+          ]
+        },
+        {
+          label: 'Performance',
+          submenu: [
+            { label: 'Waktu Proses SO & WO / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Waktu Proses SO & WO sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Kegiatan Pelaksana Kerja / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Kegiatan Pelaksana Kerja sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Rekap Kegiatan Pelaksana', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Rekap Kegiatan Pelaksana sedang dalam pengembangan.', type: 'info' }) },
+          ]
+        }
       ]
     },
     {

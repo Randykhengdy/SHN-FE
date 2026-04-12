@@ -8,12 +8,19 @@ import "@/lib/tokenDebug"; // Import debug utilities
 import "@/lib/debugUtils"; // Import debug utilities
 import { AppProvider } from "@/context/AppContext";
 import ChangePasswordModal from "@/components/ChangePasswordModal";
+import ReportDateRangeModal from "@/components/modals/ReportDateRangeModal";
+import { salesOrderService } from "@/services/salesOrderService";
+import { printSalesOrderTanggalReport } from "@/lib/soReportPrint";
+
 
 function App() {
   // Gunakan hook untuk menangani navigasi dari Electron
   useElectronNavigation();
   const { showAlert, AlertComponent } = useAlert();
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [isReportSOTanggalOpen, setIsReportSOTanggalOpen] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
+
 
   // Listen for global alert events from utility functions (like tokenUtils)
   useEffect(() => {
@@ -47,7 +54,15 @@ function App() {
       });
     }
 
+    // Listen for SO / Tanggal Report event
+    if (window.electronAPI.onReportSOTanggal) {
+      window.electronAPI.onReportSOTanggal(() => {
+        setIsReportSOTanggalOpen(true);
+      });
+    }
+
     return () => {
+
       // Note: IPC listeners are automatically cleaned up when component unmounts
     };
   }, [showAlert]);
@@ -66,6 +81,36 @@ function App() {
           <ChangePasswordModal 
             isOpen={isChangePasswordOpen} 
             onClose={() => setIsChangePasswordOpen(false)} 
+          />
+
+          <ReportDateRangeModal
+            open={isReportSOTanggalOpen}
+            onOpenChange={setIsReportSOTanggalOpen}
+            title="Report Sales Order / Tanggal"
+            loading={reportLoading}
+            onGenerate={async (from, to) => {
+              try {
+                setReportLoading(true);
+                const result = await salesOrderService.getReport({
+                  tanggal_mulai: from,
+                  tanggal_akhir: to,
+                  per_page: 9999,
+                  sort: 'tanggal_so,asc;nomor_so,asc'
+                });
+                
+                if (result.success && result.data) {
+                  printSalesOrderTanggalReport(result.data, from, to);
+                  setIsReportSOTanggalOpen(false);
+                } else {
+                  showAlert("Error", result.message || "Gagal mengambil data report", "error");
+                }
+              } catch (error) {
+                console.error("Error generating report:", error);
+                showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
+              } finally {
+                setReportLoading(false);
+              }
+            }}
           />
 
           {/* Main content - Full width without sidebar */}

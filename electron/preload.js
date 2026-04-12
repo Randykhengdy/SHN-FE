@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   downloadUpdate: () => ipcRenderer.invoke('download-update'),
   cancelDownloadUpdate: () => ipcRenderer.invoke('cancel-download-update'),
   onUpdateEvent: (callback) => ipcRenderer.on('update-event', (_event, data) => callback(data)),
+  onReportSOTanggal: (callback) => ipcRenderer.on('open-report-so-tanggal', callback),
   onRequestConfirm: (callback) => ipcRenderer.on('request-confirm', (_event, data) => callback(data)),
   sendConfirmResult: (id, result) => ipcRenderer.send('confirm-result', { id, result }),
   // App info

@@ -33,6 +33,21 @@ export const salesOrderService = {
     });
   },
 
+  // Get sales order report
+  getReport: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+    
+    if (params.tanggal_mulai) queryParams.append('tanggal_mulai', params.tanggal_mulai);
+    if (params.tanggal_akhir) queryParams.append('tanggal_akhir', params.tanggal_akhir);
+    if (params.per_page) queryParams.append('per_page', params.per_page);
+    if (params.sort) queryParams.append('sort', params.sort);
+    if (params.pelanggan_id) queryParams.append('pelanggan_id', params.pelanggan_id);
+    if (params.gudang_id) queryParams.append('gudang_id', params.gudang_id);
+    
+    const url = `${API_ENDPOINTS.salesOrder}/report?${queryParams.toString()}`;
+    return await request(url, { method: 'GET' });
+  },
+
   // Create new sales order
   create: async (data) => {
     return await request(API_ENDPOINTS.salesOrder, {
