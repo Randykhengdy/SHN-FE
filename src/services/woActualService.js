@@ -43,6 +43,23 @@ export const woActualService = {
     return request(`${BASE_URL}/${id}`, { method: 'GET' });
   },
 
+  // Get report data
+  getReport: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page);
+    if (params.per_page) queryParams.append('per_page', params.per_page);
+    
+    // Include specific report filters
+    if (params.tanggal_actual_start) queryParams.append('tanggal_actual_start', params.tanggal_actual_start);
+    if (params.tanggal_actual_end) queryParams.append('tanggal_actual_end', params.tanggal_actual_end);
+    if (params.id_pelanggan) queryParams.append('id_pelanggan', params.id_pelanggan);
+    if (params.id_gudang) queryParams.append('id_gudang', params.id_gudang);
+    if (params.status) queryParams.append('status', params.status);
+
+    const url = `${BASE_URL}/report?${queryParams.toString()}`;
+    return request(url, { method: 'GET' });
+  },
+
   // Create new WO Actual
   createWOActual: async (woActualData) => {
     return request(BASE_URL, {

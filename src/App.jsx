@@ -10,8 +10,9 @@ import { AppProvider } from "@/context/AppContext";
 import ChangePasswordModal from "@/components/ChangePasswordModal";
 import ReportDateRangeModal from "@/components/modals/ReportDateRangeModal";
 import { salesOrderService } from "@/services/salesOrderService";
+import { woActualService } from "@/services/woActualService";
 import { printSalesOrderTanggalReport } from "@/lib/soReportPrint";
-
+import { printRealisasiWOTanggalReport } from "@/lib/woActualReportPrint";
 
 function App() {
   // Gunakan hook untuk menangani navigasi dari Electron
@@ -19,8 +20,8 @@ function App() {
   const { showAlert, AlertComponent } = useAlert();
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isReportSOTanggalOpen, setIsReportSOTanggalOpen] = useState(false);
+  const [isReportRealisasiWOTanggalOpen, setIsReportRealisasiWOTanggalOpen] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
-
 
   // Listen for global alert events from utility functions (like tokenUtils)
   useEffect(() => {
@@ -58,6 +59,13 @@ function App() {
     if (window.electronAPI.onReportSOTanggal) {
       window.electronAPI.onReportSOTanggal(() => {
         setIsReportSOTanggalOpen(true);
+      });
+    }
+
+    // Listen for Realisasi WO / Tanggal Report event
+    if (window.electronAPI.onReportRealisasiWOTanggal) {
+      window.electronAPI.onReportRealisasiWOTanggal(() => {
+        setIsReportRealisasiWOTanggalOpen(true);
       });
     }
 
@@ -101,6 +109,36 @@ function App() {
                 if (result.success && result.data) {
                   printSalesOrderTanggalReport(result.data, from, to);
                   setIsReportSOTanggalOpen(false);
+                } else {
+                  showAlert("Error", result.message || "Gagal mengambil data report", "error");
+                }
+              } catch (error) {
+                console.error("Error generating report:", error);
+                showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
+              } finally {
+                setReportLoading(false);
+              }
+            }}
+          />
+
+          <ReportDateRangeModal
+            open={isReportRealisasiWOTanggalOpen}
+            onOpenChange={setIsReportRealisasiWOTanggalOpen}
+            title="Report Realisasi WO / Tanggal"
+            loading={reportLoading}
+            onGenerate={async (from, to) => {
+              try {
+                setReportLoading(true);
+                const result = await woActualService.getReport({
+                  tanggal_actual_start: from,
+                  tanggal_actual_end: to,
+                  per_page: 9999,
+                  sort: 'tanggal_actual,asc;nomor_wo,asc'
+                });
+                
+                if (result.success && result.data) {
+                  printRealisasiWOTanggalReport(result.data, from, to);
+                  setIsReportRealisasiWOTanggalOpen(false);
                 } else {
                   showAlert("Error", result.message || "Gagal mengambil data report", "error");
                 }
