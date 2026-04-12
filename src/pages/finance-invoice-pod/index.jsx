@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { financeInvoicePodService } from "@/services/financeInvoicePodService";
 import { useAlert } from "@/hooks/useAlert";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import PageLayout from "@/components/PageLayout";
 import { generatePodPrintContent, generateInvoicePrintContent, openPrintDialog } from "@/lib/printUtils";
 
@@ -33,27 +35,35 @@ const podFilterOptions = [
 export default function FinanceInvoicePodPage() {
   const navigate = useNavigate();
   const { showAlert, AlertComponent } = useAlert();
-  
+
   const [workOrders, setWorkOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isGeneratedFilter, setIsGeneratedFilter] = useState("all");
   const [isPrintedInvoiceFilter, setIsPrintedInvoiceFilter] = useState("all");
   const [isPrintedPodFilter, setIsPrintedPodFilter] = useState("all");
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
-  
+
   // Action loading states
   const [actionLoading, setActionLoading] = useState({});
+
+  // Modal State for Generate Invoice
+  const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
+  const [selectedWoForGenerate, setSelectedWoForGenerate] = useState(null);
+  const [generateForm, setGenerateForm] = useState({
+    uang_muka: '',
+    metode_pembayaran: ''
+  });
 
   // Load work orders from API
   const loadWorkOrders = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       // Build filter parameters
       const params = {};
       if (isGeneratedFilter !== "all") {
@@ -65,9 +75,9 @@ export default function FinanceInvoicePodPage() {
       if (isPrintedPodFilter !== "all") {
         params.is_printed_pod = isPrintedPodFilter === "printed";
       }
-      
+
       const result = await financeInvoicePodService.getEligibleForInvoicePod(params);
-      
+
       // Transform API data to match our UI structure
       const transformedData = result.message.map(wo => ({
         id: wo.nomor_wo,
@@ -78,22 +88,22 @@ export default function FinanceInvoicePodPage() {
         hasGeneratedInvoice: wo.has_generated_invoice,
         hasGeneratedPod: wo.has_generated_pod
       }));
-      
+
       // Apply search filter
       let filteredData = transformedData;
       if (searchTerm) {
-        filteredData = filteredData.filter(wo => 
+        filteredData = filteredData.filter(wo =>
           wo.nomorSo.toLowerCase().includes(searchTerm.toLowerCase()) ||
           wo.nomorWo.toLowerCase().includes(searchTerm.toLowerCase()) ||
           wo.namaCustomer.toLowerCase().includes(searchTerm.toLowerCase())
         );
       }
-      
+
       // Apply pagination
       const startIndex = (currentPage - 1) * itemsPerPage;
       const endIndex = startIndex + itemsPerPage;
       const paginatedData = filteredData.slice(startIndex, endIndex);
-      
+
       setWorkOrders(paginatedData);
       setTotalItems(filteredData.length);
     } catch (error) {
@@ -109,11 +119,33 @@ export default function FinanceInvoicePodPage() {
     loadWorkOrders();
   }, [loadWorkOrders]);
 
-  // Handle generate invoice POD
-  const handleGenerateInvoicePod = async (nomorWo) => {
+  // Handle generate invoice POD modal
+  const openGenerateModal = (nomorWo) => {
+    setSelectedWoForGenerate(nomorWo);
+    setGenerateForm({ uang_muka: '', metode_pembayaran: '' });
+    setIsGenerateModalOpen(true);
+  };
+
+  const handleGenerateSubmit = async () => {
+    if (!selectedWoForGenerate) return;
+
+    // Validasi metode pembayaran jika uang muka diisi
+    const uangMukaVal = parseFloat(generateForm.uang_muka.replace(/\D/g, '') || '0');
+    if (uangMukaVal > 0 && !generateForm.metode_pembayaran) {
+      showAlert("Error", "Pilih metode pembayaran untuk uang muka", "error");
+      return;
+    }
+
     try {
-      setActionLoading(prev => ({ ...prev, [nomorWo]: true }));
-      const result = await financeInvoicePodService.generateInvoicePod(nomorWo);
+      setActionLoading(prev => ({ ...prev, [selectedWoForGenerate]: true }));
+      setIsGenerateModalOpen(false); // Tutup modal saat loading
+
+      const result = await financeInvoicePodService.generateInvoicePod(
+        selectedWoForGenerate,
+        uangMukaVal,
+        generateForm.metode_pembayaran
+      );
+
       console.log('Generate result:', result);
       showAlert("Sukses", `Invoice POD berhasil di-generate!<br/>Invoice: ${result.data.nomor_invoice}<br/>Surat Jalan: ${result.data.nomor_pod}`, "success", () => {
         loadWorkOrders();
@@ -122,7 +154,8 @@ export default function FinanceInvoicePodPage() {
       console.error('Error generating invoice POD:', error);
       showAlert("Error", "Gagal generate Invoice POD", "error");
     } finally {
-      setActionLoading(prev => ({ ...prev, [nomorWo]: false }));
+      setActionLoading(prev => ({ ...prev, [selectedWoForGenerate]: false }));
+      setSelectedWoForGenerate(null);
     }
   };
 
@@ -130,17 +163,17 @@ export default function FinanceInvoicePodPage() {
   const handlePrintInvoice = async (nomorWo) => {
     try {
       setActionLoading(prev => ({ ...prev, [`invoice_${nomorWo}`]: true }));
-      
+
       // Get invoice data for printing
       const result = await financeInvoicePodService.viewInvoice(nomorWo);
       console.log('Invoice data:', result);
-      
+
       // Create print content from invoice data
       const printContent = generateInvoicePrintContent(result.data);
-      
+
       // Open print dialog
       openPrintDialog(printContent);
-      
+
       showAlert("Sukses", "Invoice berhasil di-print!", "success");
     } catch (error) {
       console.error('Error printing invoice:', error);
@@ -156,13 +189,13 @@ export default function FinanceInvoicePodPage() {
       setActionLoading(prev => ({ ...prev, [`pod_${nomorWo}`]: true }));
       const result = await financeInvoicePodService.printPod(nomorWo);
       console.log('POD data:', result);
-      
+
       // Create print content from POD data
       const printContent = generatePodPrintContent(result.data);
-      
+
       // Open print dialog
       openPrintDialog(printContent);
-      
+
     } catch (error) {
       console.error('Error printing POD:', error);
       showAlert("Error", "Gagal print POD", "error");
@@ -361,10 +394,10 @@ export default function FinanceInvoicePodPage() {
                       <TableCell>
                         <div className="flex flex-col sm:flex-row gap-2 justify-center">
                           {!wo.isGenerated ? (
-                            <Button 
-                              size="sm" 
-                              className="bg-green-600 hover:bg-green-700" 
-                              onClick={() => handleGenerateInvoicePod(wo.nomorWo)}
+                            <Button
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700"
+                              onClick={() => openGenerateModal(wo.nomorWo)}
                               disabled={actionLoading[wo.nomorWo]}
                             >
                               {actionLoading[wo.nomorWo] ? (
@@ -376,9 +409,9 @@ export default function FinanceInvoicePodPage() {
                             </Button>
                           ) : (
                             <>
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
+                              <Button
+                                size="sm"
+                                variant="outline"
                                 onClick={() => handlePrintInvoice(wo.nomorWo)}
                                 disabled={actionLoading[`invoice_${wo.nomorWo}`]}
                                 className={wo.hasGeneratedInvoice === 1 ? "bg-green-50 text-green-700 border-green-300" : ""}
@@ -390,20 +423,20 @@ export default function FinanceInvoicePodPage() {
                                 )}
                                 <span className="hidden sm:inline">Print Invoice</span>
                               </Button>
-                               <Button 
-                                 size="sm" 
-                                 variant="outline" 
-                                 onClick={() => handlePrintPod(wo.nomorWo)}
-                                 disabled={actionLoading[`pod_${wo.nomorWo}`]}
-                                 className={wo.hasGeneratedPod === 1 ? "bg-blue-50 text-blue-700 border-blue-300" : ""}
-                               >
-                                 {actionLoading[`pod_${wo.nomorWo}`] ? (
-                                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
-                                 ) : (
-                                   <FileText className="w-4 h-4 mr-1" />
-                                 )}
-                                 <span className="hidden sm:inline">Print Surat Jalan</span>
-                               </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handlePrintPod(wo.nomorWo)}
+                                disabled={actionLoading[`pod_${wo.nomorWo}`]}
+                                className={wo.hasGeneratedPod === 1 ? "bg-blue-50 text-blue-700 border-blue-300" : ""}
+                              >
+                                {actionLoading[`pod_${wo.nomorWo}`] ? (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+                                ) : (
+                                  <FileText className="w-4 h-4 mr-1" />
+                                )}
+                                <span className="hidden sm:inline">Print Surat Jalan</span>
+                              </Button>
                             </>
                           )}
                         </div>
@@ -414,7 +447,7 @@ export default function FinanceInvoicePodPage() {
               </TableBody>
             </Table>
           </div>
-          
+
           {/* Pagination */}
           {workOrders.length > 0 && (
             <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 bg-white border-t border-gray-200 gap-4">
@@ -436,7 +469,7 @@ export default function FinanceInvoicePodPage() {
                   <option value={50}>50 per halaman</option>
                 </select>
               </div>
-              
+
               {totalPages > 1 && (
                 <div className="flex items-center space-x-2">
                   <button
@@ -446,7 +479,7 @@ export default function FinanceInvoicePodPage() {
                   >
                     Sebelumnya
                   </button>
-                  
+
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     let pageNum;
                     if (totalPages <= 5) {
@@ -458,22 +491,21 @@ export default function FinanceInvoicePodPage() {
                     } else {
                       pageNum = currentPage - 2 + i;
                     }
-                    
+
                     return (
                       <button
                         key={pageNum}
                         onClick={() => setCurrentPage(pageNum)}
-                        className={`px-3 py-1 text-sm border rounded ${
-                          currentPage === pageNum
+                        className={`px-3 py-1 text-sm border rounded ${currentPage === pageNum
                             ? 'bg-blue-500 text-white border-blue-500'
                             : 'border-gray-300 hover:bg-gray-50'
-                        }`}
+                          }`}
                       >
                         {pageNum}
                       </button>
                     );
                   })}
-                  
+
                   <button
                     onClick={() => setCurrentPage(currentPage + 1)}
                     disabled={currentPage === totalPages}
@@ -504,7 +536,7 @@ export default function FinanceInvoicePodPage() {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-green-50 p-4 rounded-lg">
               <div className="flex items-center">
                 <div className="p-2 bg-green-100 rounded-lg">
@@ -516,7 +548,7 @@ export default function FinanceInvoicePodPage() {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-orange-50 p-4 rounded-lg">
               <div className="flex items-center">
                 <div className="p-2 bg-orange-100 rounded-lg">
@@ -528,7 +560,7 @@ export default function FinanceInvoicePodPage() {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-purple-50 p-4 rounded-lg">
               <div className="flex items-center">
                 <div className="p-2 bg-purple-100 rounded-lg">
@@ -543,7 +575,69 @@ export default function FinanceInvoicePodPage() {
           </div>
         </CardContent>
       </Card>
-      
+
+      {/* Generate Invoice Modal */}
+      <Dialog open={isGenerateModalOpen} onOpenChange={setIsGenerateModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Generate Invoice & POD</DialogTitle>
+            <DialogDescription>
+              Silakan input uang muka dan metodenya jika ada.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="flex flex-col space-y-1.5 focus-within:text-blue-600">
+              <Label htmlFor="uang_muka" className="font-semibold cursor-pointer">
+                Uang Muka (Opsional)
+              </Label>
+              <div className="relative border-b-2 border-gray-300 focus-within:border-blue-600 transition-colors">
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 font-medium text-gray-500 pointer-events-none">Rp</span>
+                <input
+                  id="uang_muka"
+                  type="text"
+                  placeholder="0"
+                  value={
+                    generateForm.uang_muka
+                      ? new Intl.NumberFormat("id-ID").format(generateForm.uang_muka.replace(/\D/g, ""))
+                      : ""
+                  }
+                  onChange={(e) => setGenerateForm({ ...generateForm, uang_muka: e.target.value.replace(/\D/g, "") })}
+                  className="w-full bg-transparent outline-none pl-7 pr-4 py-2 text-gray-800"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col space-y-1.5 focus-within:text-blue-600">
+              <Label htmlFor="metode_pembayaran" className="font-semibold cursor-pointer">
+                Metode Pembayaran
+              </Label>
+              <Select
+                value={generateForm.metode_pembayaran}
+                onValueChange={(val) => setGenerateForm({ ...generateForm, metode_pembayaran: val })}
+              >
+                <SelectTrigger className="w-full border-gray-300 focus:ring-1 focus:ring-blue-600">
+                  <SelectValue placeholder="Pilih Metode Pembayaran" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                  <SelectItem value="Debit">Debit</SelectItem>
+                  <SelectItem value="Transfer">Transfer</SelectItem>
+                  <SelectItem value="Piutang">Piutang</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsGenerateModalOpen(false)}>
+              Batal
+            </Button>
+            <Button onClick={handleGenerateSubmit} className="bg-green-600 hover:bg-green-700">
+              Generate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Alert Modal Component */}
       <AlertComponent />
     </PageLayout>

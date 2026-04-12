@@ -81,6 +81,7 @@ export default function PenerimaanKasPage() {
     const [paymentForm, setPaymentForm] = useState({
         tanggal_payment: new Date().toISOString().split('T')[0],
         jumlah_payment: '',
+        metode_pembayaran: '',
         catatan: ''
     });
     const [paymentFormErrors, setPaymentFormErrors] = useState({});
@@ -186,6 +187,7 @@ export default function PenerimaanKasPage() {
         setPaymentForm({
             tanggal_payment: new Date().toISOString().split('T')[0],
             jumlah_payment: '',
+            metode_pembayaran: '',
             catatan: ''
         });
         setPaymentFormErrors({});
@@ -198,6 +200,7 @@ export default function PenerimaanKasPage() {
         setPaymentForm({
             tanggal_payment: new Date().toISOString().split('T')[0],
             jumlah_payment: '',
+            metode_pembayaran: '',
             catatan: ''
         });
         setPaymentFormErrors({});
@@ -212,6 +215,7 @@ export default function PenerimaanKasPage() {
         } else if (selectedInvoice && parseFloat(paymentForm.jumlah_payment) > selectedInvoice.sisaBayar) {
             errors.jumlah_payment = `Jumlah pembayaran melebihi sisa bayar. Sisa bayar: Rp ${selectedInvoice.sisaBayar.toLocaleString('id-ID')}`;
         }
+        if (!paymentForm.metode_pembayaran) errors.metode_pembayaran = 'Metode pembayaran wajib diisi';
 
         if (Object.keys(errors).length > 0) {
             setPaymentFormErrors(errors);
@@ -223,6 +227,7 @@ export default function PenerimaanKasPage() {
             const paymentData = {
                 jumlah_payment: parseFloat(paymentForm.jumlah_payment),
                 tanggal_payment: paymentForm.tanggal_payment,
+                metode_pembayaran: paymentForm.metode_pembayaran
             };
             if (paymentForm.catatan && paymentForm.catatan.trim()) paymentData.catatan = paymentForm.catatan.trim();
 
@@ -494,6 +499,21 @@ export default function PenerimaanKasPage() {
                     <DialogHeader><DialogTitle>Form Penerimaan Pembayaran</DialogTitle></DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid gap-2"><Label>Tanggal <span className="text-red-500">*</span></Label><Input type="date" value={paymentForm.tanggal_payment} onChange={(e) => setPaymentForm({ ...paymentForm, tanggal_payment: e.target.value })} /></div>
+                        <div className="grid gap-2">
+                            <Label>Metode Pembayaran <span className="text-red-500">*</span></Label>
+                            <Select value={paymentForm.metode_pembayaran} onValueChange={(val) => setPaymentForm({ ...paymentForm, metode_pembayaran: val })}>
+                                <SelectTrigger className={paymentFormErrors.metode_pembayaran ? "border-red-500" : ""}>
+                                    <SelectValue placeholder="Pilih Metode" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Cash">Cash</SelectItem>
+                                    <SelectItem value="Debit">Debit</SelectItem>
+                                    <SelectItem value="Transfer">Transfer</SelectItem>
+                                    <SelectItem value="Piutang">Piutang</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            {paymentFormErrors.metode_pembayaran && <p className="text-xs text-red-500">{paymentFormErrors.metode_pembayaran}</p>}
+                        </div>
                         <div className="grid gap-2"><Label>Jumlah <span className="text-red-500">*</span></Label><Input type="number" value={paymentForm.jumlah_payment} onChange={(e) => setPaymentForm({ ...paymentForm, jumlah_payment: e.target.value })} /></div>
                         <div className="grid gap-2"><Label>Catatan</Label><Textarea value={paymentForm.catatan} onChange={(e) => setPaymentForm({ ...paymentForm, catatan: e.target.value })} /></div>
                     </div>
@@ -517,9 +537,9 @@ export default function PenerimaanKasPage() {
                             </Card>
                             <Card><CardHeader><CardTitle>Histori Pembayaran</CardTitle></CardHeader>
                                 <CardContent>
-                                    <Table><TableHeader><TableRow><TableHead>Tanggal</TableHead><TableHead>Jumlah</TableHead><TableHead>Aksi</TableHead></TableRow></TableHeader>
+                                    <Table><TableHeader><TableRow><TableHead>Tanggal</TableHead><TableHead>Jumlah</TableHead><TableHead>Metode</TableHead><TableHead>Aksi</TableHead></TableRow></TableHeader>
                                         <TableBody>{paymentDetail.payments?.map(p => (
-                                            <TableRow key={p.id}><TableCell>{formatDate(p.tanggal_payment)}</TableCell><TableCell>Rp {parseFloat(p.jumlah_payment || 0).toLocaleString('id-ID')}</TableCell><TableCell><Button size="sm" variant="outline" onClick={() => handlePrintReceipt(p.id)}>Print</Button></TableCell></TableRow>
+                                            <TableRow key={p.id}><TableCell>{formatDate(p.tanggal_payment)}</TableCell><TableCell>Rp {parseFloat(p.jumlah_payment || 0).toLocaleString('id-ID')}</TableCell><TableCell>{p.metode_pembayaran || '-'}</TableCell><TableCell><Button size="sm" variant="outline" onClick={() => handlePrintReceipt(p.id)}>Print</Button></TableCell></TableRow>
                                         ))}</TableBody>
                                     </Table>
                                 </CardContent>

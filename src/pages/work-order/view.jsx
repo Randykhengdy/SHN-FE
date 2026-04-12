@@ -30,6 +30,7 @@ export default function ViewWorkOrderPage() {
   const [loading, setLoading] = useState(false);
   const [printOptionsOpen, setPrintOptionsOpen] = useState(false);
   const [includeImages, setIncludeImages] = useState(true);
+  const [hideCustomerName, setHideCustomerName] = useState(true);
 
   // Prevent multiple API calls
   const isLoadingRef = useRef(false);
@@ -153,7 +154,7 @@ export default function ViewWorkOrderPage() {
         })),
         canvasImages
       };
-      const html = generateWOPlanningPrintContent(printData, { includeImages });
+      const html = generateWOPlanningPrintContent(printData, { includeImages, hideCustomerName });
       openPrintDialog(html);
     } catch (error) {
       console.error('❌ Error saat membuka dialog cetak WO Planning:', error);
@@ -730,11 +731,8 @@ export default function ViewWorkOrderPage() {
                     <TableHead className="table-header-cell-standard">Qty</TableHead>
                     <TableHead className="table-header-cell-standard">Qty Planning</TableHead>
                     <TableHead className="table-header-cell-standard">Luas/item</TableHead>
-                    <TableHead className="table-header-cell-standard">Harga</TableHead>
                     <TableHead className="table-header-cell-standard">Satuan</TableHead>
                     <TableHead className="table-header-cell-standard">Tipe Potongan</TableHead>
-                    <TableHead className="table-header-cell-standard">Diskon</TableHead>
-                    <TableHead className="table-header-cell-standard">Total</TableHead>
                     <TableHead className="table-header-cell-standard">Pelaksana</TableHead>
                     <TableHead className="table-header-cell-standard">Item Barang</TableHead>
                   </TableRow>
@@ -804,7 +802,6 @@ export default function ViewWorkOrderPage() {
                           <TableCell>{item.qty}</TableCell>
                           <TableCell>{item.qty_planning || item.qty}</TableCell>
                           <TableCell>{luasPerItem.toFixed(2)} mm²</TableCell>
-                          <TableCell>{formatCurrency(item.harga)}</TableCell>
                           <TableCell>{item.satuan}</TableCell>
                           <TableCell>
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.jenis_potongan === 'potongan'
@@ -814,8 +811,6 @@ export default function ViewWorkOrderPage() {
                               {item.jenis_potongan === 'potongan' ? 'Potongan' : 'Utuh'}
                             </span>
                           </TableCell>
-                          <TableCell>{item.diskon}%</TableCell>
-                          <TableCell className="font-semibold">{formatCurrency(item.total)}</TableCell>
                           <TableCell>
                             {itemPelaksanaArray && itemPelaksanaArray.length > 0 ? (
                               <Button
@@ -932,13 +927,23 @@ export default function ViewWorkOrderPage() {
         cancelText="Batal"
         onConfirm={doPrint}
         extraContent={(
-          <div className="w-full flex items-center justify-between gap-4 bg-gray-50 rounded-md px-3 py-2 border">
-            <span className="text-sm text-gray-800">Sertakan gambar untuk print</span>
-            <Switch
-              checked={includeImages}
-              onCheckedChange={setIncludeImages}
-              aria-label="Sertakan gambar untuk print"
-            />
+          <div className="flex flex-col gap-3 w-full">
+            <div className="w-full flex items-center justify-between gap-4 bg-gray-50 rounded-md px-3 py-2 border">
+              <span className="text-sm text-gray-800">Sertakan gambar untuk print</span>
+              <Switch
+                checked={includeImages}
+                onCheckedChange={setIncludeImages}
+                aria-label="Sertakan gambar untuk print"
+              />
+            </div>
+            <div className="w-full flex items-center justify-between gap-4 bg-gray-50 rounded-md px-3 py-2 border">
+              <span className="text-sm text-gray-800">Sembunyikan nama pelanggan saat Print</span>
+              <Switch
+                checked={hideCustomerName}
+                onCheckedChange={setHideCustomerName}
+                aria-label="Sembunyikan nama pelanggan saat Print"
+              />
+            </div>
           </div>
         )}
       />

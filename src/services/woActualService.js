@@ -8,7 +8,7 @@ export const woActualService = {
   // Get all WO Actual with pagination and filters
   getWOActuals: async (params = {}) => {
     const queryParams = new URLSearchParams();
-    
+
     if (params.page) queryParams.append('page', params.page);
     if (params.per_page) queryParams.append('per_page', params.per_page);
     if (params.search) queryParams.append('search', params.search);
@@ -33,7 +33,7 @@ export const woActualService = {
     if (dateEnd) queryParams.append('date_end', dateEnd);
     if (params.sort_by) queryParams.append('sort_by', params.sort_by);
     if (params.sort_order) queryParams.append('sort_order', params.sort_order);
-    
+
     const url = `${BASE_URL}?${queryParams.toString()}`;
     return request(url, { method: 'GET' });
   },
@@ -76,14 +76,14 @@ export const woActualService = {
   // Get WO Planning list for selection (when creating WO Actual)
   getWOPlanningForActual: async (params = {}) => {
     const queryParams = new URLSearchParams();
-    
+
     if (params.page) queryParams.append('page', params.page);
     if (params.per_page) queryParams.append('per_page', params.per_page);
     if (params.search) queryParams.append('search', params.search);
-    
+
     // Filter by status=Pending as requested
     queryParams.append('status', 'Pending');
-    
+
     const url = `${API_ENDPOINTS.workOrderPlanning}?${queryParams.toString()}`;
     return request(url, { method: 'GET' });
   },
@@ -94,8 +94,8 @@ export const woActualService = {
   },
 
   // Get WO Actual header image as Blob (binary stream)
-  getWOActualHeaderImageBlob: async (actualId) => {
-    const url = `${apiConfig.baseUrl}${API_ENDPOINTS.workOrderActual}/${actualId}/image?ts=${Date.now()}`;
+  getWOActualHeaderImageBlob: async (actualId, index = 0) => {
+    const url = `${apiConfig.baseUrl}${API_ENDPOINTS.workOrderActual}/${actualId}/image?index=${index}&ts=${Date.now()}`;
     const resp = await fetch(url, {
       headers: { ...getAuthHeader(), Accept: 'image/*' },
       cache: 'no-store'
@@ -164,5 +164,31 @@ export const woActualService = {
     if (params.search) queryParams.append('search', params.search);
     const url = `${BASE_URL}/${actualId}/item-images${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     return request(url, { method: 'GET' });
-  }
+  },
+
+  // Return item barang ke rak
+  returnToRack: async (data) => {
+    return request(`${BASE_URL}/return-to-rack`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  // Get daftar item yang belum dikembalikan ke rak
+  getPendingReturns: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.work_order_actual_id) queryParams.append('work_order_actual_id', params.work_order_actual_id);
+    const url = `${BASE_URL}/pending-returns${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return request(url, { method: 'GET' });
+  },
+
+  // Get riwayat pengembalian barang ke rak
+  getReturnHistory: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.work_order_actual_id) queryParams.append('work_order_actual_id', params.work_order_actual_id);
+    if (params.page) queryParams.append('page', params.page);
+    if (params.per_page) queryParams.append('per_page', params.per_page);
+    const url = `${BASE_URL}/return-history${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return request(url, { method: 'GET' });
+  },
 };

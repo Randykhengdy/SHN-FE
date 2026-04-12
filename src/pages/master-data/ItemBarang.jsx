@@ -29,7 +29,7 @@ export default function ItemBarangPage() {
   const [showDimensions, setShowDimensions] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
   const fileInputRef = useRef(null);
-  const { showAlert, AlertComponent } = useAlert();
+  const { showAlert, showConfirm, AlertComponent } = useAlert();
 
   const handleImportClick = (e, fetchData) => {
     fileInputRef.current._fetchData = fetchData;
@@ -86,27 +86,31 @@ export default function ItemBarangPage() {
     setIsHistoryOpen(true);
   };
 
-  const handleDestroyItem = async (item) => {
-    if (!window.confirm(`Apakah Anda yakin ingin mengubah status item "${item.nama_item_barang}" menjadi Destroy?`)) {
-      return;
-    }
+  const handleUpdateStatusItem = (item, status) => {
+    const statusLabel = status.toUpperCase();
 
-    try {
-      const response = await request(`/item-barang/${item.id}/status`, {
-        method: "PUT",
-        body: JSON.stringify({ status: "destroy" })
-      });
+    showConfirm(
+      "Konfirmasi Status",
+      `Apakah Anda yakin ingin mengubah status item "${item.nama_item_barang}" menjadi ${statusLabel}?`,
+      async () => {
+        try {
+          const response = await request(`/item-barang/${item.id}/status`, {
+            method: "PUT",
+            body: JSON.stringify({ status })
+          });
 
-      if (response.success) {
-        // MasterDataLayout akan otomatis me-refresh data jika service.getAll dipanggil lagi
-        // Namun kita bisa memicu refresh manual jika MasterDataLayout mendukungnya, 
-        // atau biarkan user me-refresh sendiri. 
-        // Karena MasterDataLayout biasanya punya internal state untuk refresh.
-        window.location.reload(); // Cara cepat untuk refresh data di MasterDataLayout
+          if (response.success) {
+            // MasterDataLayout akan otomatis me-refresh data jika service.getAll dipanggil lagi
+            // Namun kita bisa memicu refresh manual jika MasterDataLayout mendukungnya, 
+            // atau biarkan user me-refresh sendiri. 
+            // Karena MasterDataLayout biasanya punya internal state untuk refresh.
+            window.location.reload(); // Cara cepat untuk refresh data di MasterDataLayout
+          }
+        } catch (error) {
+          console.error("Error updating item status:", error);
+        }
       }
-    } catch (error) {
-      console.error("Error updating item status:", error);
-    }
+    );
   };
 
   return (
@@ -235,11 +239,19 @@ export default function ItemBarangPage() {
             }
           },
           {
-            label: "Destroy",
+            label: "Habis",
+            icon: (
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-package-x"><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14" /><path d="m7.5 4.27 9 5.15" /><polyline points="3.29 7 12 12 20.71 7" /><line x1="12" x2="12" y1="22" y2="12" /><path d="m17 13 5 5m-5 0 5-5" /></svg>
+            ),
+            onClick: (item) => handleUpdateStatusItem(item, "habis"),
+            className: "bg-orange-500 hover:bg-orange-600 text-white border-orange-500"
+          },
+          {
+            label: "Rongsok",
             icon: (
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trash-2"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>
             ),
-            onClick: (item) => handleDestroyItem(item),
+            onClick: (item) => handleUpdateStatusItem(item, "rongsok"),
             className: "bg-red-500 hover:bg-red-600 text-white border-red-500"
           }
         ]}

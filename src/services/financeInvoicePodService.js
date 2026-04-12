@@ -4,7 +4,7 @@ export const financeInvoicePodService = {
   // Get eligible work orders for invoice POD
   getEligibleForInvoicePod: async (params = {}) => {
     const queryParams = new URLSearchParams();
-    
+
     // Add filter parameters if provided
     if (params.is_generated !== undefined) {
       queryParams.append('is_generated', params.is_generated);
@@ -15,21 +15,23 @@ export const financeInvoicePodService = {
     if (params.is_printed_pod !== undefined) {
       queryParams.append('is_printed_pod', params.is_printed_pod);
     }
-    
+
     const queryString = queryParams.toString();
     const endpoint = `/invoice-pod/eligible-for-invoice-pod${queryString ? `?${queryString}` : ''}`;
-    
+
     return await request(endpoint, {
       method: 'GET'
     });
   },
 
   // Generate invoice POD
-  generateInvoicePod: async (nomorWo) => {
+  generateInvoicePod: async (nomorWo, uangMuka = 0, metodePembayaran = null) => {
     return await request('/invoice-pod/generate-invoice-pod', {
       method: 'POST',
       body: JSON.stringify({
-        nomor_wo: nomorWo
+        nomor_wo: nomorWo,
+        uang_muka: uangMuka,
+        metode_pembayaran: metodePembayaran
       })
     });
   },

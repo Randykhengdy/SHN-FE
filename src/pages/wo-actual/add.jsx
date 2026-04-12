@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Save, Plus, Trash2, Calendar, User, Package, FileText, Search } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Trash2, Calendar, User, Package, FileText, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAlert } from '@/hooks/useAlert';
 import PageLayout from '@/components/PageLayout';
 import { woActualService } from '@/services/woActualService';
@@ -17,6 +17,7 @@ import { generateWOActualPrintContent, openPrintDialog } from '@/lib/printUtils'
 import CustomAlert from '@/components/modals/CustomAlert';
 import { Switch } from '@/components/ui/switch';
 import PelaksanaActualModal from '@/components/modals/PelaksanaActualModal';
+import ReturnToRackModal from '@/components/modals/ReturnToRackModal';
 import { getPelaksanaOptions } from '@/services/masterDataService';
 import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
@@ -54,15 +55,59 @@ export default function AddWOActualPage() {
     return buildStorageUrl(trimmed);
   };
 
+  const getItemDetailsText = (planningItem) => {
+    if (!planningItem) return '';
+    let dimStr = planningItem.dimensi || '-';
+    const tb = planningItem.bentuk_barang?.tipe_barang || planningItem.bentuk_barang?.tipeBarang;
+    if (tb) {
+      const formatInt = (val) => Math.round(parseFloat(val) || 0);
+      const dims = [];
+      if (tb.diameter_luar && tb.diameter_dalam && tb.panjang) {
+        dims.push(formatInt(planningItem.diameter_luar), formatInt(planningItem.diameter_dalam), formatInt(planningItem.panjang));
+      } else if (tb.sisi1 && tb.sisi2 && tb.tebal && tb.panjang) {
+        dims.push(formatInt(planningItem.sisi1), formatInt(planningItem.sisi2), formatInt(planningItem.tebal), formatInt(planningItem.panjang));
+      } else if (tb.tebal && tb.lebar && tb.panjang) {
+        dims.push(formatInt(planningItem.tebal || planningItem.ketebalan), formatInt(planningItem.lebar), formatInt(planningItem.panjang));
+      } else if (tb.diameter && tb.panjang) {
+        dims.push(formatInt(planningItem.diameter), formatInt(planningItem.panjang));
+      } else {
+        if (tb.tebal) dims.push(formatInt(planningItem.tebal || planningItem.ketebalan));
+        if (tb.lebar) dims.push(formatInt(planningItem.lebar));
+        if (tb.panjang) dims.push(formatInt(planningItem.panjang));
+      }
+      if (dims.length > 0) dimStr = dims.join('x');
+    } else if (!planningItem.dimensi) {
+      dimStr = `${Math.round(parseFloat(planningItem.panjang) || 0)}x${Math.round(parseFloat(planningItem.lebar) || 0)}x${Math.round(parseFloat(planningItem.ketebalan || planningItem.tebal) || 0)}`;
+    }
+
+    let kodeBarang = '-';
+    if (planningItem.item_barang_group && planningItem.item_barang_group.kode_barang) {
+      kodeBarang = planningItem.item_barang_group.kode_barang;
+    } else if (planningItem.item_barang_group_name) {
+      kodeBarang = planningItem.item_barang_group_name;
+    } else if (planningItem.jenis_barang && planningItem.jenis_barang.kode_barang) {
+      kodeBarang = planningItem.jenis_barang.kode_barang;
+    } else if (planningItem.kode_barang) {
+      kodeBarang = planningItem.kode_barang;
+    }
+
+    const bentuk = planningItem.bentuk_barang?.nama || planningItem.bentuk_barang?.nama_bentuk_barang || '-';
+    const grade = planningItem.grade_barang?.nama || planningItem.grade_barang?.nama_grade_barang || '-';
+    const potong = planningItem.jenis_potongan || '-';
+
+    return `Kode Barang: ${kodeBarang} | Bentuk: ${bentuk} | Grade: ${grade} | Dimensi: ${dimStr} | Potong: ${potong}`;
+  };
+
   // Form State - Updated to match new API structure
   const [formData, setFormData] = useState({
     planningWorkOrderId: '',
     status: 'Pending', // Default status
     prioritas: 'MEDIUM', // Default priority
     catatan: '',
-    foto_bukti: null, // Will store base64 encoded image
-    foto_bukti_preview: null // For preview display
+    foto_bukti: [], // Will store array of base64 encoded images
+    foto_bukti_preview: [] // For preview display array
   });
+  const [planningCanvasImagesMap, setPlanningCanvasImagesMap] = useState({});
 
   // WO Planning Options
   const [woPlanningList, setWoPlanningList] = useState([]);
@@ -80,8 +125,10 @@ export default function AddWOActualPage() {
   const [pelaksanaModalOpen, setPelaksanaModalOpen] = useState(false);
   const [pelaksanaModalItemId, setPelaksanaModalItemId] = useState(null);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewSrc, setPreviewSrc] = useState('');
+  const [previewImages, setPreviewImages] = useState([]);
+  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [previewTitle, setPreviewTitle] = useState('');
+  const [previewDetails, setPreviewDetails] = useState('');
 
   // Loading State
   const [loading, setLoading] = useState(false);
@@ -94,6 +141,7 @@ export default function AddWOActualPage() {
   const [saveErrorDetails, setSaveErrorDetails] = useState([]);
   const [preValidateOpen, setPreValidateOpen] = useState(false);
   const [preValidateMessages, setPreValidateMessages] = useState([]);
+  const [returnToRackModalOpen, setReturnToRackModalOpen] = useState(false);
 
   // Load WO Planning options
   const loadWOPlanningOptions = useCallback(async () => {
@@ -126,6 +174,7 @@ export default function AddWOActualPage() {
     if (!planningId) {
       setSelectedWOPlanning(null);
       setActualItems({});
+      setPlanningCanvasImagesMap({});
       setFormData(prev => ({ ...prev, planningWorkOrderId: '' }));
       return;
     }
@@ -206,6 +255,49 @@ export default function AddWOActualPage() {
         ...prev,
         planningWorkOrderId: planningId
       }));
+
+      // Fetch canvas/design images for this WO Planning
+      try {
+        const imagesResp = await workOrderService.getWorkOrderImages(planningId);
+        const imagesData = imagesResp?.data || imagesResp || [];
+
+        let planningCanvasImages = [];
+        if (Array.isArray(imagesData)) {
+          planningCanvasImages = imagesData;
+        } else if (imagesData.images && Array.isArray(imagesData.images)) {
+          planningCanvasImages = imagesData.images;
+        }
+
+        const newImagesMap = {};
+        planningCanvasImages.forEach(img => {
+          // Identify which item this image belongs to. 
+          // The API returns wo_item_id which is the WorkOrderPlanningItem ID.
+          const itemIds = [
+            img.wo_item_id,
+            img.work_order_planning_item_id,
+            img.wo_plan_item_id,
+            img.work_order_item_id,
+            img.item_id,
+            img.wo_item_unique_id
+          ].filter(Boolean);
+
+          const uniqueIds = [...new Set(itemIds)];
+          uniqueIds.forEach(id => {
+            const key = String(id);
+            if (!newImagesMap[key]) newImagesMap[key] = [];
+            // Use saran_id or id for uniqueness check
+            const imgId = img.saran_id || img.id;
+            const exists = newImagesMap[key].some(existing => (existing.saran_id || existing.id) === imgId);
+
+            if (!exists || !imgId) {
+              newImagesMap[key].push(img);
+            }
+          });
+        });
+        setPlanningCanvasImagesMap(newImagesMap);
+      } catch (err) {
+        console.warn('Gagal mengambil gambar referensi WO Planning:', err);
+      }
 
       // Inisialisasi actualItems berdasarkan items planning (prefill assignments dari planning, hanya pelaksana yang editable)
       const initialItems = {};
@@ -311,44 +403,63 @@ export default function AddWOActualPage() {
     }));
   };
 
-  // Handle foto bukti upload (kirim sebagai string base64 sesuai validasi BE)
+  // Handle foto bukti upload (kirim sebagai string base64 array sesuai validasi BE)
   const handleFotoBuktiChange = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      showAlert('File tidak valid', 'Silakan pilih file gambar', 'error');
-      return;
-    }
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      showAlert('Ukuran file terlalu besar', 'Maksimal 5MB', 'error');
-      return;
-    }
-    const objectUrl = URL.createObjectURL(file);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const base64 = e.target.result; // data URL string
-      setFormData(prev => ({
-        ...prev,
-        foto_bukti: base64,
-        foto_bukti_preview: objectUrl
-      }));
-    };
-    reader.readAsDataURL(file);
+    const files = Array.from(event.target.files);
+    if (!files || files.length === 0) return;
+
+    const base64Array = [];
+    const previewArray = [];
+    let loadedCount = 0;
+
+    files.forEach((file) => {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        showAlert('File tidak valid', `File ${file.name} bukan gambar`, 'error');
+        loadedCount++;
+        return;
+      }
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        showAlert('Ukuran terlalu besar', `Maksimal 5MB untuk ${file.name}`, 'error');
+        loadedCount++;
+        return;
+      }
+
+      const objectUrl = URL.createObjectURL(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        base64Array.push(e.target.result);
+        previewArray.push(objectUrl);
+        loadedCount++;
+        if (loadedCount === files.length) {
+          setFormData(prev => ({
+            ...prev,
+            foto_bukti: [...(prev.foto_bukti || []), ...base64Array],
+            foto_bukti_preview: [...(prev.foto_bukti_preview || []), ...previewArray]
+          }));
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // reset input
+    event.target.value = '';
   };
 
-  // Remove foto bukti
-  const removeFotoBukti = () => {
+  // Remove foto bukti by index
+  const removeFotoBukti = (indexToRemove) => {
     try {
-      if (formData?.foto_bukti_preview) {
-        URL.revokeObjectURL(formData.foto_bukti_preview);
+      const previewUrl = formData.foto_bukti_preview[indexToRemove];
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
       }
     } catch (_) { }
+
     setFormData(prev => ({
       ...prev,
-      foto_bukti: null,
-      foto_bukti_preview: ''
+      foto_bukti: (prev.foto_bukti || []).filter((_, index) => index !== indexToRemove),
+      foto_bukti_preview: (prev.foto_bukti_preview || []).filter((_, index) => index !== indexToRemove)
     }));
   };
 
@@ -420,8 +531,8 @@ export default function AddWOActualPage() {
       if (totalActualQty <= 0) {
         messages.push('Qty Actual harus lebih dari 0');
       }
-      if (!formData.foto_bukti) {
-        messages.push('Gambar foto bukti header belum ada');
+      if (!formData.foto_bukti || formData.foto_bukti.length === 0) {
+        messages.push('Gambar foto bukti header belum ada (Minimal 1)');
       }
       const plannedItems = selectedWOPlanning?.items || [];
       const missingItemImages = [];
@@ -497,7 +608,7 @@ export default function AddWOActualPage() {
         // Jangan kirim actualWorkOrderId saat create; BE minta integer jika ada
         actualWorkOrderId: null,
         planningWorkOrderId: parseInt(formData.planningWorkOrderId, 10),
-        foto_bukti: typeof formData.foto_bukti === 'string' ? formData.foto_bukti : '',
+        foto_bukti: Array.isArray(formData.foto_bukti) ? formData.foto_bukti : [],
         items: itemsForSave
       };
 
@@ -637,7 +748,7 @@ export default function AddWOActualPage() {
           customer: selectedWOPlanning?.pelanggan || null,
           warehouse: selectedWOPlanning?.gudang || null,
           items: printItems,
-          parentImages: formData.foto_bukti ? [{ src: formData.foto_bukti }] : [],
+          parentImages: Array.isArray(formData.foto_bukti) ? formData.foto_bukti.map(b64 => ({ src: b64 })) : [],
         };
 
         setPendingPrintData(printData);
@@ -907,12 +1018,13 @@ export default function AddWOActualPage() {
                   {/* Foto Bukti Upload */}
                   <div>
                     <Label htmlFor="foto_bukti">Foto Bukti</Label>
-                    <div className="mt-2 flex items-center gap-4">
+                    <div className="mt-2 flex flex-col gap-4">
                       <div>
                         <input
                           id="foto_bukti"
                           type="file"
                           accept="image/*"
+                          multiple
                           onChange={handleFotoBuktiChange}
                           className="hidden"
                         />
@@ -920,25 +1032,38 @@ export default function AddWOActualPage() {
                           htmlFor="foto_bukti"
                           className="inline-flex items-center rounded-md border px-4 py-2 text-xs font-medium hover:bg-gray-50 cursor-pointer"
                         >
-                          Upload Foto
+                          Upload Foto (Bisa lebih dari 1)
                         </label>
                       </div>
-                      {formData.foto_bukti_preview && (
-                        <div className="relative inline-block">
-                          <img
-                            src={formData.foto_bukti_preview}
-                            alt="Preview foto bukti"
-                            className="w-20 h-20 object-cover rounded border"
-                          />
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="icon"
-                            onClick={removeFotoBukti}
-                            className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0"
-                          >
-                            ×
-                          </Button>
+
+                      {/* Tampilan Grid Preview */}
+                      {formData.foto_bukti_preview && formData.foto_bukti_preview.length > 0 && (
+                        <div className="flex flex-wrap gap-4">
+                          {formData.foto_bukti_preview.map((preview, idx) => (
+                            <div key={idx} className="relative inline-block">
+                              <img
+                                src={preview}
+                                alt={`Preview foto bukti ${idx + 1}`}
+                                className="w-20 h-20 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => {
+                                  setPreviewImages(formData.foto_bukti_preview);
+                                  setCurrentPreviewIndex(idx);
+                                  setPreviewTitle(`Foto Bukti Header: ${selectedWOPlanning?.nomor_wo || '-'}`);
+                                  setPreviewDetails('');
+                                  setPreviewOpen(true);
+                                }}
+                              />
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                onClick={() => removeFotoBukti(idx)}
+                                className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0"
+                              >
+                                ×
+                              </Button>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
@@ -976,6 +1101,7 @@ export default function AddWOActualPage() {
                         <TableHead className="text-center">Berat Actual (kg)</TableHead>
                         <TableHead className="text-center">Status</TableHead>
                         <TableHead className="text-center">Pelaksana</TableHead>
+                        <TableHead className="text-center">Visual Planning</TableHead>
                         <TableHead className="text-center">Foto Bukti (Item)</TableHead>
                         <TableHead className="text-center">Foto Sisa</TableHead>
                       </TableRow>
@@ -1020,6 +1146,36 @@ export default function AddWOActualPage() {
                               </Button>
                             </TableCell>
                             <TableCell className="text-center">
+                              {(() => {
+                                const canvases = planningCanvasImagesMap[String(planningItem.id)];
+                                if (canvases && canvases.length > 0) {
+                                  // Prefer canvas_image_base64, or fallback to file path
+                                  const imgObj = canvases[0];
+                                  const thumbnailSrc = resolveImageSrc(imgObj.canvas_image_base64 || imgObj.image_base64 || imgObj.canvas_file_path || imgObj.image_path);
+
+                                  return thumbnailSrc ? (
+                                    <div className="flex flex-col items-center gap-1">
+                                      <img
+                                        src={thumbnailSrc}
+                                        alt={`Preview Item #${planningItem.id}`}
+                                        className="w-12 h-12 object-cover rounded border cursor-pointer mx-auto hover:opacity-80"
+                                        onClick={() => {
+                                          const imageUrls = canvases.map(img => resolveImageSrc(img.canvas_image_base64 || img.image_base64 || img.canvas_file_path || img.image_path)).filter(Boolean);
+                                          setPreviewImages(imageUrls);
+                                          setCurrentPreviewIndex(0);
+                                          setPreviewTitle(`Desain Planning Item: ${planningItem.jenis_barang?.nama || '-'}`);
+                                          setPreviewDetails(getItemDetailsText(planningItem));
+                                          setPreviewOpen(true);
+                                        }}
+                                      />
+                                      {canvases.length > 1 && <span className="text-[10px] text-gray-500">+{canvases.length - 1} gambar</span>}
+                                    </div>
+                                  ) : <span className="text-xs text-gray-500">Render x</span>;
+                                }
+                                return <span className="text-xs text-gray-400">-</span>;
+                              })()}
+                            </TableCell>
+                            <TableCell className="text-center">
                               <div className="flex items-center justify-center gap-2">
                                 <input
                                   id={`item-foto-${planningItem.id}`}
@@ -1043,8 +1199,10 @@ export default function AddWOActualPage() {
                                     alt={`Foto Bukti Item #${planningItem.id}`}
                                     className="w-12 h-12 object-cover rounded border cursor-pointer"
                                     onClick={() => {
-                                      setPreviewSrc(actualItem.foto_bukti);
-                                      setPreviewTitle(`Foto Bukti Item #${planningItem.id}`);
+                                      setPreviewImages([actualItem.foto_bukti]);
+                                      setCurrentPreviewIndex(0);
+                                      setPreviewTitle(`Foto Bukti Item: ${planningItem.jenis_barang?.nama || '-'}`);
+                                      setPreviewDetails(getItemDetailsText(planningItem));
                                       setPreviewOpen(true);
                                     }}
                                   />
@@ -1077,8 +1235,10 @@ export default function AddWOActualPage() {
                                     alt={`Foto Sisa Item #${planningItem.id}`}
                                     className="w-12 h-12 object-cover rounded border cursor-pointer"
                                     onClick={() => {
-                                      setPreviewSrc(actualItem.foto_sisa_barang);
-                                      setPreviewTitle(`Foto Sisa Item #${planningItem.id}`);
+                                      setPreviewImages([actualItem.foto_sisa_barang]);
+                                      setCurrentPreviewIndex(0);
+                                      setPreviewTitle(`Foto Sisa Item: ${planningItem.jenis_barang?.nama || '-'}`);
+                                      setPreviewDetails(getItemDetailsText(planningItem));
                                       setPreviewOpen(true);
                                     }}
                                   />
@@ -1138,6 +1298,33 @@ export default function AddWOActualPage() {
                   <Badge variant="outline" className="text-xs">
                     {selectedWOPlanning.status}
                   </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Return to Rack - Shortcut */}
+          {selectedWOPlanning && (
+            <Card className="border-dashed border-blue-300 bg-blue-50/50">
+              <CardContent className="py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                      <Package className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-blue-900">Kembalikan Barang ke Rak</p>
+                      <p className="text-xs text-blue-600">Scan item barang dan rak untuk mencatat pengembalian</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-blue-300 text-blue-700 hover:bg-blue-100 items-center transition-colors"
+                    onClick={() => setReturnToRackModalOpen(true)}
+                  >
+                    Buka Scan →
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -1227,20 +1414,64 @@ export default function AddWOActualPage() {
         }}
       />
 
+      <ReturnToRackModal
+        open={returnToRackModalOpen}
+        onOpenChange={setReturnToRackModalOpen}
+      />
+
       {previewOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-sm font-medium text-gray-900">{previewTitle || 'Preview Foto Bukti'}</h3>
-              <button type="button" className="text-gray-500 hover:text-gray-700" onClick={() => setPreviewOpen(false)}>✕</button>
+              <h3 className="text-base font-semibold text-gray-900">{previewTitle || 'Preview Foto'}</h3>
+              <button type="button" className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-2 rounded-full transition-colors" onClick={() => setPreviewOpen(false)}>✕</button>
             </div>
-            <div className="p-4">
-              {previewSrc ? (
-                <img src={previewSrc} alt="Preview Foto Bukti" className="max-h-[70vh] w-full object-contain rounded" />
+
+            <div className="p-4 relative flex-1 flex flex-col justify-center items-center bg-gray-50/50 min-h-[400px]">
+              {previewImages && previewImages.length > 0 ? (
+                <>
+                  <div className="relative group w-full flex justify-center items-center">
+                    <img src={previewImages[currentPreviewIndex]} alt="Preview Foto" className="max-h-[60vh] max-w-full object-contain rounded-md shadow-sm border border-gray-200" />
+
+                    {previewImages.length > 1 && (
+                      <>
+                        <button
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white border border-gray-200 rounded-full p-2.5 shadow-md flex items-center justify-center transition-transform hover:scale-105"
+                          onClick={() => setCurrentPreviewIndex(prev => prev > 0 ? prev - 1 : previewImages.length - 1)}
+                        >
+                          <ChevronLeft className="w-6 h-6 text-gray-800" />
+                        </button>
+                        <button
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white border border-gray-200 rounded-full p-2.5 shadow-md flex items-center justify-center transition-transform hover:scale-105"
+                          onClick={() => setCurrentPreviewIndex(prev => prev < previewImages.length - 1 ? prev + 1 : 0)}
+                        >
+                          <ChevronRight className="w-6 h-6 text-gray-800" />
+                        </button>
+                        <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs font-medium px-3 py-1.5 rounded-full">
+                          {currentPreviewIndex + 1} / {previewImages.length}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </>
               ) : (
-                <div className="text-center text-gray-500 py-8">Tidak ada gambar</div>
+                <div className="text-center text-gray-500 flex flex-col items-center justify-center gap-2">
+                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                    <FileText className="w-6 h-6 text-gray-400" />
+                  </div>
+                  <span>Tidak ada gambar</span>
+                </div>
               )}
             </div>
+
+            {previewDetails && (
+              <div className="p-4 bg-gray-50 border-t border-gray-200">
+                <div className="text-sm text-gray-700 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                  <div className="font-semibold text-gray-900 mb-1 border-b pb-1">Detail Barang:</div>
+                  <div className="leading-relaxed whitespace-pre-wrap">{previewDetails.replace(/ \| /g, '\n')}</div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
