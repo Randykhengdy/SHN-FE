@@ -16,6 +16,7 @@ import { printRealisasiWOTanggalReport } from "@/lib/woActualReportPrint";
 import { financeInvoicePodService } from "@/services/financeInvoicePodService";
 import { printInvoicePenjualanTanggalReport } from "@/lib/invoiceReportPrint";
 import { printSalesGudangTanggalReport } from "@/lib/salesGudangReportPrint";
+import { printSalesGudangBarangReport } from "@/lib/salesGudangBarangReportPrint";
 
 function App() {
   // Gunakan hook untuk menangani navigasi dari Electron
@@ -26,6 +27,7 @@ function App() {
   const [isReportRealisasiWOTanggalOpen, setIsReportRealisasiWOTanggalOpen] = useState(false);
   const [isReportInvoicePenjualanTanggalOpen, setIsReportInvoicePenjualanTanggalOpen] = useState(false);
   const [isReportPenjualanGudangTanggalOpen, setIsReportPenjualanGudangTanggalOpen] = useState(false);
+  const [isReportPenjualanGudangBarangOpen, setIsReportPenjualanGudangBarangOpen] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
 
   // Listen for global alert events from utility functions (like tokenUtils)
@@ -85,6 +87,13 @@ function App() {
     if (window.electronAPI.onReportPenjualanGudangTanggal) {
       window.electronAPI.onReportPenjualanGudangTanggal(() => {
         setIsReportPenjualanGudangTanggalOpen(true);
+      });
+    }
+
+    // Listen for Penjualan / Gudang / Barang Report event
+    if (window.electronAPI.onReportPenjualanGudangBarang) {
+      window.electronAPI.onReportPenjualanGudangBarang(() => {
+        setIsReportPenjualanGudangBarangOpen(true);
       });
     }
 
@@ -216,6 +225,34 @@ function App() {
                 if (result.success && result.data) {
                   printSalesGudangTanggalReport(result.data, from, to);
                   setIsReportPenjualanGudangTanggalOpen(false);
+                } else {
+                  showAlert("Error", result.message || "Gagal mengambil data report", "error");
+                }
+              } catch (error) {
+                console.error("Error generating report:", error);
+                showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
+              } finally {
+                setReportLoading(false);
+              }
+            }}
+          />
+
+          <ReportDateRangeModal
+            open={isReportPenjualanGudangBarangOpen}
+            onOpenChange={setIsReportPenjualanGudangBarangOpen}
+            title="Report Penjualan / Gudang / Barang"
+            loading={reportLoading}
+            onGenerate={async (from, to) => {
+              try {
+                setReportLoading(true);
+                const result = await financeInvoicePodService.getReportPenjualanGudangBarangTanggal({
+                  tanggal_invoice_start: from,
+                  tanggal_invoice_end: to
+                });
+                
+                if (result.success && result.data) {
+                  printSalesGudangBarangReport(result.data, from, to);
+                  setIsReportPenjualanGudangBarangOpen(false);
                 } else {
                   showAlert("Error", result.message || "Gagal mengambil data report", "error");
                 }

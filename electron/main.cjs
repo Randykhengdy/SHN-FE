@@ -533,7 +533,14 @@ function createWindow() {
             { label: 'Invoice Penjualan / Tanggal', click: () => mainWindow.webContents.send('open-report-invoice-tanggal') },
             { label: 'Analisa SO, WO & Invoice / Periode', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Analisa SO, WO & Invoice / Periode sedang dalam pengembangan.', type: 'info' }) },
             { label: 'Penjualan / Gudang / Tanggal', click: () => mainWindow.webContents.send('open-report-penjualan-gudang-tanggal') },
-            { label: 'Penjualan / Gudang / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Penjualan / Gudang / Barang sedang dalam pengembangan.', type: 'info' }) },
+            {
+              label: 'Penjualan / Gudang / Barang',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-penjualan-gudang-barang');
+                }
+              }
+            },
             { label: 'Penjualan / Barang - Global', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Penjualan / Barang - Global sedang dalam pengembangan.', type: 'info' }) },
             { label: 'Penjualan / Pelanggan / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Penjualan / Pelanggan / Barang sedang dalam pengembangan.', type: 'info' }) },
             { label: 'Penjualan / Pelanggan / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Penjualan / Pelanggan / Tanggal sedang dalam pengembangan.', type: 'info' }) },
