@@ -61,5 +61,23 @@ export const financeInvoicePodService = {
         nomor_wo: nomorWo
       })
     });
+  },
+
+  // Get Report Invoice Penjualan / Tanggal
+  getReportInvoicePenjualanTanggal: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+    
+    if (params.page) queryParams.append('page', params.page);
+    if (params.per_page) queryParams.append('per_page', params.per_page);
+    if (params.tanggal_invoice_start) queryParams.append('tanggal_invoice_start', params.tanggal_invoice_start);
+    if (params.tanggal_invoice_end) queryParams.append('tanggal_invoice_end', params.tanggal_invoice_end);
+    if (params.sort) queryParams.append('sort', params.sort);
+    
+    const queryString = queryParams.toString();
+    const endpoint = `/invoice-pod/report${queryString ? `?${queryString}` : ''}`;
+    
+    return await request(endpoint, {
+      method: 'GET',
+    });
   }
 };

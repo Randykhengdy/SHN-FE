@@ -530,7 +530,7 @@ function createWindow() {
           submenu: [
             { label: 'SO / Tanggal', click: () => mainWindow.webContents.send('open-report-so-tanggal') },
             { label: 'Realisasi WO / Tanggal', click: () => mainWindow.webContents.send('open-report-wo-actual-tanggal') },
-            { label: 'Invoice Penjualan / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Invoice Penjualan / Tanggal sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Invoice Penjualan / Tanggal', click: () => mainWindow.webContents.send('open-report-invoice-tanggal') },
             { label: 'Analisa SO, WO & Invoice / Periode', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Analisa SO, WO & Invoice / Periode sedang dalam pengembangan.', type: 'info' }) },
             { label: 'Penjualan / Gudang / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Penjualan / Gudang / Tanggal sedang dalam pengembangan.', type: 'info' }) },
             { label: 'Penjualan / Gudang / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Penjualan / Gudang / Barang sedang dalam pengembangan.', type: 'info' }) },
