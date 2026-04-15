@@ -541,7 +541,14 @@ function createWindow() {
                 }
               }
             },
-            { label: 'Penjualan / Barang - Global', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Penjualan / Barang - Global sedang dalam pengembangan.', type: 'info' }) },
+            {
+              label: 'Penjualan / Barang - Global',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-penjualan-barang-global');
+                }
+              }
+            },
             { label: 'Penjualan / Pelanggan / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Penjualan / Pelanggan / Barang sedang dalam pengembangan.', type: 'info' }) },
             { label: 'Penjualan / Pelanggan / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Penjualan / Pelanggan / Tanggal sedang dalam pengembangan.', type: 'info' }) },
             { label: 'Invoice Piutang / Pelanggan', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Invoice Piutang / Pelanggan sedang dalam pengembangan.', type: 'info' }) },

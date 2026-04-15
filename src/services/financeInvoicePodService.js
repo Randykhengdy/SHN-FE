@@ -109,5 +109,20 @@ export const financeInvoicePodService = {
     return await request(endpoint, {
       method: 'GET',
     });
+  },
+
+  // Get Report Penjualan / Barang - Global
+  getReportPenjualanBarangGlobalTanggal: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+    
+    if (params.tanggal_invoice_start) queryParams.append('tanggal_invoice_start', params.tanggal_invoice_start);
+    if (params.tanggal_invoice_end) queryParams.append('tanggal_invoice_end', params.tanggal_invoice_end);
+    
+    const queryString = queryParams.toString();
+    const endpoint = `/invoice-pod/report-penjualan-barang-global${queryString ? `?${queryString}` : ''}`;
+    
+    return await request(endpoint, {
+      method: 'GET',
+    });
   }
 };
