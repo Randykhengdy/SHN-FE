@@ -572,9 +572,30 @@ function createWindow() {
             { label: 'Mutasi Antar Gudang / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Mutasi Antar Gudang / Tanggal sedang dalam pengembangan.', type: 'info' }) },
             { label: 'Rubah Status Barang (Utuh ke Potongan) / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Rubah Status Barang / Tanggal sedang dalam pengembangan.', type: 'info' }) },
             { label: 'Kartu Stock / Gudang / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Kartu Stock / Gudang / Barang sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Stock / Gudang / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Stock / Gudang / Barang sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Stock / Barang / Gudang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Stock / Barang / Gudang sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Stock Barang Global / Semua Gudang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Stock Barang Global sedang dalam pengembangan.', type: 'info' }) },
+            {
+              label: 'Stock / Gudang / Barang',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-stock-gudang-barang');
+                }
+              }
+            },
+            {
+              label: 'Stock / Barang / Gudang',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-stock-barang-gudang');
+                }
+              }
+            },
+            {
+              label: 'Stock Barang Global / Semua Gudang',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-stock-global');
+                }
+              }
+            },
             { label: 'Stock Opname / Gudang / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Stock Opname / Gudang / Barang sedang dalam pengembangan.', type: 'info' }) },
           ]
         },

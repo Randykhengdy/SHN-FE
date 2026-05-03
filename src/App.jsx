@@ -18,6 +18,10 @@ import { printInvoicePenjualanTanggalReport } from "@/lib/invoiceReportPrint";
 import { printSalesGudangTanggalReport } from "@/lib/salesGudangReportPrint";
 import { printSalesGudangBarangReport } from "@/lib/salesGudangBarangReportPrint";
 import { printSalesBarangGlobalReport } from "@/lib/salesBarangGlobalReportPrint";
+import { reportStockService } from "@/services/reportStockService";
+import { printStockGudangBarangReport } from "@/lib/stockGudangBarangReportPrint";
+import { printStockBarangGudangReport } from "@/lib/stockBarangGudangReportPrint";
+import { printStockGlobalReport } from "@/lib/stockGlobalReportPrint";
 
 function App() {
   // Gunakan hook untuk menangani navigasi dari Electron
@@ -30,6 +34,9 @@ function App() {
   const [isReportPenjualanGudangTanggalOpen, setIsReportPenjualanGudangTanggalOpen] = useState(false);
   const [isReportPenjualanGudangBarangOpen, setIsReportPenjualanGudangBarangOpen] = useState(false);
   const [isReportPenjualanBarangGlobalOpen, setIsReportPenjualanBarangGlobalOpen] = useState(false);
+  const [isReportStockGudangBarangOpen, setIsReportStockGudangBarangOpen] = useState(false);
+  const [isReportStockBarangGudangOpen, setIsReportStockBarangGudangOpen] = useState(false);
+  const [isReportStockGlobalOpen, setIsReportStockGlobalOpen] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
 
   // Listen for global alert events from utility functions (like tokenUtils)
@@ -103,6 +110,27 @@ function App() {
     if (window.electronAPI.onReportPenjualanBarangGlobal) {
       window.electronAPI.onReportPenjualanBarangGlobal(() => {
         setIsReportPenjualanBarangGlobalOpen(true);
+      });
+    }
+
+    // Listen for Stock / Gudang / Barang Report event
+    if (window.electronAPI.onReportStockGudangBarang) {
+      window.electronAPI.onReportStockGudangBarang(() => {
+        setIsReportStockGudangBarangOpen(true);
+      });
+    }
+
+    // Listen for Stock / Barang / Gudang Report event
+    if (window.electronAPI.onReportStockBarangGudang) {
+      window.electronAPI.onReportStockBarangGudang(() => {
+        setIsReportStockBarangGudangOpen(true);
+      });
+    }
+
+    // Listen for Stock Global / Semua Gudang Report event
+    if (window.electronAPI.onReportStockGlobal) {
+      window.electronAPI.onReportStockGlobal(() => {
+        setIsReportStockGlobalOpen(true);
       });
     }
 
@@ -290,6 +318,88 @@ function App() {
                 if (result.success && result.data) {
                   printSalesBarangGlobalReport(result.data, from, to);
                   setIsReportPenjualanBarangGlobalOpen(false);
+                } else {
+                  showAlert("Error", result.message || "Gagal mengambil data report", "error");
+                }
+              } catch (error) {
+                console.error("Error generating report:", error);
+                showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
+              } finally {
+                setReportLoading(false);
+              }
+            }}
+          />
+
+          <ReportDateRangeModal
+            open={isReportStockGudangBarangOpen}
+            onOpenChange={setIsReportStockGudangBarangOpen}
+            title="Report Stock / Gudang / Barang"
+            loading={reportLoading}
+            onGenerate={async (from, to) => {
+              try {
+                setReportLoading(true);
+                const result = await reportStockService.getStockGudangBarang({
+                  start_date: from,
+                  end_date: to,
+                });
+
+                if (result.status === 'success' && result.data) {
+                  printStockGudangBarangReport(result.data, from, to);
+                  setIsReportStockGudangBarangOpen(false);
+                } else {
+                  showAlert("Error", result.message || "Gagal mengambil data report", "error");
+                }
+              } catch (error) {
+                console.error("Error generating report:", error);
+                showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
+              } finally {
+                setReportLoading(false);
+              }
+            }}
+          />
+
+          <ReportDateRangeModal
+            open={isReportStockBarangGudangOpen}
+            onOpenChange={setIsReportStockBarangGudangOpen}
+            title="Report Stock / Barang / Gudang"
+            loading={reportLoading}
+            onGenerate={async (from, to) => {
+              try {
+                setReportLoading(true);
+                const result = await reportStockService.getStockBarangGudang({
+                  start_date: from,
+                  end_date: to,
+                });
+                if (result.status === 'success' && result.data) {
+                  printStockBarangGudangReport(result.data, from, to);
+                  setIsReportStockBarangGudangOpen(false);
+                } else {
+                  showAlert("Error", result.message || "Gagal mengambil data report", "error");
+                }
+              } catch (error) {
+                console.error("Error generating report:", error);
+                showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
+              } finally {
+                setReportLoading(false);
+              }
+            }}
+          />
+
+          <ReportDateRangeModal
+            open={isReportStockGlobalOpen}
+            onOpenChange={setIsReportStockGlobalOpen}
+            title="Report Stock Barang Global / Semua Gudang"
+            loading={reportLoading}
+            onGenerate={async (from, to) => {
+              try {
+                setReportLoading(true);
+                const result = await reportStockService.getStockGlobal({
+                  start_date: from,
+                  end_date: to,
+                });
+                if (result.status === 'success' && result.data) {
+                  printStockGlobalReport(result.data, from, to);
+                  setIsReportStockGlobalOpen(false);
                 } else {
                   showAlert("Error", result.message || "Gagal mengambil data report", "error");
                 }
