@@ -557,7 +557,14 @@ function createWindow() {
                 }
               }
             },
-            { label: 'Penjualan / Pelanggan / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Penjualan / Pelanggan / Tanggal sedang dalam pengembangan.', type: 'info' }) },
+            {
+              label: 'Penjualan / Pelanggan / Tanggal',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-penjualan-pelanggan-tanggal');
+                }
+              }
+            },
             { label: 'Invoice Piutang / Pelanggan', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Invoice Piutang / Pelanggan sedang dalam pengembangan.', type: 'info' }) },
             { label: 'Pembayaran Penjualan Uang Muka & Piutang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Pembayaran Penjualan Uang Muka & Piutang sedang dalam pengembangan.', type: 'info' }) },
           ]
