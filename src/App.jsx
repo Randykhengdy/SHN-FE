@@ -26,6 +26,7 @@ import { printFakturPembelianTanggalReport } from "@/lib/fakturPembelianTanggalR
 import { printPembelianGudangTanggalReport } from "@/lib/pembelianGudangTanggalReportPrint";
 import { printPembelianGudangBarangReport } from "@/lib/pembelianGudangBarangReportPrint";
 import { printPembelianBarangGlobalReport } from "@/lib/pembelianBarangGlobalReportPrint";
+import { printInvoiceHutangSupplierReport } from "@/lib/invoiceHutangSupplierReportPrint";
 import { printSalesBarangGlobalReport } from "@/lib/salesBarangGlobalReportPrint";
 import { reportStockService } from "@/services/reportStockService";
 import { printStockGudangBarangReport } from "@/lib/stockGudangBarangReportPrint";
@@ -51,6 +52,7 @@ function App() {
   const [isReportPembelianGudangTanggalOpen, setIsReportPembelianGudangTanggalOpen] = useState(false);
   const [isReportPembelianGudangBarangOpen, setIsReportPembelianGudangBarangOpen] = useState(false);
   const [isReportPembelianBarangGlobalOpen, setIsReportPembelianBarangGlobalOpen] = useState(false);
+  const [isReportInvoiceHutangSupplierOpen, setIsReportInvoiceHutangSupplierOpen] = useState(false);
   const [isReportStockGudangBarangOpen, setIsReportStockGudangBarangOpen] = useState(false);
   const [isReportStockBarangGudangOpen, setIsReportStockBarangGudangOpen] = useState(false);
   const [isReportStockGlobalOpen, setIsReportStockGlobalOpen] = useState(false);
@@ -183,6 +185,13 @@ function App() {
     if (window.electronAPI.onReportPembelianBarangGlobal) {
       window.electronAPI.onReportPembelianBarangGlobal(() => {
         setIsReportPembelianBarangGlobalOpen(true);
+      });
+    }
+
+    // Listen for Invoice Hutang / Supplier Report event
+    if (window.electronAPI.onReportInvoiceHutangSupplier) {
+      window.electronAPI.onReportInvoiceHutangSupplier(() => {
+        setIsReportInvoiceHutangSupplierOpen(true);
       });
     }
 
@@ -615,6 +624,34 @@ function App() {
                 if (result.success && result.data) {
                   printPembelianBarangGlobalReport(result.data, from, to);
                   setIsReportPembelianBarangGlobalOpen(false);
+                } else {
+                  showAlert("Error", result.message || "Gagal mengambil data report", "error");
+                }
+              } catch (error) {
+                console.error("Error generating report:", error);
+                showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
+              } finally {
+                setReportLoading(false);
+              }
+            }}
+          />
+
+          <ReportDateRangeModal
+            open={isReportInvoiceHutangSupplierOpen}
+            onOpenChange={setIsReportInvoiceHutangSupplierOpen}
+            title="Report Invoice Hutang / Supplier"
+            loading={reportLoading}
+            onGenerate={async (from, to) => {
+              try {
+                setReportLoading(true);
+                const result = await reportPurchaseService.getReportInvoiceHutangSupplier({
+                  tanggal_invoice_start: from,
+                  tanggal_invoice_end: to
+                });
+                
+                if (result.success && result.data) {
+                  printInvoiceHutangSupplierReport(result.data);
+                  setIsReportInvoiceHutangSupplierOpen(false);
                 } else {
                   showAlert("Error", result.message || "Gagal mengambil data report", "error");
                 }
