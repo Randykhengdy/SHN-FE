@@ -24,6 +24,8 @@ import { printPembayaranUMPiutangReport } from "@/lib/pembayaranUMPiutangReportP
 import { reportPurchaseService } from "@/services/reportPurchaseService";
 import { printFakturPembelianTanggalReport } from "@/lib/fakturPembelianTanggalReportPrint";
 import { printPembelianGudangTanggalReport } from "@/lib/pembelianGudangTanggalReportPrint";
+import { printPembelianGudangBarangReport } from "@/lib/pembelianGudangBarangReportPrint";
+import { printPembelianBarangGlobalReport } from "@/lib/pembelianBarangGlobalReportPrint";
 import { printSalesBarangGlobalReport } from "@/lib/salesBarangGlobalReportPrint";
 import { reportStockService } from "@/services/reportStockService";
 import { printStockGudangBarangReport } from "@/lib/stockGudangBarangReportPrint";
@@ -47,6 +49,8 @@ function App() {
   const [isReportPembayaranUMPiutangOpen, setIsReportPembayaranUMPiutangOpen] = useState(false);
   const [isReportFakturPembelianTanggalOpen, setIsReportFakturPembelianTanggalOpen] = useState(false);
   const [isReportPembelianGudangTanggalOpen, setIsReportPembelianGudangTanggalOpen] = useState(false);
+  const [isReportPembelianGudangBarangOpen, setIsReportPembelianGudangBarangOpen] = useState(false);
+  const [isReportPembelianBarangGlobalOpen, setIsReportPembelianBarangGlobalOpen] = useState(false);
   const [isReportStockGudangBarangOpen, setIsReportStockGudangBarangOpen] = useState(false);
   const [isReportStockBarangGudangOpen, setIsReportStockBarangGudangOpen] = useState(false);
   const [isReportStockGlobalOpen, setIsReportStockGlobalOpen] = useState(false);
@@ -165,6 +169,20 @@ function App() {
     if (window.electronAPI.onReportPembelianGudangTanggal) {
       window.electronAPI.onReportPembelianGudangTanggal(() => {
         setIsReportPembelianGudangTanggalOpen(true);
+      });
+    }
+
+    // Listen for Pembelian / Gudang / Barang Report event
+    if (window.electronAPI.onReportPembelianGudangBarang) {
+      window.electronAPI.onReportPembelianGudangBarang(() => {
+        setIsReportPembelianGudangBarangOpen(true);
+      });
+    }
+
+    // Listen for Pembelian Barang Global Report event
+    if (window.electronAPI.onReportPembelianBarangGlobal) {
+      window.electronAPI.onReportPembelianBarangGlobal(() => {
+        setIsReportPembelianBarangGlobalOpen(true);
       });
     }
 
@@ -541,6 +559,62 @@ function App() {
                 if (result.success && result.data) {
                   printPembelianGudangTanggalReport(result.data, from, to);
                   setIsReportPembelianGudangTanggalOpen(false);
+                } else {
+                  showAlert("Error", result.message || "Gagal mengambil data report", "error");
+                }
+              } catch (error) {
+                console.error("Error generating report:", error);
+                showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
+              } finally {
+                setReportLoading(false);
+              }
+            }}
+          />
+
+          <ReportDateRangeModal
+            open={isReportPembelianGudangBarangOpen}
+            onOpenChange={setIsReportPembelianGudangBarangOpen}
+            title="Report Pembelian / Gudang / Barang"
+            loading={reportLoading}
+            onGenerate={async (from, to) => {
+              try {
+                setReportLoading(true);
+                const result = await reportPurchaseService.getReportPembelianGudangBarang({
+                  tanggal_invoice_start: from,
+                  tanggal_invoice_end: to
+                });
+                
+                if (result.success && result.data) {
+                  printPembelianGudangBarangReport(result.data, from, to);
+                  setIsReportPembelianGudangBarangOpen(false);
+                } else {
+                  showAlert("Error", result.message || "Gagal mengambil data report", "error");
+                }
+              } catch (error) {
+                console.error("Error generating report:", error);
+                showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
+              } finally {
+                setReportLoading(false);
+              }
+            }}
+          />
+
+          <ReportDateRangeModal
+            open={isReportPembelianBarangGlobalOpen}
+            onOpenChange={setIsReportPembelianBarangGlobalOpen}
+            title="Report Pembelian Barang Global"
+            loading={reportLoading}
+            onGenerate={async (from, to) => {
+              try {
+                setReportLoading(true);
+                const result = await reportPurchaseService.getReportPembelianBarangGlobal({
+                  tanggal_invoice_start: from,
+                  tanggal_invoice_end: to
+                });
+                
+                if (result.success && result.data) {
+                  printPembelianBarangGlobalReport(result.data, from, to);
+                  setIsReportPembelianBarangGlobalOpen(false);
                 } else {
                   showAlert("Error", result.message || "Gagal mengambil data report", "error");
                 }
