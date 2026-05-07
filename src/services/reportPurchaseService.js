@@ -14,5 +14,20 @@ export const reportPurchaseService = {
     return await request(endpoint, {
       method: 'GET',
     });
+  },
+
+  // Get Report Pembelian / Gudang / Tanggal
+  getReportPembelianGudangTanggal: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+
+    if (params.tanggal_invoice_start) queryParams.append('tanggal_invoice_start', params.tanggal_invoice_start);
+    if (params.tanggal_invoice_end) queryParams.append('tanggal_invoice_end', params.tanggal_invoice_end);
+
+    const queryString = queryParams.toString();
+    const endpoint = `/report-purchase-order/report-pembelian-gudang-tanggal${queryString ? `?${queryString}` : ''}`;
+
+    return await request(endpoint, {
+      method: 'GET',
+    });
   }
 };

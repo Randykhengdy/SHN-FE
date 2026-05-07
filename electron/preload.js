@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onReportInvoicePiutangPelanggan: (callback) => ipcRenderer.on('open-report-invoice-piutang-pelanggan', callback),
   onReportPembayaranUMPiutang: (callback) => ipcRenderer.on('open-report-pembayaran-um-piutang', callback),
   onReportFakturPembelianTanggal: (callback) => ipcRenderer.on('open-report-faktur-pembelian-tanggal', callback),
+  onReportPembelianGudangTanggal: (callback) => ipcRenderer.on('open-report-pembelian-gudang-tanggal', callback),
   onReportStockGudangBarang: (callback) => ipcRenderer.on('open-report-stock-gudang-barang', callback),
   onReportStockBarangGudang: (callback) => ipcRenderer.on('open-report-stock-barang-gudang', callback),
   onReportStockGlobal: (callback) => ipcRenderer.on('open-report-stock-global', callback),
