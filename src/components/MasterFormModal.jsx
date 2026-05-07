@@ -317,7 +317,7 @@ export default function MasterFormModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 bg-white">
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-[250px]">
             {authError && (
               <AuthErrorAlert
                 onRefresh={() => {

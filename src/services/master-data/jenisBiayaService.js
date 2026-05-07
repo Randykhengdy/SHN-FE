@@ -79,5 +79,18 @@ export const jenisBiayaService = {
     }
     
     return request(`/jenis-biaya/with-trashed/trashed?${params}`, { method: "GET" });
+  },
+
+  async importData(formData) {
+    return request("/jenis-biaya/import", {
+      method: "POST",
+      body: formData,
+    });
+  },
+
+  async downloadTemplate() {
+    return request("/jenis-biaya/download-template", {
+      method: "GET",
+    });
   }
 };

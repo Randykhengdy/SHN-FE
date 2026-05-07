@@ -487,6 +487,7 @@ function createWindow() {
           { label: 'Rak', accelerator: 'CmdOrCtrl+Shift+8', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/rak') },
           { label: 'Pelaksana', accelerator: 'CmdOrCtrl+9', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/pelaksana') },
           { label: 'Jenis Transaksi Kas', accelerator: 'CmdOrCtrl+0', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/jenis-transaksi-kas') },
+          { label: 'Jenis Biaya', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/jenis-biaya') },
         ]
       }
     ] : []),
@@ -530,6 +531,14 @@ function createWindow() {
           submenu: [
             { label: 'SO / Tanggal', click: () => mainWindow.webContents.send('open-report-so-tanggal') },
             { label: 'Realisasi WO / Tanggal', click: () => mainWindow.webContents.send('open-report-wo-actual-tanggal') },
+            {
+              label: 'Kegiatan Pelaksana / Tanggal',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-kegiatan-pelaksana');
+                }
+              }
+            },
             { label: 'Invoice Penjualan / Tanggal', click: () => mainWindow.webContents.send('open-report-invoice-tanggal') },
             { label: 'Analisa SO, WO & Invoice / Periode', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Analisa SO, WO & Invoice / Periode sedang dalam pengembangan.', type: 'info' }) },
             { label: 'Penjualan / Gudang / Tanggal', click: () => mainWindow.webContents.send('open-report-penjualan-gudang-tanggal') },
@@ -603,10 +612,24 @@ function createWindow() {
         {
           label: 'Inventory',
           submenu: [
-            { label: 'Mutasi Stock / Gudang / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Mutasi Stock / Gudang / Tanggal sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Mutasi Antar Gudang / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Mutasi Antar Gudang / Tanggal sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Rubah Status Barang (Utuh ke Potongan) / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Rubah Status Barang / Tanggal sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Kartu Stock / Gudang / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Kartu Stock / Gudang / Barang sedang dalam pengembangan.', type: 'info' }) },
+            // { label: 'Mutasi Stock / Gudang / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Mutasi Stock / Gudang / Tanggal sedang dalam pengembangan.', type: 'info' }) },
+            {
+              label: 'Mutasi Antar Gudang / Tanggal',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-mutasi-antar-gudang');
+                }
+              }
+            },
+            {
+              label: 'Rubah Status Barang (Utuh ke Potongan) / Tanggal',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-rubah-status-barang');
+                }
+              }
+            },
+            // { label: 'Kartu Stock / Gudang / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Kartu Stock / Gudang / Barang sedang dalam pengembangan.', type: 'info' }) },
             {
               label: 'Stock / Gudang / Barang',
               click: () => {
@@ -631,7 +654,14 @@ function createWindow() {
                 }
               }
             },
-            { label: 'Stock Opname / Gudang / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Stock Opname / Gudang / Barang sedang dalam pengembangan.', type: 'info' }) },
+            {
+              label: 'Stock Opname / Gudang / Barang',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-stock-opname');
+                }
+              }
+            },
           ]
         },
         {
@@ -654,8 +684,22 @@ function createWindow() {
                 }
               }
             },
-            { label: 'Kegiatan Pelaksana Kerja / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Kegiatan Pelaksana Kerja sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Rekap Kegiatan Pelaksana', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Rekap Kegiatan Pelaksana sedang dalam pengembangan.', type: 'info' }) },
+            {
+              label: 'Kegiatan Pelaksana Kerja / Tanggal',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-kegiatan-pelaksana');
+                }
+              }
+            },
+            {
+              label: 'Rekap Kegiatan Pelaksana',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-rekap-kegiatan-pelaksana');
+                }
+              }
+            },
           ]
         }
       ]
