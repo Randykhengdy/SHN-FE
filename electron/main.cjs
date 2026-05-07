@@ -565,7 +565,14 @@ function createWindow() {
                 }
               }
             },
-            { label: 'Invoice Piutang / Pelanggan', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Invoice Piutang / Pelanggan sedang dalam pengembangan.', type: 'info' }) },
+            {
+              label: 'Invoice Piutang / Pelanggan',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-invoice-piutang-pelanggan');
+                }
+              }
+            },
             { label: 'Pembayaran Penjualan Uang Muka & Piutang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Pembayaran Penjualan Uang Muka & Piutang sedang dalam pengembangan.', type: 'info' }) },
           ]
         },
