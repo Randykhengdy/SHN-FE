@@ -540,7 +540,7 @@ function createWindow() {
               }
             },
             { label: 'Invoice Penjualan / Tanggal', click: () => mainWindow.webContents.send('open-report-invoice-tanggal') },
-            { label: 'Analisa SO, WO & Invoice / Periode', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Analisa SO, WO & Invoice / Periode sedang dalam pengembangan.', type: 'info' }) },
+            // { label: 'Analisa SO, WO & Invoice / Periode', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Analisa SO, WO & Invoice / Periode sedang dalam pengembangan.', type: 'info' }) },
             { label: 'Penjualan / Gudang / Tanggal', click: () => mainWindow.webContents.send('open-report-penjualan-gudang-tanggal') },
             {
               label: 'Penjualan / Gudang / Barang',
@@ -603,10 +603,38 @@ function createWindow() {
                 }
               }
             },
-            { label: 'Pembelian / Gudang / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Pembelian / Gudang / Tanggal sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Pembelian / Gudang / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Pembelian / Gudang / Barang sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Pembelian Barang Global', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Pembelian Barang Global sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Invoice Hutang / Supplier', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Invoice Hutang / Supplier sedang dalam pengembangan.', type: 'info' }) },
+            {
+              label: 'Pembelian / Gudang / Tanggal',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-pembelian-gudang-tanggal');
+                }
+              }
+            },
+            {
+              label: 'Pembelian / Gudang / Barang',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-pembelian-gudang-barang');
+                }
+              }
+            },
+            {
+              label: 'Pembelian Barang Global',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-pembelian-barang-global');
+                }
+              }
+            },
+            {
+              label: 'Invoice Hutang / Supplier',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-invoice-hutang-supplier');
+                }
+              }
+            },
           ]
         },
         {

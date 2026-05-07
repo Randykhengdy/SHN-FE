@@ -28,7 +28,7 @@ export default function Header() {
     if (window.electronAPI && typeof window.electronAPI.getVersion === 'function') {
       window.electronAPI.getVersion().then(v => {
         if (v) setAppVersion(String(v));
-      }).catch(() => {});
+      }).catch(() => { });
     }
   }, []);
 
@@ -65,9 +65,9 @@ export default function Header() {
   const handleLogout = () => {
     // Clear all tokens using tokenStorage system
     clearAllTokens();
-    
+
     console.log('🚪 Logout completed, redirecting to login...');
-    
+
     // Always use navigate untuk konsistensi routing
     navigate("/", { replace: true });
   };
@@ -94,16 +94,16 @@ export default function Header() {
     if (!roles || roles.length === 0) {
       return "Loading roles...";
     }
-    
+
     if (typeof roles === 'string') {
       return roles.charAt(0).toUpperCase() + roles.slice(1);
     }
-    
+
     const formatted = roles.map(role => {
       if (typeof role === 'object' && role.name) return role.name;
       return String(role).charAt(0).toUpperCase() + String(role).slice(1);
     }).join(", ");
-    
+
     return formatted;
   };
 
@@ -112,7 +112,7 @@ export default function Header() {
       {/* Logo dan Brand */}
       <div className="flex items-center">
         <img src={logo} alt="Logo" className="w-9 h-9 rounded-lg mr-3" />
-        <div className="font-bold text-lg text-gray-800">SURYALOGAMJAYA</div>
+        <div className="font-bold text-lg text-gray-800">SURYA LOGAM JAYA</div>
       </div>
 
       {/* User Info dan Logout */}
@@ -136,15 +136,15 @@ export default function Header() {
                 {formatRoles(userInfo.roles)}
               </div>
             </div>
-            
+
             {/* Divider */}
             <div className="w-px h-6 bg-gray-300"></div>
-            
+
             <div className="text-gray-500 text-xs">v{appVersion}</div>
-            
+
             {/* Divider */}
             <div className="w-px h-6 bg-gray-300"></div>
-            
+
             {/* Update indicator */}
             <div className="flex items-center gap-2">
               {updateState.type === 'checking' && (
@@ -169,7 +169,7 @@ export default function Header() {
               )}
               {updateState.type === 'progress' && window.electronAPI && (
                 <button
-                  onClick={() => { try { window.electronAPI.cancelDownloadUpdate(); } catch (_) {} }}
+                  onClick={() => { try { window.electronAPI.cancelDownloadUpdate(); } catch (_) { } }}
                   className="border border-gray-300 rounded-md px-2 py-1 text-xs text-gray-700 hover:bg-gray-100"
                 >
                   Cancel
@@ -188,7 +188,7 @@ export default function Header() {
             >
               {refreshing ? 'Refreshing...' : 'Refresh Role'}
             </button>
-            
+
             {/* Logout Button */}
             <button
               onClick={handleLogout}
@@ -212,7 +212,7 @@ export default function Header() {
       </div>
 
       {confirmData && (
-        <AlertDialog.Root open onOpenChange={(open) => { if (!open) { window.electronAPI.sendConfirmResult(confirmData.id, false); setConfirmData(null);} }}>
+        <AlertDialog.Root open onOpenChange={(open) => { if (!open) { window.electronAPI.sendConfirmResult(confirmData.id, false); setConfirmData(null); } }}>
           <AlertDialog.Portal>
             <AlertDialog.Overlay className="fixed inset-0 bg-black/40" />
             <AlertDialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[360px] rounded-lg bg-white shadow-xl p-4">
