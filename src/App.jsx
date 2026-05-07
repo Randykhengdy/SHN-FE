@@ -20,6 +20,7 @@ import { printSalesGudangBarangReport } from "@/lib/salesGudangBarangReportPrint
 import { printSalesPelangganBarangReport } from "@/lib/salesPelangganBarangReportPrint";
 import { printSalesPelangganTanggalReport } from "@/lib/salesPelangganTanggalReportPrint";
 import { printInvoicePiutangPelangganReport } from "@/lib/invoicePiutangPelangganReportPrint";
+import { printPembayaranUMPiutangReport } from "@/lib/pembayaranUMPiutangReportPrint";
 import { printSalesBarangGlobalReport } from "@/lib/salesBarangGlobalReportPrint";
 import { reportStockService } from "@/services/reportStockService";
 import { printStockGudangBarangReport } from "@/lib/stockGudangBarangReportPrint";
@@ -40,6 +41,7 @@ function App() {
   const [isReportPenjualanPelangganBarangOpen, setIsReportPenjualanPelangganBarangOpen] = useState(false);
   const [isReportPenjualanPelangganTanggalOpen, setIsReportPenjualanPelangganTanggalOpen] = useState(false);
   const [isReportInvoicePiutangPelangganOpen, setIsReportInvoicePiutangPelangganOpen] = useState(false);
+  const [isReportPembayaranUMPiutangOpen, setIsReportPembayaranUMPiutangOpen] = useState(false);
   const [isReportStockGudangBarangOpen, setIsReportStockGudangBarangOpen] = useState(false);
   const [isReportStockBarangGudangOpen, setIsReportStockBarangGudangOpen] = useState(false);
   const [isReportStockGlobalOpen, setIsReportStockGlobalOpen] = useState(false);
@@ -137,6 +139,13 @@ function App() {
     if (window.electronAPI.onReportInvoicePiutangPelanggan) {
       window.electronAPI.onReportInvoicePiutangPelanggan(() => {
         setIsReportInvoicePiutangPelangganOpen(true);
+      });
+    }
+
+    // Listen for Pembayaran Penjualan Uang Muka & Piutang Report event
+    if (window.electronAPI.onReportPembayaranUMPiutang) {
+      window.electronAPI.onReportPembayaranUMPiutang(() => {
+        setIsReportPembayaranUMPiutangOpen(true);
       });
     }
 
@@ -429,6 +438,34 @@ function App() {
                 if (result.success && result.data) {
                   printInvoicePiutangPelangganReport(result.data);
                   setIsReportInvoicePiutangPelangganOpen(false);
+                } else {
+                  showAlert("Error", result.message || "Gagal mengambil data report", "error");
+                }
+              } catch (error) {
+                console.error("Error generating report:", error);
+                showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
+              } finally {
+                setReportLoading(false);
+              }
+            }}
+          />
+
+          <ReportDateRangeModal
+            open={isReportPembayaranUMPiutangOpen}
+            onOpenChange={setIsReportPembayaranUMPiutangOpen}
+            title="Report Pembayaran Penjualan Uang Muka & Piutang"
+            loading={reportLoading}
+            onGenerate={async (from, to) => {
+              try {
+                setReportLoading(true);
+                const result = await financeInvoicePodService.getReportPembayaranPenjualanUMPiutang({
+                  tanggal_invoice_start: from,
+                  tanggal_invoice_end: to
+                });
+                
+                if (result.success && result.data) {
+                  printPembayaranUMPiutangReport(result.data, from, to);
+                  setIsReportPembayaranUMPiutangOpen(false);
                 } else {
                   showAlert("Error", result.message || "Gagal mengambil data report", "error");
                 }

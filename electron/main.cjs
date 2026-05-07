@@ -573,7 +573,14 @@ function createWindow() {
                 }
               }
             },
-            { label: 'Pembayaran Penjualan Uang Muka & Piutang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Pembayaran Penjualan Uang Muka & Piutang sedang dalam pengembangan.', type: 'info' }) },
+            {
+              label: 'Pembayaran Penjualan Uang Muka & Piutang',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-pembayaran-um-piutang');
+                }
+              }
+            },
           ]
         },
         {
