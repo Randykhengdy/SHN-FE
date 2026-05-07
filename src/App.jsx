@@ -17,6 +17,12 @@ import { financeInvoicePodService } from "@/services/financeInvoicePodService";
 import { printInvoicePenjualanTanggalReport } from "@/lib/invoiceReportPrint";
 import { printSalesGudangTanggalReport } from "@/lib/salesGudangReportPrint";
 import { printSalesGudangBarangReport } from "@/lib/salesGudangBarangReportPrint";
+import { printSalesPelangganBarangReport } from "@/lib/salesPelangganBarangReportPrint";
+import { printSalesPelangganTanggalReport } from "@/lib/salesPelangganTanggalReportPrint";
+import { printInvoicePiutangPelangganReport } from "@/lib/invoicePiutangPelangganReportPrint";
+import { printPembayaranUMPiutangReport } from "@/lib/pembayaranUMPiutangReportPrint";
+import { reportPurchaseService } from "@/services/reportPurchaseService";
+import { printFakturPembelianTanggalReport } from "@/lib/fakturPembelianTanggalReportPrint";
 import { printSalesBarangGlobalReport } from "@/lib/salesBarangGlobalReportPrint";
 import { reportStockService } from "@/services/reportStockService";
 import { printStockGudangBarangReport } from "@/lib/stockGudangBarangReportPrint";
@@ -36,6 +42,11 @@ function App() {
   const [isReportPenjualanGudangTanggalOpen, setIsReportPenjualanGudangTanggalOpen] = useState(false);
   const [isReportPenjualanGudangBarangOpen, setIsReportPenjualanGudangBarangOpen] = useState(false);
   const [isReportPenjualanBarangGlobalOpen, setIsReportPenjualanBarangGlobalOpen] = useState(false);
+  const [isReportPenjualanPelangganBarangOpen, setIsReportPenjualanPelangganBarangOpen] = useState(false);
+  const [isReportPenjualanPelangganTanggalOpen, setIsReportPenjualanPelangganTanggalOpen] = useState(false);
+  const [isReportInvoicePiutangPelangganOpen, setIsReportInvoicePiutangPelangganOpen] = useState(false);
+  const [isReportPembayaranUMPiutangOpen, setIsReportPembayaranUMPiutangOpen] = useState(false);
+  const [isReportFakturPembelianTanggalOpen, setIsReportFakturPembelianTanggalOpen] = useState(false);
   const [isReportStockGudangBarangOpen, setIsReportStockGudangBarangOpen] = useState(false);
   const [isReportStockBarangGudangOpen, setIsReportStockBarangGudangOpen] = useState(false);
   const [isReportStockGlobalOpen, setIsReportStockGlobalOpen] = useState(false);
@@ -113,6 +124,41 @@ function App() {
     if (window.electronAPI.onReportPenjualanBarangGlobal) {
       window.electronAPI.onReportPenjualanBarangGlobal(() => {
         setIsReportPenjualanBarangGlobalOpen(true);
+      });
+    }
+
+    // Listen for Penjualan / Pelanggan / Barang Report event
+    if (window.electronAPI.onReportPenjualanPelangganBarang) {
+      window.electronAPI.onReportPenjualanPelangganBarang(() => {
+        setIsReportPenjualanPelangganBarangOpen(true);
+      });
+    }
+
+    // Listen for Penjualan / Pelanggan / Tanggal Report event
+    if (window.electronAPI.onReportPenjualanPelangganTanggal) {
+      window.electronAPI.onReportPenjualanPelangganTanggal(() => {
+        setIsReportPenjualanPelangganTanggalOpen(true);
+      });
+    }
+
+    // Listen for Invoice Piutang / Pelanggan Report event
+    if (window.electronAPI.onReportInvoicePiutangPelanggan) {
+      window.electronAPI.onReportInvoicePiutangPelanggan(() => {
+        setIsReportInvoicePiutangPelangganOpen(true);
+      });
+    }
+
+    // Listen for Pembayaran Penjualan Uang Muka & Piutang Report event
+    if (window.electronAPI.onReportPembayaranUMPiutang) {
+      window.electronAPI.onReportPembayaranUMPiutang(() => {
+        setIsReportPembayaranUMPiutangOpen(true);
+      });
+    }
+
+    // Listen for Faktur Pembelian / Tanggal Report event
+    if (window.electronAPI.onReportFakturPembelianTanggal) {
+      window.electronAPI.onReportFakturPembelianTanggal(() => {
+        setIsReportFakturPembelianTanggalOpen(true);
       });
     }
 
@@ -328,6 +374,146 @@ function App() {
                 if (result.success && result.data) {
                   printSalesBarangGlobalReport(result.data, from, to);
                   setIsReportPenjualanBarangGlobalOpen(false);
+                } else {
+                  showAlert("Error", result.message || "Gagal mengambil data report", "error");
+                }
+              } catch (error) {
+                console.error("Error generating report:", error);
+                showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
+              } finally {
+                setReportLoading(false);
+              }
+            }}
+          />
+
+          <ReportDateRangeModal
+            open={isReportPenjualanPelangganBarangOpen}
+            onOpenChange={setIsReportPenjualanPelangganBarangOpen}
+            title="Report Penjualan / Pelanggan / Barang"
+            loading={reportLoading}
+            onGenerate={async (from, to) => {
+              try {
+                setReportLoading(true);
+                const result = await financeInvoicePodService.getReportPenjualanPelangganBarangTanggal({
+                  tanggal_invoice_start: from,
+                  tanggal_invoice_end: to
+                });
+                
+                if (result.success && result.data) {
+                  printSalesPelangganBarangReport(result.data, from, to);
+                  setIsReportPenjualanPelangganBarangOpen(false);
+                } else {
+                  showAlert("Error", result.message || "Gagal mengambil data report", "error");
+                }
+              } catch (error) {
+                console.error("Error generating report:", error);
+                showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
+              } finally {
+                setReportLoading(false);
+              }
+            }}
+          />
+
+          <ReportDateRangeModal
+            open={isReportPenjualanPelangganTanggalOpen}
+            onOpenChange={setIsReportPenjualanPelangganTanggalOpen}
+            title="Report Penjualan / Pelanggan / Tanggal"
+            loading={reportLoading}
+            onGenerate={async (from, to) => {
+              try {
+                setReportLoading(true);
+                const result = await financeInvoicePodService.getReportPenjualanPelangganTanggal({
+                  tanggal_invoice_start: from,
+                  tanggal_invoice_end: to
+                });
+                
+                if (result.success && result.data) {
+                  printSalesPelangganTanggalReport(result.data, from, to);
+                  setIsReportPenjualanPelangganTanggalOpen(false);
+                } else {
+                  showAlert("Error", result.message || "Gagal mengambil data report", "error");
+                }
+              } catch (error) {
+                console.error("Error generating report:", error);
+                showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
+              } finally {
+                setReportLoading(false);
+              }
+            }}
+          />
+
+          <ReportDateRangeModal
+            open={isReportInvoicePiutangPelangganOpen}
+            onOpenChange={setIsReportInvoicePiutangPelangganOpen}
+            title="Report Invoice Piutang / Pelanggan"
+            loading={reportLoading}
+            onGenerate={async (from, to) => {
+              try {
+                setReportLoading(true);
+                const result = await financeInvoicePodService.getReportInvoicePiutangPelanggan({
+                  tanggal_invoice_start: from,
+                  tanggal_invoice_end: to
+                });
+                
+                if (result.success && result.data) {
+                  printInvoicePiutangPelangganReport(result.data);
+                  setIsReportInvoicePiutangPelangganOpen(false);
+                } else {
+                  showAlert("Error", result.message || "Gagal mengambil data report", "error");
+                }
+              } catch (error) {
+                console.error("Error generating report:", error);
+                showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
+              } finally {
+                setReportLoading(false);
+              }
+            }}
+          />
+
+          <ReportDateRangeModal
+            open={isReportPembayaranUMPiutangOpen}
+            onOpenChange={setIsReportPembayaranUMPiutangOpen}
+            title="Report Pembayaran Penjualan Uang Muka & Piutang"
+            loading={reportLoading}
+            onGenerate={async (from, to) => {
+              try {
+                setReportLoading(true);
+                const result = await financeInvoicePodService.getReportPembayaranPenjualanUMPiutang({
+                  tanggal_invoice_start: from,
+                  tanggal_invoice_end: to
+                });
+                
+                if (result.success && result.data) {
+                  printPembayaranUMPiutangReport(result.data, from, to);
+                  setIsReportPembayaranUMPiutangOpen(false);
+                } else {
+                  showAlert("Error", result.message || "Gagal mengambil data report", "error");
+                }
+              } catch (error) {
+                console.error("Error generating report:", error);
+                showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
+              } finally {
+                setReportLoading(false);
+              }
+            }}
+          />
+
+          <ReportDateRangeModal
+            open={isReportFakturPembelianTanggalOpen}
+            onOpenChange={setIsReportFakturPembelianTanggalOpen}
+            title="Report Faktur Pembelian / Tanggal"
+            loading={reportLoading}
+            onGenerate={async (from, to) => {
+              try {
+                setReportLoading(true);
+                const result = await reportPurchaseService.getReportFakturPembelianTanggal({
+                  tanggal_invoice_start: from,
+                  tanggal_invoice_end: to
+                });
+                
+                if (result.success && result.data) {
+                  printFakturPembelianTanggalReport(result.data, from, to);
+                  setIsReportFakturPembelianTanggalOpen(false);
                 } else {
                   showAlert("Error", result.message || "Gagal mengambil data report", "error");
                 }

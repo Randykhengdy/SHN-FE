@@ -66,16 +66,16 @@ export const financeInvoicePodService = {
   // Get Report Invoice Penjualan / Tanggal
   getReportInvoicePenjualanTanggal: async (params = {}) => {
     const queryParams = new URLSearchParams();
-    
+
     if (params.page) queryParams.append('page', params.page);
     if (params.per_page) queryParams.append('per_page', params.per_page);
     if (params.tanggal_invoice_start) queryParams.append('tanggal_invoice_start', params.tanggal_invoice_start);
     if (params.tanggal_invoice_end) queryParams.append('tanggal_invoice_end', params.tanggal_invoice_end);
     if (params.sort) queryParams.append('sort', params.sort);
-    
+
     const queryString = queryParams.toString();
     const endpoint = `/invoice-pod/report${queryString ? `?${queryString}` : ''}`;
-    
+
     return await request(endpoint, {
       method: 'GET',
     });
@@ -84,13 +84,13 @@ export const financeInvoicePodService = {
   // Get Report Penjualan / Gudang / Tanggal
   getReportPenjualanGudangTanggal: async (params = {}) => {
     const queryParams = new URLSearchParams();
-    
+
     if (params.tanggal_invoice_start) queryParams.append('tanggal_invoice_start', params.tanggal_invoice_start);
     if (params.tanggal_invoice_end) queryParams.append('tanggal_invoice_end', params.tanggal_invoice_end);
-    
+
     const queryString = queryParams.toString();
-    const endpoint = `/invoice-pod/report-penjualan-gudang${queryString ? `?${queryString}` : ''}`;
-    
+    const endpoint = `/report-sales-order/report-penjualan-gudang${queryString ? `?${queryString}` : ''}`;
+
     return await request(endpoint, {
       method: 'GET',
     });
@@ -99,13 +99,43 @@ export const financeInvoicePodService = {
   // Get Report Penjualan / Gudang / Barang
   getReportPenjualanGudangBarangTanggal: async (params = {}) => {
     const queryParams = new URLSearchParams();
-    
+
     if (params.tanggal_invoice_start) queryParams.append('tanggal_invoice_start', params.tanggal_invoice_start);
     if (params.tanggal_invoice_end) queryParams.append('tanggal_invoice_end', params.tanggal_invoice_end);
-    
+
     const queryString = queryParams.toString();
-    const endpoint = `/invoice-pod/report-penjualan-gudang-barang${queryString ? `?${queryString}` : ''}`;
-    
+    const endpoint = `/report-sales-order/report-penjualan-gudang-barang${queryString ? `?${queryString}` : ''}`;
+
+    return await request(endpoint, {
+      method: 'GET',
+    });
+  },
+
+  // Get Report Penjualan / Pelanggan / Barang
+  getReportPenjualanPelangganBarangTanggal: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+
+    if (params.tanggal_invoice_start) queryParams.append('tanggal_invoice_start', params.tanggal_invoice_start);
+    if (params.tanggal_invoice_end) queryParams.append('tanggal_invoice_end', params.tanggal_invoice_end);
+
+    const queryString = queryParams.toString();
+    const endpoint = `/report-sales-order/report-penjualan-pelanggan-barang${queryString ? `?${queryString}` : ''}`;
+
+    return await request(endpoint, {
+      method: 'GET',
+    });
+  },
+
+  // Get Report Penjualan / Pelanggan / Tanggal
+  getReportPenjualanPelangganTanggal: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+
+    if (params.tanggal_invoice_start) queryParams.append('tanggal_invoice_start', params.tanggal_invoice_start);
+    if (params.tanggal_invoice_end) queryParams.append('tanggal_invoice_end', params.tanggal_invoice_end);
+
+    const queryString = queryParams.toString();
+    const endpoint = `/report-sales-order/report-penjualan-pelanggan-tanggal${queryString ? `?${queryString}` : ''}`;
+
     return await request(endpoint, {
       method: 'GET',
     });
@@ -114,13 +144,43 @@ export const financeInvoicePodService = {
   // Get Report Penjualan / Barang - Global
   getReportPenjualanBarangGlobalTanggal: async (params = {}) => {
     const queryParams = new URLSearchParams();
-    
+
     if (params.tanggal_invoice_start) queryParams.append('tanggal_invoice_start', params.tanggal_invoice_start);
     if (params.tanggal_invoice_end) queryParams.append('tanggal_invoice_end', params.tanggal_invoice_end);
-    
+
     const queryString = queryParams.toString();
-    const endpoint = `/invoice-pod/report-penjualan-barang-global${queryString ? `?${queryString}` : ''}`;
-    
+    const endpoint = `/report-sales-order/report-penjualan-barang-global${queryString ? `?${queryString}` : ''}`;
+
+    return await request(endpoint, {
+      method: 'GET',
+    });
+  },
+
+  // Get Report Invoice Piutang / Pelanggan
+  getReportInvoicePiutangPelanggan: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+
+    if (params.tanggal_invoice_start) queryParams.append('tanggal_invoice_start', params.tanggal_invoice_start);
+    if (params.tanggal_invoice_end) queryParams.append('tanggal_invoice_end', params.tanggal_invoice_end);
+
+    const queryString = queryParams.toString();
+    const endpoint = `/report-sales-order/report-invoice-piutang-pelanggan${queryString ? `?${queryString}` : ''}`;
+
+    return await request(endpoint, {
+      method: 'GET',
+    });
+  },
+
+  // Get Report Pembayaran Penjualan Uang Muka & Piutang
+  getReportPembayaranPenjualanUMPiutang: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+
+    if (params.tanggal_invoice_start) queryParams.append('tanggal_invoice_start', params.tanggal_invoice_start);
+    if (params.tanggal_invoice_end) queryParams.append('tanggal_invoice_end', params.tanggal_invoice_end);
+
+    const queryString = queryParams.toString();
+    const endpoint = `/report-sales-order/report-pembayaran-penjualan-um-piutang${queryString ? `?${queryString}` : ''}`;
+
     return await request(endpoint, {
       method: 'GET',
     });

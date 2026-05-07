@@ -549,16 +549,51 @@ function createWindow() {
                 }
               }
             },
-            { label: 'Penjualan / Pelanggan / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Penjualan / Pelanggan / Barang sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Penjualan / Pelanggan / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Penjualan / Pelanggan / Tanggal sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Invoice Piutang / Pelanggan', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Invoice Piutang / Pelanggan sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Pembayaran Penjualan Uang Muka & Piutang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Pembayaran Penjualan Uang Muka & Piutang sedang dalam pengembangan.', type: 'info' }) },
+            {
+              label: 'Penjualan / Pelanggan / Barang',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-penjualan-pelanggan-barang');
+                }
+              }
+            },
+            {
+              label: 'Penjualan / Pelanggan / Tanggal',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-penjualan-pelanggan-tanggal');
+                }
+              }
+            },
+            {
+              label: 'Invoice Piutang / Pelanggan',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-invoice-piutang-pelanggan');
+                }
+              }
+            },
+            {
+              label: 'Pembayaran Penjualan Uang Muka & Piutang',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-pembayaran-um-piutang');
+                }
+              }
+            },
           ]
         },
         {
           label: 'Purchasing',
           submenu: [
-            { label: 'Faktur Pembelian / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Faktur Pembelian / Tanggal sedang dalam pengembangan.', type: 'info' }) },
+            {
+              label: 'Faktur Pembelian / Tanggal',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-faktur-pembelian-tanggal');
+                }
+              }
+            },
             { label: 'Pembelian / Gudang / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Pembelian / Gudang / Tanggal sedang dalam pengembangan.', type: 'info' }) },
             { label: 'Pembelian / Gudang / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Pembelian / Gudang / Barang sedang dalam pengembangan.', type: 'info' }) },
             { label: 'Pembelian Barang Global', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Pembelian Barang Global sedang dalam pengembangan.', type: 'info' }) },

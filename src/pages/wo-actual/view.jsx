@@ -499,7 +499,6 @@ export default function ViewWOActualPage() {
             // Add images
             afterImages: itemImagesMap[item.id] ? [{ src: itemImagesMap[item.id] }] : [],
             sisaImages: itemSisaImagesMap[item.id] ? [{ src: itemSisaImagesMap[item.id] }] : [],
-            beforeImages: beforeImages
           };
         }),
 
