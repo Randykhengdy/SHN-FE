@@ -611,7 +611,14 @@ function createWindow() {
         {
           label: 'Performance',
           submenu: [
-            { label: 'Waktu Proses SO & WO / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Waktu Proses SO & WO sedang dalam pengembangan.', type: 'info' }) },
+            {
+              label: 'Waktu Proses SO & WO / Tanggal',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-tracking-so-wo');
+                }
+              }
+            },
             { label: 'Kegiatan Pelaksana Kerja / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Kegiatan Pelaksana Kerja sedang dalam pengembangan.', type: 'info' }) },
             { label: 'Rekap Kegiatan Pelaksana', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Rekap Kegiatan Pelaksana sedang dalam pengembangan.', type: 'info' }) },
           ]

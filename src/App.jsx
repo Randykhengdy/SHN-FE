@@ -22,6 +22,8 @@ import { reportStockService } from "@/services/reportStockService";
 import { printStockGudangBarangReport } from "@/lib/stockGudangBarangReportPrint";
 import { printStockBarangGudangReport } from "@/lib/stockBarangGudangReportPrint";
 import { printStockGlobalReport } from "@/lib/stockGlobalReportPrint";
+import { reportSalesOrderTrackingService } from "@/services/reportSalesOrderTrackingService";
+import { printTrackingSOWOReport } from "@/lib/trackingSOWOReportPrint";
 
 function App() {
   // Gunakan hook untuk menangani navigasi dari Electron
@@ -37,6 +39,7 @@ function App() {
   const [isReportStockGudangBarangOpen, setIsReportStockGudangBarangOpen] = useState(false);
   const [isReportStockBarangGudangOpen, setIsReportStockBarangGudangOpen] = useState(false);
   const [isReportStockGlobalOpen, setIsReportStockGlobalOpen] = useState(false);
+  const [isReportTrackingSOWOOpen, setIsReportTrackingSOWOOpen] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
 
   // Listen for global alert events from utility functions (like tokenUtils)
@@ -131,6 +134,13 @@ function App() {
     if (window.electronAPI.onReportStockGlobal) {
       window.electronAPI.onReportStockGlobal(() => {
         setIsReportStockGlobalOpen(true);
+      });
+    }
+
+    // Listen for Tracking SO/WO Report event
+    if (window.electronAPI.onReportTrackingSOWO) {
+      window.electronAPI.onReportTrackingSOWO(() => {
+        setIsReportTrackingSOWOOpen(true);
       });
     }
 
@@ -400,6 +410,33 @@ function App() {
                 if (result.status === 'success' && result.data) {
                   printStockGlobalReport(result.data, from, to);
                   setIsReportStockGlobalOpen(false);
+                } else {
+                  showAlert("Error", result.message || "Gagal mengambil data report", "error");
+                }
+              } catch (error) {
+                console.error("Error generating report:", error);
+                showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
+              } finally {
+                setReportLoading(false);
+              }
+            }}
+          />
+
+          <ReportDateRangeModal
+            open={isReportTrackingSOWOOpen}
+            onOpenChange={setIsReportTrackingSOWOOpen}
+            title="Report Waktu Proses SO / WO / Tanggal"
+            loading={reportLoading}
+            onGenerate={async (from, to) => {
+              try {
+                setReportLoading(true);
+                const result = await reportSalesOrderTrackingService.getTrackingSOWO({
+                  start_date: from,
+                  end_date: to,
+                });
+                if (result.success && result.data) {
+                  printTrackingSOWOReport(result.data, from, to);
+                  setIsReportTrackingSOWOOpen(false);
                 } else {
                   showAlert("Error", result.message || "Gagal mengambil data report", "error");
                 }
