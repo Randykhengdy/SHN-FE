@@ -41,6 +41,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onReportStockOpname: (callback) => ipcRenderer.on('open-report-stock-opname', callback),
   onReportKegiatanPelaksana: (callback) => ipcRenderer.on('open-report-kegiatan-pelaksana', callback),
   onReportRekapKegiatanPelaksana: (callback) => ipcRenderer.on('open-report-rekap-kegiatan-pelaksana', callback),
+  onReportRincianKeuangan: (callback) => ipcRenderer.on('open-report-rincian-keuangan', callback),
+  onReportRekapLabaOperasional: (callback) => ipcRenderer.on('open-report-rekap-laba-operasional', callback),
   onRequestConfirm: (callback) => ipcRenderer.on('request-confirm', (_event, data) => callback(data)),
   sendConfirmResult: (id, result) => ipcRenderer.send('confirm-result', { id, result }),
   // App info

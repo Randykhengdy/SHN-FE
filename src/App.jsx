@@ -40,6 +40,9 @@ import { printRubahStatusBarangReport } from "@/lib/rubahStatusBarangReportPrint
 import { printStockOpnameReport } from "@/lib/stockOpnameReportPrint";
 import { printKegiatanPelaksanaReport } from "@/lib/kegiatanPelaksanaReportPrint";
 import { printRekapKegiatanPelaksanaReport } from "@/lib/rekapKegiatanPelaksanaReportPrint";
+import { reportKasService } from "@/services/reportKasService";
+import { printRincianKeuanganReport } from "@/lib/rincianKeuanganReportPrint";
+import { printRekapLabaOperasionalReport } from "@/lib/rekapLabaOperasionalReportPrint";
 
 function App() {
   // Gunakan hook untuk menangani navigasi dari Electron
@@ -70,6 +73,8 @@ function App() {
   const [isReportStockOpnameOpen, setIsReportStockOpnameOpen] = useState(false);
   const [isReportKegiatanPelaksanaOpen, setIsReportKegiatanPelaksanaOpen] = useState(false);
   const [isReportRekapKegiatanPelaksanaOpen, setIsReportRekapKegiatanPelaksanaOpen] = useState(false);
+  const [isReportRincianKeuanganOpen, setIsReportRincianKeuanganOpen] = useState(false);
+  const [isReportRekapLabaOperasionalOpen, setIsReportRekapLabaOperasionalOpen] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
 
   // Listen for global alert events from utility functions (like tokenUtils)
@@ -272,11 +277,42 @@ function App() {
       });
     }
 
+    // Listen for Rincian Keuangan Kas Report event
+    if (window.electronAPI.onReportRincianKeuangan) {
+      window.electronAPI.onReportRincianKeuangan(() => {
+        setIsReportRincianKeuanganOpen(true);
+      });
+    }
+
+    // Listen for Rekap Laba Operasional Report event
+    if (window.electronAPI.onReportRekapLabaOperasional) {
+      window.electronAPI.onReportRekapLabaOperasional(() => {
+        setIsReportRekapLabaOperasionalOpen(true);
+      });
+    }
+
     return () => {
 
       // Note: IPC listeners are automatically cleaned up when component unmounts
     };
   }, [showAlert]);
+
+  const handleGenerateRincianKeuangan = async (startDate, endDate) => {
+    try {
+      setReportLoading(true);
+      const res = await reportKasService.getRincianKeuangan({ start_date: startDate, end_date: endDate });
+      if (!res.success) throw new Error(res.message);
+      
+      const { data } = res;
+      printRincianKeuanganReport(data, startDate, endDate);
+      setIsReportRincianKeuanganOpen(false);
+    } catch (error) {
+      console.error("Error generating report:", error);
+      showAlert("Error", "Gagal menghasilkan laporan: " + (error.message || "Unknown error"), "error");
+    } finally {
+      setReportLoading(false);
+    }
+  };
 
   return (
     <ErrorBoundary>
@@ -958,6 +994,35 @@ function App() {
               } catch (error) {
                 console.error("Error generating report:", error);
                 showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
+              } finally {
+                setReportLoading(false);
+              }
+            }}
+          />
+
+          <ReportDateRangeModal
+            open={isReportRincianKeuanganOpen}
+            onOpenChange={setIsReportRincianKeuanganOpen}
+            title="Report Rincian Keuangan dan Laba Operasional / Tanggal"
+            loading={reportLoading}
+            onGenerate={handleGenerateRincianKeuangan}
+          />
+
+          <ReportDateRangeModal
+            open={isReportRekapLabaOperasionalOpen}
+            onOpenChange={setIsReportRekapLabaOperasionalOpen}
+            title="Rekap Laba Operasional & Keuangan"
+            loading={reportLoading}
+            onGenerate={async (from, to) => {
+              try {
+                setReportLoading(true);
+                const res = await reportKasService.getRekapLabaOperasional({ start_date: from, end_date: to });
+                if (!res.success) throw new Error(res.message);
+                printRekapLabaOperasionalReport(res.data, from, to);
+                setIsReportRekapLabaOperasionalOpen(false);
+              } catch (error) {
+                console.error("Error generating report:", error);
+                showAlert("Error", "Gagal menghasilkan laporan: " + (error.message || "Unknown error"), "error");
               } finally {
                 setReportLoading(false);
               }

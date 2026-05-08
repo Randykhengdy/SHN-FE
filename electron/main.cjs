@@ -697,8 +697,15 @@ function createWindow() {
           submenu: [
             { label: 'Financial Report', click: () => mainWindow.webContents.send('navigate-to', '/financial-report') },
             { label: 'Pemakaian Kas / Barang / Jenis Biaya', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Pemakaian Kas sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Rincian Keuangan dan Laba Operasional / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Rincian Keuangan sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Rekap Laba Operasional & Keuangan', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Rekap Laba Operasional sedang dalam pengembangan.', type: 'info' }) },
+            { 
+              label: 'Rincian Keuangan dan Laba Operasional / Tanggal', 
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-rincian-keuangan');
+                }
+              }
+            },
+            { label: 'Rekap Laba Operasional & Keuangan', click: () => mainWindow.webContents.send('open-report-rekap-laba-operasional') },
           ]
         },
         {
