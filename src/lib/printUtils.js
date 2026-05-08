@@ -455,7 +455,7 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
       <td style="border: 1px solid #ddd; padding: 8px;">${item.dimensi_potong || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 8px;">${item.unit || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.qty || 0}</td>
-      <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${item.total_kg || 0} kg</td>
+      <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${(item.unit?.toLowerCase() === 'kg' || item.unit?.toLowerCase() === 'kilogram') ? `${item.total_kg || 0} kg` : '-'}</td>
       <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">Rp ${parseFloat(item.harga_per_unit || 0).toLocaleString('id-ID')}</td>
       <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">Rp ${parseFloat(item.total_harga || 0).toLocaleString('id-ID')}</td>
     </tr>
