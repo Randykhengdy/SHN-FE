@@ -11,10 +11,12 @@ import { useAlert } from '@/hooks/useAlert'
 import { useAppContext } from '@/context/AppContext'
 import { getUserInfo } from '@/lib/jwtUtils'
 import { notificationsService } from '@/services/notificationsService'
+import { useNavigate } from 'react-router-dom'
 
 export default function NotificationsPage() {
   const { showAlert, AlertComponent } = useAlert()
   const { user } = useAppContext()
+  const navigate = useNavigate()
 
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(false)
@@ -57,7 +59,14 @@ export default function NotificationsPage() {
       case 'sales_order': return <Badge className="bg-blue-100 text-blue-800">Sales Order</Badge>
       case 'work_order': return <Badge className="bg-green-100 text-green-800">Work Order</Badge>
       case 'work_order_planning': return <Badge className="bg-purple-100 text-purple-800">Work Order Planning</Badge>
+      case 'penerimaan_barang_non_po': return <Badge className="bg-orange-100 text-orange-800">Penerimaan Non-PO</Badge>
       default: return <Badge className="bg-gray-100 text-gray-800">General</Badge>
+    }
+  }
+
+  const handleNotificationClick = (n) => {
+    if (n.type === 'penerimaan_barang_non_po') {
+      navigate('/input-harga-barang-datang')
     }
   }
 
@@ -94,7 +103,11 @@ export default function NotificationsPage() {
                   </TableRow>
                 ) : (
                   items.map(n => (
-                    <TableRow key={n.id}>
+                    <TableRow
+                      key={n.id}
+                      className="cursor-pointer hover:bg-gray-50 transition-colors"
+                      onClick={() => handleNotificationClick(n)}
+                    >
                       <TableCell className="font-medium">{n.title}</TableCell>
                       <TableCell>{n.message}</TableCell>
                       <TableCell>{getTypeBadge(n.type)}</TableCell>
