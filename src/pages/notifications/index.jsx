@@ -64,7 +64,17 @@ export default function NotificationsPage() {
     }
   }
 
-  const handleNotificationClick = (n) => {
+  const handleNotificationClick = async (n) => {
+    try {
+      if (!n.isRead) {
+        await notificationsService.markAsRead(n.id);
+        // Optimistically update the list so it doesn't wait for refresh
+        setItems(prev => prev.map(item => item.id === n.id ? { ...item, isRead: true } : item));
+      }
+    } catch (e) {
+      console.error('Failed to mark notification as read:', e);
+    }
+
     if (n.type === 'penerimaan_barang_non_po') {
       navigate('/input-harga-barang-datang')
     }
@@ -105,10 +115,13 @@ export default function NotificationsPage() {
                   items.map(n => (
                     <TableRow
                       key={n.id}
-                      className="cursor-pointer hover:bg-gray-50 transition-colors"
+                      className={`cursor-pointer transition-colors ${n.isRead ? 'hover:bg-gray-50' : 'bg-blue-50 hover:bg-blue-100'}`}
                       onClick={() => handleNotificationClick(n)}
                     >
-                      <TableCell className="font-medium">{n.title}</TableCell>
+                      <TableCell className={n.isRead ? 'font-medium' : 'font-bold'}>
+                        {!n.isRead && <span className="inline-block w-2 h-2 bg-blue-600 rounded-full mr-2"></span>}
+                        {n.title}
+                      </TableCell>
                       <TableCell>{n.message}</TableCell>
                       <TableCell>{getTypeBadge(n.type)}</TableCell>
                       <TableCell>{n.createdAt ? new Date(n.createdAt).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</TableCell>

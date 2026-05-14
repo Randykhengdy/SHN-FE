@@ -7,6 +7,7 @@ import { roleService } from "@/services/master-data";
 import { getCurrentRoleId } from "@/lib/utils";
 import logo from "@/assets/logo.png";
 import { Bell } from "lucide-react";
+import { notificationsService } from "@/services/notificationsService";
 
 export default function Header() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ export default function Header() {
   const [appVersion, setAppVersion] = useState("-");
   const [updateState, setUpdateState] = useState({ type: null, percent: null, message: null });
   const [confirmData, setConfirmData] = useState(null);
+  const [hasUnread, setHasUnread] = useState(false);
 
   useEffect(() => {
     // Get user info dari JWT token
@@ -61,6 +63,33 @@ export default function Header() {
       });
     }
   }, []);
+
+  useEffect(() => {
+    if (!userInfo) return;
+
+    let isMounted = true;
+
+    const checkUnread = async () => {
+      try {
+        const res = await notificationsService.getByUser(userInfo.id || userInfo.user_id, { unread: true, per_page: 1 });
+        const unreadCount = res?.pagination?.total || res?.total || (Array.isArray(res?.data) ? res.data.length : 0);
+        if (isMounted) setHasUnread(unreadCount > 0);
+      } catch (error) {
+        console.error("Error checking unread notifications:", error);
+      }
+    };
+
+    // Initial check
+    checkUnread();
+
+    // Poll every 1 minute
+    const intervalId = setInterval(checkUnread, 60000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, [userInfo]);
 
   const handleLogout = () => {
     // Clear all tokens using tokenStorage system
@@ -122,9 +151,17 @@ export default function Header() {
             {/* Notifications link */}
             <button
               onClick={() => navigate('/notifications')}
-              className="flex items-center gap-1 text-sm text-gray-700 rounded-md px-2 py-1 hover:bg-gray-100"
+              className="flex items-center gap-1 text-sm text-gray-700 rounded-md px-2 py-1 hover:bg-gray-100 relative"
             >
-              <Bell className="w-4 h-4" />
+              <div className="relative">
+                <Bell className="w-4 h-4" />
+                {hasUnread && (
+                  <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                  </span>
+                )}
+              </div>
               <span>Notifikasi</span>
             </button>
             {/* User Info */}

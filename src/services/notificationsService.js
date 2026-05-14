@@ -8,5 +8,8 @@ export const notificationsService = {
     if (typeof params.unread !== 'undefined') query.append('unread', params.unread ? '1' : '0')
     const qs = query.toString() ? `?${query.toString()}` : ''
     return request(`/notifications/by-user/${userId}${qs}`, { method: 'GET' })
+  },
+  markAsRead: async (notificationId) => {
+    return request(`/notifications/${notificationId}/read`, { method: 'PATCH' })
   }
 }
