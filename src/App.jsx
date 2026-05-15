@@ -45,10 +45,11 @@ import { printRekapKegiatanPelaksanaReport } from "@/lib/rekapKegiatanPelaksanaR
 import { reportKasService } from "@/services/reportKasService";
 import { printRincianKeuanganReport } from "@/lib/rincianKeuanganReportPrint";
 import { printRekapLabaOperasionalReport } from "@/lib/rekapLabaOperasionalReportPrint";
+import TabLayout from "@/components/layout/TabLayout";
 
 function App() {
-  // Gunakan hook untuk menangani navigasi dari Electron
-  useElectronNavigation();
+  // Navigation dari Electron sekarang ditangani oleh TabLayout
+  // (yang berada di dalam AppProvider dan punya akses ke addTab)
   const { showAlert, AlertComponent } = useAlert();
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isReportSOTanggalOpen, setIsReportSOTanggalOpen] = useState(false);
@@ -1069,7 +1070,9 @@ function App() {
 
           {/* Main content - Full width without sidebar */}
           <main className="w-full h-full overflow-auto">
-            <AppRouter />
+            <TabLayout>
+              <AppRouter />
+            </TabLayout>
           </main>
         </div>
       </AppProvider>

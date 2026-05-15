@@ -446,6 +446,11 @@ function createWindow() {
     }
   });
 
+  const navigateTo = (path, label) => {
+    console.log(`[Main] Navigating to: ${path} (${label})`);
+    if (mainWindow) mainWindow.webContents.send('navigate-to', path, label);
+  };
+
   const buildMenuTemplate = () => [
     {
       label: 'File',
@@ -453,12 +458,12 @@ function createWindow() {
         {
           label: 'Dashboard',
           accelerator: 'CmdOrCtrl+D',
-          click: () => mainWindow.webContents.send('navigate-to', '/dashboard')
+          click: () => navigateTo('/dashboard', 'Dashboard')
         },
         {
           label: 'Dashboard Workshop',
           accelerator: 'CmdOrCtrl+Shift+D',
-          click: () => mainWindow.webContents.send('navigate-to', '/dashboard/workshop')
+          click: () => navigateTo('/dashboard/workshop', 'Dashboard Workshop')
         },
         { type: 'separator' },
         {
@@ -472,22 +477,22 @@ function createWindow() {
       {
         label: 'Masterdata',
         submenu: [
-          { label: 'Jenis Barang', accelerator: 'CmdOrCtrl+1', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/jenis-barang') },
-          { label: 'Tipe Barang', accelerator: 'CmdOrCtrl+Shift+1', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/tipe-barang') },
-          { label: 'Bentuk Barang', accelerator: 'CmdOrCtrl+2', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/bentuk-barang') },
-          { label: 'Grade Barang', accelerator: 'CmdOrCtrl+3', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/grade-barang') },
-          { label: 'Item Barang Group', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/item-barang-group') },
-          { label: 'Berat Jenis', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/berat-jenis') },
-          { label: 'Item Barang', accelerator: 'CmdOrCtrl+4', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/item-barang') },
-          { label: 'Jenis Mutasi Stock', accelerator: 'CmdOrCtrl+5', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/jenis-mutasi-stock') },
+          { label: 'Jenis Barang', accelerator: 'CmdOrCtrl+1', click: () => navigateTo('/masterdata/jenis-barang', 'Jenis Barang') },
+          { label: 'Tipe Barang', accelerator: 'CmdOrCtrl+Shift+1', click: () => navigateTo('/masterdata/tipe-barang', 'Tipe Barang') },
+          { label: 'Bentuk Barang', accelerator: 'CmdOrCtrl+2', click: () => navigateTo('/masterdata/bentuk-barang', 'Bentuk Barang') },
+          { label: 'Grade Barang', accelerator: 'CmdOrCtrl+3', click: () => navigateTo('/masterdata/grade-barang', 'Grade Barang') },
+          { label: 'Item Barang Group', click: () => navigateTo('/masterdata/item-barang-group', 'Item Barang Group') },
+          { label: 'Berat Jenis', click: () => navigateTo('/masterdata/berat-jenis', 'Berat Jenis') },
+          { label: 'Item Barang', accelerator: 'CmdOrCtrl+4', click: () => navigateTo('/masterdata/item-barang', 'Item Barang') },
+          { label: 'Jenis Mutasi Stock', accelerator: 'CmdOrCtrl+5', click: () => navigateTo('/masterdata/jenis-mutasi-stock', 'Jenis Mutasi Stock') },
           { type: 'separator' },
-          { label: 'Suppliers', accelerator: 'CmdOrCtrl+6', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/supplier') },
-          { label: 'Pelanggan', accelerator: 'CmdOrCtrl+7', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/pelanggan') },
-          { label: 'Gudang', accelerator: 'CmdOrCtrl+8', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/gudang') },
-          { label: 'Rak', accelerator: 'CmdOrCtrl+Shift+8', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/rak') },
-          { label: 'Pelaksana', accelerator: 'CmdOrCtrl+9', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/pelaksana') },
-          { label: 'Jenis Transaksi Kas', accelerator: 'CmdOrCtrl+0', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/jenis-transaksi-kas') },
-          { label: 'Jenis Biaya', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/jenis-biaya') },
+          { label: 'Suppliers', accelerator: 'CmdOrCtrl+6', click: () => navigateTo('/masterdata/supplier', 'Suppliers') },
+          { label: 'Pelanggan', accelerator: 'CmdOrCtrl+7', click: () => navigateTo('/masterdata/pelanggan', 'Pelanggan') },
+          { label: 'Gudang', accelerator: 'CmdOrCtrl+8', click: () => navigateTo('/masterdata/gudang', 'Gudang') },
+          { label: 'Rak', accelerator: 'CmdOrCtrl+Shift+8', click: () => navigateTo('/masterdata/rak', 'Rak') },
+          { label: 'Pelaksana', accelerator: 'CmdOrCtrl+9', click: () => navigateTo('/masterdata/pelaksana', 'Pelaksana') },
+          { label: 'Jenis Transaksi Kas', accelerator: 'CmdOrCtrl+0', click: () => navigateTo('/masterdata/jenis-transaksi-kas', 'Jenis Transaksi Kas') },
+          { label: 'Jenis Biaya', click: () => navigateTo('/masterdata/jenis-biaya', 'Jenis Biaya') },
         ]
       }
     ] : []),
@@ -495,32 +500,30 @@ function createWindow() {
       {
         label: 'User Management',
         submenu: [
-          { label: 'Users', accelerator: 'CmdOrCtrl+U', click: () => mainWindow.webContents.send('navigate-to', '/users') },
-          { label: 'Role', accelerator: 'CmdOrCtrl+Shift+R', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/role') },
+          { label: 'Users', accelerator: 'CmdOrCtrl+U', click: () => navigateTo('/users', 'Users') },
+          { label: 'Role', accelerator: 'CmdOrCtrl+Shift+R', click: () => navigateTo('/masterdata/role', 'Role') },
         ]
       }
     ] : []),
     {
       label: 'Transaksi',
       submenu: [
-        ...(canShow('PURCHASE_ORDER') ? [{ label: 'Purchase Order', accelerator: 'CmdOrCtrl+P', click: () => mainWindow.webContents.send('navigate-to', '/purchase-order') }] : []),
-        ...(canShow('SALES_ORDER') ? [{ label: 'Sales Order', accelerator: 'CmdOrCtrl+S', click: () => mainWindow.webContents.send('navigate-to', '/sales-order') }] : []),
-        ...(canShow('WORK_ORDER_PLANNING') ? [{ label: 'Work Order', accelerator: 'CmdOrCtrl+W', click: () => mainWindow.webContents.send('navigate-to', '/work-order') }] : []),
-        ...(canShow('WORK_ORDER_ACTUAL') ? [{ label: 'WO Actual', accelerator: 'CmdOrCtrl+Shift+W', click: () => mainWindow.webContents.send('navigate-to', '/wo-actual') }] : []),
-        { label: 'Surat Jalan Invoicing', accelerator: 'CmdOrCtrl+F', click: () => mainWindow.webContents.send('navigate-to', '/finance-invoice-pod') },
-        // ...(canShow('PEMBAYARAN_PO') ? [{ label: 'Pembayaran PO', click: () => mainWindow.webContents.send('navigate-to', '/pembayaran-po') }] : []),
-        // ...(canShow('PENERIMAAN_KAS') ? [{ label: 'Penerimaan Kas', click: () => mainWindow.webContents.send('navigate-to', '/penerimaan-kas') }] : []),
-        { label: 'Pembayaran PO', click: () => mainWindow.webContents.send('navigate-to', '/pembayaran-po') },
-        { label: 'Penerimaan Kas', click: () => mainWindow.webContents.send('navigate-to', '/penerimaan-kas') },
+        ...(canShow('PURCHASE_ORDER') ? [{ label: 'Purchase Order', accelerator: 'CmdOrCtrl+P', click: () => navigateTo('/purchase-order', 'Purchase Order') }] : []),
+        ...(canShow('SALES_ORDER') ? [{ label: 'Sales Order', accelerator: 'CmdOrCtrl+S', click: () => navigateTo('/sales-order', 'Sales Order') }] : []),
+        ...(canShow('WORK_ORDER_PLANNING') ? [{ label: 'Work Order', accelerator: 'CmdOrCtrl+W', click: () => navigateTo('/work-order', 'Work Order') }] : []),
+        ...(canShow('WORK_ORDER_ACTUAL') ? [{ label: 'WO Actual', accelerator: 'CmdOrCtrl+Shift+W', click: () => navigateTo('/wo-actual', 'WO Actual') }] : []),
+        { label: 'Surat Jalan Invoicing', accelerator: 'CmdOrCtrl+F', click: () => navigateTo('/finance-invoice-pod', 'Surat Jalan Invoicing') },
+        { label: 'Pembayaran PO', click: () => navigateTo('/pembayaran-po', 'Pembayaran PO') },
+        { label: 'Penerimaan Kas', click: () => navigateTo('/penerimaan-kas', 'Penerimaan Kas') },
         { type: 'separator' },
-        { label: 'Mutasi Stock', accelerator: 'CmdOrCtrl+M', click: () => mainWindow.webContents.send('navigate-to', '/mutasi-stock') },
-        { label: 'Item Barang Request', accelerator: 'CmdOrCtrl+I', click: () => mainWindow.webContents.send('navigate-to', '/item-barang-request') },
-        { label: 'Approval', accelerator: 'CmdOrCtrl+Shift+A', click: () => mainWindow.webContents.send('navigate-to', '/approval') },
-        { label: 'Input Harga Barang Datang', click: () => mainWindow.webContents.send('navigate-to', '/input-harga-barang-datang') },
+        { label: 'Mutasi Stock', accelerator: 'CmdOrCtrl+M', click: () => navigateTo('/mutasi-stock', 'Mutasi Stock') },
+        { label: 'Item Barang Request', accelerator: 'CmdOrCtrl+I', click: () => navigateTo('/item-barang-request', 'Item Barang Request') },
+        { label: 'Approval', accelerator: 'CmdOrCtrl+Shift+A', click: () => navigateTo('/approval', 'Approval') },
+        { label: 'Input Harga Barang Datang', click: () => navigateTo('/input-harga-barang-datang', 'Input Harga Barang Datang') },
         { type: 'separator' },
-        { label: 'Konversi Barang', accelerator: 'CmdOrCtrl+K', click: () => mainWindow.webContents.send('navigate-to', '/konversi-barang') },
-        { label: 'Split Barang', accelerator: 'CmdOrCtrl+Shift+S', click: () => mainWindow.webContents.send('navigate-to', '/split-barang') },
-        { label: 'Merge Barang', accelerator: 'CmdOrCtrl+Shift+M', click: () => mainWindow.webContents.send('navigate-to', '/merge-barang') }
+        { label: 'Konversi Barang', accelerator: 'CmdOrCtrl+K', click: () => navigateTo('/konversi-barang', 'Konversi Barang') },
+        { label: 'Split Barang', accelerator: 'CmdOrCtrl+Shift+S', click: () => navigateTo('/split-barang', 'Split Barang') },
+        { label: 'Merge Barang', accelerator: 'CmdOrCtrl+Shift+M', click: () => navigateTo('/merge-barang', 'Merge Barang') }
       ]
     },
     {
@@ -695,7 +698,7 @@ function createWindow() {
         {
           label: 'Finance',
           submenu: [
-            { label: 'Financial Report', click: () => mainWindow.webContents.send('navigate-to', '/financial-report') },
+            { label: 'Financial Report', click: () => navigateTo('/financial-report', 'Financial Report') },
             {
               label: 'Pemakaian Kas / Barang / Jenis Biaya',
               click: () => {
@@ -767,7 +770,7 @@ function createWindow() {
         },
         {
           label: 'System Log',
-          click: () => mainWindow.webContents.send('navigate-to', '/system-log')
+          click: () => navigateTo('/system-log', 'System Log')
         },
         {
           label: 'Check for Updates…',
