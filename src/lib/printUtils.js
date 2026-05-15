@@ -679,7 +679,7 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
     const tiles = imgs.map((img, idx) => {
       const src = img.canvas_image_base64 || img.image_base64 || img.image_url || img.src || img.url || '';
       return `
-        <div style="margin-bottom: 10px;">
+        <div style="page-break-inside: avoid;">
           <div style="font-size: 11px; color: #666; margin-bottom: 4px;">Parent #${idx + 1}</div>
           <div style="border: 1px solid #ddd; background-color: #fafafa; padding: 8px; text-align: center;">
             ${src ? `
@@ -695,7 +695,9 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
     return `
       <div class="section" style="margin-top: 16px;">
         <div style="font-weight: bold; margin-bottom: 8px;">Foto Bukti WO Actual</div>
-        ${tiles}
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          ${tiles}
+        </div>
       </div>
     `;
   })();
@@ -954,11 +956,11 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
           const items = group.images.map((image, imageIndex) => {
             const src = image.canvas_image_base64 || image.image_base64 || image.image_url || image.src || '';
             return `
-                <div style="margin-bottom: 16px; page-break-inside: avoid;">
+                <div style="page-break-inside: avoid;">
                   <div style="font-weight: bold; margin-bottom: 6px; font-size: 12px; color: #555;">WO Item ${group.itemNumber} - Image ${imageIndex + 1}</div>
                   <div style="text-align: center; border: 1px solid #ddd; padding: 8px; background-color: #f9f9f9;">
                     ${src ? `
-                      <img src="${src}" alt="WO Item ${group.itemNumber} - Image ${imageIndex + 1}" style="max-width: 100%; max-height: 320px; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                      <img src="${src}" alt="WO Item ${group.itemNumber} - Image ${imageIndex + 1}" style="max-width: 100%; max-height: 260px; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
                       <div style="display: none; padding: 16px; color: #666; font-style: italic;">Gambar tidak dapat dimuat</div>
                     ` : `
                       <div style="padding: 16px; color: #666; font-style: italic;">Canvas image tidak tersedia</div>
@@ -978,7 +980,9 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
           return `
               <div style="margin-bottom: 20px;">
                 <div style="font-weight: bold; margin-bottom: 8px;">Canvas Layout - Item ${group.itemNumber}</div>
-                ${items}
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                  ${items}
+                </div>
               </div>
             `;
         }).join('');
