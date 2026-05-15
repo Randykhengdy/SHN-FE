@@ -422,6 +422,9 @@ export default function AddSalesOrderPage() {
       case 'per dimensi':
       case 'per m²':
       case 'm²':
+        if (itemCutType === 'potongan') {
+          return pricePerUnit; // Akan dikalikan dengan qty di perhitungan total
+        }
         // Harga X volume (untuk 2D) atau panjang (untuk 1D)
         if (selectedShape?.dimensi === "1D") {
           // Untuk 1D (shaft): harga X panjang saja
@@ -495,6 +498,10 @@ export default function AddSalesOrderPage() {
             case 'per dimensi':
             case 'per m²':
             case 'm²':
+              if (itemCutType === 'potongan') {
+                priceDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/pcs`;
+                break;
+              }
               // Check if shape is 1D or 2D
               if (selectedShape?.dimensi === "1D") {
                 priceDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/m`;
@@ -584,6 +591,9 @@ export default function AddSalesOrderPage() {
       case 'per dimensi':
       case 'per m²':
       case 'm²':
+        if (itemCutType === 'potongan') {
+          return 'Harga (Rp/pcs)';
+        }
         // Check if shape is 1D or 2D
         if (selectedShape?.dimensi === "1D") {
           return 'Harga (Rp/m)';
@@ -614,6 +624,9 @@ export default function AddSalesOrderPage() {
       case 'per dimensi':
       case 'per m²':
       case 'm²':
+        if (itemCutType === 'potongan') {
+          return 'Harga/pcs';
+        }
         // Check if shape is 1D or 2D
         if (selectedShape?.dimensi === "1D") {
           return 'Harga/m';
