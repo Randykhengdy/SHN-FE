@@ -908,9 +908,14 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
 
         // Use Set to ensure unique string keys
         const uniqueIds = [...new Set(idCandidates.map(String))];
+
+        // Detect if item is 1D (Shaft/As)
+        const bentukName = (item.bentukBarang?.nama_bentuk_barang || item.bentukBarang?.nama_bentuk || item.bentukBarang?.nama || '').toLowerCase();
+        const is1D = bentukName.includes('as') || bentukName.includes('shaft') || bentukName.includes('round bar') || bentukName.includes('1d');
+
         uniqueIds.forEach(id => {
           if (!itemMap.has(id)) {
-            itemMap.set(id, { index: index + 1, name });
+            itemMap.set(id, { index: index + 1, name, is1D });
           }
         });
       });
@@ -944,7 +949,12 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
         }
 
         if (!groupedMap.has(key)) {
-          groupedMap.set(key, { itemNumber: info.index, itemName: info.name, images: [] });
+          groupedMap.set(key, {
+            itemNumber: info.index,
+            itemName: info.name,
+            is1D: info.is1D,
+            images: []
+          });
         }
         groupedMap.get(key).images.push({ ...img, originalIndex: idx });
       });
@@ -958,9 +968,9 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
             return `
                 <div style="page-break-inside: avoid;">
                   <div style="font-weight: bold; margin-bottom: 6px; font-size: 12px; color: #555;">WO Item ${group.itemNumber} - Image ${imageIndex + 1}</div>
-                  <div style="text-align: center; border: 1px solid #ddd; padding: 8px; background-color: #f9f9f9;">
+                  <div style="text-align: center; border: 1px solid #ddd; background-color: #f9f9f9; overflow: hidden; ${group.is1D ? 'height: 100px; display: flex; align-items: flex-start;' : 'padding: 8px;'}">
                     ${src ? `
-                      <img src="${src}" alt="WO Item ${group.itemNumber} - Image ${imageIndex + 1}" style="max-width: 100%; max-height: 260px; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                      <img src="${src}" alt="WO Item ${group.itemNumber} - Image ${imageIndex + 1}" style="${group.is1D ? 'width: 100%; height: auto; object-fit: cover; object-position: top;' : 'max-width: 100%; max-height: 260px; object-fit: contain;'}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
                       <div style="display: none; padding: 16px; color: #666; font-style: italic;">Gambar tidak dapat dimuat</div>
                     ` : `
                       <div style="padding: 16px; color: #666; font-style: italic;">Canvas image tidak tersedia</div>
