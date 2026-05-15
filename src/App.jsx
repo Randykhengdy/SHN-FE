@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react";
-import AppRouter from "@/router/AppRouter";
-import useElectronNavigation from "@/hooks/useElectronNavigation";
 import TokenInterceptor from "@/components/TokenInterceptor";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useAlert } from "@/hooks/useAlert";
@@ -329,12 +327,6 @@ function App() {
     <ErrorBoundary>
       <AppProvider>
         <div className="h-screen w-screen overflow-hidden">
-          {/* Token Interceptor - Check token expiration */}
-          <TokenInterceptor />
-          
-          {/* Global Alert Component */}
-          <AlertComponent />
-          
           {/* Global Change Password Modal */}
           <ChangePasswordModal 
             isOpen={isChangePasswordOpen} 
@@ -1068,11 +1060,9 @@ function App() {
             }}
           />
 
-          {/* Main content - Full width without sidebar */}
+          {/* Main content - TabLayout mengelola Router dan Tabs sendiri */}
           <main className="w-full h-full overflow-auto">
-            <TabLayout>
-              <AppRouter />
-            </TabLayout>
+            <TabLayout />
           </main>
         </div>
       </AppProvider>

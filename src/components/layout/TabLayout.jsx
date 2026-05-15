@@ -1,23 +1,23 @@
-import React, { useEffect, useRef, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
+import { MemoryRouter, HashRouter, useNavigate, useLocation } from 'react-router-dom';
 import { useAppContext } from '@/context/AppContext';
+import AppRouter from '@/router/AppRouter';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import TokenInterceptor from '@/components/TokenInterceptor';
+import { useAlert } from '@/hooks/useAlert';
 
-const TabLayout = ({ children }) => {
+// Komponen wrapper yang mendeteksi auth page dan mengelola IPC
+const TabLayoutInner = () => {
   const { tabs, activeTabId, closeTab, switchTab, addTab } = useAppContext();
   const navigate = useNavigate();
   const location = useLocation();
 
   // === Electron IPC Navigation Listener ===
   const addTabRef = useRef(addTab);
-  const navigateRef = useRef(navigate);
   useEffect(() => {
     addTabRef.current = addTab;
   }, [addTab]);
-  useEffect(() => {
-    navigateRef.current = navigate;
-  }, [navigate]);
 
   useEffect(() => {
     if (!window.electronAPI) return;
@@ -28,10 +28,6 @@ const TabLayout = ({ children }) => {
       console.log('[TabLayout] IPC navigate-to received:', path, label);
       if (addTabRef.current) {
         addTabRef.current(path, label);
-      }
-      // Navigasi langsung ke path yang diminta
-      if (navigateRef.current) {
-        navigateRef.current(path);
       }
     };
 
@@ -48,50 +44,48 @@ const TabLayout = ({ children }) => {
     }
   }, [location]);
 
-  // === Tab UI Logic ===
-  const handleTabClick = (tab) => {
-    switchTab(tab.id);
-    navigate(tab.path);
-  };
-
-  const handleCloseTab = useCallback((e, id) => {
-    e.stopPropagation();
-
-    // Cari tab yang akan ditutup dan tentukan tab pengganti
-    const idx = tabs.findIndex(t => t.id === id);
-    const isClosingActive = id === activeTabId;
-
-    closeTab(id);
-
-    if (isClosingActive) {
-      // Navigasi ke tab lain setelah menutup tab aktif
-      const remaining = tabs.filter(t => t.id !== id);
-      if (remaining.length > 0) {
-        // Pilih tab sebelumnya, atau yang pertama
-        const nextTab = remaining[Math.min(idx, remaining.length - 1)] || remaining[remaining.length - 1];
-        navigate(nextTab.path);
-      } else {
-        // Tidak ada tab tersisa, kembali ke dashboard
-        navigate('/dashboard');
-      }
-    }
-  }, [tabs, activeTabId, closeTab, navigate]);
-
   const isAuthPage = ['/', '/login', '/register'].includes(location.pathname);
 
-  // Auto-add current location as tab on first load (e.g. dashboard after login)
+  // Ketika user login dan pindah ke dashboard, buat tab pertama
   useEffect(() => {
     if (!isAuthPage && tabs.length === 0 && location.pathname !== '/') {
       addTab(location.pathname);
     }
   }, [isAuthPage, tabs.length, location.pathname, addTab]);
 
-  if (isAuthPage) {
-    return <>{children}</>;
+  // Jika sudah ada tabs, jangan render via HashRouter Routes lagi
+  // (konten dirender oleh MemoryRouter per-tab di TabLayout)
+  if (!isAuthPage && tabs.length > 0) {
+    return null;
   }
+
+  // Render halaman auth (login/register) lewat HashRouter
+  return <AppRouter />;
+};
+
+// Komponen tab bar + content area
+const TabLayout = () => {
+  const { tabs, activeTabId, closeTab, switchTab } = useAppContext();
+  const { AlertComponent } = useAlert();
+
+  const handleTabClick = (tab) => {
+    switchTab(tab.id);
+  };
+
+  const handleCloseTab = useCallback((e, id) => {
+    e.stopPropagation();
+    closeTab(id);
+  }, [closeTab]);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-slate-50">
+      {/* HashRouter untuk auth pages + IPC listener + Global components */}
+      <HashRouter>
+        <TokenInterceptor />
+        <AlertComponent />
+        <TabLayoutInner />
+      </HashRouter>
+
       {/* Tab Bar */}
       {tabs.length > 0 && (
         <div className="flex items-end px-2 pt-2 bg-slate-200/50 border-b border-slate-300 gap-1 overflow-x-auto no-scrollbar min-h-[40px]">
@@ -130,10 +124,26 @@ const TabLayout = ({ children }) => {
         </div>
       )}
 
-      {/* Content Area */}
-      <div className="flex-1 overflow-auto relative">
-        {children}
-      </div>
+      {/* Content Area — semua tab di-render bersamaan, hanya tab aktif yang visible */}
+      {tabs.length > 0 && (
+        <div className="flex-1 overflow-hidden relative">
+          {tabs.map((tab) => (
+            <div
+              key={tab.id}
+              style={{
+                display: tab.id === activeTabId ? 'flex' : 'none',
+                flexDirection: 'column',
+                height: '100%',
+                overflow: 'auto',
+              }}
+            >
+              <MemoryRouter initialEntries={[tab.path]}>
+                <AppRouter />
+              </MemoryRouter>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
