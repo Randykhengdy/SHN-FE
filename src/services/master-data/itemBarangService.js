@@ -136,5 +136,31 @@ export const itemBarangService = {
     const formData = new FormData();
     formData.append("file", file);
     return request("/item-barang/import", { method: "POST", body: formData });
+  },
+
+  // Rongsok Approval
+  async requestRongsok(itemBarangId, reason = "") {
+    return request("/item-barang/destroy", {
+      method: "POST",
+      body: JSON.stringify({ item_barang_id: itemBarangId, reason }),
+    });
+  },
+
+  async getPendingRongsok(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return request(`/item-barang/pending-rongsok?${queryString}`, { method: "GET" });
+  },
+
+  async approveRongsok(rongsokRequestId) {
+    return request(`/item-barang/${rongsokRequestId}/approve-rongsok`, {
+      method: "PATCH",
+    });
+  },
+
+  async rejectRongsok(rongsokRequestId, rejectionReason) {
+    return request(`/item-barang/${rongsokRequestId}/reject-rongsok`, {
+      method: "PATCH",
+      body: JSON.stringify({ rejection_reason: rejectionReason }),
+    });
   }
 };

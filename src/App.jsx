@@ -37,6 +37,7 @@ import { printTrackingSOWOReport } from "@/lib/trackingSOWOReportPrint";
 import { reportMutasiService } from "@/services/reportMutasiService";
 import { printMutasiAntarGudangReport } from "@/lib/mutasiAntarGudangReportPrint";
 import { printRubahStatusBarangReport } from "@/lib/rubahStatusBarangReportPrint";
+import { printBarangRongsokReport } from "@/lib/barangRongsokReportPrint";
 import { printStockOpnameReport } from "@/lib/stockOpnameReportPrint";
 import { printKegiatanPelaksanaReport } from "@/lib/kegiatanPelaksanaReportPrint";
 import { printRekapKegiatanPelaksanaReport } from "@/lib/rekapKegiatanPelaksanaReportPrint";
@@ -72,6 +73,7 @@ function App() {
   const [isReportTrackingSOWOOpen, setIsReportTrackingSOWOOpen] = useState(false);
   const [isReportMutasiAntarGudangOpen, setIsReportMutasiAntarGudangOpen] = useState(false);
   const [isReportRubahStatusBarangOpen, setIsReportRubahStatusBarangOpen] = useState(false);
+  const [isReportBarangRongsokOpen, setIsReportBarangRongsokOpen] = useState(false);
   const [isReportStockOpnameOpen, setIsReportStockOpnameOpen] = useState(false);
   const [isReportKegiatanPelaksanaOpen, setIsReportKegiatanPelaksanaOpen] = useState(false);
   const [isReportRekapKegiatanPelaksanaOpen, setIsReportRekapKegiatanPelaksanaOpen] = useState(false);
@@ -265,6 +267,13 @@ function App() {
       });
     }
 
+    // Listen for Report Barang Rongsok event
+    if (window.electronAPI.onReportBarangRongsok) {
+      window.electronAPI.onReportBarangRongsok(() => {
+        setIsReportBarangRongsokOpen(true);
+      });
+    }
+
     // Listen for Stock Opname Report event
     if (window.electronAPI.onReportStockOpname) {
       window.electronAPI.onReportStockOpname(() => {
@@ -437,7 +446,7 @@ function App() {
                 });
                 
                 if (result.success && result.data) {
-                  printSalesGudangTanggalReport(result.data, from, to);
+                  printSalesGudangTanggalReport(result.data, result.data_rongsok, from, to);
                   setIsReportPenjualanGudangTanggalOpen(false);
                 } else {
                   showAlert("Error", result.message || "Gagal mengambil data report", "error");
@@ -465,7 +474,7 @@ function App() {
                 });
                 
                 if (result.success && result.data) {
-                  printSalesGudangBarangReport(result.data, from, to);
+                  printSalesGudangBarangReport(result.data, result.data_rongsok, from, to);
                   setIsReportPenjualanGudangBarangOpen(false);
                 } else {
                   showAlert("Error", result.message || "Gagal mengambil data report", "error");
@@ -493,7 +502,7 @@ function App() {
                 });
                 
                 if (result.success && result.data) {
-                  printSalesBarangGlobalReport(result.data, from, to);
+                  printSalesBarangGlobalReport(result.data, result.data_rongsok, from, to);
                   setIsReportPenjualanBarangGlobalOpen(false);
                 } else {
                   showAlert("Error", result.message || "Gagal mengambil data report", "error");
@@ -935,14 +944,42 @@ function App() {
                   start_date: from,
                   end_date: to,
                 });
+                
                 if (result.success && result.data) {
                   printRubahStatusBarangReport(result.data, from, to);
                   setIsReportRubahStatusBarangOpen(false);
                 } else {
-                  showAlert("Error", result.message || "Gagal mengambil data report", "error");
+                  showAlert("Error", result.message || "Gagal mengambil data report rubah status barang", "error");
                 }
               } catch (error) {
-                console.error("Error generating report:", error);
+                console.error("Error generating report rubah status barang:", error);
+                showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
+              } finally {
+                setReportLoading(false);
+              }
+            }}
+          />
+
+          <ReportDateRangeModal
+            open={isReportBarangRongsokOpen}
+            onOpenChange={setIsReportBarangRongsokOpen}
+            title="Report Barang Rongsok / Tanggal"
+            loading={reportLoading}
+            onGenerate={async (from, to) => {
+              try {
+                setReportLoading(true);
+                const params = { start_date: from, end_date: to };
+                
+                const result = await reportMutasiService.getReportBarangRongsok(params);
+                
+                if (result.success && result.data) {
+                  printBarangRongsokReport(result.data, from, to);
+                  setIsReportBarangRongsokOpen(false);
+                } else {
+                  showAlert("Error", result.message || "Gagal mengambil data report barang rongsok", "error");
+                }
+              } catch (error) {
+                console.error("Error generating report barang rongsok:", error);
                 showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
               } finally {
                 setReportLoading(false);

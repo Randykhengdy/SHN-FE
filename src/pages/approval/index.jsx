@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import CustomAlert from "@/components/modals/CustomAlert";
 import { itemBarangRequestService } from "@/services/itemBarangRequestService";
 import { salesOrderService } from "@/services/salesOrderService";
+import { itemBarangService } from "@/services/master-data";
 import { useAlert } from "@/hooks/useAlert";
 import RejectionModal from "@/components/modals/RejectionModal";
 import SalesOrderLayout from "@/components/SalesOrderLayout";
@@ -17,12 +18,16 @@ import { useAppContext } from "@/context/AppContext";
 export default function ApprovalPage() {
   const navigate = useNavigate();
   const { showAlert, AlertComponent } = useAlert();
-  const { hasPermission } = useAppContext();
+  const { hasPermission, user } = useAppContext();
   const canUpdateItemRequest = hasPermission && (hasPermission('ITEM_BARANG_REQUEST_APPROVAL', 'Update') || hasPermission('APPROVAL', 'Update'));
   const canUpdateSOApproval = hasPermission && (hasPermission('SALES_ORDER_APPROVAL', 'Update') || hasPermission('APPROVAL', 'Update'));
-  const [activeTab, setActiveTab] = useState(canUpdateItemRequest ? "item-barang-request" : "sales-order");
+  
+  // Sesuai request, murni pakai is_can_delete_item_barang saja
+  const canUpdateRongsokApproval = user?.is_can_delete_item_barang == 1;
+  const [activeTab, setActiveTab] = useState(canUpdateItemRequest ? "item-barang-request" : canUpdateSOApproval ? "sales-order" : "rongsok");
   const [itemRequests, setItemRequests] = useState([]);
   const [soDeleteRequests, setSoDeleteRequests] = useState([]);
+  const [rongsokRequests, setRongsokRequests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [approvingId, setApprovingId] = useState(null); // Track which request is being approved
   const [rejectingId, setRejectingId] = useState(null); // Track which request is being rejected
@@ -40,6 +45,8 @@ export default function ApprovalPage() {
       loadItemRequests();
     } else if (activeTab === "sales-order") {
       loadSalesOrderDeleteRequests();
+    } else if (activeTab === "rongsok") {
+      loadRongsokRequests();
     }
   }, [activeTab]);
 
@@ -166,6 +173,60 @@ export default function ApprovalPage() {
     }
   };
 
+  // === Rongsok Approval Handlers ===
+  const loadRongsokRequests = async (showErrorAlert = true) => {
+    try {
+      setLoading(true);
+      const response = await itemBarangService.getPendingRongsok({ per_page: 100 });
+      const rows = Array.isArray(response?.data) ? response.data : [];
+      setRongsokRequests(rows);
+    } catch (error) {
+      console.error('❌ Error loading rongsok requests:', error);
+      if (showErrorAlert) {
+        showAlert("Error", "Gagal memuat data request rongsok", "error");
+      }
+      setRongsokRequests([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApproveRongsok = async (request) => {
+    try {
+      setApprovingId(request.id);
+      await itemBarangService.approveRongsok(request.id);
+      showAlert("Sukses", "Request rongsok berhasil di-approve!", "success", () => {
+        loadRongsokRequests(false);
+      });
+    } catch (error) {
+      console.error('❌ Error approving rongsok:', error);
+      showAlert("Error", error.message || "Gagal approve request rongsok", "error");
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const handleRejectRongsok = (request) => {
+    setSelectedRequest({ ...request, _type: 'rongsok' });
+    setShowRejectionModal(true);
+  };
+
+  const handleRejectRongsokConfirm = async (reason) => {
+    try {
+      setRejectingId(selectedRequest.id);
+      await itemBarangService.rejectRongsok(selectedRequest.id, reason || "Ditolak oleh admin");
+      setShowRejectionModal(false);
+      showAlert("Sukses", "Request rongsok berhasil ditolak!", "success", () => {
+        loadRongsokRequests(false);
+      });
+    } catch (error) {
+      console.error('❌ Error rejecting rongsok:', error);
+      showAlert("Error", error.message || "Gagal menolak request rongsok", "error");
+    } finally {
+      setRejectingId(null);
+    }
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
@@ -201,12 +262,22 @@ export default function ApprovalPage() {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            {/* Fix Tailwind dynamic class compilation by providing static string mapping */}
+            <TabsList className={`grid w-full ${
+              [canUpdateItemRequest, canUpdateSOApproval, canUpdateRongsokApproval].filter(Boolean).length === 3 
+                ? 'grid-cols-3' 
+                : [canUpdateItemRequest, canUpdateSOApproval, canUpdateRongsokApproval].filter(Boolean).length === 2 
+                  ? 'grid-cols-2' 
+                  : 'grid-cols-1'
+            }`}>
               {canUpdateItemRequest && (
                 <TabsTrigger value="item-barang-request">Item Barang Request</TabsTrigger>
               )}
               {canUpdateSOApproval && (
                 <TabsTrigger value="sales-order">Sales Order</TabsTrigger>
+              )}
+              {canUpdateRongsokApproval && (
+                <TabsTrigger value="rongsok">Rongsok Approval</TabsTrigger>
               )}
             </TabsList>
 
@@ -378,6 +449,98 @@ export default function ApprovalPage() {
                 </Card>
               </TabsContent>
             )}
+
+            {canUpdateRongsokApproval && (
+              <TabsContent value="rongsok" className="mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Permintaan Rongsok Item Barang</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {loading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <span className="ml-2">Loading data...</span>
+                      </div>
+                    ) : rongsokRequests.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        Tidak ada request rongsok yang menunggu approval
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50">
+                              <TableHead className="font-semibold">ID</TableHead>
+                              <TableHead className="font-semibold">Kode Barang</TableHead>
+                              <TableHead className="font-semibold">Nama Item</TableHead>
+                              <TableHead className="font-semibold">Gudang</TableHead>
+                              <TableHead className="font-semibold text-center">% Sisa</TableHead>
+                              <TableHead className="font-semibold">Alasan</TableHead>
+                              <TableHead className="font-semibold">Diminta Oleh</TableHead>
+                              <TableHead className="font-semibold">Tanggal</TableHead>
+                              <TableHead className="font-semibold text-center">Aksi</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {rongsokRequests.map((r) => (
+                              <TableRow key={r.id} className="hover:bg-gray-50">
+                                <TableCell className="font-medium">{r.id}</TableCell>
+                                <TableCell>
+                                  <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">
+                                    {r.item_barang?.kode_barang || '-'}
+                                  </span>
+                                </TableCell>
+                                <TableCell>{r.item_barang?.nama_item_barang || '-'}</TableCell>
+                                <TableCell>{r.item_barang?.gudang?.nama_gudang || '-'}</TableCell>
+                                <TableCell className="text-center">
+                                  <Badge className={`${r.persentase_sisa < 20 ? 'bg-orange-100 text-orange-800' : 'bg-red-100 text-red-800'}`}>
+                                    {Number(r.persentase_sisa || 0).toFixed(1)}%
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="max-w-xs truncate" title={r.reason}>{r.reason || '-'}</TableCell>
+                                <TableCell>{r.requested_by_user?.name || '-'}</TableCell>
+                                <TableCell>{formatDate(r.requested_at)}</TableCell>
+                                <TableCell>
+                                  <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                                    <Button
+                                      size="sm"
+                                      className="bg-green-600 hover:bg-green-700"
+                                      onClick={() => handleApproveRongsok(r)}
+                                      title="Setujui Rongsok"
+                                      disabled={approvingId === r.id}
+                                    >
+                                      {approvingId === r.id ? (
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                      ) : (
+                                        <Check className="w-4 h-4" />
+                                      )}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => handleRejectRongsok(r)}
+                                      title="Tolak Rongsok"
+                                      disabled={rejectingId === r.id}
+                                    >
+                                      {rejectingId === r.id ? (
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                      ) : (
+                                        <X className="w-4 h-4" />
+                                      )}
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
           </Tabs>
         </CardContent>
       </Card>
@@ -387,7 +550,7 @@ export default function ApprovalPage() {
         open={showRejectionModal}
         onOpenChange={setShowRejectionModal}
         salesOrder={selectedRequest}
-        onConfirm={handleRejectConfirm}
+        onConfirm={selectedRequest?._type === 'rongsok' ? handleRejectRongsokConfirm : handleRejectConfirm}
         onCancel={() => setShowRejectionModal(false)}
       />
       {/* Approve Modal */}

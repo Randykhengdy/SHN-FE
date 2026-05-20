@@ -28,4 +28,17 @@ export const reportMutasiService = {
     const qs = queryParams.toString();
     return await request(`/report-mutasi/rubah-status-barang${qs ? `?${qs}` : ''}`, { method: 'GET' });
   },
+
+  /**
+   * GET /api/report-mutasi/barang-rongsok
+   * Laporan Barang Rongsok / Tanggal
+   */
+  getReportBarangRongsok: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.start_date) queryParams.append('start_date', params.start_date);
+    if (params.end_date)   queryParams.append('end_date',   params.end_date);
+    if (params.gudang_id)  queryParams.append('gudang_id',  params.gudang_id);
+    const qs = queryParams.toString();
+    return await request(`/report-mutasi/barang-rongsok${qs ? `?${qs}` : ''}`, { method: 'GET' });
+  },
 };

@@ -1,6 +1,13 @@
 import React, { useState, useRef } from "react";
 import MasterDataLayout from "@/components/MasterDataLayout";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import ItemBarangCanvasPage from "./ItemBarangCanvasPage";
 import ItemBarangHistoryModal from "./ItemBarangHistoryModal";
 import {
@@ -14,6 +21,7 @@ import {
 import { request } from "@/lib/request";
 import { Download, Upload } from "lucide-react";
 import { useAlert } from "@/hooks/useAlert";
+import { useAppContext } from "@/context/AppContext";
 
 // Module-level variable untuk menyimpan mapping dimensi bentuk barang
 let bentukBarangDimensiMap = {};
@@ -30,6 +38,16 @@ export default function ItemBarangPage() {
   const [importLoading, setImportLoading] = useState(false);
   const fileInputRef = useRef(null);
   const { showAlert, showConfirm, AlertComponent } = useAlert();
+  const { user, hasPermission } = useAppContext();
+
+  // Rongsok reason dialog state
+  const [rongsokDialogOpen, setRongsokDialogOpen] = useState(false);
+  const [rongsokReason, setRongsokReason] = useState("");
+  const [rongsokTargetItem, setRongsokTargetItem] = useState(null);
+  const [rongsokLoading, setRongsokLoading] = useState(false);
+
+  // Custom canDelete logic for ItemBarang based on user attribute or fallback to standard role permission
+  const canDelete = (user?.is_can_delete_item_barang == 1) || (hasPermission && hasPermission('ITEM_BARANG', 'Delete')) || (hasPermission && hasPermission('MASTER_DATA', 'Delete'));
 
   const handleImportClick = (e, fetchData) => {
     fileInputRef.current._fetchData = fetchData;
@@ -100,17 +118,58 @@ export default function ItemBarangPage() {
           });
 
           if (response.success) {
-            // MasterDataLayout akan otomatis me-refresh data jika service.getAll dipanggil lagi
-            // Namun kita bisa memicu refresh manual jika MasterDataLayout mendukungnya, 
-            // atau biarkan user me-refresh sendiri. 
-            // Karena MasterDataLayout biasanya punya internal state untuk refresh.
-            window.location.reload(); // Cara cepat untuk refresh data di MasterDataLayout
+            window.location.reload();
           }
         } catch (error) {
           console.error("Error updating item status:", error);
         }
       }
     );
+  };
+
+  // Rongsok with approval flow
+  const handleRongsokRequest = (item) => {
+    setRongsokTargetItem(item);
+    setRongsokReason("");
+    setRongsokDialogOpen(true);
+  };
+
+  const handleRongsokSubmit = async () => {
+    if (!rongsokTargetItem) return;
+    setRongsokLoading(true);
+    try {
+      const response = await itemBarangService.requestRongsok(rongsokTargetItem.id, rongsokReason);
+      console.log("Rongsok response:", response);
+      setRongsokDialogOpen(false);
+      const itemName = rongsokTargetItem.nama_item_barang;
+      setRongsokTargetItem(null);
+      setRongsokReason("");
+
+      // Backend returns needs_approval: true when sisa berat >= 10%
+      const needsApproval = response?.data?.needs_approval;
+      const persentase = response?.data?.persentase_sisa ?? response?.data?.rongsok_request?.persentase_sisa;
+
+      if (needsApproval) {
+        const pctText = persentase != null ? ` (sisa berat ${Number(persentase).toFixed(1)}%)` : "";
+        showAlert(
+          "Request Rongsok Diajukan",
+          `Request rongsok untuk item "${itemName}" berhasil diajukan${pctText}. Menunggu persetujuan admin di menu Approval.`,
+          "warning"
+        );
+      } else {
+        showAlert(
+          "Sukses",
+          response.message || `Item "${itemName}" berhasil di-rongsok.`,
+          "success",
+          () => window.location.reload()
+        );
+      }
+    } catch (error) {
+      console.error("Error requesting rongsok:", error);
+      showAlert("Error", error.message || "Gagal melakukan request rongsok.", "error");
+    } finally {
+      setRongsokLoading(false);
+    }
   };
 
   return (
@@ -145,10 +204,73 @@ export default function ItemBarangPage() {
         />
       )}
 
+      {/* Rongsok Reason Dialog */}
+      <Dialog open={rongsokDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setRongsokDialogOpen(false);
+          setRongsokTargetItem(null);
+          setRongsokReason("");
+        }
+      }}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-red-600 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>
+              Request Rongsok
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {rongsokTargetItem && (
+              <div className="bg-gray-50 rounded-md p-3 text-sm space-y-1">
+                <div><span className="font-medium text-gray-600">Kode:</span> {rongsokTargetItem.kode_barang}</div>
+                <div><span className="font-medium text-gray-600">Nama:</span> {rongsokTargetItem.nama_item_barang}</div>
+              </div>
+            )}
+            <div className="grid gap-2">
+              <label htmlFor="rongsok-reason" className="text-sm font-medium">
+                Alasan Rongsok <span className="text-gray-500">(opsional)</span>
+              </label>
+              <textarea
+                id="rongsok-reason"
+                placeholder="Masukkan alasan rongsok..."
+                value={rongsokReason}
+                onChange={(e) => setRongsokReason(e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
+                maxLength={500}
+              />
+            </div>
+            <div className="text-xs text-gray-500 bg-yellow-50 border border-yellow-200 rounded-md p-2">
+              ⚠️ Jika sisa berat item masih ≥ 10%, request rongsok akan masuk ke antrian approval admin.
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRongsokDialogOpen(false);
+                setRongsokTargetItem(null);
+                setRongsokReason("");
+              }}
+              disabled={rongsokLoading}
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleRongsokSubmit}
+              disabled={rongsokLoading}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {rongsokLoading ? "Memproses..." : "Request Rongsok"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <MasterDataLayout
         title="Item Barang"
         subtitle="Master Data"
         service={itemBarangService}
+        canDelete={canDelete}
         customHeaderContent={
           <div className="flex items-center gap-2">
             <input
@@ -244,6 +366,7 @@ export default function ItemBarangPage() {
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-package-x"><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14" /><path d="m7.5 4.27 9 5.15" /><polyline points="3.29 7 12 12 20.71 7" /><line x1="12" x2="12" y1="22" y2="12" /><path d="m17 13 5 5m-5 0 5-5" /></svg>
             ),
             onClick: (item) => handleUpdateStatusItem(item, "habis"),
+            visible: () => canDelete,
             className: "bg-orange-500 hover:bg-orange-600 text-white border-orange-500"
           },
           {
@@ -251,7 +374,7 @@ export default function ItemBarangPage() {
             icon: (
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trash-2"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>
             ),
-            onClick: (item) => handleUpdateStatusItem(item, "rongsok"),
+            onClick: (item) => handleRongsokRequest(item),
             className: "bg-red-500 hover:bg-red-600 text-white border-red-500"
           }
         ]}
@@ -400,6 +523,8 @@ export default function ItemBarangPage() {
           },
           { name: "quantity", label: "Quantity", type: "number", step: 0.01, required: true },
           { name: "sisa_luas", label: "Sisa Luas", type: "number", step: 0.01 },
+          { name: "berat", label: "Berat (kg)", type: "number", step: 0.01 },
+          { name: "saldo_berat", label: "Saldo Berat (kg)", type: "number", step: 0.01 },
           {
             name: "jenis_potongan",
             label: "Jenis Potongan",
@@ -514,10 +639,55 @@ export default function ItemBarangPage() {
           ] : []),
           { key: "quantity", label: "Qty", align: "center", width: "8rem", maxWidth: "8rem", format: "number" },
           { key: "sisa_luas", label: "Sisa Luas", align: "center", width: "10rem", maxWidth: "10rem", format: "number" },
+          { key: "berat", label: "Berat (kg)", align: "center", width: "10rem", maxWidth: "10rem", format: "number" },
+          { key: "saldo_berat", label: "Saldo Berat (kg)", align: "center", width: "10rem", maxWidth: "10rem", format: "number" },
+          {
+            key: "persentase_sisa_berat",
+            label: "% Sisa",
+            align: "center",
+            width: "8rem",
+            maxWidth: "8rem",
+            render: (val) => {
+              if (val == null) return <span className="text-gray-400 text-xs">-</span>;
+              const pct = Number(val);
+              const color = pct < 10
+                ? "bg-red-100 text-red-700"
+                : pct < 20
+                  ? "bg-orange-100 text-orange-700"
+                  : "bg-green-100 text-green-700";
+              return (
+                <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-medium ${color}`}>
+                  {pct.toFixed(1)}%
+                </span>
+              );
+            }
+          },
           { key: "jenis_potongan", label: "Jenis Potongan", align: "center", width: "12rem", maxWidth: "12rem" },
           { key: "gudang.nama_gudang", label: "Gudang", align: "center", width: "12rem", maxWidth: "12rem" },
           { key: "rak.nama_rak", label: "Rak", align: "center", width: "12rem", maxWidth: "12rem" },
-          { key: "status", label: "Status", align: "center", width: "10rem", maxWidth: "10rem" },
+          {
+            key: "status",
+            label: "Status",
+            align: "center",
+            width: "10rem",
+            maxWidth: "10rem",
+            render: (val) => {
+              if (!val) return "-";
+              const formatted = val.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+              
+              let badgeClass = "bg-blue-100 text-blue-800"; // default
+              if (val === 'active') badgeClass = "bg-green-100 text-green-800";
+              else if (val === 'request_rongsok') badgeClass = "bg-orange-100 text-orange-800";
+              else if (val === 'rongsok') badgeClass = "bg-red-100 text-red-800";
+              else if (val === 'habis') badgeClass = "bg-gray-100 text-gray-800";
+
+              return (
+                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap ${badgeClass}`}>
+                  {formatted}
+                </span>
+              );
+            }
+          },
           { key: "created_at", label: "Dibuat Pada", align: "center", width: "12rem", maxWidth: "12rem", format: "datetime" },
           // { key: "is_edit", label: "Is Edit", align: "center", width: "8rem", maxWidth: "8rem", format: "boolean" },
           { key: "jenis_barang.nama_jenis", label: "Jenis Barang", align: "center", width: "12rem", maxWidth: "12rem" },

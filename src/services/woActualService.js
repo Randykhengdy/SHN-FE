@@ -68,14 +68,6 @@ export const woActualService = {
     });
   },
 
-  // Update WO Actual
-  updateWOActual: async (id, woActualData) => {
-    return request(`${BASE_URL}/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(woActualData)
-    });
-  },
-
   // Save WO Actual (with file upload support)
   saveWOActual: async (woActualData) => {
     // Selalu kirim sebagai JSON (backend sudah menerima base64 untuk foto_bukti)
@@ -83,11 +75,6 @@ export const woActualService = {
       method: 'POST',
       body: JSON.stringify(woActualData)
     });
-  },
-
-  // Delete WO Actual
-  deleteWOActual: async (id) => {
-    return request(`${BASE_URL}/${id}`, { method: 'DELETE' });
   },
 
   // Get WO Planning list for selection (when creating WO Actual)

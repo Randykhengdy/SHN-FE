@@ -660,6 +660,14 @@ function createWindow() {
                 }
               }
             },
+            {
+              label: 'Barang Rongsok / Tanggal',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-barang-rongsok');
+                }
+              }
+            },
             // { label: 'Kartu Stock / Gudang / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Kartu Stock / Gudang / Barang sedang dalam pengembangan.', type: 'info' }) },
             {
               label: 'Stock / Gudang / Barang',
