@@ -13,7 +13,8 @@ import {
   ClipboardList,
   Edit3,
   Activity,
-  CornerDownLeft
+  CornerDownLeft,
+  BarChart2,
 } from "lucide-react";
 
 export default function NavigationMenu() {
@@ -93,7 +94,6 @@ export default function NavigationMenu() {
       icon: Users,
       category: "admin"
     },
-    // Laporan items
     {
       label: "WO Planning Report",
       path: "/laporan/work-order-planning",
@@ -105,7 +105,14 @@ export default function NavigationMenu() {
       path: "/laporan/work-order-actual",
       icon: ClipboardList,
       category: "laporan"
-    }
+    },
+    // Report Sales
+    {
+      label: "Piutang Pelanggan",
+      path: "/reports/piutang-pelanggan",
+      icon: BarChart2,
+      category: "report"
+    },
   ];
 
   const isActive = (path) => {
@@ -192,6 +199,26 @@ export default function NavigationMenu() {
         <div className="flex items-center gap-1">
           <span className="text-xs font-medium text-gray-500 mr-2">MASTER DATA:</span>
           {getCategoryItems("master").map((item) => (
+            <Button
+              key={item.path}
+              variant={isActive(item.path) ? "default" : "ghost"}
+              size="sm"
+              onClick={() => navigate(item.path)}
+              className="flex items-center gap-2"
+            >
+              <item.icon className="w-4 h-4" />
+              {item.label}
+            </Button>
+          ))}
+        </div>
+
+        {/* Divider */}
+        <div className="w-px h-6 bg-gray-300 mx-2"></div>
+
+        {/* Report Menu */}
+        <div className="flex items-center gap-1">
+          <span className="text-xs font-medium text-gray-500 mr-2">REPORT:</span>
+          {getCategoryItems("report").map((item) => (
             <Button
               key={item.path}
               variant={isActive(item.path) ? "default" : "ghost"}

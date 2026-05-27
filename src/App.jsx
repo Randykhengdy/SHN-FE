@@ -12,12 +12,16 @@ import ReportDateRangeModal from "@/components/modals/ReportDateRangeModal";
 import { salesOrderService } from "@/services/salesOrderService";
 import { woActualService } from "@/services/woActualService";
 import { printSalesOrderTanggalReport } from "@/lib/soReportPrint";
-import { printRealisasiWOTanggalReport } from "@/lib/woActualReportPrint";
+import { printRealisasiWOTanggalReport } from "@/lib/realisasiWOTanggalReportPrint";
 import { financeInvoicePodService } from "@/services/financeInvoicePodService";
 import { printInvoicePenjualanTanggalReport } from "@/lib/invoiceReportPrint";
 import { printSalesGudangTanggalReport } from "@/lib/salesGudangReportPrint";
 import { printSalesGudangBarangReport } from "@/lib/salesGudangBarangReportPrint";
 import { printSalesBarangGlobalReport } from "@/lib/salesBarangGlobalReportPrint";
+import { printSalesPelangganBarangReport } from "@/lib/salesPelangganBarangReportPrint";
+import { printPiutangPelangganReport } from "@/lib/piutangPelangganReportPrint";
+import { printPembayaranUangMukaPiutangReport } from "@/lib/pembayaranUangMukaPiutangReportPrint";
+import { reportSalesService } from "@/services/reportSalesService";
 
 function App() {
   // Gunakan hook untuk menangani navigasi dari Electron
@@ -29,7 +33,10 @@ function App() {
   const [isReportInvoicePenjualanTanggalOpen, setIsReportInvoicePenjualanTanggalOpen] = useState(false);
   const [isReportPenjualanGudangTanggalOpen, setIsReportPenjualanGudangTanggalOpen] = useState(false);
   const [isReportPenjualanGudangBarangOpen, setIsReportPenjualanGudangBarangOpen] = useState(false);
+  const [isReportPenjualanPelangganBarangOpen, setIsReportPenjualanPelangganBarangOpen] = useState(false);
   const [isReportPenjualanBarangGlobalOpen, setIsReportPenjualanBarangGlobalOpen] = useState(false);
+  const [isReportPiutangPelangganOpen, setIsReportPiutangPelangganOpen] = useState(false);
+  const [isReportPembayaranUmPiutangOpen, setIsReportPembayaranUmPiutangOpen] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
 
   // Listen for global alert events from utility functions (like tokenUtils)
@@ -99,10 +106,31 @@ function App() {
       });
     }
 
+    // Listen for Penjualan / Pelanggan / Barang Report event
+    if (window.electronAPI.onReportPenjualanPelangganBarang) {
+      window.electronAPI.onReportPenjualanPelangganBarang(() => {
+        setIsReportPenjualanPelangganBarangOpen(true);
+      });
+    }
+
     // Listen for Penjualan / Barang - Global Report event
     if (window.electronAPI.onReportPenjualanBarangGlobal) {
       window.electronAPI.onReportPenjualanBarangGlobal(() => {
         setIsReportPenjualanBarangGlobalOpen(true);
+      });
+    }
+
+    // Listen for Invoice Piutang / Pelanggan Report event
+    if (window.electronAPI.onReportPiutangPelanggan) {
+      window.electronAPI.onReportPiutangPelanggan(() => {
+        setIsReportPiutangPelangganOpen(true);
+      });
+    }
+
+    // Listen for Pembayaran Uang Muka & Piutang Report event
+    if (window.electronAPI.onReportPembayaranUmPiutang) {
+      window.electronAPI.onReportPembayaranUmPiutang(() => {
+        setIsReportPembayaranUmPiutangOpen(true);
       });
     }
 
@@ -166,13 +194,11 @@ function App() {
             onGenerate={async (from, to) => {
               try {
                 setReportLoading(true);
-                const result = await woActualService.getReport({
-                  tanggal_actual_start: from,
-                  tanggal_actual_end: to,
-                  per_page: 9999,
-                  sort: 'tanggal_actual,asc;nomor_wo,asc'
+                const result = await reportSalesService.getRealisasiWO({
+                  tanggal_start: from,
+                  tanggal_end: to,
                 });
-                
+
                 if (result.success && result.data) {
                   printRealisasiWOTanggalReport(result.data, from, to);
                   setIsReportRealisasiWOTanggalOpen(false);
@@ -275,6 +301,34 @@ function App() {
           />
 
           <ReportDateRangeModal
+            open={isReportPenjualanPelangganBarangOpen}
+            onOpenChange={setIsReportPenjualanPelangganBarangOpen}
+            title="Report Penjualan / Pelanggan / Barang"
+            loading={reportLoading}
+            onGenerate={async (from, to) => {
+              try {
+                setReportLoading(true);
+                const result = await financeInvoicePodService.getReportPenjualanPelangganBarangTanggal({
+                  tanggal_invoice_start: from,
+                  tanggal_invoice_end: to
+                });
+                
+                if (result.success && result.data) {
+                  printSalesPelangganBarangReport(result.data, from, to);
+                  setIsReportPenjualanPelangganBarangOpen(false);
+                } else {
+                  showAlert("Error", result.message || "Gagal mengambil data report", "error");
+                }
+              } catch (error) {
+                console.error("Error generating report:", error);
+                showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
+              } finally {
+                setReportLoading(false);
+              }
+            }}
+          />
+
+          <ReportDateRangeModal
             open={isReportPenjualanBarangGlobalOpen}
             onOpenChange={setIsReportPenjualanBarangGlobalOpen}
             title="Report Penjualan / Barang - Global"
@@ -295,6 +349,62 @@ function App() {
                 }
               } catch (error) {
                 console.error("Error generating report:", error);
+                showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
+              } finally {
+                setReportLoading(false);
+              }
+            }}
+          />
+
+          <ReportDateRangeModal
+            open={isReportPiutangPelangganOpen}
+            onOpenChange={setIsReportPiutangPelangganOpen}
+            title="Invoice Piutang / Pelanggan"
+            loading={reportLoading}
+            onGenerate={async (from, to) => {
+              try {
+                setReportLoading(true);
+                const result = await reportSalesService.getPiutangPelanggan({
+                  start_date: from,
+                  end_date: to,
+                });
+
+                if (result.success && result.data) {
+                  printPiutangPelangganReport(result.data, from, to);
+                  setIsReportPiutangPelangganOpen(false);
+                } else {
+                  showAlert("Error", result.message || "Gagal mengambil data report", "error");
+                }
+              } catch (error) {
+                console.error("Error generating piutang report:", error);
+                showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
+              } finally {
+                setReportLoading(false);
+              }
+            }}
+          />
+
+          <ReportDateRangeModal
+            open={isReportPembayaranUmPiutangOpen}
+            onOpenChange={setIsReportPembayaranUmPiutangOpen}
+            title="Pembayaran Penjualan Uang Muka & Piutang"
+            loading={reportLoading}
+            onGenerate={async (from, to) => {
+              try {
+                setReportLoading(true);
+                const result = await reportSalesService.getPembayaranUangMukaPiutang({
+                  start_date: from,
+                  end_date: to,
+                });
+
+                if (result.success && result.data) {
+                  printPembayaranUangMukaPiutangReport(result.data, from, to);
+                  setIsReportPembayaranUmPiutangOpen(false);
+                } else {
+                  showAlert("Error", result.message || "Gagal mengambil data report", "error");
+                }
+              } catch (error) {
+                console.error("Error generating pembayaran um piutang report:", error);
                 showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
               } finally {
                 setReportLoading(false);

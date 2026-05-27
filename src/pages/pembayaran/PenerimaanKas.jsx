@@ -219,6 +219,11 @@ export default function PenerimaanKasPage() {
 
         if (Object.keys(errors).length > 0) {
             setPaymentFormErrors(errors);
+            
+            // Show popup if the error is specifically about exceeding sisa bayar
+            if (errors.jumlah_payment && selectedInvoice && parseFloat(paymentForm.jumlah_payment) > selectedInvoice.sisaBayar) {
+                showAlert("Peringatan", errors.jumlah_payment, "warning");
+            }
             return;
         }
 
@@ -514,7 +519,19 @@ export default function PenerimaanKasPage() {
                             </Select>
                             {paymentFormErrors.metode_pembayaran && <p className="text-xs text-red-500">{paymentFormErrors.metode_pembayaran}</p>}
                         </div>
-                        <div className="grid gap-2"><Label>Jumlah <span className="text-red-500">*</span></Label><Input type="number" value={paymentForm.jumlah_payment} onChange={(e) => setPaymentForm({ ...paymentForm, jumlah_payment: e.target.value })} /></div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="jumlah_payment">Jumlah <span className="text-red-500">*</span></Label>
+                            <Input
+                                id="jumlah_payment"
+                                type="number"
+                                step="0.01"
+                                placeholder="0.00"
+                                value={paymentForm.jumlah_payment}
+                                onChange={(e) => setPaymentForm({ ...paymentForm, jumlah_payment: e.target.value })}
+                                className={paymentFormErrors.jumlah_payment ? "border-red-500" : ""}
+                            />
+                            {paymentFormErrors.jumlah_payment && <p className="text-xs text-red-500">{paymentFormErrors.jumlah_payment}</p>}
+                        </div>
                         <div className="grid gap-2"><Label>Catatan</Label><Textarea value={paymentForm.catatan} onChange={(e) => setPaymentForm({ ...paymentForm, catatan: e.target.value })} /></div>
                     </div>
                     <DialogFooter>

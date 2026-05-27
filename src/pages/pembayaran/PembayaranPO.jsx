@@ -192,6 +192,11 @@ export default function PembayaranPOPage() {
 
         if (Object.keys(errors).length > 0) {
             setPoPaymentFormErrors(errors);
+            
+            // Show popup if the error is specifically about exceeding sisa bayar
+            if (errors.jumlah_payment && selectedPO && parseFloat(poPaymentForm.jumlah_payment) > selectedPO.sisaBayar) {
+                showAlert("Peringatan", errors.jumlah_payment, "warning");
+            }
             return;
         }
 

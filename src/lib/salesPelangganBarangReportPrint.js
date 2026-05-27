@@ -5,15 +5,10 @@ import { format } from 'date-fns';
  */
 const formatCurrency = (number) => {
   if (number === undefined || number === null) return '0';
-  return new Intl.NumberFormat('id-ID').format(number);
-};
-
-/**
- * Format weight or dimension
- */
-const formatNumber = (number) => {
-  if (number === undefined || number === null) return '0';
-  return Number(number).toFixed(2).replace(/\.00$/, '');
+  return new Intl.NumberFormat('id-ID', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(number);
 };
 
 const formatDecimal2 = (number) => {
@@ -21,28 +16,28 @@ const formatDecimal2 = (number) => {
   return Number(number).toFixed(2);
 };
 
-export const printSalesGudangTanggalReport = (groupedData, startDate, endDate) => {
+export const printSalesPelangganBarangReport = (groupedData, startDate, endDate) => {
   const periodeStart = format(new Date(startDate), "dd-MM-yyyy");
   const periodeEnd = format(new Date(endDate), "dd-MM-yyyy");
 
   const todayStr = format(new Date(), "EEEE, d MMMM yyyy");
 
-  // Get Gudang Keys
-  const gudangNames = Object.keys(groupedData).sort();
+  // Get Pelanggan Keys
+  const pelangganNames = Object.keys(groupedData).sort();
 
   let totalKeseluruhanBerat = 0;
   let totalKeseluruhanJumlah = 0;
   let totalKeseluruhanModal = 0;
   let totalKeseluruhanLaba = 0;
 
-  // Render Rows Grouped By Gudang
-  const tableRowsRendering = gudangNames.map(gudangName => {
-    const items = groupedData[gudangName];
+  // Render Rows Grouped By Pelanggan
+  const tableRowsRendering = pelangganNames.map(pelangganName => {
+    const items = groupedData[pelangganName];
 
     let rowsHtml = `
       <tr>
-        <td colspan="11" class="gudang-header" style="text-align: left; font-weight: bold; padding-top: 10px; padding-bottom: 5px;">
-          Gudang : ${gudangName}
+        <td colspan="9" class="pelanggan-header" style="text-align: left; font-weight: bold; padding-top: 10px; padding-bottom: 5px;">
+          Pelanggan : ${pelangganName}
         </td>
       </tr>
     `;
@@ -55,12 +50,9 @@ export const printSalesGudangTanggalReport = (groupedData, startDate, endDate) =
     if (!items || items.length === 0) {
       rowsHtml += `
         <tr>
-          <td valign="top" align="center">-</td>
-          <td valign="top" align="left">-</td>
           <td valign="top" align="left">-</td>
           <td valign="top" align="center">-</td>
           <td valign="top" align="center">-</td>
-          <td valign="top" align="right">-</td>
           <td valign="top" align="right">-</td>
           <td valign="top" align="right">-</td>
           <td valign="top" align="right">-</td>
@@ -68,28 +60,13 @@ export const printSalesGudangTanggalReport = (groupedData, startDate, endDate) =
           <td valign="top" align="right">-</td>
         </tr>
       `;
-      return rowsHtml;
-    }
-
-    // Group by no_bukti for rowspan
-    const groupedByNoBukti = {};
-    items.forEach(item => {
-      const key = item.no_bukti || '-';
-      if (!groupedByNoBukti[key]) {
-        groupedByNoBukti[key] = [];
-      }
-      groupedByNoBukti[key].push(item);
-    });
-
-    Object.values(groupedByNoBukti).forEach(soItems => {
-      const rowspan = soItems.length;
-      
-      soItems.forEach((item, index) => {
+    } else {
+      items.forEach(item => {
         const itemQty = item.qty || 0;
         const itemKg = Number(item.total_kg || 0);
-        const itemHarga = Number(item.harga || 0); // Assuming it might be added later
+        const itemHargaPerKg = Number(item.harga_per_kg || 0);
         const itemJumlah = Number(item.jumlah || 0);
-        const itemHPP = Number(item.hpp || 0);
+        const itemHPP = Number(item.hpp_rata || 0);
         const itemModal = Number(item.modal || 0);
         const itemLaba = Number(item.laba_kotor || 0);
 
@@ -98,44 +75,21 @@ export const printSalesGudangTanggalReport = (groupedData, startDate, endDate) =
         subTotalModal += itemModal;
         subTotalLaba += itemLaba;
 
-        const tgl = item.tanggal || '-';
-        const noBukti = item.no_bukti || '-';
-        const namaBarang = item.nama_barang || '-';
-        const statusUnit = item.status || '-';
-
-        if (index === 0) {
-          rowsHtml += `
-            <tr>
-              <td valign="top" align="center" rowspan="${rowspan}">${tgl}</td>
-              <td valign="top" align="left" rowspan="${rowspan}">${noBukti}</td>
-              <td valign="top" align="left">${namaBarang}</td>
-              <td valign="top" align="center">${statusUnit}</td>
-              <td valign="top" align="center">${formatCurrency(itemQty)}</td>
-              <td valign="top" align="right">${formatDecimal2(itemKg)}</td>
-              <td valign="top" align="right">${formatCurrency(itemHarga)}</td>
-              <td valign="top" align="right">${formatCurrency(itemJumlah)}</td>
-              <td valign="top" align="right">${formatCurrency(itemHPP)}</td>
-              <td valign="top" align="right">${formatCurrency(itemModal)}</td>
-              <td valign="top" align="right">${formatCurrency(itemLaba)}</td>
-            </tr>
-          `;
-        } else {
-          rowsHtml += `
-            <tr>
-              <td valign="top" align="left">${namaBarang}</td>
-              <td valign="top" align="center">${statusUnit}</td>
-              <td valign="top" align="center">${formatCurrency(itemQty)}</td>
-              <td valign="top" align="right">${formatDecimal2(itemKg)}</td>
-              <td valign="top" align="right">${formatCurrency(itemHarga)}</td>
-              <td valign="top" align="right">${formatCurrency(itemJumlah)}</td>
-              <td valign="top" align="right">${formatCurrency(itemHPP)}</td>
-              <td valign="top" align="right">${formatCurrency(itemModal)}</td>
-              <td valign="top" align="right">${formatCurrency(itemLaba)}</td>
-            </tr>
-          `;
-        }
+        rowsHtml += `
+          <tr>
+            <td valign="top" align="left">${item.item_barang_group || ''}</td>
+            <td valign="top" align="center">${item.status || ''}</td>
+            <td valign="top" align="center">${formatCurrency(itemQty)}</td>
+            <td valign="top" align="right">${formatDecimal2(itemKg)}</td>
+            <td valign="top" align="right">${formatCurrency(itemHargaPerKg)}</td>
+            <td valign="top" align="right">${formatCurrency(itemJumlah)}</td>
+            <td valign="top" align="right">${formatCurrency(itemHPP)}</td>
+            <td valign="top" align="right">${formatCurrency(itemModal)}</td>
+            <td valign="top" align="right">${formatCurrency(itemLaba)}</td>
+          </tr>
+        `;
       });
-    });
+    }
 
     totalKeseluruhanBerat += subTotalBerat;
     totalKeseluruhanJumlah += subTotalJumlah;
@@ -144,8 +98,7 @@ export const printSalesGudangTanggalReport = (groupedData, startDate, endDate) =
 
     rowsHtml += `
       <tr class="subtotal-row">
-        <td colspan="4" align="center" style="font-weight: bold; border-top: 1px dotted #000;">${gudangName}</td>
-        <td align="center" style="border-top: 1px dotted #000;"></td>
+        <td colspan="3" align="right" style="font-weight: bold; border-top: 1px dotted #000; padding-right: 20px;">${pelangganName}</td>
         <td align="right" style="font-weight: bold; border-top: 1px dotted #000;">${formatDecimal2(subTotalBerat)}</td>
         <td align="right" style="border-top: 1px dotted #000;"></td>
         <td align="right" style="font-weight: bold; border-top: 1px dotted #000;">${formatCurrency(subTotalJumlah)}</td>
@@ -164,7 +117,7 @@ export const printSalesGudangTanggalReport = (groupedData, startDate, endDate) =
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Penjualan / Gudang / Tanggal</title>
+      <title>Penjualan / Pelanggan / Barang</title>
       <style>
         body {
           font-family: 'Courier New', Courier, monospace;
@@ -279,7 +232,7 @@ export const printSalesGudangTanggalReport = (groupedData, startDate, endDate) =
     </head>
     <body>
       <div class="toolbar">
-        <span class="toolbar-title">Print Preview - Penjualan / Gudang / Tanggal</span>
+        <span class="toolbar-title">Print Preview - Penjualan / Pelanggan / Barang</span>
         <button class="btn btn-print" onclick="window.print()">Print Sekarang</button>
         <button class="btn btn-close" onclick="window.close()">Tutup Preview</button>
       </div>
@@ -290,31 +243,28 @@ export const printSalesGudangTanggalReport = (groupedData, startDate, endDate) =
             <div>${todayStr}</div>
             <div>Halaman : 001</div>
           </div>
-          <h1>Penjualan / Gudang / Tanggal</h1>
+          <h1>Penjualan / Pelanggan / Barang</h1>
           <div class="periode">Periode ${periodeStart} s.d. ${periodeEnd}</div>
         </div>
 
         <table>
           <thead>
             <tr>
-              <th width="8%" align="center">Tanggal</th>
-              <th width="12%" align="left">No.Bukti</th>
-              <th width="24%" align="left">Nama Barang</th>
-              <th width="6%" align="center">Status</th>
-              <th width="4%" align="center">Qty</th>
-              <th width="7%" align="right">Total Kg.</th>
-              <th width="9%" align="right">Harga</th>
-              <th width="10%" align="right">Jumlah</th>
-              <th width="7%" align="right">HPP</th>
-              <th width="9%" align="right">Modal</th>
-              <th width="9%" align="right">Laba Kotor</th>
+              <th width="32%" align="left">Nama Barang</th>
+              <th width="8%" align="center">Status</th>
+              <th width="5%" align="center">Qty</th>
+              <th width="8%" align="right">Total Kg.</th>
+              <th width="10%" align="right">Harga/Kg.</th>
+              <th width="12%" align="right">Jumlah</th>
+              <th width="8%" align="right">HPP</th>
+              <th width="10%" align="right">Modal</th>
+              <th width="10%" align="right">Laba Kotor</th>
             </tr>
           </thead>
           <tbody>
             ${tableRowsRendering}
             <tr class="grand-total-row">
-              <td colspan="4" align="center">GRAND TOTAL</td>
-              <td align="center"></td>
+              <td colspan="3" align="center">GRAND TOTAL</td>
               <td align="right">${formatDecimal2(totalKeseluruhanBerat)}</td>
               <td align="center"></td>
               <td align="right">${formatCurrency(totalKeseluruhanJumlah)}</td>
