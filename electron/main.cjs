@@ -446,6 +446,11 @@ function createWindow() {
     }
   });
 
+  const navigateTo = (path, label) => {
+    console.log(`[Main] Navigating to: ${path} (${label})`);
+    if (mainWindow) mainWindow.webContents.send('navigate-to', path, label);
+  };
+
   const buildMenuTemplate = () => [
     {
       label: 'File',
@@ -453,12 +458,12 @@ function createWindow() {
         {
           label: 'Dashboard',
           accelerator: 'CmdOrCtrl+D',
-          click: () => mainWindow.webContents.send('navigate-to', '/dashboard')
+          click: () => navigateTo('/dashboard', 'Dashboard')
         },
         {
           label: 'Dashboard Workshop',
           accelerator: 'CmdOrCtrl+Shift+D',
-          click: () => mainWindow.webContents.send('navigate-to', '/dashboard/workshop')
+          click: () => navigateTo('/dashboard/workshop', 'Dashboard Workshop')
         },
         { type: 'separator' },
         {
@@ -472,21 +477,22 @@ function createWindow() {
       {
         label: 'Masterdata',
         submenu: [
-          { label: 'Jenis Barang', accelerator: 'CmdOrCtrl+1', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/jenis-barang') },
-          { label: 'Tipe Barang', accelerator: 'CmdOrCtrl+Shift+1', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/tipe-barang') },
-          { label: 'Bentuk Barang', accelerator: 'CmdOrCtrl+2', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/bentuk-barang') },
-          { label: 'Grade Barang', accelerator: 'CmdOrCtrl+3', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/grade-barang') },
-          { label: 'Item Barang Group', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/item-barang-group') },
-          { label: 'Berat Jenis', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/berat-jenis') },
-          { label: 'Item Barang', accelerator: 'CmdOrCtrl+4', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/item-barang') },
-          { label: 'Jenis Mutasi Stock', accelerator: 'CmdOrCtrl+5', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/jenis-mutasi-stock') },
+          { label: 'Jenis Barang', accelerator: 'CmdOrCtrl+1', click: () => navigateTo('/masterdata/jenis-barang', 'Jenis Barang') },
+          { label: 'Tipe Barang', accelerator: 'CmdOrCtrl+Shift+1', click: () => navigateTo('/masterdata/tipe-barang', 'Tipe Barang') },
+          { label: 'Bentuk Barang', accelerator: 'CmdOrCtrl+2', click: () => navigateTo('/masterdata/bentuk-barang', 'Bentuk Barang') },
+          { label: 'Grade Barang', accelerator: 'CmdOrCtrl+3', click: () => navigateTo('/masterdata/grade-barang', 'Grade Barang') },
+          { label: 'Item Barang Group', click: () => navigateTo('/masterdata/item-barang-group', 'Item Barang Group') },
+          { label: 'Berat Jenis', click: () => navigateTo('/masterdata/berat-jenis', 'Berat Jenis') },
+          { label: 'Item Barang', accelerator: 'CmdOrCtrl+4', click: () => navigateTo('/masterdata/item-barang', 'Item Barang') },
+          { label: 'Jenis Mutasi Stock', accelerator: 'CmdOrCtrl+5', click: () => navigateTo('/masterdata/jenis-mutasi-stock', 'Jenis Mutasi Stock') },
           { type: 'separator' },
-          { label: 'Suppliers', accelerator: 'CmdOrCtrl+6', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/supplier') },
-          { label: 'Pelanggan', accelerator: 'CmdOrCtrl+7', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/pelanggan') },
-          { label: 'Gudang', accelerator: 'CmdOrCtrl+8', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/gudang') },
-          { label: 'Rak', accelerator: 'CmdOrCtrl+Shift+8', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/rak') },
-          { label: 'Pelaksana', accelerator: 'CmdOrCtrl+9', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/pelaksana') },
-          { label: 'Jenis Transaksi Kas', accelerator: 'CmdOrCtrl+0', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/jenis-transaksi-kas') },
+          { label: 'Suppliers', accelerator: 'CmdOrCtrl+6', click: () => navigateTo('/masterdata/supplier', 'Suppliers') },
+          { label: 'Pelanggan', accelerator: 'CmdOrCtrl+7', click: () => navigateTo('/masterdata/pelanggan', 'Pelanggan') },
+          { label: 'Gudang', accelerator: 'CmdOrCtrl+8', click: () => navigateTo('/masterdata/gudang', 'Gudang') },
+          { label: 'Rak', accelerator: 'CmdOrCtrl+Shift+8', click: () => navigateTo('/masterdata/rak', 'Rak') },
+          { label: 'Pelaksana', accelerator: 'CmdOrCtrl+9', click: () => navigateTo('/masterdata/pelaksana', 'Pelaksana') },
+          { label: 'Jenis Transaksi Kas', accelerator: 'CmdOrCtrl+0', click: () => navigateTo('/masterdata/jenis-transaksi-kas', 'Jenis Transaksi Kas') },
+          { label: 'Jenis Biaya', click: () => navigateTo('/masterdata/jenis-biaya', 'Jenis Biaya') },
         ]
       }
     ] : []),
@@ -494,32 +500,30 @@ function createWindow() {
       {
         label: 'User Management',
         submenu: [
-          { label: 'Users', accelerator: 'CmdOrCtrl+U', click: () => mainWindow.webContents.send('navigate-to', '/users') },
-          { label: 'Role', accelerator: 'CmdOrCtrl+Shift+R', click: () => mainWindow.webContents.send('navigate-to', '/masterdata/role') },
+          { label: 'Users', accelerator: 'CmdOrCtrl+U', click: () => navigateTo('/users', 'Users') },
+          { label: 'Role', accelerator: 'CmdOrCtrl+Shift+R', click: () => navigateTo('/masterdata/role', 'Role') },
         ]
       }
     ] : []),
     {
       label: 'Transaksi',
       submenu: [
-        ...(canShow('PURCHASE_ORDER') ? [{ label: 'Purchase Order', accelerator: 'CmdOrCtrl+P', click: () => mainWindow.webContents.send('navigate-to', '/purchase-order') }] : []),
-        ...(canShow('SALES_ORDER') ? [{ label: 'Sales Order', accelerator: 'CmdOrCtrl+S', click: () => mainWindow.webContents.send('navigate-to', '/sales-order') }] : []),
-        ...(canShow('WORK_ORDER_PLANNING') ? [{ label: 'Work Order', accelerator: 'CmdOrCtrl+W', click: () => mainWindow.webContents.send('navigate-to', '/work-order') }] : []),
-        ...(canShow('WORK_ORDER_ACTUAL') ? [{ label: 'WO Actual', accelerator: 'CmdOrCtrl+Shift+W', click: () => mainWindow.webContents.send('navigate-to', '/wo-actual') }] : []),
-        { label: 'Surat Jalan Invoicing', accelerator: 'CmdOrCtrl+F', click: () => mainWindow.webContents.send('navigate-to', '/finance-invoice-pod') },
-        // ...(canShow('PEMBAYARAN_PO') ? [{ label: 'Pembayaran PO', click: () => mainWindow.webContents.send('navigate-to', '/pembayaran-po') }] : []),
-        // ...(canShow('PENERIMAAN_KAS') ? [{ label: 'Penerimaan Kas', click: () => mainWindow.webContents.send('navigate-to', '/penerimaan-kas') }] : []),
-        { label: 'Pembayaran PO', click: () => mainWindow.webContents.send('navigate-to', '/pembayaran-po') },
-        { label: 'Penerimaan Kas', click: () => mainWindow.webContents.send('navigate-to', '/penerimaan-kas') },
+        ...(canShow('PURCHASE_ORDER') ? [{ label: 'Purchase Order', accelerator: 'CmdOrCtrl+P', click: () => navigateTo('/purchase-order', 'Purchase Order') }] : []),
+        ...(canShow('SALES_ORDER') ? [{ label: 'Sales Order', accelerator: 'CmdOrCtrl+S', click: () => navigateTo('/sales-order', 'Sales Order') }] : []),
+        ...(canShow('WORK_ORDER_PLANNING') ? [{ label: 'Work Order', accelerator: 'CmdOrCtrl+W', click: () => navigateTo('/work-order', 'Work Order') }] : []),
+        ...(canShow('WORK_ORDER_ACTUAL') ? [{ label: 'WO Actual', accelerator: 'CmdOrCtrl+Shift+W', click: () => navigateTo('/wo-actual', 'WO Actual') }] : []),
+        { label: 'Surat Jalan Invoicing', accelerator: 'CmdOrCtrl+F', click: () => navigateTo('/finance-invoice-pod', 'Surat Jalan Invoicing') },
+        { label: 'Pembayaran PO', click: () => navigateTo('/pembayaran-po', 'Pembayaran PO') },
+        { label: 'Penerimaan Kas', click: () => navigateTo('/penerimaan-kas', 'Penerimaan Kas') },
         { type: 'separator' },
-        { label: 'Mutasi Stock', accelerator: 'CmdOrCtrl+M', click: () => mainWindow.webContents.send('navigate-to', '/mutasi-stock') },
-        { label: 'Item Barang Request', accelerator: 'CmdOrCtrl+I', click: () => mainWindow.webContents.send('navigate-to', '/item-barang-request') },
-        { label: 'Approval', accelerator: 'CmdOrCtrl+Shift+A', click: () => mainWindow.webContents.send('navigate-to', '/approval') },
-        { label: 'Input Harga Barang Datang', click: () => mainWindow.webContents.send('navigate-to', '/input-harga-barang-datang') },
+        { label: 'Mutasi Stock', accelerator: 'CmdOrCtrl+M', click: () => navigateTo('/mutasi-stock', 'Mutasi Stock') },
+        { label: 'Item Barang Request', accelerator: 'CmdOrCtrl+I', click: () => navigateTo('/item-barang-request', 'Item Barang Request') },
+        { label: 'Approval', accelerator: 'CmdOrCtrl+Shift+A', click: () => navigateTo('/approval', 'Approval') },
+        { label: 'Input Harga Barang Datang', click: () => navigateTo('/input-harga-barang-datang', 'Input Harga Barang Datang') },
         { type: 'separator' },
-        { label: 'Konversi Barang', accelerator: 'CmdOrCtrl+K', click: () => mainWindow.webContents.send('navigate-to', '/konversi-barang') },
-        { label: 'Split Barang', accelerator: 'CmdOrCtrl+Shift+S', click: () => mainWindow.webContents.send('navigate-to', '/split-barang') },
-        { label: 'Merge Barang', accelerator: 'CmdOrCtrl+Shift+M', click: () => mainWindow.webContents.send('navigate-to', '/merge-barang') }
+        { label: 'Konversi Barang', accelerator: 'CmdOrCtrl+K', click: () => navigateTo('/konversi-barang', 'Konversi Barang') },
+        { label: 'Split Barang', accelerator: 'CmdOrCtrl+Shift+S', click: () => navigateTo('/split-barang', 'Split Barang') },
+        { label: 'Merge Barang', accelerator: 'CmdOrCtrl+Shift+M', click: () => navigateTo('/merge-barang', 'Merge Barang') }
       ]
     },
     {
@@ -530,8 +534,16 @@ function createWindow() {
           submenu: [
             { label: 'SO / Tanggal', click: () => mainWindow.webContents.send('open-report-so-tanggal') },
             { label: 'Realisasi WO / Tanggal', click: () => mainWindow.webContents.send('open-report-wo-actual-tanggal') },
+            {
+              label: 'Kegiatan Pelaksana / Tanggal',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-kegiatan-pelaksana');
+                }
+              }
+            },
             { label: 'Invoice Penjualan / Tanggal', click: () => mainWindow.webContents.send('open-report-invoice-tanggal') },
-            { label: 'Analisa SO, WO & Invoice / Periode', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Analisa SO, WO & Invoice / Periode sedang dalam pengembangan.', type: 'info' }) },
+            // { label: 'Analisa SO, WO & Invoice / Periode', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Analisa SO, WO & Invoice / Periode sedang dalam pengembangan.', type: 'info' }) },
             { label: 'Penjualan / Gudang / Tanggal', click: () => mainWindow.webContents.send('open-report-penjualan-gudang-tanggal') },
             {
               label: 'Penjualan / Gudang / Barang',
@@ -557,49 +569,190 @@ function createWindow() {
                 }
               }
             },
-            { label: 'Penjualan / Pelanggan / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Penjualan / Pelanggan / Tanggal sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Invoice Piutang / Pelanggan', click: () => mainWindow.webContents.send('open-report-piutang-pelanggan') },
-            { label: 'Pembayaran Penjualan Uang Muka & Piutang', click: () => mainWindow.webContents.send('open-report-pembayaran-um-piutang') },
+            {
+              label: 'Penjualan / Pelanggan / Tanggal',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-penjualan-pelanggan-tanggal');
+                }
+              }
+            },
+            {
+              label: 'Invoice Piutang / Pelanggan',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-invoice-piutang-pelanggan');
+                }
+              }
+            },
+            {
+              label: 'Pembayaran Penjualan Uang Muka & Piutang',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-pembayaran-um-piutang');
+                }
+              }
+            },
           ]
         },
         {
           label: 'Purchasing',
           submenu: [
-            { label: 'Faktur Pembelian / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Faktur Pembelian / Tanggal sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Pembelian / Gudang / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Pembelian / Gudang / Tanggal sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Pembelian / Gudang / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Pembelian / Gudang / Barang sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Pembelian Barang Global', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Pembelian Barang Global sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Invoice Hutang / Supplier', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Invoice Hutang / Supplier sedang dalam pengembangan.', type: 'info' }) },
+            {
+              label: 'Faktur Pembelian / Tanggal',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-faktur-pembelian-tanggal');
+                }
+              }
+            },
+            {
+              label: 'Pembelian / Gudang / Tanggal',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-pembelian-gudang-tanggal');
+                }
+              }
+            },
+            {
+              label: 'Pembelian / Gudang / Barang',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-pembelian-gudang-barang');
+                }
+              }
+            },
+            {
+              label: 'Pembelian Barang Global',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-pembelian-barang-global');
+                }
+              }
+            },
+            {
+              label: 'Invoice Hutang / Supplier',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-invoice-hutang-supplier');
+                }
+              }
+            },
           ]
         },
         {
           label: 'Inventory',
           submenu: [
-            { label: 'Mutasi Stock / Gudang / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Mutasi Stock / Gudang / Tanggal sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Mutasi Antar Gudang / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Mutasi Antar Gudang / Tanggal sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Rubah Status Barang (Utuh ke Potongan) / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Rubah Status Barang / Tanggal sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Kartu Stock / Gudang / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Kartu Stock / Gudang / Barang sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Stock / Gudang / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Stock / Gudang / Barang sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Stock / Barang / Gudang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Stock / Barang / Gudang sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Stock Barang Global / Semua Gudang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Stock Barang Global sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Stock Opname / Gudang / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Stock Opname / Gudang / Barang sedang dalam pengembangan.', type: 'info' }) },
+            // { label: 'Mutasi Stock / Gudang / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Mutasi Stock / Gudang / Tanggal sedang dalam pengembangan.', type: 'info' }) },
+            {
+              label: 'Mutasi Antar Gudang / Tanggal',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-mutasi-antar-gudang');
+                }
+              }
+            },
+            {
+              label: 'Rubah Status Barang (Utuh ke Potongan) / Tanggal',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-rubah-status-barang');
+                }
+              }
+            },
+            {
+              label: 'Barang Rongsok / Tanggal',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-barang-rongsok');
+                }
+              }
+            },
+            // { label: 'Kartu Stock / Gudang / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Kartu Stock / Gudang / Barang sedang dalam pengembangan.', type: 'info' }) },
+            {
+              label: 'Stock / Gudang / Barang',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-stock-gudang-barang');
+                }
+              }
+            },
+            {
+              label: 'Stock / Barang / Gudang',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-stock-barang-gudang');
+                }
+              }
+            },
+            {
+              label: 'Stock Barang Global / Semua Gudang',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-stock-global');
+                }
+              }
+            },
+            {
+              label: 'Stock Opname / Gudang / Barang',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-stock-opname');
+                }
+              }
+            },
           ]
         },
         {
           label: 'Finance',
           submenu: [
-            { label: 'Financial Report', click: () => mainWindow.webContents.send('navigate-to', '/financial-report') },
-            { label: 'Pemakaian Kas / Barang / Jenis Biaya', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Pemakaian Kas sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Rincian Keuangan dan Laba Operasional / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Rincian Keuangan sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Rekap Laba Operasional & Keuangan', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Rekap Laba Operasional sedang dalam pengembangan.', type: 'info' }) },
+            { label: 'Financial Report', click: () => navigateTo('/financial-report', 'Financial Report') },
+            {
+              label: 'Pemakaian Kas / Barang / Jenis Biaya',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-pemakaian-kas-jenis-biaya');
+                }
+              }
+            },
+            {
+              label: 'Rincian Keuangan dan Laba Operasional / Tanggal',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-rincian-keuangan');
+                }
+              }
+            },
+            { label: 'Rekap Laba Operasional & Keuangan', click: () => mainWindow.webContents.send('open-report-rekap-laba-operasional') },
           ]
         },
         {
           label: 'Performance',
           submenu: [
-            { label: 'Waktu Proses SO & WO / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Waktu Proses SO & WO sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Kegiatan Pelaksana Kerja / Tanggal', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Kegiatan Pelaksana Kerja sedang dalam pengembangan.', type: 'info' }) },
-            { label: 'Rekap Kegiatan Pelaksana', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Rekap Kegiatan Pelaksana sedang dalam pengembangan.', type: 'info' }) },
+            {
+              label: 'Waktu Proses SO & WO / Tanggal',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-tracking-so-wo');
+                }
+              }
+            },
+            {
+              label: 'Kegiatan Pelaksana Kerja / Tanggal',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-kegiatan-pelaksana');
+                }
+              }
+            },
+            {
+              label: 'Rekap Kegiatan Pelaksana',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-rekap-kegiatan-pelaksana');
+                }
+              }
+            },
           ]
         }
       ]
@@ -625,7 +778,7 @@ function createWindow() {
         },
         {
           label: 'System Log',
-          click: () => mainWindow.webContents.send('navigate-to', '/system-log')
+          click: () => navigateTo('/system-log', 'System Log')
         },
         {
           label: 'Check for Updates…',

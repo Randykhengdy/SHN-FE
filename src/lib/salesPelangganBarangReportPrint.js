@@ -58,6 +58,7 @@ export const printSalesPelangganBarangReport = (groupedData, startDate, endDate)
           <td valign="top" align="right">-</td>
           <td valign="top" align="right">-</td>
           <td valign="top" align="right">-</td>
+          <td valign="top" align="right">-</td>
         </tr>
       `;
     } else {
@@ -103,8 +104,8 @@ export const printSalesPelangganBarangReport = (groupedData, startDate, endDate)
         <td align="right" style="border-top: 1px dotted #000;"></td>
         <td align="right" style="font-weight: bold; border-top: 1px dotted #000;">${formatCurrency(subTotalJumlah)}</td>
         <td align="right" style="border-top: 1px dotted #000;"></td>
-        <td align="right" style="font-weight: bold; border-top: 1px dotted #000;">${formatCurrency(subTotalModal)}</td>
-        <td align="right" style="font-weight: bold; border-top: 1px dotted #000;">${formatCurrency(subTotalLaba)}</td>
+        <td align="right" style="border-top: 1px dotted #000;">${formatCurrency(subTotalModal)}</td>
+        <td align="right" style="border-top: 1px dotted #000;">${formatCurrency(subTotalLaba)}</td>
       </tr>
     `;
 

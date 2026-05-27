@@ -86,8 +86,82 @@ export function AppProvider({ children }) {
     return menu.permissions.some(r => names.includes(String(r.nama_permission || '').toLowerCase()));
   };
 
+  const [tabs, setTabs] = useState([]);
+  const [activeTabId, setActiveTabId] = useState(null);
+
+  const addTab = (path, label) => {
+    // Basic paths that shouldn't be tabs
+    if (['/', '/login', '/register'].includes(path)) return;
+
+    // Check if tab with this path already exists
+    const existingIndex = tabs.findIndex(t => t.path === path);
+    if (existingIndex !== -1) {
+      setActiveTabId(tabs[existingIndex].id);
+      return;
+    }
+
+    // Check limit
+    if (tabs.length >= 5) {
+      // Trigger a global alert
+      const event = new CustomEvent('showAlert', {
+        detail: {
+          title: 'Batas Tab Tercapai',
+          message: 'Anda hanya dapat membuka maksimal 5 tab. Silakan tutup tab yang tidak digunakan.',
+          type: 'warning'
+        }
+      });
+      window.dispatchEvent(event);
+      return;
+    }
+
+    // Add new tab
+    const newTab = {
+      id: Date.now().toString(),
+      path,
+      label: label || path.split('/').pop()?.replace(/-/g, ' ') || 'New Tab'
+    };
+    
+    setTabs(prev => [...prev, newTab]);
+    setActiveTabId(newTab.id);
+  };
+
+  const closeTab = (id) => {
+    setTabs(prev => {
+      const newTabs = prev.filter(t => t.id !== id);
+      
+      // If closing active tab, switch to another one
+      if (id === activeTabId && newTabs.length > 0) {
+        setActiveTabId(newTabs[newTabs.length - 1].id);
+      } else if (newTabs.length === 0) {
+        setActiveTabId(null);
+      }
+      
+      return newTabs;
+    });
+  };
+
+  const switchTab = (id) => {
+    const tab = tabs.find(t => t.id === id);
+    if (tab) {
+      setActiveTabId(id);
+    }
+  };
+
   return (
-    <AppContext.Provider value={{ user, rolePermissionsData, setUser, setRolePermissionsData, hasPermission, getPermissionsByMenuCode, hasAnyPermission }}>
+    <AppContext.Provider value={{ 
+      user, 
+      rolePermissionsData, 
+      setUser, 
+      setRolePermissionsData, 
+      hasPermission, 
+      getPermissionsByMenuCode, 
+      hasAnyPermission,
+      tabs,
+      activeTabId,
+      addTab,
+      closeTab,
+      switchTab
+    }}>
       {children}
     </AppContext.Provider>
   );

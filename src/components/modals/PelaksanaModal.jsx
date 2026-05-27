@@ -22,10 +22,10 @@ const PelaksanaModal = ({
   const [qtyError, setQtyError] = useState('');
   // Store debounce timeouts for each row
   const debounceTimeouts = useRef({});
-  
+
   // Get work order item qty
   const workOrderItemQty = workOrderItem ? (parseInt(workOrderItem.qty_planning) || 0) : 0;
-  
+
   // Calculate total qty from all rows
   const totalQty = useMemo(() => {
     return rows.reduce((sum, row) => sum + (parseInt(row.qty) || 0), 0);
@@ -40,8 +40,19 @@ const PelaksanaModal = ({
   const calculateBeratForRow = useCallback(async (rowId, qty) => {
     const qtyNum = parseInt(qty) || 0;
     if (!workOrderItem || !qtyNum || qtyNum <= 0) {
-      setRows(prev => prev.map(r => 
+      setRows(prev => prev.map(r =>
         r.id === rowId ? { ...r, berat: 0 } : r
+      ));
+      return;
+    }
+
+    // Prioritas: Gunakan berat dari SO jika tersedia
+    if (parseFloat(workOrderItem.berat) > 0) {
+      const unitWeight = parseFloat(workOrderItem.berat);
+      const totalWeight = qtyNum * unitWeight;
+
+      setRows(prev => prev.map(r =>
+        r.id === rowId ? { ...r, berat: totalWeight } : r
       ));
       return;
     }
@@ -49,14 +60,14 @@ const PelaksanaModal = ({
     try {
       const panjang = parseFloat(workOrderItem.panjang) || 0;
       const lebar = parseFloat(workOrderItem.lebar) || 0;
-      const tebal = parseFloat(workOrderItem.tebal) || 0;
+      const tebal = parseFloat(workOrderItem.tebal) || parseFloat(workOrderItem.diameter) || 0;
       const jenisBarangId = workOrderItem.jenis_barang_id;
       const bentukBarangId = workOrderItem.bentuk_barang_id;
       const gradeBarangId = workOrderItem.grade_barang_id;
 
-      // Check if required fields are available
-      if (!jenisBarangId || !bentukBarangId || !gradeBarangId || !panjang || !tebal) {
-        setRows(prev => prev.map(r => 
+      // Check if required fields are available (at least tebal or diameter)
+      if (!jenisBarangId || !bentukBarangId || !gradeBarangId || !panjang || (!tebal && !workOrderItem.diameter)) {
+        setRows(prev => prev.map(r =>
           r.id === rowId ? { ...r, berat: 0 } : r
         ));
         return;
@@ -65,7 +76,6 @@ const PelaksanaModal = ({
       // Convert mm to cm for API
       const panjangCm = panjang / 10;
       // For 1D shapes (shaft), lebar should be null
-      // Check if lebar is 0 or null, or if it's a 1D shape
       const lebarCm = (lebar && lebar > 0) ? (lebar / 10) : null;
       const tebalCm = tebal / 10;
 
@@ -75,27 +85,28 @@ const PelaksanaModal = ({
         grade_barang_id: parseInt(gradeBarangId),
         panjang: panjangCm,
         lebar: lebarCm,
-        tebal: tebalCm
+        tebal: tebalCm,
+        diameter: workOrderItem.diameter ? (parseFloat(workOrderItem.diameter) / 10) : null
       };
 
       const response = await beratJenisService.calculateWeight(requestData);
-      
+
       if (response.success && response.data && response.data.berat_kg) {
         const beratKg = parseFloat(response.data.berat_kg) || 0;
         // Calculate total weight: qty × berat_kg
         const totalWeight = qtyNum * beratKg;
-        
-        setRows(prev => prev.map(r => 
+
+        setRows(prev => prev.map(r =>
           r.id === rowId ? { ...r, berat: totalWeight } : r
         ));
       } else {
-        setRows(prev => prev.map(r => 
+        setRows(prev => prev.map(r =>
           r.id === rowId ? { ...r, berat: 0 } : r
         ));
       }
     } catch (error) {
       console.error('Error calculating weight:', error);
-      setRows(prev => prev.map(r => 
+      setRows(prev => prev.map(r =>
         r.id === rowId ? { ...r, berat: 0 } : r
       ));
     }
@@ -124,7 +135,7 @@ const PelaksanaModal = ({
       setQtyError('');
     }
   }, [open, initialValue, workOrderItem, calculateBeratForRow]);
-  
+
   // Validate total qty whenever rows change
   useEffect(() => {
     if (workOrderItemQty > 0 && totalQty > workOrderItemQty) {
@@ -176,11 +187,11 @@ const PelaksanaModal = ({
       const updatedRows = prev.map(r => {
         if (r.id === rowId) {
           const updatedRow = { ...r, [field]: val };
-          
+
           // Validate qty when qty changes
           if (field === "qty" && workOrderItem) {
             const qtyValue = parseInt(val) || 0;
-            
+
             // Calculate total qty with the new value
             const currentTotal = prev.reduce((sum, row) => {
               if (row.id === rowId) {
@@ -188,20 +199,20 @@ const PelaksanaModal = ({
               }
               return sum + (parseInt(row.qty) || 0);
             }, 0);
-            
+
             // Validate total qty doesn't exceed work order item qty
             if (currentTotal > workOrderItemQty) {
               setQtyError(`Total qty pelaksana (${currentTotal}) tidak boleh melebihi qty planning (${workOrderItemQty})`);
             } else {
               setQtyError('');
             }
-            
+
             // Auto-calculate berat when qty changes with debounce
             // Clear existing timeout for this row
             if (debounceTimeouts.current[rowId]) {
               clearTimeout(debounceTimeouts.current[rowId]);
             }
-            
+
             // Set new timeout with 500ms debounce
             debounceTimeouts.current[rowId] = setTimeout(() => {
               calculateBeratForRow(rowId, qtyValue);
@@ -209,7 +220,7 @@ const PelaksanaModal = ({
               delete debounceTimeouts.current[rowId];
             }, 500);
           }
-          
+
           return updatedRow;
         }
         return r;
@@ -225,23 +236,23 @@ const PelaksanaModal = ({
         return; // simple guard; parent form will handle alerting if needed
       }
     }
-    
+
     // Validate total qty doesn't exceed work order item qty
     if (workOrderItemQty > 0 && totalQty > workOrderItemQty) {
       setQtyError(`Total qty pelaksana (${totalQty}) tidak boleh melebihi qty planning (${workOrderItemQty})`);
       return;
     }
-    
+
     onSave?.(rows);
     onOpenChange(false);
   }, [rows, totalQty, workOrderItemQty, onSave, onOpenChange]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
+      <DialogContent
         className="h-[85vh] flex flex-col"
-        style={{ 
-          width: '85vw', 
+        style={{
+          width: '85vw',
           maxWidth: '85vw',
           minWidth: '85vw'
         }}
@@ -261,7 +272,7 @@ const PelaksanaModal = ({
                 </div>
               )}
             </div>
-            <Button 
+            <Button
               onClick={addRow}
               size="sm"
               className="bg-blue-600 hover:bg-blue-700"
@@ -354,8 +365,8 @@ const PelaksanaModal = ({
 
                     {/* Aksi */}
                     <div className="col-span-1 flex justify-center">
-                      <Button 
-                        variant="destructive" 
+                      <Button
+                        variant="destructive"
                         size="icon"
                         onClick={() => removeRow(row.id)}
                         className="h-8 w-8"
@@ -374,13 +385,13 @@ const PelaksanaModal = ({
         {/* Footer */}
         <DialogFooter className="flex-shrink-0 pt-4 border-t">
           <div className="flex justify-end gap-3">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => onOpenChange(false)}
             >
               Tutup
             </Button>
-            <Button 
+            <Button
               onClick={handleSave}
               className="bg-blue-600 hover:bg-blue-700"
               disabled={!!qtyError}

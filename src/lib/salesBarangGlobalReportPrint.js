@@ -16,7 +16,7 @@ const formatDecimal2 = (number) => {
   return Number(number).toFixed(2);
 };
 
-export const printSalesBarangGlobalReport = (data, startDate, endDate) => {
+export const printSalesBarangGlobalReport = (data, dataRongsok, startDate, endDate) => {
   const periodeStart = format(new Date(startDate), "dd-MM-yyyy");
   const periodeEnd = format(new Date(endDate), "dd-MM-yyyy");
 
@@ -29,14 +29,21 @@ export const printSalesBarangGlobalReport = (data, startDate, endDate) => {
 
   let rowsHtml = '';
 
-  if (!data || data.length === 0) {
-    rowsHtml += `
+  const rongsokItems = dataRongsok || [];
+  const salesItems = data || [];
+
+  const renderItems = (itemsToRender, title) => {
+    if (!itemsToRender || itemsToRender.length === 0) return '';
+    
+    let html = `
       <tr>
-        <td colspan="9" align="center" style="padding: 15px;">Tidak ada data penjualan dalam periode ini.</td>
+        <td colspan="9" style="text-align: center; font-style: italic; background-color: #f9f9f9; border-top: 1px dotted #ccc; border-bottom: 1px dotted #ccc; padding: 4px;">
+          --- ${title} ---
+        </td>
       </tr>
     `;
-  } else {
-    data.forEach(item => {
+
+    itemsToRender.forEach(item => {
       const itemQty = item.qty || 0;
       const itemKg = Number(item.total_kg || 0);
       const itemHargaPerKg = Number(item.harga_per_kg || 0);
@@ -50,10 +57,13 @@ export const printSalesBarangGlobalReport = (data, startDate, endDate) => {
       totalKeseluruhanModal += itemModal;
       totalKeseluruhanLaba += itemLaba;
 
-      rowsHtml += `
+      let statusUnit = (item.status || '').toUpperCase();
+      if (statusUnit === 'POTONGAN') statusUnit = 'POTONG';
+
+      html += `
         <tr>
           <td valign="top" align="left">${item.item_barang_group || ''}</td>
-          <td valign="top" align="center">${item.status || ''}</td>
+          <td valign="top" align="center">${statusUnit}</td>
           <td valign="top" align="center">${formatCurrency(itemQty)}</td>
           <td valign="top" align="right">${formatDecimal2(itemKg)}</td>
           <td valign="top" align="right">${formatCurrency(itemHargaPerKg)}</td>
@@ -64,6 +74,22 @@ export const printSalesBarangGlobalReport = (data, startDate, endDate) => {
         </tr>
       `;
     });
+    return html;
+  };
+
+  if (rongsokItems.length > 0) {
+    rowsHtml += renderItems(rongsokItems, 'BARANG RONGSOK');
+  }
+  if (salesItems.length > 0) {
+    rowsHtml += renderItems(salesItems, 'DATA PENJUALAN');
+  }
+
+  if (rongsokItems.length === 0 && salesItems.length === 0) {
+    rowsHtml += `
+      <tr>
+        <td colspan="9" align="center" style="padding: 15px;">Tidak ada data penjualan dalam periode ini.</td>
+      </tr>
+    `;
   }
 
   const documentHtml = `

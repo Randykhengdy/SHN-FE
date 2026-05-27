@@ -46,7 +46,11 @@ export const authService = {
       } else {
         // store minimal user info with role if provided
         if (result.role_id || result.role_name) {
-          setUser({ role_id: result.role_id, role_name: result.role_name });
+          setUser({ 
+            role_id: result.role_id, 
+            role_name: result.role_name,
+            is_can_delete_item_barang: result.is_can_delete_item_barang 
+          });
           try {
             try {
               const grouped = await roleService.getRoleMenuPermissionsData(result.role_id);

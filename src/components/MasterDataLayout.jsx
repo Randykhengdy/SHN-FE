@@ -26,6 +26,8 @@ export default function MasterDataLayout({
   selection,
   renderRow,
   menuCode = 'MASTER_DATA',
+  canDelete: customCanDelete,
+  canUpdate: customCanUpdate,
 }) {
   const { showConfirm, showAlert, AlertComponent } = useAlert();
   const { hasPermission } = useAppContext();
@@ -44,8 +46,8 @@ export default function MasterDataLayout({
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [filterValue, setFilterValue] = useState(filterConfig?.defaultValue || "semua");
   const canCreate = hasPermission && hasPermission(menuCode, 'Create');
-  const canUpdate = hasPermission && hasPermission(menuCode, 'Update');
-  const canDelete = hasPermission && hasPermission(menuCode, 'Delete');
+  const canUpdate = customCanUpdate !== undefined ? customCanUpdate : (hasPermission && hasPermission(menuCode, 'Update'));
+  const canDelete = customCanDelete !== undefined ? customCanDelete : (hasPermission && hasPermission(menuCode, 'Delete'));
 
   // Debounce search term
   useEffect(() => {

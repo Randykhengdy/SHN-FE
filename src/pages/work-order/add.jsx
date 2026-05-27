@@ -1536,6 +1536,7 @@ export default function AddWorkOrderPage() {
                     const params = new URLSearchParams({ per_page: '10', page: String(page || 1), status: 'submit,partial_wo' });
                     if (q) params.append('search', q);
                     params.set('per_page', '50');
+                    params.append('order', 'desc');
                     const resp = await request(`/sales-order/header?${params.toString()}`, { method: 'GET' });
                     const rows = Array.isArray(resp?.data) ? resp.data : [];
                     return rows.map(so => {

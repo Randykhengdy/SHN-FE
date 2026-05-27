@@ -83,7 +83,19 @@ export default function MasterFormModal({
 
   useEffect(() => {
     if (isOpen && !editData) {
-      setForm(prev => (prev && Object.keys(prev).length === 0 ? prev : {}));
+      // Build initial form with defaultValues from field definitions
+      const defaults = {};
+      fields.forEach((field) => {
+        if (field.defaultValue !== undefined) {
+          const val = typeof field.defaultValue === 'function' ? field.defaultValue() : field.defaultValue;
+          defaults[field.name] = val;
+        }
+      });
+      setForm(prev => {
+        const hasDefaults = Object.keys(defaults).length > 0;
+        if (!hasDefaults && prev && Object.keys(prev).length === 0) return prev;
+        return defaults;
+      });
       setOptions({});
       setSearchTerms({});
       setOpenDropdowns({});
@@ -317,7 +329,7 @@ export default function MasterFormModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 bg-white">
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-[250px]">
             {authError && (
               <AuthErrorAlert
                 onRefresh={() => {

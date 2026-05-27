@@ -1,9 +1,18 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAppContext } from '@/context/AppContext';
 
 const useElectronNavigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
+
+  const { addTab } = useAppContext();
+  const addTabRef = useRef(addTab);
+
+  // Selalu update ref dengan addTab terbaru dari context
+  useEffect(() => {
+    addTabRef.current = addTab;
+  }, [addTab]);
 
   // Menangani navigasi dari menu Electron
   const lastLogRef = useRef({ path: null, ts: 0 });
@@ -13,19 +22,23 @@ const useElectronNavigation = () => {
     window.__electronNavRegistered = true;
 
     // Listener untuk event navigate-to dari main process
-    const handleNavigate = (event, path) => {
+    const handleNavigate = (event, path, label) => {
       const now = Date.now();
-      const windowThrottle = 2000;
+      const windowThrottle = 1000;
       const canLog = (now - (lastLogRef.current.ts || 0)) > windowThrottle;
-      if (process.env.NODE_ENV === 'development' && canLog) {
-        console.log('Navigating to:', path);
+      if (canLog) {
+        console.log('[ElectronNav] Event received:', { path, label });
         lastLogRef.current = { path, ts: now };
       }
-      navigate(path);
+      
+      // Gunakan ref agar selalu memanggil versi terbaru dari addTab
+      if (addTabRef.current) {
+        addTabRef.current(path, label);
+      }
     };
 
     // Register listener
-    window.electronAPI.onNavigate((event, path) => handleNavigate(event, path));
+    window.electronAPI.onNavigate((event, path, label) => handleNavigate(event, path, label));
 
     // Cleanup listener saat komponen unmount
     return () => {

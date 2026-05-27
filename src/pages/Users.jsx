@@ -79,7 +79,39 @@ export default function UsersPage() {
             optionsService: roleService,
             optionLabel: "name"
           },
-          { name: "password", label: "Password", type: "password", maxLength: 100, required: false, hideOnEdit: true }
+          { name: "password", label: "Password", type: "password", maxLength: 100, required: false, hideOnEdit: true },
+          { 
+            name: "is_can_delete_item_barang", 
+            label: "Akses Hapus Item Barang", 
+            type: "custom",
+            defaultValue: "0",
+            mapFromEdit: (data) => data.is_can_delete_item_barang ? "1" : "0",
+            render: ({ form, handleSelectChange }) => (
+              <div 
+                className="flex items-center h-10 px-3 mt-1 rounded-md border border-gray-300 bg-white hover:bg-gray-50 transition-colors cursor-pointer select-none" 
+                onClick={() => handleSelectChange('is_can_delete_item_barang', form.is_can_delete_item_barang === "1" ? "0" : "1")}
+              >
+                <input
+                  type="checkbox"
+                  id="is_can_delete_item_barang"
+                  name="is_can_delete_item_barang"
+                  checked={form.is_can_delete_item_barang === "1"}
+                  onChange={(e) => {
+                    handleSelectChange('is_can_delete_item_barang', e.target.checked ? "1" : "0");
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <label 
+                  htmlFor="is_can_delete_item_barang" 
+                  className="ml-2 text-sm text-gray-700 cursor-pointer w-full" 
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Ya, izinkan hapus item
+                </label>
+              </div>
+            )
+          }
         ]}
         columns={[
           { key: "id", label: "ID", align: "center", width: "5rem", maxWidth: "5rem" },

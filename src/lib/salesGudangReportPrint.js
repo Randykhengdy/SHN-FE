@@ -21,14 +21,17 @@ const formatDecimal2 = (number) => {
   return Number(number).toFixed(2);
 };
 
-export const printSalesGudangTanggalReport = (groupedData, startDate, endDate) => {
+export const printSalesGudangTanggalReport = (groupedData, dataRongsok, startDate, endDate) => {
   const periodeStart = format(new Date(startDate), "dd-MM-yyyy");
   const periodeEnd = format(new Date(endDate), "dd-MM-yyyy");
 
   const todayStr = format(new Date(), "EEEE, d MMMM yyyy");
 
-  // Get Gudang Keys
-  const gudangNames = Object.keys(groupedData).sort();
+  // Get Gudang Keys from both groupedData and dataRongsok
+  const gudangNames = Array.from(new Set([
+    ...Object.keys(groupedData || {}),
+    ...Object.keys(dataRongsok || {})
+  ])).sort();
 
   let totalKeseluruhanBerat = 0;
   let totalKeseluruhanJumlah = 0;
@@ -37,7 +40,10 @@ export const printSalesGudangTanggalReport = (groupedData, startDate, endDate) =
 
   // Render Rows Grouped By Gudang
   const tableRowsRendering = gudangNames.map(gudangName => {
-    const items = groupedData[gudangName];
+    // Rongsok items first, then regular sales items
+    const rongsokItems = (dataRongsok || {})[gudangName] || [];
+    const salesItems = (groupedData || {})[gudangName] || [];
+    const items = [...rongsokItems, ...salesItems];
 
     let rowsHtml = `
       <tr>
@@ -52,90 +58,122 @@ export const printSalesGudangTanggalReport = (groupedData, startDate, endDate) =
     let subTotalModal = 0;
     let subTotalLaba = 0;
 
-    if (!items || items.length === 0) {
-      rowsHtml += `
+    // Helper to render a group of items — returns { html, totals }
+    const renderItems = (itemsToRender, title) => {
+      if (!itemsToRender || itemsToRender.length === 0) return { html: '', totals: { berat: 0, jumlah: 0, modal: 0, laba: 0 } };
+      
+      let sectionBerat = 0, sectionJumlah = 0, sectionModal = 0, sectionLaba = 0;
+
+      let html = `
         <tr>
-          <td valign="top" align="center">-</td>
-          <td valign="top" align="left">-</td>
-          <td valign="top" align="left">-</td>
-          <td valign="top" align="center">-</td>
-          <td valign="top" align="center">-</td>
-          <td valign="top" align="right">-</td>
-          <td valign="top" align="right">-</td>
-          <td valign="top" align="right">-</td>
-          <td valign="top" align="right">-</td>
-          <td valign="top" align="right">-</td>
-          <td valign="top" align="right">-</td>
+          <td colspan="11" style="text-align: center; font-style: italic; background-color: #f9f9f9; border-top: 1px dotted #ccc; border-bottom: 1px dotted #ccc; padding: 4px;">
+            --- ${title} ---
+          </td>
         </tr>
       `;
-      return rowsHtml;
+
+      const groupedByNoBukti = itemsToRender.reduce((acc, item) => {
+        const key = item.no_bukti || '-';
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(item);
+        return acc;
+      }, {});
+
+      Object.entries(groupedByNoBukti).forEach(([noBukti, groupItems]) => {
+        if (groupItems.length === 0) return;
+        
+        const rowspan = groupItems.length;
+        const tglCetakan = groupItems[0].tanggal || '-';
+
+        groupItems.forEach((item, index) => {
+          const itemQty = item.qty || 0;
+          const itemKg = Number(item.total_kg || 0);
+          const itemHarga = Number(item.harga || 0);
+          const itemJumlah = Number(item.jumlah || 0);
+          const itemHPP = Number(item.hpp || 0);
+          const itemModal = Number(item.modal || 0);
+          const itemLaba = Number(item.laba_kotor || 0);
+
+          sectionBerat += itemKg;
+          sectionJumlah += itemJumlah;
+          sectionModal += itemModal;
+          sectionLaba += itemLaba;
+
+          let statusUnit = (item.status || '').toUpperCase();
+          if (statusUnit === 'POTONGAN') statusUnit = 'POTONG';
+
+          if (index === 0) {
+            html += `
+              <tr>
+                <td valign="top" align="center" rowspan="${rowspan}">${tglCetakan}</td>
+                <td valign="top" align="left" rowspan="${rowspan}">${noBukti}</td>
+                <td valign="top" align="left">${item.nama_barang || ''}</td>
+                <td valign="top" align="center">${statusUnit}</td>
+                <td valign="top" align="center">${formatCurrency(itemQty)}</td>
+                <td valign="top" align="right">${formatDecimal2(itemKg)}</td>
+                <td valign="top" align="right">${formatCurrency(itemHarga)}</td>
+                <td valign="top" align="right">${formatCurrency(itemJumlah)}</td>
+                <td valign="top" align="right">${formatCurrency(itemHPP)}</td>
+                <td valign="top" align="right">${formatCurrency(itemModal)}</td>
+                <td valign="top" align="right">${formatCurrency(itemLaba)}</td>
+              </tr>
+            `;
+          } else {
+            html += `
+              <tr>
+                <td valign="top" align="left">${item.nama_barang || ''}</td>
+                <td valign="top" align="center">${statusUnit}</td>
+                <td valign="top" align="center">${formatCurrency(itemQty)}</td>
+                <td valign="top" align="right">${formatDecimal2(itemKg)}</td>
+                <td valign="top" align="right">${formatCurrency(itemHarga)}</td>
+                <td valign="top" align="right">${formatCurrency(itemJumlah)}</td>
+                <td valign="top" align="right">${formatCurrency(itemHPP)}</td>
+                <td valign="top" align="right">${formatCurrency(itemModal)}</td>
+                <td valign="top" align="right">${formatCurrency(itemLaba)}</td>
+              </tr>
+            `;
+          }
+        });
+      });
+
+      return { html, totals: { berat: sectionBerat, jumlah: sectionJumlah, modal: sectionModal, laba: sectionLaba } };
+    };
+
+    if (rongsokItems.length > 0) {
+      const { html, totals } = renderItems(rongsokItems, 'BARANG RONGSOK');
+      rowsHtml += html;
+      // Subtotal Rongsok
+      rowsHtml += `
+        <tr>
+          <td colspan="4" align="right" style="font-weight: bold; border-top: 1px dashed #999; border-bottom: 1px dashed #999; padding: 3px 2px;">Total Rongsok</td>
+          <td align="center" style="border-top: 1px dashed #999; border-bottom: 1px dashed #999;"></td>
+          <td align="right" style="font-weight: bold; border-top: 1px dashed #999; border-bottom: 1px dashed #999;">${formatDecimal2(totals.berat)}</td>
+          <td align="right" style="border-top: 1px dashed #999; border-bottom: 1px dashed #999;"></td>
+          <td align="right" style="font-weight: bold; border-top: 1px dashed #999; border-bottom: 1px dashed #999;">${formatCurrency(totals.jumlah)}</td>
+          <td align="right" style="border-top: 1px dashed #999; border-bottom: 1px dashed #999;"></td>
+          <td align="right" style="font-weight: bold; border-top: 1px dashed #999; border-bottom: 1px dashed #999;">${formatCurrency(totals.modal)}</td>
+          <td align="right" style="font-weight: bold; border-top: 1px dashed #999; border-bottom: 1px dashed #999;">${formatCurrency(totals.laba)}</td>
+        </tr>
+      `;
+      subTotalBerat += totals.berat;
+      subTotalJumlah += totals.jumlah;
+      subTotalModal += totals.modal;
+      subTotalLaba += totals.laba;
+    }
+    if (salesItems.length > 0) {
+      const { html, totals } = renderItems(salesItems, 'DATA PENJUALAN');
+      rowsHtml += html;
+      subTotalBerat += totals.berat;
+      subTotalJumlah += totals.jumlah;
+      subTotalModal += totals.modal;
+      subTotalLaba += totals.laba;
+    }
+    
+    // If both are empty
+    if (rongsokItems.length === 0 && salesItems.length === 0) {
+      rowsHtml += `<tr><td colspan="11" align="center">-</td></tr>`;
     }
 
-    // Group by no_bukti for rowspan
-    const groupedByNoBukti = {};
-    items.forEach(item => {
-      const key = item.no_bukti || '-';
-      if (!groupedByNoBukti[key]) {
-        groupedByNoBukti[key] = [];
-      }
-      groupedByNoBukti[key].push(item);
-    });
-
-    Object.values(groupedByNoBukti).forEach(soItems => {
-      const rowspan = soItems.length;
-      
-      soItems.forEach((item, index) => {
-        const itemQty = item.qty || 0;
-        const itemKg = Number(item.total_kg || 0);
-        const itemHarga = Number(item.harga || 0); // Assuming it might be added later
-        const itemJumlah = Number(item.jumlah || 0);
-        const itemHPP = Number(item.hpp || 0);
-        const itemModal = Number(item.modal || 0);
-        const itemLaba = Number(item.laba_kotor || 0);
-
-        subTotalBerat += itemKg;
-        subTotalJumlah += itemJumlah;
-        subTotalModal += itemModal;
-        subTotalLaba += itemLaba;
-
-        const tgl = item.tanggal || '-';
-        const noBukti = item.no_bukti || '-';
-        const namaBarang = item.nama_barang || '-';
-        const statusUnit = item.status || '-';
-
-        if (index === 0) {
-          rowsHtml += `
-            <tr>
-              <td valign="top" align="center" rowspan="${rowspan}">${tgl}</td>
-              <td valign="top" align="left" rowspan="${rowspan}">${noBukti}</td>
-              <td valign="top" align="left">${namaBarang}</td>
-              <td valign="top" align="center">${statusUnit}</td>
-              <td valign="top" align="center">${formatCurrency(itemQty)}</td>
-              <td valign="top" align="right">${formatDecimal2(itemKg)}</td>
-              <td valign="top" align="right">${formatCurrency(itemHarga)}</td>
-              <td valign="top" align="right">${formatCurrency(itemJumlah)}</td>
-              <td valign="top" align="right">${formatCurrency(itemHPP)}</td>
-              <td valign="top" align="right">${formatCurrency(itemModal)}</td>
-              <td valign="top" align="right">${formatCurrency(itemLaba)}</td>
-            </tr>
-          `;
-        } else {
-          rowsHtml += `
-            <tr>
-              <td valign="top" align="left">${namaBarang}</td>
-              <td valign="top" align="center">${statusUnit}</td>
-              <td valign="top" align="center">${formatCurrency(itemQty)}</td>
-              <td valign="top" align="right">${formatDecimal2(itemKg)}</td>
-              <td valign="top" align="right">${formatCurrency(itemHarga)}</td>
-              <td valign="top" align="right">${formatCurrency(itemJumlah)}</td>
-              <td valign="top" align="right">${formatCurrency(itemHPP)}</td>
-              <td valign="top" align="right">${formatCurrency(itemModal)}</td>
-              <td valign="top" align="right">${formatCurrency(itemLaba)}</td>
-            </tr>
-          `;
-        }
-      });
-    });
 
     totalKeseluruhanBerat += subTotalBerat;
     totalKeseluruhanJumlah += subTotalJumlah;

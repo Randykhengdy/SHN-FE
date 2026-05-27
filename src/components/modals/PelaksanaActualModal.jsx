@@ -34,7 +34,7 @@ const PelaksanaActualModal = ({
   readOnly = false,
   qtyPlanning = 0,
 }) => {
-  const { showAlert, AlertComponent } = useAlert();
+  const { showAlert, showConfirm, AlertComponent } = useAlert();
   const [rows, setRows] = useState([]);
   const [containerRef, setContainerRef] = useState(null);
 
@@ -48,20 +48,21 @@ const PelaksanaActualModal = ({
       const computed = planningArr.map((p, idx) => {
         const pId = p?.pelaksana_info?.id || p?.pelaksana?.id || p?.id || null;
         const pNama = p?.pelaksana_info?.nama_pelaksana || p?.pelaksana?.nama || p?.nama || p?.name || "-";
-        
+
         // Ambil data actual yang sesuai index-nya (jika ada)
         const actualRow = actualArr[idx];
-        
+
         // Tentukan ID dan Nama final
         // Prioritaskan data dari actualRow jika ada (karena itu hasil edit user)
         // Jika tidak ada actualRow, gunakan default dari planning
         const finalId = actualRow?.pelaksana_id ?? pId;
         const finalNama = actualRow?.pelaksana?.nama_pelaksana ?? actualRow?.nama ?? pNama;
-        
+
         return {
           pelaksana_id: finalId,
           nama: finalNama,
           planning_nama: pNama, // Nama asli dari planning (tidak berubah)
+          planning_berat: p?.weight ?? p?.berat ?? 0, // Berat dari planning
           qty: actualRow?.qty ?? 0,
           berat: (actualRow?.berat ?? actualRow?.weight ?? ''),
           catatan: actualRow?.catatan ?? (p?.catatan || ""),
@@ -75,6 +76,7 @@ const PelaksanaActualModal = ({
       pelaksana_id: r.pelaksana_id ?? r.pelaksana?.id ?? null,
       nama: r.pelaksana?.nama_pelaksana || r.pelaksana?.nama || r.nama || "-",
       planning_nama: "-", // Tidak ada planning
+      planning_berat: 0,
       qty: r.qty ?? 0,
       berat: (r.berat ?? r.weight ?? ''),
       catatan: r.catatan || "",
@@ -107,7 +109,7 @@ const PelaksanaActualModal = ({
       const r = rows[i];
       const qty = parseFloat(r.qty || 0);
       const berat = parseFloat(r.berat || 0);
-      
+
       if (qty <= 0 || berat <= 0) {
         showAlert('Validasi Gagal', `Baris ke-${i + 1} (${r.nama}): Qty dan Berat harus lebih dari 0`, 'error');
         return;
@@ -120,15 +122,43 @@ const PelaksanaActualModal = ({
       return;
     }
 
-    const cleaned = rows.map(r => ({
-      pelaksana_id: r.pelaksana_id,
-      pelaksana: r.nama,
-      qty: parseFloat(r.qty || 0),
-      berat: parseFloat(r.berat || 0),
-      catatan: r.catatan || "",
-    }));
-    onSave?.(cleaned);
-    onOpenChange?.(false);
+    // Check for 10% weight difference
+    const isSignificantDiff = rows.some(r => {
+      const parseNum = (val) => {
+        if (typeof val === 'number') return val;
+        if (!val) return 0;
+        return parseFloat(String(val).replace(',', '.')) || 0;
+      };
+
+      const pBerat = parseNum(r.planning_berat);
+      const aBerat = parseNum(r.berat);
+
+      // Use a small epsilon to avoid strict floating point issues
+      // and ensure it triggers if it's even slightly over 110%
+      return aBerat > (pBerat * 1.10001);
+    });
+
+    const completeSave = () => {
+      const cleaned = rows.map(r => ({
+        pelaksana_id: r.pelaksana_id,
+        pelaksana: r.nama,
+        qty: parseFloat(r.qty || 0),
+        berat: parseFloat(r.berat || 0),
+        catatan: r.catatan || "",
+      }));
+      onSave?.(cleaned);
+      onOpenChange?.(false);
+    };
+
+    if (isSignificantDiff) {
+      showConfirm(
+        'Konfirmasi Selisih Berat',
+        'Selisih berat planning dan actual lebih dari 10%, apakah lanjut?',
+        completeSave
+      );
+    } else {
+      completeSave();
+    }
   };
 
   return (
@@ -146,11 +176,12 @@ const PelaksanaActualModal = ({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      {!readOnly && <TableHead className="w-[30%] text-left">Pelaksana (Planning)</TableHead>}
-                      <TableHead className={`${readOnly ? 'w-[40%]' : 'w-[30%]'} text-left`}>
+                      {!readOnly && <TableHead className="w-[25%] text-left">Pelaksana (Planning)</TableHead>}
+                      <TableHead className={`${readOnly ? 'w-[30%]' : 'w-[25%]'} text-left`}>
                         {readOnly ? 'Pelaksana' : 'Pelaksana (Actual)'}
                       </TableHead>
-                      <TableHead className="text-center w-[20%]">Qty Actual</TableHead>
+                      <TableHead className="text-center w-[15%]">Qty Actual</TableHead>
+                      <TableHead className="text-center w-[15%]">Berat Planning</TableHead>
                       <TableHead className="text-center w-[20%]">Berat Actual</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -201,10 +232,15 @@ const PelaksanaActualModal = ({
                             type="number"
                             value={row.qty ?? 0}
                             onChange={(e) => updateRow(idx, "qty", e.target.value)}
-                            className={`w-full max-w-[150px] mx-auto text-center ${readOnly ? 'bg-gray-50' : ''}`}
+                            className={`w-full max-w-[120px] mx-auto text-center ${readOnly ? 'bg-gray-50' : ''}`}
                             min={0}
                             disabled={readOnly}
                           />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="text-sm font-medium text-gray-900 px-3 py-2 border rounded-md bg-gray-50 w-full max-w-[120px] mx-auto">
+                            {row.planning_berat || 0}
+                          </div>
                         </TableCell>
                         <TableCell className="text-center">
                           <Input
@@ -212,7 +248,7 @@ const PelaksanaActualModal = ({
                             step="0.01"
                             value={(row.berat === undefined || row.berat === null) ? '' : row.berat}
                             onChange={(e) => updateRow(idx, "berat", e.target.value)}
-                            className={`w-full max-w-[180px] mx-auto text-center ${readOnly ? 'bg-gray-50' : ''}`}
+                            className={`w-full max-w-[150px] mx-auto text-center ${readOnly ? 'bg-gray-50' : ''}`}
                             min={0}
                             disabled={readOnly}
                           />
@@ -235,7 +271,7 @@ const PelaksanaActualModal = ({
               ) : (
                 <>
                   <Button variant="outline" onClick={() => onOpenChange?.(false)}>Batal</Button>
-                  <Button 
+                  <Button
                     onClick={handleSave}
                     disabled={isOverLimit}
                   >
