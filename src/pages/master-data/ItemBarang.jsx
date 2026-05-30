@@ -37,6 +37,7 @@ export default function ItemBarangPage() {
   const [showDimensions, setShowDimensions] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
   const fileInputRef = useRef(null);
+  const refetchRef = useRef(null);
   const { showAlert, showConfirm, AlertComponent } = useAlert();
   const { user, hasPermission } = useAppContext();
 
@@ -104,7 +105,7 @@ export default function ItemBarangPage() {
     setIsHistoryOpen(true);
   };
 
-  const handleUpdateStatusItem = (item, status) => {
+  const handleUpdateStatusItem = (item, status, refetch) => {
     const statusLabel = status.toUpperCase();
 
     showConfirm(
@@ -118,7 +119,11 @@ export default function ItemBarangPage() {
           });
 
           if (response.success) {
-            window.location.reload();
+            if (typeof refetch === "function") {
+              refetch();
+            } else {
+              window.location.reload();
+            }
           }
         } catch (error) {
           console.error("Error updating item status:", error);
@@ -128,7 +133,8 @@ export default function ItemBarangPage() {
   };
 
   // Rongsok with approval flow
-  const handleRongsokRequest = (item) => {
+  const handleRongsokRequest = (item, refetch) => {
+    refetchRef.current = refetch;
     setRongsokTargetItem(item);
     setRongsokReason("");
     setRongsokDialogOpen(true);
@@ -154,14 +160,27 @@ export default function ItemBarangPage() {
         showAlert(
           "Request Rongsok Diajukan",
           `Request rongsok untuk item "${itemName}" berhasil diajukan${pctText}. Menunggu persetujuan admin di menu Approval.`,
-          "warning"
+          "warning",
+          () => {
+            if (typeof refetchRef.current === "function") {
+              refetchRef.current();
+            } else {
+              window.location.reload();
+            }
+          }
         );
       } else {
         showAlert(
           "Sukses",
           response.message || `Item "${itemName}" berhasil di-rongsok.`,
           "success",
-          () => window.location.reload()
+          () => {
+            if (typeof refetchRef.current === "function") {
+              refetchRef.current();
+            } else {
+              window.location.reload();
+            }
+          }
         );
       }
     } catch (error) {
@@ -365,7 +384,7 @@ export default function ItemBarangPage() {
             icon: (
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-package-x"><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14" /><path d="m7.5 4.27 9 5.15" /><polyline points="3.29 7 12 12 20.71 7" /><line x1="12" x2="12" y1="22" y2="12" /><path d="m17 13 5 5m-5 0 5-5" /></svg>
             ),
-            onClick: (item) => handleUpdateStatusItem(item, "habis"),
+            onClick: (item, refetch) => handleUpdateStatusItem(item, "habis", refetch),
             visible: () => canDelete,
             className: "bg-orange-500 hover:bg-orange-600 text-white border-orange-500"
           },
@@ -374,7 +393,7 @@ export default function ItemBarangPage() {
             icon: (
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trash-2"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>
             ),
-            onClick: (item) => handleRongsokRequest(item),
+            onClick: (item, refetch) => handleRongsokRequest(item, refetch),
             className: "bg-red-500 hover:bg-red-600 text-white border-red-500"
           }
         ]}

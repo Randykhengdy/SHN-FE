@@ -796,6 +796,9 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
         isSave: box.isSave,
         // workItemUniqueId: box.workItemUniqueId
       });
+    } else if (box.type === 'SplitProcessed') {
+      // Done Split (Black)
+      ctx.fillStyle = '#000000';
     } else if (box.color && box.color !== '#10b981') {
       // Use box color if it's explicitly set (for loaded boxes)
       ctx.fillStyle = box.color;
