@@ -16,7 +16,8 @@ export default function AsyncSearchSelect({
   className = "",
   required = false,
   disabled = false,
-  pageSize = 50
+  pageSize = 50,
+  preload = false
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -92,6 +93,12 @@ export default function AsyncSearchSelect({
       load(searchQuery, 1, false);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (preload && !hasLoaded) {
+      load("", 1, false);
+    }
+  }, [preload]);
 
   useEffect(() => {
     if (!isOpen) return;

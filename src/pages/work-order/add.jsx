@@ -1524,6 +1524,7 @@ export default function AddWorkOrderPage() {
                 <AsyncSearchSelect
                   label=""
                   placeholder="Pilih Sales Order"
+                  preload={true}
                   value={workOrderData.sales_order_id ? workOrderData.sales_order_id.toString() : ''}
                   onValueChange={(value) => {
                     if (!value) return;
