@@ -446,24 +446,28 @@ export default function AddPurchaseOrderPage() {
         return;
       }
 
-      // Build dynamic dimensiString for display based on tipe_barang
+      // Force vite reload
+
+      // Generate Dimensi string
+      const kolomDimensi = selectedShape?.kolom_dimensi || {};
       let dimensiParts = [];
 
-      // Helper to format dimension values: remove trailing zeros and format decimal
-      const formatDim = (val) => {
-        if (!val) return "";
+      const addDim = (isActive, val) => {
+        if (!isActive || val === null || val === undefined || val === '') return;
         const parsed = parseFloat(val);
-        return isNaN(parsed) ? val : parsed.toString();
+        if (!isNaN(parsed) && parsed > 0) {
+          dimensiParts.push(parsed.toString());
+        }
       };
 
-      if (tipe.diameter_luar && itemDiameterLuar) dimensiParts.push(formatDim(itemDiameterLuar));
-      if (tipe.diameter_dalam && itemDiameterDalam) dimensiParts.push(formatDim(itemDiameterDalam));
-      if (tipe.diameter && itemDiameter) dimensiParts.push(formatDim(itemDiameter));
-      if (tipe.sisi1 && itemSisi1) dimensiParts.push(formatDim(itemSisi1));
-      if (tipe.sisi2 && itemSisi2) dimensiParts.push(formatDim(itemSisi2));
-      if (tipe.tebal && itemTebal) dimensiParts.push(formatDim(itemTebal));
-      if (tipe.lebar && itemLebar) dimensiParts.push(formatDim(itemLebar));
-      if (tipe.panjang && itemPanjang) dimensiParts.push(formatDim(itemPanjang));
+      addDim(kolomDimensi.diameter_luar, itemDiameterLuar);
+      addDim(kolomDimensi.diameter_dalam, itemDiameterDalam);
+      addDim(kolomDimensi.diameter, itemDiameter);
+      addDim(kolomDimensi.sisi1, itemSisi1);
+      addDim(kolomDimensi.sisi2, itemSisi2);
+      addDim(kolomDimensi.tebal, itemTebal);
+      addDim(kolomDimensi.lebar, itemLebar);
+      addDim(kolomDimensi.panjang, itemPanjang);
 
       let dimensiString = dimensiParts.length > 0 ? dimensiParts.join(' x ') : '-';
 

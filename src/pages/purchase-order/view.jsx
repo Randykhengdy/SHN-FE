@@ -71,21 +71,24 @@ export default function ViewPurchaseOrderPage() {
   };
 
   const getDimensiString = (item) => {
-    const formatDim = (val) => {
-      if (!val) return "";
+    let dimensiParts = [];
+    
+    const addDim = (val) => {
+      if (val === null || val === undefined || val === '') return;
       const parsed = parseFloat(val);
-      return isNaN(parsed) ? val : parsed.toString();
+      if (!isNaN(parsed) && parsed > 0) {
+        dimensiParts.push(parsed.toString());
+      }
     };
 
-    let dimensiParts = [];
-    if (item.diameter_luar) dimensiParts.push(formatDim(item.diameter_luar));
-    if (item.diameter_dalam) dimensiParts.push(formatDim(item.diameter_dalam));
-    if (item.diameter) dimensiParts.push(formatDim(item.diameter));
-    if (item.sisi1) dimensiParts.push(formatDim(item.sisi1));
-    if (item.sisi2) dimensiParts.push(formatDim(item.sisi2));
-    if (item.tebal) dimensiParts.push(formatDim(item.tebal));
-    if (item.lebar) dimensiParts.push(formatDim(item.lebar));
-    if (item.panjang) dimensiParts.push(formatDim(item.panjang));
+    addDim(item.diameter_luar);
+    addDim(item.diameter_dalam);
+    addDim(item.diameter);
+    addDim(item.sisi1);
+    addDim(item.sisi2);
+    addDim(item.tebal);
+    addDim(item.lebar);
+    addDim(item.panjang);
 
     return dimensiParts.length > 0 ? dimensiParts.join(' x ') : '-';
   };
