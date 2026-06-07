@@ -448,8 +448,7 @@ export default function AddPurchaseOrderPage() {
 
       // Force vite reload
 
-      // Generate Dimensi string
-      const kolomDimensi = selectedShape?.kolom_dimensi || {};
+      // Generate Dimensi string (menggunakan tipe dari tipe_barang yang sudah dideklarasi di atas)
       let dimensiParts = [];
 
       const addDim = (isActive, val) => {
@@ -460,14 +459,14 @@ export default function AddPurchaseOrderPage() {
         }
       };
 
-      addDim(kolomDimensi.diameter_luar, itemDiameterLuar);
-      addDim(kolomDimensi.diameter_dalam, itemDiameterDalam);
-      addDim(kolomDimensi.diameter, itemDiameter);
-      addDim(kolomDimensi.sisi1, itemSisi1);
-      addDim(kolomDimensi.sisi2, itemSisi2);
-      addDim(kolomDimensi.tebal, itemTebal);
-      addDim(kolomDimensi.lebar, itemLebar);
-      addDim(kolomDimensi.panjang, itemPanjang);
+      addDim(tipe.diameter_luar, itemDiameterLuar);
+      addDim(tipe.diameter_dalam, itemDiameterDalam);
+      addDim(tipe.diameter, itemDiameter);
+      addDim(tipe.sisi1, itemSisi1);
+      addDim(tipe.sisi2, itemSisi2);
+      addDim(tipe.tebal, itemTebal);
+      addDim(tipe.lebar, itemLebar);
+      addDim(tipe.panjang, itemPanjang);
 
       let dimensiString = dimensiParts.length > 0 ? dimensiParts.join(' x ') : '-';
 
@@ -592,12 +591,14 @@ export default function AddPurchaseOrderPage() {
           diameter_dalam: item.diameter_dalam,
           sisi1: item.sisi1,
           sisi2: item.sisi2,
+          berat: item.berat,
           jenis_barang_id: item.jenis_barang_id,
           bentuk_barang_id: item.bentuk_barang_id,
           grade_barang_id: item.grade_barang_id,
           harga: item.harga,
           satuan: item.satuan,
           diskon: item.diskon,
+          subtotal: item.subtotalNumeric,
           catatan: item.catatan
         }))
       };

@@ -105,7 +105,7 @@ export default function ViewPurchaseOrderPage() {
         qty: item.qty || 0,
         harga_display: formatCurrency(parseFloat(item.harga || 0)),
         diskon_display: `${item.diskon || 0}%`,
-        total_display: formatCurrency((item.qty || 0) * (parseFloat(item.harga || 0)))
+        total_display: formatCurrency(parseFloat(item.subtotal || 0))
       }));
 
       const sup = purchaseOrder.supplier || {};
@@ -250,8 +250,8 @@ export default function ViewPurchaseOrderPage() {
               <TableBody>
                 {purchaseOrder.purchase_order_items?.length > 0 ? (
                   purchaseOrder.purchase_order_items.map((item, index) => {
-                    // Calculate subtotal: qty * harga
-                    const subtotal = item.qty * parseFloat(item.harga);
+                    // Use stored subtotal from database
+                    const subtotal = parseFloat(item.subtotal || 0);
 
                     return (
                       <TableRow key={item.id} className="hover:bg-gray-50">
@@ -275,8 +275,7 @@ export default function ViewPurchaseOrderPage() {
                           {getDimensiString(item)}
                         </TableCell>
                         <TableCell>
-                          {/* Calculate weight if needed or show N/A */}
-                          {item.berat || 'N/A'}
+                          {item.berat && parseFloat(item.berat) > 0 ? `${parseFloat(item.berat).toFixed(4)} kg` : 'N/A'}
                         </TableCell>
                         <TableCell className="font-semibold text-right text-green-600">
                           {formatCurrency(subtotal)}
