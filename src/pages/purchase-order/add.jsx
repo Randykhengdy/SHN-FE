@@ -62,18 +62,21 @@ export default function AddPurchaseOrderPage() {
   useEffect(() => {
     const loadMasterData = async () => {
       try {
+        setLoadingSupplier(true);
         setLoadingItemType(true);
         setLoadingItemShape(true);
         setLoadingItemGrade(true);
         setLoadingUnit(true);
 
         const [
+          suppliers,
           jenisBarang,
           bentukBarang,
           gradeBarang,
           units,
           poNumber
         ] = await Promise.all([
+          getSupplierOptions(),
           getJenisBarangOptions(),
           getBentukBarangOptions(),
           getGradeBarangOptions(),
@@ -81,6 +84,7 @@ export default function AddPurchaseOrderPage() {
           documentSequenceService.generatePONumber()
         ]);
 
+        setSupplierOptions(suppliers);
         setItemTypeOptions(jenisBarang);
         setItemShapeOptions(bentukBarang);
         setItemGradeOptions(gradeBarang);
@@ -93,6 +97,7 @@ export default function AddPurchaseOrderPage() {
         console.error('Error loading master data:', error);
         showAlert('Error', 'Gagal memuat data master atau generate nomor PO', 'error');
       } finally {
+        setLoadingSupplier(false);
         setLoadingItemType(false);
         setLoadingItemShape(false);
         setLoadingItemGrade(false);
@@ -933,25 +938,25 @@ export default function AddPurchaseOrderPage() {
           {/* Supplier Information */}
           <div className="grid-form m-lg grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="col-span-2">
-              <AsyncSearchSelect
+              <SearchSelect
                 label="Supplier"
                 placeholder="Pilih Supplier"
                 searchPlaceholder="Cari supplier..."
                 value={selectedSupplier?.id ? String(selectedSupplier.id) : ""}
-                onValueChange={async (value) => {
-                  try {
-                    const resp = await supplierService.getById(value);
-                    const sup = resp?.data || resp;
-                    if (sup) handleSupplierSelect(sup);
-                  } catch (_) { }
+                onValueChange={(value) => {
+                  const sup = supplierOptions.find(opt => String(opt.value) === String(value));
+                  if (sup) {
+                    handleSupplierSelect(sup);
+                  } else {
+                    setSelectedSupplier(null);
+                    setSupplierName("");
+                    setSupplierPhone("");
+                    setSupplierEmail("");
+                    setSupplierAddress("");
+                  }
                 }}
-                fetchOptions={async (q, page) => {
-                  const resp = await supplierService.getPaginated(page || 1, 50, q || "", "nama_supplier", "asc");
-                  const rows = resp?.data || [];
-                  return rows.map(item => ({ value: String(item.id), label: item.nama_supplier || item.nama || "Unknown", kode: item.kode_supplier || item.kode, nama: item.nama_supplier || item.nama, telepon: item.telepon, email: item.email, alamat: item.alamat }));
-                }}
-                displayKey="label"
-                valueKey="value"
+                options={supplierOptions}
+                loading={loadingSupplier}
                 required
               />
             </div>
