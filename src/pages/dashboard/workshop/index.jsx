@@ -13,7 +13,7 @@ const DashboardWorkshopPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [fontSize, setFontSize] = useState(13); // Default font size
-  const [showCustomerName, setShowCustomerName] = useState(true); // Toggle untuk kolom nama pelanggan
+  const [showCustomerName, setShowCustomerName] = useState(false); // Toggle untuk kolom nama pelanggan
   const [dateFrom, setDateFrom] = useState(null);
   const [dateTo, setDateTo] = useState(null);
 
