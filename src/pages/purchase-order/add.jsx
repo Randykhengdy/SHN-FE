@@ -335,7 +335,14 @@ export default function AddPurchaseOrderPage() {
           grade_barang_id: parseInt(itemGrade),
           panjang: panjangCm,
           lebar: lebarCm,
-          tebal: tebalCm
+          tebal: tebalCm,
+          dimensi_diameter: parseFloat(itemDiameter) || null,
+          dimensi_diameter_luar: parseFloat(itemDiameterLuar) || null,
+          dimensi_diameter_dalam: parseFloat(itemDiameterDalam) || null,
+          dimensi_sisi1: parseFloat(itemSisi1) || null,
+          dimensi_sisi2: parseFloat(itemSisi2) || null,
+          dimensi_tebal: parseFloat(itemTebal) || null,
+          dimensi_lebar: parseFloat(itemLebar) || null
         };
 
         const response = await beratJenisService.calculateWeight(requestData);
