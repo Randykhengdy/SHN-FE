@@ -579,6 +579,9 @@ export default function AddPurchaseOrderPage() {
         tanggal_pembayaran: tanggalPembayaran,
         id_supplier: selectedSupplier.id,
         total_amount: totalAmount,
+        include_ppn: includePPN,
+        ppn_amount: ppn,
+        grand_total: totalHargaSO,
         status: status,
         catatan: catatan || null,
         items: items.map(item => ({

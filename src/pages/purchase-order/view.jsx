@@ -117,7 +117,11 @@ export default function ViewPurchaseOrderPage() {
         supplier_name: sup.nama_supplier || sup.nama || "",
         supplier_phone: sup.telepon || "",
         supplier_address: sup.alamat || "",
-        items
+        items,
+        subtotal: parseFloat(purchaseOrder.total_amount || 0),
+        total_discount: 0,
+        ppn: parseFloat(purchaseOrder.ppn_amount || 0),
+        grand_total: parseFloat(purchaseOrder.grand_total || purchaseOrder.total_amount || 0)
       };
 
       const html = generatePurchaseOrderPrintContent(data);
@@ -211,7 +215,7 @@ export default function ViewPurchaseOrderPage() {
             <div>
               <Label className="text-sm font-medium text-gray-600">Total Amount</Label>
               <div className="text-lg font-bold text-green-600">
-                {formatCurrency(purchaseOrder.total_amount)}
+                {formatCurrency(purchaseOrder.grand_total || purchaseOrder.total_amount)}
               </div>
             </div>
           </div>
@@ -293,6 +297,30 @@ export default function ViewPurchaseOrderPage() {
                 )}
               </TableBody>
             </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Summary Section - Subtotal, PPN, Grand Total */}
+      <Card className="mb-6 border-green-200 bg-green-50">
+        <CardContent className="pt-6">
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex justify-between w-full max-w-sm">
+              <span className="text-sm font-medium text-gray-700">Subtotal</span>
+              <span className="text-sm font-semibold">{formatCurrency(purchaseOrder.total_amount)}</span>
+            </div>
+            {purchaseOrder.include_ppn && (
+              <div className="flex justify-between w-full max-w-sm">
+                <span className="text-sm font-medium text-gray-700">PPN (11%)</span>
+                <span className="text-sm font-semibold">{formatCurrency(purchaseOrder.ppn_amount)}</span>
+              </div>
+            )}
+            <div className="flex justify-between w-full max-w-sm border-t pt-2 mt-1">
+              <span className="text-base font-bold text-gray-800">Grand Total</span>
+              <span className="text-lg font-bold text-green-600">
+                {formatCurrency(purchaseOrder.grand_total || purchaseOrder.total_amount)}
+              </span>
+            </div>
           </div>
         </CardContent>
       </Card>
