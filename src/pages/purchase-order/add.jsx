@@ -165,9 +165,9 @@ export default function AddPurchaseOrderPage() {
 
     if (unitLower.includes('kg') || unitLower.includes('kilogram')) {
       totalBeforeDiscount = price * (parseFloat(weight) || 0) * qty;
-    } else if (unitLower.includes('pc') || unitLower.includes('unit') || unitLower.includes('batang') || unitLower.includes('buah') || unitLower.includes('pieces') || unitLower.includes('utuh')) {
+    } else if (unitLower.includes('pc') || unitLower.includes('unit') || unitLower.includes('batang') || unitLower.includes('buah') || unitLower.includes('pieces') || unitLower.includes('utuh') || unitLower.includes('dimensi')) {
       totalBeforeDiscount = price * qty;
-    } else if (unitLower.includes('m2') || unitLower.includes('m²') || unitLower.includes('dimensi')) {
+    } else if (unitLower.includes('m2') || unitLower.includes('m²')) {
       // Input dimensions are in mm
       if (dimensiType === "1D") {
         // 1D: Harga per meter
@@ -230,7 +230,9 @@ export default function AddPurchaseOrderPage() {
         // Hitung harga per unit display
         let pricePerUnitDisplay = `Rp 0/${selectedUnitLabel}`;
         if (pricePerUnit > 0) {
-          if (unitLower.includes('m2') || unitLower.includes('m²') || unitLower.includes('dimensi')) {
+          if (unitLower.includes('dimensi') || unitLower.includes('pc') || unitLower.includes('unit') || unitLower.includes('batang') || unitLower.includes('buah') || unitLower.includes('pieces') || unitLower.includes('utuh')) {
+            pricePerUnitDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/pcs`;
+          } else if (unitLower.includes('m2') || unitLower.includes('m²')) {
             if (selectedShape?.dimensi === "1D") {
               pricePerUnitDisplay = `Rp ${pricePerUnit.toLocaleString('id-ID')}/m`;
             } else {
@@ -298,7 +300,8 @@ export default function AddPurchaseOrderPage() {
       itemLength &&
       !isNaN(panjang) &&
       panjang > 0 &&
-      itemDiameter &&
+      // Check if we have a valid thickness/diameter
+      (itemTebal || itemDiameter) &&
       !isNaN(tebal) &&
       tebal >= 0;
 
@@ -490,6 +493,7 @@ export default function AddPurchaseOrderPage() {
         satuanDisplay: unitOptions.find(opt => opt.value === itemUnit)?.label || itemUnit,
         diskonDisplay: `${itemDiscount}%`,
         total: itemTotal,
+        subtotalNumeric: subtotal,
         // Backend fields - sesuai dengan validasi backend
         jenis_barang_id: itemType, // ID jenis barang
         bentuk_barang_id: selectedShape.id, // ID bentuk barang
@@ -554,31 +558,8 @@ export default function AddPurchaseOrderPage() {
     }
 
     try {
-      // Calculate total amount dari semua items
-      // Konversi mm ke m/m² untuk perhitungan
-      const totalAmount = items.reduce((sum, item) => {
-        const length = item.panjang || 0;
-        const width = item.lebar || 0;
-        const qty = item.qty || 0;
-        const harga = item.harga || 0;
-        const diskon = item.diskon || 0;
-
-        // Konversi mm ke m/m²
-        let areaInM = 0;
-        if (width > 0) {
-          // 2D: luas dalam m²
-          areaInM = (length * width) / 10000;
-        } else {
-          // 1D: panjang dalam m
-          areaInM = length / 1000;
-        }
-
-        const subtotalBeforeDiscount = areaInM * harga * qty;
-        const discountAmount = subtotalBeforeDiscount * (diskon / 100);
-        const subtotal = subtotalBeforeDiscount - discountAmount;
-
-        return sum + subtotal;
-      }, 0);
+      // Calculate total amount dari semua items menggunakan subtotal yang sudah dihitung sesuai satuan
+      const totalAmount = items.reduce((sum, item) => sum + (item.subtotalNumeric || 0), 0);
 
       const purchaseOrderData = {
         nomor_po: poNumber,
@@ -751,6 +732,7 @@ export default function AddPurchaseOrderPage() {
         satuanDisplay: unitOptions.length > 0 ? unitOptions[0].label : "Per Dimensi",
         diskonDisplay: "5%",
         total: "Rp 213,750",
+        subtotalNumeric: 213750,
         // Backend fields - sesuai dengan validasi backend
         jenis_barang_id: itemTypeOptions.length > 0 ? itemTypeOptions[0].value : 1,
         bentuk_barang_id: 1, // ID bentuk barang persegi
@@ -775,6 +757,7 @@ export default function AddPurchaseOrderPage() {
         satuanDisplay: unitOptions.length > 0 ? unitOptions[0].label : "Per Dimensi",
         diskonDisplay: "3%",
         total: "Rp 62,856",
+        subtotalNumeric: 62856,
         // Backend fields - sesuai dengan validasi backend
         jenis_barang_id: itemTypeOptions.length > 1 ? itemTypeOptions[1].value : 2,
         bentuk_barang_id: 2, // ID bentuk barang bulat
@@ -826,9 +809,12 @@ export default function AddPurchaseOrderPage() {
 
     if (label.includes('kg') || label.includes('kilogram')) {
       return "Harga (Rp/kg)";
-    } else if (label.includes('pc') || label.includes('unit') || label.includes('batang') || label.includes('buah') || label.includes('pieces') || label.includes('utuh')) {
+    } else if (label.includes('pc') || label.includes('unit') || label.includes('batang') || label.includes('buah') || label.includes('pieces') || label.includes('utuh') || label.includes('dimensi')) {
+      if (label.includes('dimensi')) {
+        return "Harga (Rp/Pieces)";
+      }
       return `Harga (Rp/${selectedUnitLabel})`;
-    } else if (label.includes('m2') || label.includes('m²') || label.includes('dimensi')) {
+    } else if (label.includes('m2') || label.includes('m²')) {
       if (selectedShape?.dimensi === "1D") {
         return "Harga (Rp/m)";
       }
