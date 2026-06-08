@@ -93,6 +93,16 @@ export default function ViewPurchaseOrderPage() {
     return dimensiParts.length > 0 ? dimensiParts.join(' x ') : '-';
   };
 
+  // Map satuan ID/kode to readable name
+  const getSatuanName = (satuan) => {
+    const map = {
+      '1': 'Pieces', 'PCS': 'Pieces', 'pcs': 'Pieces',
+      '2': 'Kilogram', 'KG': 'Kilogram', 'kg': 'Kilogram',
+      '10': 'Dimensi', 'PER_DIMENSI': 'Dimensi', 'per-dimensi': 'Dimensi',
+    };
+    return map[satuan] || satuan || '-';
+  };
+
   const handlePrint = () => {
     if (!purchaseOrder) return;
 
@@ -103,6 +113,8 @@ export default function ViewPurchaseOrderPage() {
         grade_barang: item.grade_barang?.nama || "",
         dimensi: getDimensiString(item),
         qty: item.qty || 0,
+        satuan: getSatuanName(item.satuan),
+        berat: item.berat || 0,
         harga_display: formatCurrency(parseFloat(item.harga || 0)),
         diskon_display: `${item.diskon || 0}%`,
         total_display: formatCurrency(parseFloat(item.subtotal || 0))

@@ -133,13 +133,15 @@ export const generatePurchaseOrderPrintContent = (purchaseOrderData) => {
       </td>
       <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.dimensi || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.qty || 0}</td>
+      <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.satuan || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${item.berat ? `${item.berat} kg` : '-'}</td>
       <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${item.harga_display || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${item.diskon_display || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${item.total_display || '-'}</td>
     </tr>
   `).join('') || `
     <tr>
-      <td colspan="7" style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #777;">
+      <td colspan="9" style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #777;">
         Tidak ada item
       </td>
     </tr>
@@ -227,6 +229,8 @@ export const generatePurchaseOrderPrintContent = (purchaseOrderData) => {
             <th>Item</th>
             <th style="width: 120px; text-align: center;">Dimensi</th>
             <th style="width: 70px; text-align: center;">Qty</th>
+            <th style="width: 70px; text-align: center;">Satuan</th>
+            <th style="width: 80px; text-align: right;">Berat (kg)</th>
             <th style="width: 110px; text-align: right;">Harga</th>
             <th style="width: 70px; text-align: right;">Diskon</th>
             <th style="width: 120px; text-align: right;">Subtotal</th>

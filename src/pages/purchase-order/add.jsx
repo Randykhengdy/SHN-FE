@@ -631,6 +631,8 @@ export default function AddPurchaseOrderPage() {
             grade_barang: item.grade,
             dimensi: item.dimensi,
             qty: item.qty,
+            satuan: item.satuanDisplay || item.satuan || '-',
+            berat: item.berat || 0,
             harga_display: item.hargaDisplay,
             diskon_display: item.diskonDisplay,
             total_display: item.total
@@ -682,6 +684,8 @@ export default function AddPurchaseOrderPage() {
           grade_barang: item.grade,
           dimensi: item.dimensi,
           qty: item.qty,
+          satuan: item.satuanDisplay || item.satuan || '-',
+          berat: item.berat || 0,
           harga_display: item.hargaDisplay,
           diskon_display: item.diskonDisplay,
           total_display: item.total
