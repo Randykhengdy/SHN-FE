@@ -1486,7 +1486,7 @@ const ItemBarangCanvasPage = ({ item, onClose }) => {
                 <h3 className="text-sm font-medium text-gray-700">Add Box</h3>
                 <div className="grid grid-cols-2 gap-2">
                     <div>
-                        <label className="text-xs text-gray-500">Width</label>
+                        <label className="text-xs text-gray-500">Panjang</label>
                         <input 
                             type="number" 
                             className="w-full border rounded px-2 py-1 text-sm"
@@ -1495,14 +1495,14 @@ const ItemBarangCanvasPage = ({ item, onClose }) => {
                         />
                     </div>
                     <div>
-                        <label className="text-xs text-gray-500">Height</label>
+                        <label className="text-xs text-gray-500">Lebar</label>
                         <input 
                             type="number" 
                             className={`w-full border rounded px-2 py-1 text-sm ${is1D ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
                             value={is1D ? baseContainer.height : newBoxSize.height}
                             onChange={e => !is1D && setNewBoxSize(p => ({ ...p, height: parseInt(e.target.value) || 0 }))}
                             disabled={is1D}
-                            title={is1D ? "Height is fixed for 1D items (same as container height)" : ""}
+                            title={is1D ? "Lebar tetap untuk item 1D (sama dengan lebar container)" : ""}
                         />
                     </div>
                 </div>
@@ -1515,7 +1515,7 @@ const ItemBarangCanvasPage = ({ item, onClose }) => {
                 <h3 className="text-sm font-medium text-blue-700">Add Split Area</h3>
                 <div className="grid grid-cols-2 gap-2">
                     <div>
-                        <label className="text-xs text-gray-500">Width</label>
+                        <label className="text-xs text-gray-500">Panjang</label>
                         <input 
                             type="number" 
                             className="w-full border rounded px-2 py-1 text-sm border-blue-200 focus:border-blue-500"
@@ -1524,14 +1524,14 @@ const ItemBarangCanvasPage = ({ item, onClose }) => {
                         />
                     </div>
                     <div>
-                        <label className="text-xs text-gray-500">Height</label>
+                        <label className="text-xs text-gray-500">Lebar</label>
                         <input 
                             type="number" 
                             className={`w-full border rounded px-2 py-1 text-sm border-blue-200 focus:border-blue-500 ${is1D ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
                             value={is1D ? baseContainer.height : splitBoxSize.height}
                             onChange={e => !is1D && setSplitBoxSize(p => ({ ...p, height: parseInt(e.target.value) || 0 }))}
                             disabled={is1D}
-                            title={is1D ? "Height is fixed for 1D items (same as container height)" : ""}
+                            title={is1D ? "Lebar tetap untuk item 1D (sama dengan lebar container)" : ""}
                         />
                     </div>
                 </div>
@@ -1593,7 +1593,7 @@ const ItemBarangCanvasPage = ({ item, onClose }) => {
                             <input
                                 type="text"
                                 className="w-full border rounded px-2 py-1 text-sm mt-1"
-                                placeholder="Default: WxH"
+                                placeholder="Default: PxL"
                                 value={boxes.find(b => b.id === Array.from(selectedBoxIds)[0])?.text || ''}
                                 onChange={(e) => updateSelectedText(e.target.value)}
                             />
