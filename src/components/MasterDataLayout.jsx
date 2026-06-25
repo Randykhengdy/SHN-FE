@@ -651,6 +651,21 @@ export default function MasterDataLayout({
                               const cellClassName = col.getCellClassName
                                 ? col.getCellClassName(item)
                                 : '';
+                                
+                              let displayValue = value;
+                              if (col.render) {
+                                displayValue = col.render(value, item);
+                              } else if (col.format === 'datetime' && value) {
+                                const d = new Date(value);
+                                if (!isNaN(d.getTime())) {
+                                  displayValue = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+                                }
+                              } else if (col.format === 'number' && typeof value === 'number') {
+                                displayValue = value.toLocaleString('id-ID');
+                              } else if (col.format === 'boolean') {
+                                displayValue = value ? 'Ya' : 'Tidak';
+                              }
+
                               return (
                                 <td
                                   key={col.key}
@@ -661,7 +676,7 @@ export default function MasterDataLayout({
                                     maxWidth: col.maxWidth
                                   }}
                                 >
-                                  {value}
+                                  {displayValue}
                                 </td>
                               );
                             })}

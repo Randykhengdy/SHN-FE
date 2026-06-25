@@ -45,6 +45,7 @@ export default function ItemBarangPage() {
   const [rongsokReason, setRongsokReason] = useState("");
   const [rongsokTargetItem, setRongsokTargetItem] = useState(null);
   const [rongsokLoading, setRongsokLoading] = useState(false);
+  const [rongsokRefetch, setRongsokRefetch] = useState(null);
 
   // Custom canDelete logic for ItemBarang based on user attribute or fallback to standard role permission
   const canDelete = (user?.is_can_delete_item_barang == 1) || (hasPermission && hasPermission('ITEM_BARANG', 'Delete')) || (hasPermission && hasPermission('MASTER_DATA', 'Delete'));
@@ -104,7 +105,7 @@ export default function ItemBarangPage() {
     setIsHistoryOpen(true);
   };
 
-  const handleUpdateStatusItem = (item, status) => {
+  const handleUpdateStatusItem = (item, status, refetch) => {
     const statusLabel = status.toUpperCase();
 
     showConfirm(
@@ -118,7 +119,11 @@ export default function ItemBarangPage() {
           });
 
           if (response.success) {
-            window.location.reload();
+            if (typeof refetch === 'function') {
+              refetch();
+            } else if (fileInputRef.current?._fetchData) {
+              fileInputRef.current._fetchData();
+            }
           }
         } catch (error) {
           console.error("Error updating item status:", error);
@@ -128,9 +133,10 @@ export default function ItemBarangPage() {
   };
 
   // Rongsok with approval flow
-  const handleRongsokRequest = (item) => {
+  const handleRongsokRequest = (item, refetch) => {
     setRongsokTargetItem(item);
     setRongsokReason("");
+    setRongsokRefetch(() => refetch);
     setRongsokDialogOpen(true);
   };
 
@@ -156,12 +162,17 @@ export default function ItemBarangPage() {
           `Request rongsok untuk item "${itemName}" berhasil diajukan${pctText}. Menunggu persetujuan admin di menu Approval.`,
           "warning"
         );
+        if (typeof rongsokRefetch === 'function') rongsokRefetch();
+        else if (fileInputRef.current?._fetchData) fileInputRef.current._fetchData();
       } else {
         showAlert(
           "Sukses",
           response.message || `Item "${itemName}" berhasil di-rongsok.`,
           "success",
-          () => window.location.reload()
+          () => {
+            if (typeof rongsokRefetch === 'function') rongsokRefetch();
+            else if (fileInputRef.current?._fetchData) fileInputRef.current._fetchData();
+          }
         );
       }
     } catch (error) {
@@ -365,7 +376,7 @@ export default function ItemBarangPage() {
             icon: (
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-package-x"><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14" /><path d="m7.5 4.27 9 5.15" /><polyline points="3.29 7 12 12 20.71 7" /><line x1="12" x2="12" y1="22" y2="12" /><path d="m17 13 5 5m-5 0 5-5" /></svg>
             ),
-            onClick: (item) => handleUpdateStatusItem(item, "habis"),
+            onClick: (item, refetch) => handleUpdateStatusItem(item, "habis", refetch),
             visible: () => canDelete,
             className: "bg-orange-500 hover:bg-orange-600 text-white border-orange-500"
           },
@@ -374,7 +385,7 @@ export default function ItemBarangPage() {
             icon: (
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trash-2"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>
             ),
-            onClick: (item) => handleRongsokRequest(item),
+            onClick: (item, refetch) => handleRongsokRequest(item, refetch),
             className: "bg-red-500 hover:bg-red-600 text-white border-red-500"
           }
         ]}
@@ -674,7 +685,7 @@ export default function ItemBarangPage() {
             render: (val) => {
               if (!val) return "-";
               const formatted = val.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-              
+
               let badgeClass = "bg-blue-100 text-blue-800"; // default
               if (val === 'active') badgeClass = "bg-green-100 text-green-800";
               else if (val === 'request_rongsok') badgeClass = "bg-orange-100 text-orange-800";
@@ -689,6 +700,25 @@ export default function ItemBarangPage() {
             }
           },
           { key: "created_at", label: "Dibuat Pada", align: "center", width: "12rem", maxWidth: "12rem", format: "datetime" },
+          {
+            key: "habis_at",
+            label: "Terhitung Habis Pada",
+            align: "center",
+            width: "12rem",
+            maxWidth: "12rem",
+            render: (val) => {
+              if (!val) return "-";
+              const date = new Date(val);
+              if (isNaN(date.getTime())) return "-";
+              const day = String(date.getDate()).padStart(2, '0');
+              const month = String(date.getMonth() + 1).padStart(2, '0');
+              const year = date.getFullYear();
+              const hours = String(date.getHours()).padStart(2, '0');
+              const minutes = String(date.getMinutes()).padStart(2, '0');
+              const seconds = String(date.getSeconds()).padStart(2, '0');
+              return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+            }
+          },
           // { key: "is_edit", label: "Is Edit", align: "center", width: "8rem", maxWidth: "8rem", format: "boolean" },
           { key: "jenis_barang.nama_jenis", label: "Jenis Barang", align: "center", width: "12rem", maxWidth: "12rem" },
           { key: "bentuk_barang.nama_bentuk", label: "Bentuk Barang", align: "center", width: "12rem", maxWidth: "12rem" },

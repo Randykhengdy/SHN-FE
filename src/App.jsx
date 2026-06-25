@@ -38,6 +38,7 @@ import { reportMutasiService } from "@/services/reportMutasiService";
 import { printMutasiAntarGudangReport } from "@/lib/mutasiAntarGudangReportPrint";
 import { printRubahStatusBarangReport } from "@/lib/rubahStatusBarangReportPrint";
 import { printBarangRongsokReport } from "@/lib/barangRongsokReportPrint";
+import { printBarangHabisReport } from "@/lib/barangHabisReportPrint";
 import { printStockOpnameReport } from "@/lib/stockOpnameReportPrint";
 import { printKegiatanPelaksanaReport } from "@/lib/kegiatanPelaksanaReportPrint";
 import { printRekapKegiatanPelaksanaReport } from "@/lib/rekapKegiatanPelaksanaReportPrint";
@@ -84,6 +85,7 @@ function App() {
   const [isReportMutasiAntarGudangOpen, setIsReportMutasiAntarGudangOpen] = useState(false);
   const [isReportRubahStatusBarangOpen, setIsReportRubahStatusBarangOpen] = useState(false);
   const [isReportBarangRongsokOpen, setIsReportBarangRongsokOpen] = useState(false);
+  const [isReportBarangHabisOpen, setIsReportBarangHabisOpen] = useState(false);
   const [isReportStockOpnameOpen, setIsReportStockOpnameOpen] = useState(false);
   const [isReportKegiatanPelaksanaOpen, setIsReportKegiatanPelaksanaOpen] = useState(false);
   const [isReportRekapKegiatanPelaksanaOpen, setIsReportRekapKegiatanPelaksanaOpen] = useState(false);
@@ -289,6 +291,13 @@ function App() {
     if (window.electronAPI.onReportBarangRongsok) {
       window.electronAPI.onReportBarangRongsok(() => {
         setIsReportBarangRongsokOpen(true);
+      });
+    }
+
+    // Listen for Report Barang Habis event
+    if (window.electronAPI.onReportBarangHabis) {
+      window.electronAPI.onReportBarangHabis(() => {
+        setIsReportBarangHabisOpen(true);
       });
     }
 
@@ -1030,6 +1039,33 @@ function App() {
                 }
               } catch (error) {
                 console.error("Error generating report barang rongsok:", error);
+                showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
+              } finally {
+                setReportLoading(false);
+              }
+            }}
+          />
+
+          <ReportDateRangeModal
+            open={isReportBarangHabisOpen}
+            onOpenChange={setIsReportBarangHabisOpen}
+            title="Report Barang Habis / Tanggal"
+            loading={reportLoading}
+            onGenerate={async (from, to) => {
+              try {
+                setReportLoading(true);
+                const params = { start_date: from, end_date: to };
+                
+                const result = await reportMutasiService.getReportBarangHabis(params);
+                
+                if (result.success && result.data) {
+                  printBarangHabisReport(result.data, from, to);
+                  setIsReportBarangHabisOpen(false);
+                } else {
+                  showAlert("Error", result.message || "Gagal mengambil data report barang habis", "error");
+                }
+              } catch (error) {
+                console.error("Error generating report barang habis:", error);
                 showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
               } finally {
                 setReportLoading(false);
