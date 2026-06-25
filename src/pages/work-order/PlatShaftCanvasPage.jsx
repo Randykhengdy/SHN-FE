@@ -3571,7 +3571,80 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
 
   // Keyboard event handler
   const handleKeyDown = useCallback((e) => {
-    // Canvas panning controls (always active when canvas exists)
+    // If boxes are selected, move them using Arrow keys
+    if (selectedBoxIds.size > 0 && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+      e.preventDefault();
+
+      let dx = 0;
+      let dy = 0;
+      if (e.key === 'ArrowLeft') dx = -1;
+      if (e.key === 'ArrowRight') dx = 1;
+
+      // Determine if it is 1D based on workOrderData
+      const hasPlatLebar = workOrderData?.selectedItem?.platLebar || workOrderData?.platLebar;
+      const is1D = !hasPlatLebar;
+
+      if (!is1D) {
+        if (e.key === 'ArrowUp') dy = -1;
+        if (e.key === 'ArrowDown') dy = 1;
+      }
+
+      if (dx !== 0 || dy !== 0) {
+        setBoxes(prevBoxes => {
+          const selectedBoxes = prevBoxes.filter(box => selectedBoxIds.has(box.id));
+
+          const wouldBeValid = selectedBoxes.every(box => {
+            if (box.isDisabled) return false;
+
+            const isRotated = box.isRotated || false;
+            const boxWidth = isRotated ? box.height : box.width;
+            const boxHeight = isRotated ? box.width : box.height;
+
+            const newX = box.x + dx;
+            const newY = box.y + dy;
+
+            // Check container bounds
+            if (newX < baseContainer.x ||
+              newX + boxWidth > baseContainer.x + baseContainer.width ||
+              newY < baseContainer.y ||
+              newY + boxHeight > baseContainer.y + baseContainer.height) {
+              return false;
+            }
+
+            // Check collision with other boxes
+            const hasCollision = prevBoxes.some(other => {
+              if (selectedBoxIds.has(other.id)) return false;
+
+              const otherWidth = other.isRotated ? other.height : other.width;
+              const otherHeight = other.isRotated ? other.width : other.height;
+
+              return !(newX >= other.x + otherWidth ||
+                newX + boxWidth <= other.x ||
+                newY >= other.y + otherHeight ||
+                newY + boxHeight <= other.y);
+            });
+
+            return !hasCollision;
+          });
+
+          if (!wouldBeValid) return prevBoxes;
+
+          return prevBoxes.map(box => {
+            if (selectedBoxIds.has(box.id)) {
+              return {
+                ...box,
+                x: box.x + dx,
+                y: box.y + dy
+              };
+            }
+            return box;
+          });
+        });
+      }
+      return;
+    }
+
+    // Canvas panning controls (always active when canvas exists and no boxes are selected)
     if (canvasRef.current) {
       const panSpeed = 20; // pixels per key press
 
@@ -3621,7 +3694,7 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
       e.preventDefault();
       selectAllBoxes();
     }
-  }, [selectedBoxIds, deleteSelectedBoxes, selectAllBoxes, resetZoom]);
+  }, [selectedBoxIds, deleteSelectedBoxes, selectAllBoxes, resetZoom, baseContainer, workOrderData]);
 
   // Event listeners
   useEffect(() => {
