@@ -774,9 +774,9 @@ export default function ViewWOActualPage() {
                             <TableCell className="text-center">{gradeNama || 'N/A'}</TableCell>
                             <TableCell className="text-center">{jenisPotongan}</TableCell>
                             <TableCell className="text-center">{qtyPlanning}</TableCell>
-                            <TableCell className="text-center">{Math.round(beratPlanning)}</TableCell>
+                            <TableCell className="text-center">{(parseFloat(beratPlanning) || 0).toFixed(4)}</TableCell>
                             <TableCell className="text-center">{qtyActual}</TableCell>
-                            <TableCell className="text-center">{Math.round(beratActual)}</TableCell>
+                            <TableCell className="text-center">{(parseFloat(beratActual) || 0).toFixed(4)}</TableCell>
                             <TableCell className="text-center">
                               <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
                                 {status}
