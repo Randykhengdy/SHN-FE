@@ -48,6 +48,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onRequestConfirm: (callback) => ipcRenderer.on('request-confirm', (_event, data) => callback(data)),
   sendConfirmResult: (id, result) => ipcRenderer.send('confirm-result', { id, result }),
   // App info
+  onCloseRequest: (callback) => ipcRenderer.on('close-request', callback),
+  confirmClose: () => ipcRenderer.send('confirm-close'),
   getVersion: () => ipcRenderer.invoke('get-app-version'),
   getName: () => ipcRenderer.invoke('get-app-name')
 });

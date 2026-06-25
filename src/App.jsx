@@ -45,6 +45,16 @@ import { reportKasService } from "@/services/reportKasService";
 import { printRincianKeuanganReport } from "@/lib/rincianKeuanganReportPrint";
 import { printRekapLabaOperasionalReport } from "@/lib/rekapLabaOperasionalReportPrint";
 import TabLayout from "@/components/layout/TabLayout";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 function App() {
   // Navigation dari Electron sekarang ditangani oleh TabLayout
@@ -80,6 +90,7 @@ function App() {
   const [isReportRincianKeuanganOpen, setIsReportRincianKeuanganOpen] = useState(false);
   const [isReportRekapLabaOperasionalOpen, setIsReportRekapLabaOperasionalOpen] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
+  const [isCloseConfirmationOpen, setIsCloseConfirmationOpen] = useState(false);
 
   // Listen for global alert events from utility functions (like tokenUtils)
   useEffect(() => {
@@ -98,6 +109,13 @@ function App() {
   // Listen for alert events from Electron main process
   useEffect(() => {
     if (!window.electronAPI) return;
+
+    // Listen for Close Application Request
+    if (window.electronAPI.onCloseRequest) {
+      window.electronAPI.onCloseRequest(() => {
+        setIsCloseConfirmationOpen(true);
+      });
+    }
 
     const handleElectronAlert = (data) => {
       const { title, message, type } = data;
@@ -336,6 +354,38 @@ function App() {
     <ErrorBoundary>
       <AppProvider>
         <div className="h-screen w-screen overflow-hidden">
+          {/* Exit Confirmation Modal */}
+          <AlertDialog open={isCloseConfirmationOpen} onOpenChange={setIsCloseConfirmationOpen}>
+            <AlertDialogContent className="sm:max-w-md p-0 overflow-hidden border-border/40 shadow-2xl bg-card">
+              <AlertDialogHeader className="p-6 pb-4">
+                <AlertDialogTitle className="text-xl font-bold flex items-center gap-2">
+                  <div className="p-2 rounded-full bg-red-500/10 text-red-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                  </div>
+                  Konfirmasi Tutup Aplikasi
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-base text-muted-foreground pt-2">
+                  Apakah Anda yakin ingin menutup aplikasi? Semua pekerjaan yang belum disimpan mungkin akan hilang.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="bg-muted/30 p-4 border-t border-border/40">
+                <AlertDialogCancel className="w-full sm:w-auto h-10 px-6 font-medium bg-background hover:bg-muted transition-colors">
+                  Batal
+                </AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={() => {
+                    if (window.electronAPI?.confirmClose) {
+                      window.electronAPI.confirmClose();
+                    }
+                  }}
+                  className="w-full sm:w-auto h-10 px-6 font-medium bg-red-500 hover:bg-red-600 text-white transition-colors"
+                >
+                  Ya, Tutup
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
           {/* Global Change Password Modal */}
           <ChangePasswordModal 
             isOpen={isChangePasswordOpen} 

@@ -856,6 +856,22 @@ function createWindow() {
     } catch (e) { }
   });
 
+  let isQuitting = false;
+
+  mainWindow.on('close', (e) => {
+    if (!isQuitting) {
+      e.preventDefault();
+      if (mainWindow) {
+        mainWindow.webContents.send('close-request');
+      }
+    }
+  });
+
+  ipcMain.on('confirm-close', () => {
+    isQuitting = true;
+    if (mainWindow) mainWindow.close();
+  });
+
   // Emitted when the window is closed
   mainWindow.on('closed', () => {
     // Dereference the window object, usually you would store windows
