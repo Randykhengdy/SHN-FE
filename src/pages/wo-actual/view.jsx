@@ -876,9 +876,9 @@ export default function ViewWOActualPage() {
               <div className="bg-gray-50 p-3 rounded-md border">
                 <span className="text-sm text-gray-600 block mb-1">Total Berat (Plan / Act)</span>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-semibold text-gray-900">{Math.round(totals.totalBeratPlanning)}</span>
+                  <span className="text-xl font-semibold text-gray-900">{(totals.totalBeratPlanning || 0).toFixed(4)}</span>
                   <span className="text-sm text-gray-500">/</span>
-                  <span className="text-xl font-semibold text-blue-600">{Math.round(totals.totalBeratActual)}</span>
+                  <span className="text-xl font-semibold text-blue-600">{(totals.totalBeratActual || 0).toFixed(4)}</span>
                   <span className="text-sm text-gray-600">kg</span>
                 </div>
               </div>
