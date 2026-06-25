@@ -879,11 +879,11 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
 
     // Check if it is 1D based on heuristic: if platLebar is missing (defaults to platPanjang/10)
     let is1D = false;
-    
+
     // Logic: If platLebar is not explicitly provided in the source data, it's considered 1D
     const hasPlatLebar = workOrderData?.selectedItem?.platLebar || workOrderData?.platLebar;
     if (!hasPlatLebar) {
-        is1D = true;
+      is1D = true;
     }
 
     if (is1D) {
@@ -891,8 +891,8 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
     } else {
       ctx.fillText(`${box.width}×${box.height}`, centerX, centerY);
     }
-    
-   
+
+
     // Draw selection indicator
     if (isSelected) {
       ctx.fillStyle = '#ef4444';
@@ -2090,14 +2090,14 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
           if (itemBarangIdForPreview) {
             // Save standard preview (legacy/fallback)
             setStoredPreviewDataUrl(itemBarangIdForPreview, dataURL);
-            
+
             // Save specific WO Item preview to localStorage
             const woItemUniqueId = workOrderData?.workOrderItem?.wo_item_unique_id;
             if (woItemUniqueId) {
               try {
                 const specificKey = `WO_canvas_preview_woitem_${woItemUniqueId}_item_${itemBarangIdForPreview}`;
                 localStorage.setItem(specificKey, dataURL);
-                
+
                 // Save timestamp for API (YYYY-MM-DD HH:mm:ss) into WO_total_quantity
                 const now = new Date();
                 const year = now.getFullYear();
@@ -2107,38 +2107,38 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                 const minutes = String(now.getMinutes()).padStart(2, '0');
                 const seconds = String(now.getSeconds()).padStart(2, '0');
                 const formattedDate = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-                
+
                 // Update WO_total_quantity to include save_date
                 try {
                   const totalQuantityData = JSON.parse(localStorage.getItem('WO_total_quantity') || '[]');
                   const currentWoItemId = workOrderData?.workOrderItem?.id || workOrderData?.itemId;
-                  
-                  const woItemData = totalQuantityData.find(item => 
+
+                  const woItemData = totalQuantityData.find(item =>
                     item.WoItemID === currentWoItemId || item.WoItemID === parseInt(currentWoItemId)
                   );
-                  
+
                   if (woItemData && woItemData.WOQuantity) {
-                    const saranItem = woItemData.WOQuantity.find(item => 
+                    const saranItem = woItemData.WOQuantity.find(item =>
                       item.ItemId === itemBarangIdForPreview || item.ItemId === parseInt(itemBarangIdForPreview)
                     );
-                    
+
                     if (saranItem) {
                       saranItem.save_date = formattedDate;
                       localStorage.setItem('WO_total_quantity', JSON.stringify(totalQuantityData));
                       console.log('✅ Updated save_date in WO_total_quantity:', formattedDate);
                     } else {
-                        // If saran item doesn't exist yet (might happen if quantity is 0), create it or warn
-                        // Usually it exists if we are saving canvas, but if not, we should probably add it? 
-                        // But canvas saving usually implies we have content. 
-                        // If quantity is 0, maybe we shouldn't force it? 
-                        // Let's just log warning.
-                        console.warn('⚠️ Saran item not found in WO_total_quantity for timestamp update');
+                      // If saran item doesn't exist yet (might happen if quantity is 0), create it or warn
+                      // Usually it exists if we are saving canvas, but if not, we should probably add it? 
+                      // But canvas saving usually implies we have content. 
+                      // If quantity is 0, maybe we shouldn't force it? 
+                      // Let's just log warning.
+                      console.warn('⚠️ Saran item not found in WO_total_quantity for timestamp update');
                     }
                   }
                 } catch (err) {
-                   console.error('Error updating save_date in WO_total_quantity:', err);
+                  console.error('Error updating save_date in WO_total_quantity:', err);
                 }
-                
+
                 console.log('✅ Saved specific preview to localStorage:', specificKey);
               } catch (err) {
                 console.warn('⚠️ Failed to save specific preview/timestamp to localStorage:', err);
@@ -2179,22 +2179,22 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
           // For preview mode, we now ONLY use localStorage as per user request
           // This avoids file system errors in EXE environment
           console.log('=== SAVE CANVAS PREVIEW (LOCAL STORAGE ONLY) ===');
-          
+
           try {
-             // Logic to dispatch event so other components know update happened
-             if (typeof window !== 'undefined') {
-                window.canvasPreviewCacheBuster = Date.now();
-             }
-             const itemBarangId = workOrderData?.selectedItem?.id || null;
-             if (itemBarangId) {
-                window.dispatchEvent(new CustomEvent('canvasPreviewSaved', { detail: { itemId: itemBarangId } }));
-             }
-             
-             console.log('✅ Canvas preview saved to localStorage successfully');
-             showAlert('Success', 'Canvas berhasil disimpan ke local storage!', 'success');
-             
+            // Logic to dispatch event so other components know update happened
+            if (typeof window !== 'undefined') {
+              window.canvasPreviewCacheBuster = Date.now();
+            }
+            const itemBarangId = workOrderData?.selectedItem?.id || null;
+            if (itemBarangId) {
+              window.dispatchEvent(new CustomEvent('canvasPreviewSaved', { detail: { itemId: itemBarangId } }));
+            }
+
+            console.log('✅ Canvas preview saved to localStorage successfully');
+            showAlert('Success', 'Canvas berhasil disimpan ke local storage!', 'success');
+
           } catch (error) {
-             console.error('Error in post-save operations:', error);
+            console.error('Error in post-save operations:', error);
           }
 
         } else {
@@ -3985,13 +3985,13 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                         )}
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <label className="text-xs text-gray-600">Width</label>
+                            <label className="text-xs text-gray-600">Panjang</label>
                             <div className="w-full h-6 text-xs border rounded px-1 bg-gray-50 flex items-center text-gray-700">
                               {baseContainer.width}
                             </div>
                           </div>
                           <div>
-                            <label className="text-xs text-gray-600">Height</label>
+                            <label className="text-xs text-gray-600">Lebar</label>
                             <div className="w-full h-6 text-xs border rounded px-1 bg-gray-50 flex items-center text-gray-700">
                               {baseContainer.height}
                             </div>
@@ -4006,13 +4006,13 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                       <div className="space-y-1">
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <label className="text-xs text-gray-600">Width</label>
+                            <label className="text-xs text-gray-600">Panjang</label>
                             <div className="w-full h-6 text-xs border rounded px-1 bg-gray-50 flex items-center text-gray-700">
                               {newBoxSize.width}
                             </div>
                           </div>
                           <div>
-                            <label className="text-xs text-gray-600">Height</label>
+                            <label className="text-xs text-gray-600">Lebar</label>
                             <div className="w-full h-6 text-xs border rounded px-1 bg-gray-50 flex items-center text-gray-700">
                               {newBoxSize.height}
                             </div>
