@@ -988,7 +988,7 @@ export default function AddSalesOrderPage() {
       }
 
       setTimeout(() => {
-        window.history.back();
+        navigate('/sales-order');
       }, 2000);
 
     } catch (error) {
@@ -998,7 +998,7 @@ export default function AddSalesOrderPage() {
   };
 
   const handleBackToList = () => {
-    window.history.back();
+    navigate('/sales-order');
   };
 
   // Handle print sales order
