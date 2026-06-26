@@ -22,7 +22,35 @@ import { request } from "@/lib/request";
 import { Download, Upload } from "lucide-react";
 import { useAlert } from "@/hooks/useAlert";
 import { useAppContext } from "@/context/AppContext";
+import apiConfig from "@/config/api";
 
+// Helper: build storage URL from file path
+const buildStorageUrl = (path) => {
+  if (!path) return null;
+  try {
+    const base = apiConfig.baseUrl.replace(/\/api$/, '');
+    let normalized = path.replace(/^\/+/, '');
+    normalized = normalized.replace(/^work-order-actual\/\d+\/items\//, 'work-order-actual/items/');
+    const hasStoragePrefix = /^storage\//.test(normalized);
+    return hasStoragePrefix ? `${base}/${normalized}` : `${base}/storage/${normalized}`;
+  } catch (e) {
+    return null;
+  }
+};
+
+// Helper: resolve any input (base64/raw/url/path) to displayable img src
+const resolveImageSrc = (input) => {
+  if (!input) return null;
+  if (typeof input !== 'string') return null;
+  const trimmed = input.trim();
+  if (trimmed.startsWith('blob:')) return trimmed;
+  if (/^data:image\//i.test(trimmed)) return trimmed;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (/^[A-Za-z0-9+/=]+$/i.test(trimmed) && trimmed.length > 100) {
+    return `data:image/jpeg;base64,${trimmed}`;
+  }
+  return buildStorageUrl(trimmed);
+};
 // Module-level variable untuk menyimpan mapping dimensi bentuk barang
 let bentukBarangDimensiMap = {};
 // Module-level variable untuk menyimpan mapping tipe barang
@@ -46,6 +74,8 @@ export default function ItemBarangPage() {
   const [rongsokTargetItem, setRongsokTargetItem] = useState(null);
   const [rongsokLoading, setRongsokLoading] = useState(false);
   const [rongsokRefetch, setRongsokRefetch] = useState(null);
+
+  const [previewItem, setPreviewItem] = useState(null);
 
   // Custom canDelete logic for ItemBarang based on user attribute or fallback to standard role permission
   const canDelete = (user?.is_can_delete_item_barang == 1) || (hasPermission && hasPermission('ITEM_BARANG', 'Delete')) || (hasPermission && hasPermission('MASTER_DATA', 'Delete'));
@@ -214,6 +244,28 @@ export default function ItemBarangPage() {
           item={selectedItem}
         />
       )}
+
+      {/* Image Preview Dialog */}
+      <Dialog open={!!previewItem} onOpenChange={(open) => { if (!open) setPreviewItem(null); }}>
+        <DialogContent className="sm:max-w-[700px] bg-white">
+          <DialogHeader>
+            <DialogTitle>Preview Hasil Potong</DialogTitle>
+          </DialogHeader>
+          {previewItem && (
+            <div className="flex flex-col gap-4 mt-2">
+              <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm bg-gray-50 p-4 rounded-md border border-gray-100">
+                <div><span className="font-medium text-gray-500">Kode Barang:</span> {previewItem.kode_barang}</div>
+                <div><span className="font-medium text-gray-500">Gudang:</span> {previewItem.gudang?.nama_gudang || '-'}</div>
+                <div className="col-span-2"><span className="font-medium text-gray-500">Nama Barang:</span> {previewItem.nama_item_barang}</div>
+                <div className="col-span-2"><span className="font-medium text-gray-500">Group Barang:</span> {previewItem.item_barang_group?.nama_group_barang || '-'}</div>
+              </div>
+              <div className="flex justify-center items-center p-2 bg-gray-100/50 rounded-md border border-gray-100 shadow-inner">
+                <img src={resolveImageSrc(previewItem.canvas_image)} alt="Preview" className="max-w-full max-h-[60vh] object-contain rounded" />
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Rongsok Reason Dialog */}
       <Dialog open={rongsokDialogOpen} onOpenChange={(open) => {
@@ -635,6 +687,31 @@ export default function ItemBarangPage() {
         columns={[
           { key: "id", label: "ID", align: "center", width: "5rem", maxWidth: "5rem" },
           { key: "kode_barang", label: "Kode Barang", align: "center", width: "10rem", maxWidth: "10rem" },
+          {
+            key: "canvas_image",
+            label: "Thumbnail",
+            align: "center",
+            width: "6rem",
+            maxWidth: "6rem",
+            render: (val, item) => {
+              if (!val) return <span className="text-gray-400 text-xs">-</span>;
+              const src = resolveImageSrc(val);
+              if (!src) return <span className="text-gray-400 text-xs">-</span>;
+              return (
+                <div className="flex justify-center items-center">
+                  <img 
+                    src={src} 
+                    alt="Thumbnail" 
+                    className="w-12 h-12 object-contain rounded border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity hover:shadow-md" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPreviewItem(item);
+                    }}
+                  />
+                </div>
+              );
+            }
+          },
           { key: "nama_item_barang", label: "Nama Item Barang", align: "left", minWidth: "15rem", maxWidth: "20rem" },
           { key: "item_barang_group.nama_group_barang", label: "Group Barang", align: "left", minWidth: "15rem", maxWidth: "20rem" },
           // Dimension columns - conditionally shown
