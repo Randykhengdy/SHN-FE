@@ -105,8 +105,6 @@ export default function AddWorkOrderPage() {
 
   // Plat Preview Modal State
   const [showPlatPreviewModal, setShowPlatPreviewModal] = useState(false);
-  const [previewItems, setPreviewItems] = useState([]);
-  const [loadingPreview, setLoadingPreview] = useState(false);
 
   // Loading State
   const [loading, setLoading] = useState(false);
@@ -138,8 +136,6 @@ export default function AddWorkOrderPage() {
     setWorkOrderItems([]);
     setSelectedSalesOrder(null);
     setSelectedPlatDasar({});
-    setPreviewItems([]);
-    setLoadingPreview(false);
     setValidationMismatches([]);
     setCatatanError(false);
     setCatatanRequiredOpen(false);
@@ -733,45 +729,11 @@ export default function AddWorkOrderPage() {
   const openPlatPreviewModal = async (item) => {
     setCurrentItemData(item);
     setShowPlatPreviewModal(true);
-    setLoadingPreview(true);
-
-    try {
-      // Hit same API as regular Pilih button
-      const response = await request(`/work-order-planning/get-saran-plat-dasar?per_page=${SARAN_PER_PAGE}&page=1`, {
-        method: 'POST',
-        body: JSON.stringify({
-          jenis_barang_id: item.jenis_barang_id,
-          bentuk_barang_id: item.bentuk_barang_id,
-          grade_barang_id: item.grade_barang_id,
-          tebal: parseFloat(item.tebal) || 0,
-          panjang: parseFloat(item.panjang) || 0,
-          lebar: parseFloat(item.lebar) || 0,
-          per_page: SARAN_PER_PAGE,
-          page: 1,
-          item_barang_group_id: item.item_barang_group_id || null,
-          diameter_luar: parseFloat(item.diameter_luar) || 0,
-          diameter_dalam: parseFloat(item.diameter_dalam) || 0,
-          diameter: parseFloat(item.diameter) || 0,
-          sisi1: parseFloat(item.sisi1) || 0,
-          sisi2: parseFloat(item.sisi2) || 0
-        })
-      });
-
-      console.log('Preview API response:', response.data);
-      setPreviewItems((response.data || []).slice(0, SARAN_PER_PAGE));
-    } catch (error) {
-      console.error('Error loading preview items:', error);
-      showAlert('Error', 'Gagal memuat data preview', 'error');
-      setPreviewItems([]);
-    } finally {
-      setLoadingPreview(false);
-    }
   };
 
   const closePlatPreviewModal = () => {
     setShowPlatPreviewModal(false);
     setCurrentItemData(null);
-    setPreviewItems([]);
 
     // Refresh woTotalQuantity from localStorage
     const savedData = localStorage.getItem('WO_total_quantity');
@@ -1961,8 +1923,6 @@ export default function AddWorkOrderPage() {
         isOpen={showPlatPreviewModal}
         onClose={closePlatPreviewModal}
         currentItemData={currentItemData}
-        previewItems={previewItems}
-        loadingPreview={loadingPreview}
         calculateRequiredArea={calculateRequiredArea}
       />
 
