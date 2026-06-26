@@ -54,4 +54,16 @@ export const reportMutasiService = {
     const qs = queryParams.toString();
     return await request(`/report-mutasi/barang-habis${qs ? `?${qs}` : ''}`, { method: 'GET' });
   },
+
+  /**
+   * GET /api/report-split-barang
+   * Laporan Split Barang / Tanggal
+   */
+  getReportSplitBarang: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.start_date) queryParams.append('start_date', params.start_date);
+    if (params.end_date)   queryParams.append('end_date',   params.end_date);
+    const qs = queryParams.toString();
+    return await request(`/report-split-barang${qs ? `?${qs}` : ''}`, { method: 'GET' });
+  },
 };

@@ -777,6 +777,7 @@ export default function ItemBarangPage() {
             }
           },
           { key: "created_at", label: "Dibuat Pada", align: "center", width: "12rem", maxWidth: "12rem", format: "datetime" },
+          { key: "split_at", label: "Di Split Pada", align: "center", width: "12rem", maxWidth: "12rem", format: "datetime" },
           {
             key: "habis_at",
             label: "Terhitung Habis Pada",

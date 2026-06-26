@@ -676,6 +676,14 @@ function createWindow() {
                 }
               }
             },
+            {
+              label: 'Report Split Barang / Tanggal',
+              click: () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('open-report-split-barang');
+                }
+              }
+            },
             // { label: 'Kartu Stock / Gudang / Barang', click: () => mainWindow.webContents.send('show-alert', { title: 'Report', message: 'Halaman Kartu Stock / Gudang / Barang sedang dalam pengembangan.', type: 'info' }) },
             {
               label: 'Stock / Gudang / Barang',

@@ -39,6 +39,7 @@ import { printMutasiAntarGudangReport } from "@/lib/mutasiAntarGudangReportPrint
 import { printRubahStatusBarangReport } from "@/lib/rubahStatusBarangReportPrint";
 import { printBarangRongsokReport } from "@/lib/barangRongsokReportPrint";
 import { printBarangHabisReport } from "@/lib/barangHabisReportPrint";
+import { printSplitBarangReport } from "@/lib/splitBarangReportPrint";
 import { printStockOpnameReport } from "@/lib/stockOpnameReportPrint";
 import { printKegiatanPelaksanaReport } from "@/lib/kegiatanPelaksanaReportPrint";
 import { printRekapKegiatanPelaksanaReport } from "@/lib/rekapKegiatanPelaksanaReportPrint";
@@ -86,6 +87,7 @@ function App() {
   const [isReportRubahStatusBarangOpen, setIsReportRubahStatusBarangOpen] = useState(false);
   const [isReportBarangRongsokOpen, setIsReportBarangRongsokOpen] = useState(false);
   const [isReportBarangHabisOpen, setIsReportBarangHabisOpen] = useState(false);
+  const [isReportSplitBarangOpen, setIsReportSplitBarangOpen] = useState(false);
   const [isReportStockOpnameOpen, setIsReportStockOpnameOpen] = useState(false);
   const [isReportKegiatanPelaksanaOpen, setIsReportKegiatanPelaksanaOpen] = useState(false);
   const [isReportRekapKegiatanPelaksanaOpen, setIsReportRekapKegiatanPelaksanaOpen] = useState(false);
@@ -298,6 +300,13 @@ function App() {
     if (window.electronAPI.onReportBarangHabis) {
       window.electronAPI.onReportBarangHabis(() => {
         setIsReportBarangHabisOpen(true);
+      });
+    }
+
+    // Listen for Report Split Barang event
+    if (window.electronAPI.onReportSplitBarang) {
+      window.electronAPI.onReportSplitBarang(() => {
+        setIsReportSplitBarangOpen(true);
       });
     }
 
@@ -1066,6 +1075,33 @@ function App() {
                 }
               } catch (error) {
                 console.error("Error generating report barang habis:", error);
+                showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
+              } finally {
+                setReportLoading(false);
+              }
+            }}
+          />
+
+          <ReportDateRangeModal
+            open={isReportSplitBarangOpen}
+            onOpenChange={setIsReportSplitBarangOpen}
+            title="Report Split Barang / Tanggal"
+            loading={reportLoading}
+            onGenerate={async (from, to) => {
+              try {
+                setReportLoading(true);
+                const params = { start_date: from, end_date: to };
+                
+                const result = await reportMutasiService.getReportSplitBarang(params);
+                
+                if (result.success && result.data) {
+                  printSplitBarangReport(result.data, from, to);
+                  setIsReportSplitBarangOpen(false);
+                } else {
+                  showAlert("Error", result.message || "Gagal mengambil data report split barang", "error");
+                }
+              } catch (error) {
+                console.error("Error generating report split barang:", error);
                 showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
               } finally {
                 setReportLoading(false);
