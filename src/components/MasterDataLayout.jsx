@@ -4,7 +4,7 @@ import Header from "./Header";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { RefreshCw, ChevronUp, ChevronDown } from "lucide-react";
+import { RefreshCw, ChevronUp, ChevronDown, MoreVertical } from "lucide-react";
 import RolePermissionEditor from "./RolePermissionEditor";
 import { useAlert } from "@/hooks/useAlert";
 import { useAppContext } from "@/context/AppContext";
@@ -45,6 +45,16 @@ export default function MasterDataLayout({
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [filterValue, setFilterValue] = useState(filterConfig?.defaultValue || "semua");
+  const [activeRowDropdown, setActiveRowDropdown] = useState(null);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleOutsideClick = () => {
+      setActiveRowDropdown(null);
+    };
+    document.addEventListener("click", handleOutsideClick);
+    return () => document.removeEventListener("click", handleOutsideClick);
+  }, []);
   const canCreate = hasPermission && hasPermission(menuCode, 'Create');
   const canUpdate = customCanUpdate !== undefined ? customCanUpdate : (hasPermission && hasPermission(menuCode, 'Update'));
   const canDelete = customCanDelete !== undefined ? customCanDelete : (hasPermission && hasPermission(menuCode, 'Delete'));
@@ -504,100 +514,142 @@ export default function MasterDataLayout({
                         const baseClassName = `border-b border-gray-100 last:border-b-0 hover:bg-blue-50/70 hover:border-l-4 hover:border-l-blue-500 transition-all duration-200 group ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`;
                         const customClassName = getRowClassName ? getRowClassName(item, index) : '';
 
-                        const renderActionsCell = () => (
-                          <td className="px-4 py-3 text-left">
-                            <div className="flex gap-2 justify-start opacity-90 group-hover:opacity-100 transition-opacity duration-200">
-                              {!showTrashed && customActions && customActions.map((action, idx) => {
-                                if (typeof action.visible === 'function' && !action.visible(item)) return null;
-                                const computedIcon = typeof action.icon === 'function' ? action.icon(item) : action.icon;
-                                const computedLabel = typeof action.label === 'function' ? action.label(item) : action.label;
-                                const computedClassName = typeof action.className === 'function' ? action.className(item) : action.className;
-                                return (
-                                  <Button
-                                    key={idx}
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => action.onClick(item, fetchData)}
-                                    className={computedClassName || "bg-blue-500 hover:bg-blue-600 text-white border-blue-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-blue-300 focus:ring-offset-1"}
-                                  >
-                                    <span className="flex items-center gap-1">
-                                      {computedIcon}
-                                      {computedLabel}
-                                    </span>
-                                  </Button>
-                                );
-                              })}
+                        const renderActionsCell = () => {
+                          const hasActions = (!showTrashed && customActions && customActions.length > 0) || canUpdate || canDelete;
+                          if (!hasActions) return <td className="px-4 py-3 text-left"></td>;
 
-                              {!showTrashed ? (
-                                <>
-                                  {canUpdate ? (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleEdit(item)}
-                                      className="bg-yellow-400 hover:bg-yellow-500 text-white border-yellow-400 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-yellow-300 focus:ring-offset-1"
-                                    >
-                                      <span className="flex items-center gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                        </svg>
-                                        Edit
-                                      </span>
-                                    </Button>
-                                  ) : null}
-                                  {canDelete ? (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleDelete(item.id)}
-                                      className="bg-red-500 hover:bg-red-600 text-white border-red-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-red-300 focus:ring-offset-1"
-                                    >
-                                      <span className="flex items-center gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                        Hapus
-                                      </span>
-                                    </Button>
-                                  ) : null}
-                                </>
-                              ) : (
-                                <>
-                                  {canDelete ? (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleRestore(item.id)}
-                                      className="bg-green-500 hover:bg-green-600 text-white border-green-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-green-300 focus:ring-offset-1"
-                                    >
-                                      <span className="flex items-center gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                        </svg>
-                                        Pulihkan
-                                      </span>
-                                    </Button>
-                                  ) : null}
-                                  {canDelete ? (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleForceDelete(item.id)}
-                                      className="bg-red-500 hover:bg-red-600 text-white border-red-500 transition-all duration-200 hover:shadow-md hover:scale-105 focus:ring-2 focus:ring-red-300 focus:ring-offset-1"
-                                    >
-                                      <span className="flex items-center gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                        Hapus Permanen
-                                      </span>
-                                    </Button>
-                                  ) : null}
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        );
+                          const isOpen = activeRowDropdown === item.id;
+                          const openUpward = index >= data.length - 2 && data.length > 2;
+
+                          return (
+                            <td className="px-4 py-3 text-left relative">
+                              <div className="relative inline-block text-left">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveRowDropdown(isOpen ? null : item.id);
+                                  }}
+                                  className="h-8 w-8 p-0 flex items-center justify-center hover:bg-gray-100/80 rounded-md border border-gray-300 transition-colors"
+                                >
+                                  <MoreVertical size={16} className="text-gray-500" />
+                                </Button>
+
+                                {isOpen && (
+                                  <div
+                                    onClick={(e) => e.stopPropagation()}
+                                    className={`absolute right-0 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50 py-1 ${openUpward ? 'bottom-full mb-1 origin-bottom-right' : 'top-full mt-1 origin-top-right'
+                                      }`}
+                                    style={{
+                                      minWidth: '12rem',
+                                    }}
+                                  >
+                                    {!showTrashed && customActions && customActions.map((action, idx) => {
+                                      if (typeof action.visible === 'function' && !action.visible(item)) return null;
+
+                                      const computedIcon = typeof action.icon === 'function' ? action.icon(item) : action.icon;
+                                      const computedLabel = typeof action.label === 'function' ? action.label(item) : action.label;
+                                      const computedClassName = typeof action.className === 'function' ? action.className(item) : action.className;
+
+                                      const isDanger = computedClassName?.includes("bg-red") || computedClassName?.includes("text-red");
+                                      const isWarning = computedClassName?.includes("bg-orange") || computedClassName?.includes("text-orange");
+
+                                      let itemClass = "flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150 text-left";
+                                      if (isDanger) {
+                                        itemClass = "flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-150 text-left";
+                                      } else if (isWarning) {
+                                        itemClass = "flex items-center w-full px-4 py-2 text-sm text-orange-600 hover:bg-orange-50 transition-colors duration-150 text-left";
+                                      }
+
+                                      return (
+                                        <button
+                                          key={idx}
+                                          onClick={(e) => {
+                                            setActiveRowDropdown(null);
+                                            action.onClick(item, fetchData);
+                                          }}
+                                          className={itemClass}
+                                        >
+                                          {computedIcon && (
+                                            <span className="mr-2.5 flex-shrink-0 text-gray-500">
+                                              {React.cloneElement(computedIcon, { className: "h-4 w-4" })}
+                                            </span>
+                                          )}
+                                          <span>{computedLabel}</span>
+                                        </button>
+                                      );
+                                    })}
+
+                                    {!showTrashed ? (
+                                      <>
+                                        {canUpdate && (
+                                          <button
+                                            onClick={(e) => {
+                                              setActiveRowDropdown(null);
+                                              handleEdit(item);
+                                            }}
+                                            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150 text-left"
+                                          >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2.5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg>
+                                            Edit
+                                          </button>
+                                        )}
+                                        {canDelete && (
+                                          <button
+                                            onClick={(e) => {
+                                              setActiveRowDropdown(null);
+                                              handleDelete(item.id);
+                                            }}
+                                            className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-150 text-left"
+                                          >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                            Hapus
+                                          </button>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <>
+                                        {canDelete && (
+                                          <button
+                                            onClick={(e) => {
+                                              setActiveRowDropdown(null);
+                                              handleRestore(item.id);
+                                            }}
+                                            className="flex items-center w-full px-4 py-2 text-sm text-green-700 hover:bg-green-50 transition-colors duration-150 text-left"
+                                          >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                            </svg>
+                                            Pulihkan
+                                          </button>
+                                        )}
+                                        {canDelete && (
+                                          <button
+                                            onClick={(e) => {
+                                              setActiveRowDropdown(null);
+                                              handleForceDelete(item.id);
+                                            }}
+                                            className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-150 text-left"
+                                          >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                            Hapus Permanen
+                                          </button>
+                                        )}
+                                      </>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          );
+                        };
 
                         const renderSelectionCell = () => {
                           if (!selection) return null;
@@ -651,7 +703,7 @@ export default function MasterDataLayout({
                               const cellClassName = col.getCellClassName
                                 ? col.getCellClassName(item)
                                 : '';
-                                
+
                               let displayValue = value;
                               if (col.render) {
                                 displayValue = col.render(value, item);
