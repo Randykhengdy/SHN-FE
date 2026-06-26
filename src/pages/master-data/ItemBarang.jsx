@@ -224,7 +224,7 @@ export default function ItemBarangPage() {
         onChange={handleFileChange}
       />
       {isCanvasOpen && selectedItem && (
-        <div className="fixed inset-0 z-[100] bg-white w-screen h-screen">
+        <div className="fixed inset-0 z-40 bg-white w-screen h-screen">
           <ItemBarangCanvasPage
             item={selectedItem}
             onClose={() => {

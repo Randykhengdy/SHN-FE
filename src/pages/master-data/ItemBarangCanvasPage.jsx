@@ -5,7 +5,7 @@ import { request } from '@/lib/request';
 import { ArrowLeft, Trash2, Plus, RotateCw, ZoomIn, ZoomOut, Maximize, Save, Unlock, Lock } from 'lucide-react';
 
 const ItemBarangCanvasPage = ({ item, onClose }) => {
-  const { showAlert } = useAlert();
+  const { showAlert, showConfirm, AlertComponent } = useAlert();
 
   // Canvas refs
   const canvasRef = useRef(null);
@@ -656,127 +656,134 @@ const ItemBarangCanvasPage = ({ item, onClose }) => {
   const handleSaveCanvas = useCallback(async () => {
     // Check for split boxes
     const splitBoxes = boxes.filter(b => b.type === 'Split');
-    let doSplit = false;
+
+    const proceedWithSave = (doSplit) => {
+      // 1. Auto zoom fit for optimal preview
+      if (typeof zoomFit === 'function') {
+        zoomFit();
+      }
+
+      // 2. Wait for zoom animation/render
+      setTimeout(async () => {
+        try {
+          const canvas = canvasRef.current;
+          if (!canvas) return;
+
+          // Generate preview image (screenshot)
+          const canvasImage = canvas.toDataURL('image/jpeg', 0.8);
+
+          // Calculate metadata for area
+          const containerArea = baseContainer.width * baseContainer.height;
+          const totalBoxArea = boxes.reduce((acc, box) => acc + (box.width * box.height), 0);
+
+          // Prepare boxes for saving (mark Split as SplitProcessed if splitting)
+          const boxesToSave = doSplit 
+              ? boxes.map(b => b.type === 'Split' ? { ...b, type: 'SplitProcessed' } : b)
+              : boxes;
+
+          // Prepare canvas data object
+          const canvasDataObj = {
+            baseContainer,
+            boxes: boxesToSave,
+            gridSize,
+            zoom, // Note: This might be pre-zoomFit value, but acceptable for data restoration
+            panOffset,
+            sisa_luas: parseFloat(item?.sisa_luas) || 0,
+            metadata: {
+              containerArea,
+              totalArea: totalBoxArea,
+              savedAt: new Date().toISOString()
+            }
+          };
+
+          // Calculate splits if needed
+          let splits = undefined;
+          if (doSplit) {
+              // Ambil hanya box yang berada di dalam Split
+              const insideBoxes = boxes.filter(b => {
+                  if (b.type === 'Split') return false;
+                  const bw = b.isRotated ? b.height : b.width;
+                  const bh = b.isRotated ? b.width : b.height;
+                  const br = b.x + bw;
+                  const bb = b.y + bh;
+                  return splitBoxes.some(s => {
+                      const sw = s.isRotated ? s.height : s.width;
+                      const sh = s.isRotated ? s.width : s.height;
+                      const sr = s.x + sw;
+                      const sb = s.y + sh;
+                      return b.x >= s.x && br <= sr && b.y >= s.y && bb <= sb;
+                  });
+              });
+
+              const children = insideBoxes.map(b => {
+                  const w = b.isRotated ? b.height : b.width;
+                  const h = b.isRotated ? b.width : b.height;
+                  return {
+                      id: b.id,
+                      width: w,
+                      height: h
+                  };
+              });
+              
+              splits = children.map(c => ({
+                  panjang: c.width,
+                  lebar: c.height
+              }));
+
+              // Fallback: if no inside boxes found, use Split boxes themselves
+              if (splits.length === 0) {
+                  splits = splitBoxes.map(s => ({
+                      panjang: s.isRotated ? s.height : s.width,
+                      lebar: s.isRotated ? s.width : s.height
+                  }));
+              }
+              
+              console.log('Including splits in save:', splits);
+          }
+
+          const payload = {
+            item_barang_id: item.id,
+            canvas_data: JSON.stringify(canvasDataObj), // Send as JSON String per API docs
+            canvas_image: canvasImage,
+            splits
+          };
+
+          // Use new endpoint for direct canvas save
+          const response = await request('/api/item-barang/save-canvas', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+          
+          console.log('SAVE RESPONSE:', response);
+
+          if (doSplit) {
+               setBoxes(boxesToSave);
+               showAlert('Success', `Canvas saved & Split processed (${splits.length} items)!`, 'success');
+          } else {
+               showAlert('Success', 'Canvas saved successfully!', 'success');
+          }
+          
+          if (onClose) onClose();
+        } catch (error) {
+          console.error('Error saving canvas:', error);
+          showAlert('Error', 'Failed to save canvas.', 'error');
+        }
+      }, 500); // 500ms delay to allow zoomFit to render
+    };
 
     if (splitBoxes.length > 0) {
-        if (!window.confirm(`Found ${splitBoxes.length} Split Area(s). This will Process Split and Save. Continue?`)) {
-            return;
-        }
-        doSplit = true;
+        showConfirm(
+            'Confirm Split & Save',
+            `Found ${splitBoxes.length} Split Area(s). This will Process Split and Save. Continue?`,
+            () => proceedWithSave(true),
+            null,
+            'Continue',
+            'Cancel'
+        );
+    } else {
+        proceedWithSave(false);
     }
-
-    // 1. Auto zoom fit for optimal preview
-    if (typeof zoomFit === 'function') {
-      zoomFit();
-    }
-
-    // 2. Wait for zoom animation/render
-    setTimeout(async () => {
-      try {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        // Generate preview image (screenshot)
-        const canvasImage = canvas.toDataURL('image/jpeg', 0.8);
-
-        // Calculate metadata for area
-        const containerArea = baseContainer.width * baseContainer.height;
-        const totalBoxArea = boxes.reduce((acc, box) => acc + (box.width * box.height), 0);
-
-        // Prepare boxes for saving (mark Split as SplitProcessed if splitting)
-        const boxesToSave = doSplit 
-            ? boxes.map(b => b.type === 'Split' ? { ...b, type: 'SplitProcessed' } : b)
-            : boxes;
-
-        // Prepare canvas data object
-        const canvasDataObj = {
-          baseContainer,
-          boxes: boxesToSave,
-          gridSize,
-          zoom, // Note: This might be pre-zoomFit value, but acceptable for data restoration
-          panOffset,
-          sisa_luas: parseFloat(item?.sisa_luas) || 0,
-          metadata: {
-            containerArea,
-            totalArea: totalBoxArea,
-            savedAt: new Date().toISOString()
-          }
-        };
-
-        // Calculate splits if needed
-        let splits = undefined;
-        if (doSplit) {
-            // Ambil hanya box yang berada di dalam Split
-            const insideBoxes = boxes.filter(b => {
-                if (b.type === 'Split') return false;
-                const bw = b.isRotated ? b.height : b.width;
-                const bh = b.isRotated ? b.width : b.height;
-                const br = b.x + bw;
-                const bb = b.y + bh;
-                return splitBoxes.some(s => {
-                    const sw = s.isRotated ? s.height : s.width;
-                    const sh = s.isRotated ? s.width : s.height;
-                    const sr = s.x + sw;
-                    const sb = s.y + sh;
-                    return b.x >= s.x && br <= sr && b.y >= s.y && bb <= sb;
-                });
-            });
-
-            const children = insideBoxes.map(b => {
-                const w = b.isRotated ? b.height : b.width;
-                const h = b.isRotated ? b.width : b.height;
-                return {
-                    id: b.id,
-                    width: w,
-                    height: h
-                };
-            });
-            
-            splits = children.map(c => ({
-                panjang: c.width,
-                lebar: c.height
-            }));
-
-            // Fallback: if no inside boxes found, use Split boxes themselves
-            if (splits.length === 0) {
-                splits = splitBoxes.map(s => ({
-                    panjang: s.isRotated ? s.height : s.width,
-                    lebar: s.isRotated ? s.width : s.height
-                }));
-            }
-            
-            console.log('Including splits in save:', splits);
-        }
-
-        const payload = {
-          item_barang_id: item.id,
-          canvas_data: JSON.stringify(canvasDataObj), // Send as JSON String per API docs
-          canvas_image: canvasImage,
-          splits
-        };
-
-        // Use new endpoint for direct canvas save
-        const response = await request('/api/item-barang/save-canvas', {
-          method: 'POST',
-          body: JSON.stringify(payload)
-        });
-        
-        console.log('SAVE RESPONSE:', response);
-
-        if (doSplit) {
-             setBoxes(boxesToSave);
-             showAlert('Success', `Canvas saved & Split processed (${splits.length} items)!`, 'success');
-        } else {
-             showAlert('Success', 'Canvas saved successfully!', 'success');
-        }
-        
-        if (onClose) onClose();
-      } catch (error) {
-        console.error('Error saving canvas:', error);
-        showAlert('Error', 'Failed to save canvas.', 'error');
-      }
-    }, 500); // 500ms delay to allow zoomFit to render
-  }, [baseContainer, boxes, gridSize, zoom, panOffset, item.id, zoomFit, onClose, showAlert]);
+  }, [baseContainer, boxes, gridSize, zoom, panOffset, item.id, zoomFit, onClose, showAlert, showConfirm]);
 
 
   const unlockSelected = useCallback(() => {
@@ -1697,6 +1704,7 @@ const ItemBarangCanvasPage = ({ item, onClose }) => {
           />
         </div>
       </div>
+      <AlertComponent />
     </div>
   );
 };

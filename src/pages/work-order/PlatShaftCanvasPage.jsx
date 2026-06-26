@@ -2807,6 +2807,26 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
           }
         }
 
+        // Sync saldo_berat to backend: call save-canvas API with canvas_data for the saran plat
+        if (saranId && saranId !== 'unknown') {
+          (async () => {
+            try {
+              const canvasPayload = {
+                item_barang_id: saranId,
+                canvas_data: jsonString,
+              };
+              await request('/api/item-barang/save-canvas', {
+                method: 'POST',
+                body: JSON.stringify(canvasPayload),
+              });
+              console.log('✅ saldo_berat synced to backend for saran plat:', saranId);
+            } catch (apiErr) {
+              console.error('❌ Failed to sync saldo_berat to backend:', apiErr);
+              // Non-fatal: localStorage save is still done
+            }
+          })();
+        }
+
         const idStatus = isCurrentWorkOrder ? 'Current Work Order' : 'Different Work Order';
         showAlert('Success', `Canvas saved for ${itemName}!\n\nID Status: ${idStatus}\nStorage Key: ${storageKey}\n\nJPG preview will be saved to /canvas-previews/ folder in both formats.`, 'success');
 
