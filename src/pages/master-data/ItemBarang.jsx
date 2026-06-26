@@ -813,9 +813,22 @@ export default function ItemBarangPage() {
             }
           },
           // { key: "is_edit", label: "Is Edit", align: "center", width: "8rem", maxWidth: "8rem", format: "boolean" },
-          { key: "jenis_barang.nama_jenis", label: "Jenis Barang", align: "center", width: "12rem", maxWidth: "12rem" },
+           { key: "jenis_barang.nama_jenis", label: "Jenis Barang", align: "center", width: "12rem", maxWidth: "12rem" },
           { key: "bentuk_barang.nama_bentuk", label: "Bentuk Barang", align: "center", width: "12rem", maxWidth: "12rem" },
           { key: "grade_barang.nama", label: "Grade Barang", align: "center", width: "12rem", maxWidth: "12rem" },
+          {
+            key: "harga_modal",
+            label: "Harga Modal",
+            align: "right",
+            width: "12rem",
+            maxWidth: "12rem",
+            render: (val) => {
+              if (val == null) return <span className="text-gray-400 text-xs">-</span>;
+              const num = parseFloat(val);
+              if (isNaN(num)) return <span className="text-gray-400 text-xs">-</span>;
+              return "Rp " + num.toLocaleString("id-ID");
+            }
+          },
         ]}
       />
     </>
