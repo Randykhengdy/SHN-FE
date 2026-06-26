@@ -29,8 +29,8 @@ const getDimensiString = (item) => {
  */
 export const printSplitBarangReport = (data, startDate, endDate) => {
   const periodeStart = startDate ? format(new Date(startDate), 'dd-MM-yyyy') : '-';
-  const periodeEnd   = endDate   ? format(new Date(endDate),   'dd-MM-yyyy') : '-';
-  const todayStr     = format(new Date(), 'EEEE, d MMMM yyyy');
+  const periodeEnd = endDate ? format(new Date(endDate), 'dd-MM-yyyy') : '-';
+  const todayStr = format(new Date(), 'EEEE, d MMMM yyyy');
 
   let gtTotalAnak = 0;
 
@@ -41,7 +41,7 @@ export const printSplitBarangReport = (data, startDate, endDate) => {
     const gudang = parentItem.gudang ? parentItem.gudang.nama_gudang : '-';
     const tanggalSplit = parentItem.split_at ? format(new Date(parentItem.split_at), 'dd-MM-yyyy HH:mm') : '-';
     const parentDimensi = getDimensiString(parentItem);
-    
+
     let anakRows = '';
     if (children.length > 0) {
       anakRows = children.map((anak) => {

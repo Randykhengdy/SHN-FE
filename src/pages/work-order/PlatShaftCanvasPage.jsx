@@ -4001,8 +4001,48 @@ const PlatShaftCanvasPage = React.forwardRef(({ hideTitle = false, onClose, onCa
                           <span className="font-medium">Area Utilization:</span> {(() => {
                             const totalAreaUsed = boxes ? boxes.reduce((total, box) => total + (box.width * box.height), 0) : 0;
                             const containerArea = baseContainer.width * baseContainer.height;
-                            const areaUtilization = containerArea > 0 ? Math.round((totalAreaUsed / containerArea) * 100) : 0;
+                            const areaUtilization = containerArea > 0 ? ((totalAreaUsed / containerArea) * 100).toFixed(2) : 0;
                             return `${areaUtilization}%`;
+                          })()}
+                        </div>
+
+                        {/* Saldo & Persentase Ukuran */}
+                        <div className="text-sm">
+                          <span className="font-medium">Sisa Ukuran (Saldo):</span> {(() => {
+                            const totalAreaUsed = boxes ? boxes.reduce((total, box) => total + (box.width * box.height), 0) : 0;
+                            const containerArea = baseContainer.width * baseContainer.height;
+                            const saldoArea = Math.max(0, containerArea - totalAreaUsed);
+                            return `${saldoArea.toFixed(2)} px²`;
+                          })()}
+                        </div>
+                        <div className="text-sm">
+                          <span className="font-medium">Sisa Ukuran (%):</span> {(() => {
+                            const totalAreaUsed = boxes ? boxes.reduce((total, box) => total + (box.width * box.height), 0) : 0;
+                            const containerArea = baseContainer.width * baseContainer.height;
+                            const saldoArea = Math.max(0, containerArea - totalAreaUsed);
+                            const percent = containerArea > 0 ? ((saldoArea / containerArea) * 100).toFixed(2) : 0;
+                            return `${percent}%`;
+                          })()}
+                        </div>
+
+                        {/* Saldo & Persentase Berat */}
+                        <div className="text-sm">
+                          <span className="font-medium">Sisa Berat (Saldo):</span> {(() => {
+                            const totalAreaUsed = boxes ? boxes.reduce((total, box) => total + (box.width * box.height), 0) : 0;
+                            const containerArea = baseContainer.width * baseContainer.height;
+                            const saldoArea = Math.max(0, containerArea - totalAreaUsed);
+                            const beratAwal = workOrderData?.selectedItem?.berat || 0;
+                            const saldoBerat = containerArea > 0 ? (saldoArea / containerArea) * beratAwal : 0;
+                            return `${saldoBerat.toFixed(2)} kg`;
+                          })()}
+                        </div>
+                        <div className="text-sm">
+                          <span className="font-medium">Sisa Berat (%):</span> {(() => {
+                            const totalAreaUsed = boxes ? boxes.reduce((total, box) => total + (box.width * box.height), 0) : 0;
+                            const containerArea = baseContainer.width * baseContainer.height;
+                            const saldoArea = Math.max(0, containerArea - totalAreaUsed);
+                            const percent = containerArea > 0 ? ((saldoArea / containerArea) * 100).toFixed(2) : 0;
+                            return `${percent}%`;
                           })()}
                         </div>
 
