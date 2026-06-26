@@ -522,7 +522,7 @@ export default function MasterDataLayout({
                           const openUpward = index >= data.length - 2 && data.length > 2;
 
                           return (
-                            <td className="px-4 py-3 text-left relative">
+                            <td className={`px-4 py-3 text-left relative ${isOpen ? 'z-50' : ''}`}>
                               <div className="relative inline-block text-left">
                                 <Button
                                   variant="outline"
@@ -688,10 +688,12 @@ export default function MasterDataLayout({
                           );
                         }
 
+                        const isDropdownOpen = activeRowDropdown === item.id;
                         return (
                           <tr
                             key={item.id}
-                            className={`${baseClassName} ${customClassName}`}
+                            className={`${baseClassName} ${customClassName} ${isDropdownOpen ? 'relative z-30' : ''}`}
+                            style={isDropdownOpen ? { zIndex: 30, position: 'relative' } : undefined}
                           >
                             {renderSelectionCell()}
                             {columns.map((col) => {
