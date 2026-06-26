@@ -55,6 +55,12 @@ export default function MasterDataLayout({
     document.addEventListener("click", handleOutsideClick);
     return () => document.removeEventListener("click", handleOutsideClick);
   }, []);
+
+  const [hiddenColumns, setHiddenColumns] = useState([]);
+
+  const displayedColumns = useMemo(() => {
+    return columns.filter(col => !hiddenColumns.includes(col.key));
+  }, [columns, hiddenColumns]);
   const canCreate = hasPermission && hasPermission(menuCode, 'Create');
   const canUpdate = customCanUpdate !== undefined ? customCanUpdate : (hasPermission && hasPermission(menuCode, 'Update'));
   const canDelete = customCanDelete !== undefined ? customCanDelete : (hasPermission && hasPermission(menuCode, 'Delete'));
@@ -336,6 +342,51 @@ export default function MasterDataLayout({
                       Tampilkan yang dihapus
                     </Label>
                   </div>
+                  {/* Column Visibility Dropdown */}
+                  <div className="relative group/col-dropdown">
+                    <Button
+                      variant="outline"
+                      className="border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                    >
+                      <span className="flex items-center gap-2">
+                        Kolom
+                        <ChevronDown size={16} className="text-gray-500" />
+                      </span>
+                    </Button>
+
+                    <div className="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 opacity-0 invisible group-hover/col-dropdown:opacity-100 group-hover/col-dropdown:visible transition-all duration-200 z-50 transform origin-top-right scale-95 group-hover/col-dropdown:scale-100 flex flex-col p-2 gap-1 overflow-y-auto max-h-[60vh]">
+                      <div className="px-3 py-1.5 text-xs font-semibold text-gray-500 border-b border-gray-100 mb-1">
+                        Tampilkan Kolom
+                      </div>
+                      {columns.map((col) => {
+                        if (col.key === 'actions' || !col.label) return null;
+                        const isChecked = !hiddenColumns.includes(col.key);
+                        return (
+                          <label
+                            key={col.key}
+                            className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md cursor-pointer select-none transition-colors"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => {
+                                if (isChecked) {
+                                  if (columns.filter(c => c.key !== 'actions' && !hiddenColumns.includes(c.key)).length <= 1) {
+                                    return;
+                                  }
+                                  setHiddenColumns([...hiddenColumns, col.key]);
+                                } else {
+                                  setHiddenColumns(hiddenColumns.filter(k => k !== col.key));
+                                }
+                              }}
+                              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2.5 cursor-pointer accent-blue-600"
+                            />
+                            {col.label}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
                   <div className="relative group/dropdown">
                     <Button
                       variant="outline"
@@ -434,7 +485,7 @@ export default function MasterDataLayout({
                           {selection.headerLabel || 'Pilih'}
                         </th>
                       ) : null}
-                      {columns.map((col) => (
+                      {displayedColumns.map((col) => (
                         <th
                           key={col.key}
                           className={`px-4 py-3 text-sm font-semibold group ${col.key === 'actions' ? 'cursor-default' : 'cursor-pointer hover:bg-gray-100/80 hover:text-blue-600 transition-colors duration-200'
@@ -472,7 +523,7 @@ export default function MasterDataLayout({
                               <div className="h-4 w-4 bg-gray-200 rounded"></div>
                             </td>
                           ) : null}
-                          {Array(columns.length).fill(0).map((_, colIndex) => (
+                          {Array(displayedColumns.length).fill(0).map((_, colIndex) => (
                             <td key={`skeleton-cell-${index}-${colIndex}`} className="px-4 py-4 whitespace-nowrap">
                               <div
                                 className={`h-4 ${colIndex === 0 ? 'w-8' : 'w-full max-w-[120px]'} bg-gray-200 rounded`}
@@ -493,7 +544,7 @@ export default function MasterDataLayout({
                       ))
                     ) : data.length === 0 ? (
                       <tr>
-                        <td colSpan={(columns.length + 1) + (selection ? 1 : 0)} className="px-6 py-16 text-center">
+                        <td colSpan={(displayedColumns.length + 1) + (selection ? 1 : 0)} className="px-6 py-16 text-center">
                           <div className="flex flex-col items-center justify-center space-y-3">
                             <div className="bg-gray-100 p-3 rounded-full">
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -696,7 +747,7 @@ export default function MasterDataLayout({
                             style={isDropdownOpen ? { zIndex: 30, position: 'relative' } : undefined}
                           >
                             {renderSelectionCell()}
-                            {columns.map((col) => {
+                            {displayedColumns.map((col) => {
                               // Gunakan custom getValue jika ada, jika tidak gunakan default
                               const value = col.getValue
                                 ? col.getValue(item)
