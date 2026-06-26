@@ -822,30 +822,34 @@ export default function ViewWOActualPage() {
                               })()}
                             </TableCell>
                             <TableCell className="text-center">
-                              {(() => {
-                                const cachedBlobSrc = resolveImageSrc(itemSisaImagesMap[actualItem.id]);
-                                const rawPathSrc = resolveImageSrc(actualItem.foto_sisa_barang);
-                                const displaySrc = cachedBlobSrc || rawPathSrc;
+                              {planningItem.jenis_potongan?.toLowerCase() === 'utuh' || actualItem.jenis_potongan?.toLowerCase() === 'utuh' ? (
+                                <span className="text-xs text-gray-400 font-medium">N/A (Utuh)</span>
+                              ) : (
+                                (() => {
+                                  const cachedBlobSrc = resolveImageSrc(itemSisaImagesMap[actualItem.id]);
+                                  const rawPathSrc = resolveImageSrc(actualItem.foto_sisa_barang);
+                                  const displaySrc = cachedBlobSrc || rawPathSrc;
 
-                                return displaySrc ? (
-                                  <div className="flex flex-col items-center gap-1">
-                                    <img
-                                      src={displaySrc}
-                                      alt="Foto Sisa Item"
-                                      className="w-10 h-10 object-cover rounded border cursor-pointer"
-                                      onClick={() => {
-                                        setPreviewImages([displaySrc]);
-                                        setCurrentPreviewIndex(0);
-                                        setPreviewTitle(`Foto Sisa Item: ${jenisNama}`);
-                                        setPreviewDetails(getItemDetailsText(planningItem));
-                                        setPreviewOpen(true);
-                                      }}
-                                    />
-                                  </div>
-                                ) : (
-                                  <span className="text-xs text-gray-400">-</span>
-                                );
-                              })()}
+                                  return displaySrc ? (
+                                    <div className="flex flex-col items-center gap-1">
+                                      <img
+                                        src={displaySrc}
+                                        alt="Foto Sisa Item"
+                                        className="w-10 h-10 object-cover rounded border cursor-pointer"
+                                        onClick={() => {
+                                          setPreviewImages([displaySrc]);
+                                          setCurrentPreviewIndex(0);
+                                          setPreviewTitle(`Foto Sisa Item: ${jenisNama}`);
+                                          setPreviewDetails(getItemDetailsText(planningItem));
+                                          setPreviewOpen(true);
+                                        }}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs text-gray-400">-</span>
+                                  );
+                                })()
+                              )}
                             </TableCell>
                           </TableRow>
                         );

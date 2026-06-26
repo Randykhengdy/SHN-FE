@@ -598,7 +598,7 @@ export default function AddWOActualPage() {
         if (item?.foto_bukti) {
           value.foto_bukti = item.foto_bukti;
         }
-        if (item?.foto_sisa_barang) {
+        if (item?.foto_sisa_barang && planningItem?.jenis_potongan?.toLowerCase() !== 'utuh') {
           value.foto_sisa_barang = item.foto_sisa_barang;
         }
         return [id, value];
@@ -696,7 +696,7 @@ export default function AddWOActualPage() {
 
           // AFTER: gunakan foto bukti item yang baru diupload (data URL)
           const afterImages = actualItem.foto_bukti ? [{ src: actualItem.foto_bukti }] : [];
-          const sisaImages = actualItem.foto_sisa_barang ? [{ src: actualItem.foto_sisa_barang }] : [];
+          const sisaImages = (actualItem.foto_sisa_barang && planningItem.jenis_potongan?.toLowerCase() !== 'utuh') ? [{ src: actualItem.foto_sisa_barang }] : [];
 
           return {
             no: idx + 1,
@@ -1212,40 +1212,44 @@ export default function AddWOActualPage() {
                               </div>
                             </TableCell>
                             <TableCell className="text-center">
-                              <div className="flex items-center justify-center gap-2">
-                                <input
-                                  id={`item-foto-sisa-${planningItem.id}`}
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) handleItemFotoSisaChange(planningItem.id, file);
-                                  }}
-                                  className="hidden"
-                                />
-                                <label
-                                  htmlFor={`item-foto-sisa-${planningItem.id}`}
-                                  className="inline-flex items-center rounded-md border px-3 py-1 text-xs font-medium hover:bg-gray-50 cursor-pointer"
-                                >
-                                  Upload
-                                </label>
-                                {actualItem.foto_sisa_barang ? (
-                                  <img
-                                    src={actualItem.foto_sisa_barang}
-                                    alt={`Foto Sisa Item #${planningItem.id}`}
-                                    className="w-12 h-12 object-cover rounded border cursor-pointer"
-                                    onClick={() => {
-                                      setPreviewImages([actualItem.foto_sisa_barang]);
-                                      setCurrentPreviewIndex(0);
-                                      setPreviewTitle(`Foto Sisa Item: ${planningItem.jenis_barang?.nama || '-'}`);
-                                      setPreviewDetails(getItemDetailsText(planningItem));
-                                      setPreviewOpen(true);
+                              {planningItem.jenis_potongan?.toLowerCase() === 'utuh' ? (
+                                <span className="text-xs text-gray-400 font-medium">N/A (Utuh)</span>
+                              ) : (
+                                <div className="flex items-center justify-center gap-2">
+                                  <input
+                                    id={`item-foto-sisa-${planningItem.id}`}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) handleItemFotoSisaChange(planningItem.id, file);
                                     }}
+                                    className="hidden"
                                   />
-                                ) : (
-                                  <span className="text-xs text-gray-500">Belum ada</span>
-                                )}
-                              </div>
+                                  <label
+                                    htmlFor={`item-foto-sisa-${planningItem.id}`}
+                                    className="inline-flex items-center rounded-md border px-3 py-1 text-xs font-medium hover:bg-gray-50 cursor-pointer"
+                                  >
+                                    Upload
+                                  </label>
+                                  {actualItem.foto_sisa_barang ? (
+                                    <img
+                                      src={actualItem.foto_sisa_barang}
+                                      alt={`Foto Sisa Item #${planningItem.id}`}
+                                      className="w-12 h-12 object-cover rounded border cursor-pointer"
+                                      onClick={() => {
+                                        setPreviewImages([actualItem.foto_sisa_barang]);
+                                        setCurrentPreviewIndex(0);
+                                        setPreviewTitle(`Foto Sisa Item: ${planningItem.jenis_barang?.nama || '-'}`);
+                                        setPreviewDetails(getItemDetailsText(planningItem));
+                                        setPreviewOpen(true);
+                                      }}
+                                    />
+                                  ) : (
+                                    <span className="text-xs text-gray-500">Belum ada</span>
+                                  )}
+                                </div>
+                              )}
                             </TableCell>
                           </TableRow>
                         );
