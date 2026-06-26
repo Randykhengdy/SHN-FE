@@ -728,7 +728,22 @@ export default function ItemBarangPage() {
           { key: "quantity", label: "Qty", align: "center", width: "8rem", maxWidth: "8rem", format: "number" },
           { key: "sisa_luas", label: "Sisa Luas", align: "center", width: "10rem", maxWidth: "10rem", format: "number" },
           { key: "berat", label: "Berat (kg)", align: "center", width: "10rem", maxWidth: "10rem", format: "number" },
-          { key: "saldo_berat", label: "Saldo Berat (kg)", align: "center", width: "10rem", maxWidth: "10rem", format: "number" },
+          {
+            key: "saldo_berat",
+            label: "Saldo Berat (kg)",
+            align: "center",
+            width: "10rem",
+            maxWidth: "10rem",
+            render: (val) => {
+              if (val == null) return <span className="text-gray-400 text-xs">-</span>;
+              const num = parseFloat(val);
+              if (isNaN(num)) return <span className="text-gray-400 text-xs">-</span>;
+              return num.toLocaleString("id-ID", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              });
+            }
+          },
           {
             key: "persentase_sisa_berat",
             label: "% Sisa",
