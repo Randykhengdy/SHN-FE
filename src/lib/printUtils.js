@@ -645,6 +645,7 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
 // Generate printable HTML for Work Order Actual (WO Actual)
 export const generateWOActualPrintContent = (woActualData, options = {}) => {
   const includeImages = options.includeImages !== false;
+  const hideCustomer = options.hideCustomer === true;
   const formatDate = (dateString) => {
     if (!dateString) return '-';
     try {
@@ -823,9 +824,9 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
         <div class="info-row"><span class="info-label">Tanggal Actual</span><span class="info-value">${formatDate(woActualData.woActual?.tanggal_actual || woActualData.woActual?.created_at || new Date().toISOString())}</span></div>
       </div>
 
-      ${(woActualData.customer || woActualData.warehouse) ? `
+      ${((woActualData.customer && !hideCustomer) || woActualData.warehouse) ? `
       <div class="section" style="padding: 12px; border: 1px solid #ddd; background-color: #fafafa;">
-        ${woActualData.customer ? `
+        ${(woActualData.customer && !hideCustomer) ? `
         <div class="info-row"><span class="info-label">Pelanggan</span><span class="info-value">${woActualData.customer?.nama_pelanggan || woActualData.customer?.nama || 'N/A'}</span></div>
         ` : ''}
         ${woActualData.warehouse ? `

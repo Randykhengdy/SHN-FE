@@ -43,7 +43,23 @@ export default function ViewWOActualPage() {
   const [printOptionsOpen, setPrintOptionsOpen] = useState(false);
   const [printLoading, setPrintLoading] = useState(false);
   const [includeImages, setIncludeImages] = useState(true);
+  const [hideCustomer, setHideCustomer] = useState(false);
   const [itemSisaImagesMap, setItemSisaImagesMap] = useState({});
+
+  // Helper to format date in Indonesian standard (DD/MM/YYYY)
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch (error) {
+      return 'N/A';
+    }
+  };
 
   // Helper: build storage URL from file path
   const buildStorageUrl = (path) => {
@@ -509,7 +525,7 @@ export default function ViewWOActualPage() {
           : []
       };
 
-      const html = generateWOActualPrintContent(printData, { includeImages });
+      const html = generateWOActualPrintContent(printData, { includeImages, hideCustomer });
       openPrintDialog(html);
       setPrintOptionsOpen(false);
     } catch (error) {
@@ -589,7 +605,7 @@ export default function ViewWOActualPage() {
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">Tanggal WO Planning</Label>
-                <Input value={planning?.tanggal_wo || 'N/A'} disabled className="bg-gray-50" />
+                <Input value={formatDate(planning?.tanggal_wo)} disabled className="bg-gray-50" />
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">Status Planning</Label>
@@ -630,7 +646,7 @@ export default function ViewWOActualPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <Label className="text-sm font-medium text-gray-700">Tanggal Actual</Label>
-                <Input value={(woActual.tanggal_actual || woActual.created_at || '').toString().substring(0, 10)} disabled className="bg-gray-50" />
+                <Input value={formatDate(woActual.tanggal_actual || woActual.created_at)} disabled className="bg-gray-50" />
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">Jam Mulai</Label>
@@ -1008,13 +1024,23 @@ export default function ViewWOActualPage() {
           cancelText="Batal"
           onConfirm={handlePrint}
           extraContent={(
-            <div className="w-full flex items-center justify-between gap-4 bg-gray-50 rounded-md px-3 py-2 border">
-              <span className="text-sm text-gray-800">Sertakan gambar untuk print</span>
-              <Switch
-                checked={includeImages}
-                onCheckedChange={setIncludeImages}
-                aria-label="Sertakan gambar untuk print"
-              />
+            <div className="flex flex-col gap-3 w-full">
+              <div className="w-full flex items-center justify-between gap-4 bg-gray-50 rounded-md px-3 py-2 border">
+                <span className="text-sm text-gray-800">Sertakan gambar untuk print</span>
+                <Switch
+                  checked={includeImages}
+                  onCheckedChange={setIncludeImages}
+                  aria-label="Sertakan gambar untuk print"
+                />
+              </div>
+              <div className="w-full flex items-center justify-between gap-4 bg-gray-50 rounded-md px-3 py-2 border">
+                <span className="text-sm text-gray-800">Sembunyikan nama customer</span>
+                <Switch
+                  checked={hideCustomer}
+                  onCheckedChange={setHideCustomer}
+                  aria-label="Sembunyikan nama customer"
+                />
+              </div>
             </div>
           )}
         />
