@@ -239,13 +239,13 @@ const PelaksanaActualModal = ({
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="text-sm font-medium text-gray-900 px-3 py-2 border rounded-md bg-gray-50 w-full max-w-[120px] mx-auto">
-                            {row.planning_berat || 0}
+                            {Number(row.planning_berat || 0).toFixed(4)}
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
                           <Input
                             type="number"
-                            step="0.01"
+                            step="0.0001"
                             value={(row.berat === undefined || row.berat === null) ? '' : row.berat}
                             onChange={(e) => updateRow(idx, "berat", e.target.value)}
                             className={`w-full max-w-[150px] mx-auto text-center ${readOnly ? 'bg-gray-50' : ''}`}

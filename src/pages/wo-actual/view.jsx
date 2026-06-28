@@ -284,13 +284,14 @@ export default function ViewWOActualPage() {
       return sum + (parseFloat(qtyPlan) || 0);
     }, 0);
     const totalBeratPlanning = (items || []).reduce((sum, it) => {
+      const qtyPlan = parseFloat(it.qty_planning ?? it.work_order_planning_item?.qty_planning ?? it.work_order_planning_item?.qty ?? 0) || 0;
       const pelaksanaArr = Array.isArray(it.work_order_planning_item?.pelaksana)
         ? it.work_order_planning_item.pelaksana
         : (Array.isArray(it.work_order_planning_item?.work_order_item_pelaksanas)
           ? it.work_order_planning_item.work_order_item_pelaksanas
           : []);
       const beratPlan = it.berat_planning ?? pelaksanaArr.reduce((acc, p) => acc + (parseFloat(p.weight ?? p.berat) || 0), 0);
-      return sum + (parseFloat(beratPlan) || 0);
+      return sum + ((parseFloat(beratPlan) || 0) * qtyPlan);
     }, 0);
     return { totalQtyActual, totalBeratActual, totalQtyPlanning, totalBeratPlanning };
   }, [items]);
@@ -737,6 +738,8 @@ export default function ViewWOActualPage() {
                         const beratActual = actualItem.berat ?? actualItem.berat_actual ?? 0;
                         const status = actualItem.status || woActual?.status || 'PENDING';
 
+                        const totalBeratPlanningRow = (parseFloat(beratPlanning) || 0) * (parseFloat(qtyPlanning) || 0);
+
                         const planningPelaksanaArr = Array.isArray(planningItem.pelaksana)
                           ? planningItem.pelaksana
                           : (Array.isArray(planningItem.work_order_item_pelaksanas)
@@ -761,8 +764,17 @@ export default function ViewWOActualPage() {
                         const jenisPotongan = planningItem.jenis_potongan || actualItem.jenis_potongan || 'N/A';
 
                         const openPelaksanaModal = () => {
+                          const enrichedPlanningPelaksanaArr = planningPelaksanaArr.map(p => {
+                            let pWeight = parseFloat(p.weight ?? p.berat ?? 0);
+                            if (!pWeight && beratPlanning) {
+                              const pQty = parseFloat(p.qty || p.jumlah || qtyPlanning) || 0;
+                              pWeight = parseFloat(beratPlanning) * pQty;
+                            }
+                            return { ...p, weight: pWeight };
+                          });
+
                           setPelaksanaModalData(actualPelaksanaArr);
-                          setPelaksanaPlanningData(planningPelaksanaArr);
+                          setPelaksanaPlanningData(enrichedPlanningPelaksanaArr);
                           setModalQtyPlanning(qtyPlanning);
                           setPelaksanaModalOpen(true);
                         };
@@ -774,7 +786,7 @@ export default function ViewWOActualPage() {
                             <TableCell className="text-center">{gradeNama || 'N/A'}</TableCell>
                             <TableCell className="text-center">{jenisPotongan}</TableCell>
                             <TableCell className="text-center">{qtyPlanning}</TableCell>
-                            <TableCell className="text-center">{(parseFloat(beratPlanning) || 0).toFixed(4)}</TableCell>
+                            <TableCell className="text-center">{(parseFloat(totalBeratPlanningRow) || 0).toFixed(4)}</TableCell>
                             <TableCell className="text-center">{qtyActual}</TableCell>
                             <TableCell className="text-center">{(parseFloat(beratActual) || 0).toFixed(4)}</TableCell>
                             <TableCell className="text-center">
