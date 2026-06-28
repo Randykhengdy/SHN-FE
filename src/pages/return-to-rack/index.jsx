@@ -21,9 +21,9 @@ import {
 } from "lucide-react";
 import { woActualService } from "@/services/woActualService";
 import { request } from "@/lib/request";
-import apiConfig from "@/config/api";
+import { API_ENDPOINTS } from "@/config/api";
 
-const BASE_URL = `${apiConfig.baseUrl}${apiConfig.endpoints.itemBarang}`;
+const BASE_URL = API_ENDPOINTS.itemBarang;
 
 export default function ReturnToRackPage() {
     const navigate = useNavigate();
@@ -115,7 +115,7 @@ export default function ReturnToRackPage() {
                 // Not JSON, use as-is (manual input of kode_rak)
             }
 
-            const res = await request(`${apiConfig.baseUrl}/rak/search-by-kode`, {
+            const res = await request(`/rak/search-by-kode`, {
                 method: 'POST',
                 body: JSON.stringify({ kode: kodeRak })
             });
