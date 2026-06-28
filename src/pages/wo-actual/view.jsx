@@ -764,17 +764,24 @@ export default function ViewWOActualPage() {
                         const jenisPotongan = planningItem.jenis_potongan || actualItem.jenis_potongan || 'N/A';
 
                         const openPelaksanaModal = () => {
-                          const enrichedPlanningPelaksanaArr = planningPelaksanaArr.map(p => {
-                            let pWeight = parseFloat(p.weight ?? p.berat ?? 0);
-                            if (!pWeight && beratPlanning) {
-                              const pQty = parseFloat(p.qty || p.jumlah || qtyPlanning) || 0;
-                              pWeight = parseFloat(beratPlanning) * pQty;
-                            }
-                            return { ...p, weight: pWeight };
-                          });
+                          let enrichedPlanning = [...planningPelaksanaArr];
+
+                          // Jika planning kosong tapi ada actual, buat mockup agar modal bisa menampilkan row dengan planning_berat
+                          if (enrichedPlanning.length === 0 && actualPelaksanaArr.length > 0) {
+                            enrichedPlanning = actualPelaksanaArr.map(a => ({
+                              id: a.id,
+                              pelaksana: a.pelaksana
+                            }));
+                          }
+
+                          // Pastikan berat planning di modal sama persis dengan totalBeratPlanningRow
+                          const finalPlanningArr = enrichedPlanning.map(p => ({
+                            ...p,
+                            weight: totalBeratPlanningRow
+                          }));
 
                           setPelaksanaModalData(actualPelaksanaArr);
-                          setPelaksanaPlanningData(enrichedPlanningPelaksanaArr);
+                          setPelaksanaPlanningData(finalPlanningArr);
                           setModalQtyPlanning(qtyPlanning);
                           setPelaksanaModalOpen(true);
                         };
