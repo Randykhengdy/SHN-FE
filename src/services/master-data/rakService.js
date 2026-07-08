@@ -59,7 +59,7 @@ export const rakService = {
   },
 
   async softDelete(id) {
-    return request(`/rak/${id}`, {
+    return request(`/rak/${id}/soft`, {
       method: "DELETE"
     });
   },
