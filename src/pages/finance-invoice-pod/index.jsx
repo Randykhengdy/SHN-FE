@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Search, Filter, Download, FileText, Eye, RefreshCw, Printer, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Search, Filter, Download, FileText, Eye, RefreshCw, Printer, CheckCircle, XCircle, AlertCircle, Banknote } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { financeInvoicePodService } from "@/services/financeInvoicePodService";
+import { pembayaranService } from "@/services/pembayaranService";
 import { useAlert } from "@/hooks/useAlert";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -56,6 +57,14 @@ export default function FinanceInvoicePodPage() {
   const [selectedWoForGenerate, setSelectedWoForGenerate] = useState(null);
   const [generateForm, setGenerateForm] = useState({
     uang_muka: '',
+    metode_pembayaran: ''
+  });
+
+  // Modal State for Payment
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [selectedWoForPayment, setSelectedWoForPayment] = useState(null);
+  const [paymentForm, setPaymentForm] = useState({
+    jumlah_payment: '',
     metode_pembayaran: ''
   });
 
@@ -156,6 +165,68 @@ export default function FinanceInvoicePodPage() {
     } finally {
       setActionLoading(prev => ({ ...prev, [selectedWoForGenerate]: false }));
       setSelectedWoForGenerate(null);
+    }
+  };
+
+  // Handle payment modal
+  const openPaymentModal = async (nomorWo) => {
+    try {
+      setActionLoading(prev => ({ ...prev, [`payment_${nomorWo}`]: true }));
+      const result = await financeInvoicePodService.viewInvoice(nomorWo);
+      setSelectedWoForPayment({
+        nomorWo: nomorWo,
+        nomorInvoice: result.data.nomor_invoice,
+        sisaBayar: result.data.sisa_bayar
+      });
+      setPaymentForm({ jumlah_payment: '', metode_pembayaran: '' });
+      setIsPaymentModalOpen(true);
+    } catch (error) {
+      console.error('Error fetching invoice for payment:', error);
+      showAlert("Error", "Gagal mengambil data Invoice", "error");
+    } finally {
+      setActionLoading(prev => ({ ...prev, [`payment_${nomorWo}`]: false }));
+    }
+  };
+
+  const handlePaymentSubmit = async () => {
+    if (!selectedWoForPayment) return;
+
+    const jumlahPaymentVal = parseFloat(paymentForm.jumlah_payment.replace(/\D/g, '') || '0');
+    if (jumlahPaymentVal <= 0) {
+      showAlert("Error", "Jumlah pembayaran harus lebih dari 0", "error");
+      return;
+    }
+    
+    if (jumlahPaymentVal > selectedWoForPayment.sisaBayar) {
+      showAlert("Error", `Jumlah pembayaran melebihi sisa bayar (Rp ${new Intl.NumberFormat("id-ID").format(selectedWoForPayment.sisaBayar)})`, "error");
+      return;
+    }
+
+    if (!paymentForm.metode_pembayaran) {
+      showAlert("Error", "Pilih metode pembayaran", "error");
+      return;
+    }
+
+    try {
+      setActionLoading(prev => ({ ...prev, [`submit_payment_${selectedWoForPayment.nomorWo}`]: true }));
+      setIsPaymentModalOpen(false);
+
+      const result = await pembayaranService.processPayment(selectedWoForPayment.nomorInvoice, {
+        jumlah_payment: jumlahPaymentVal,
+        metode_pembayaran: paymentForm.metode_pembayaran,
+        catatan: 'Pembayaran Uang Muka'
+      });
+
+      console.log('Payment result:', result);
+      showAlert("Sukses", "Pembayaran berhasil diproses!", "success", () => {
+        loadWorkOrders();
+      });
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      showAlert("Error", "Gagal memproses pembayaran", "error");
+    } finally {
+      setActionLoading(prev => ({ ...prev, [`submit_payment_${selectedWoForPayment.nomorWo}`]: false }));
+      setSelectedWoForPayment(null);
     }
   };
 
@@ -437,6 +508,20 @@ export default function FinanceInvoicePodPage() {
                                 )}
                                 <span className="hidden sm:inline">Print Surat Jalan</span>
                               </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openPaymentModal(wo.nomorWo)}
+                                disabled={actionLoading[`payment_${wo.nomorWo}`]}
+                                className="bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100"
+                              >
+                                {actionLoading[`payment_${wo.nomorWo}`] ? (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600 mr-2"></div>
+                                ) : (
+                                  <Banknote className="w-4 h-4 mr-1" />
+                                )}
+                                <span className="hidden sm:inline">Bayar Uang Muka</span>
+                              </Button>
                             </>
                           )}
                         </div>
@@ -633,6 +718,72 @@ export default function FinanceInvoicePodPage() {
             </Button>
             <Button onClick={handleGenerateSubmit} className="bg-green-600 hover:bg-green-700">
               Generate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Modal */}
+      <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bayar Uang Muka</DialogTitle>
+            <DialogDescription>
+              Invoice: {selectedWoForPayment?.nomorInvoice}<br/>
+              Sisa Bayar: Rp {selectedWoForPayment ? new Intl.NumberFormat("id-ID").format(selectedWoForPayment.sisaBayar) : 0}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="flex flex-col space-y-1.5 focus-within:text-blue-600">
+              <Label htmlFor="jumlah_payment" className="font-semibold cursor-pointer">
+                Jumlah Pembayaran
+              </Label>
+              <div className="relative border-b-2 border-gray-300 focus-within:border-blue-600 transition-colors">
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 font-medium text-gray-500 pointer-events-none">Rp</span>
+                <input
+                  id="jumlah_payment"
+                  type="text"
+                  placeholder="0"
+                  value={
+                    paymentForm.jumlah_payment
+                      ? new Intl.NumberFormat("id-ID").format(paymentForm.jumlah_payment.replace(/\D/g, ""))
+                      : ""
+                  }
+                  onChange={(e) => setPaymentForm({ ...paymentForm, jumlah_payment: e.target.value.replace(/\D/g, "") })}
+                  className="w-full bg-transparent outline-none pl-7 pr-4 py-2 text-gray-800"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col space-y-1.5 focus-within:text-blue-600">
+              <Label htmlFor="metode_pembayaran_payment" className="font-semibold cursor-pointer">
+                Metode Pembayaran
+              </Label>
+              <Select
+                value={paymentForm.metode_pembayaran}
+                onValueChange={(val) => setPaymentForm({ ...paymentForm, metode_pembayaran: val })}
+              >
+                <SelectTrigger id="metode_pembayaran_payment" className="w-full border-gray-300 focus:ring-1 focus:ring-blue-600">
+                  <SelectValue placeholder="Pilih Metode Pembayaran" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                  <SelectItem value="Debit">Debit</SelectItem>
+                  <SelectItem value="Transfer">Transfer</SelectItem>
+                  <SelectItem value="Piutang">Piutang</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPaymentModalOpen(false)}>
+              Batal
+            </Button>
+            <Button onClick={handlePaymentSubmit} disabled={actionLoading[`submit_payment_${selectedWoForPayment?.nomorWo}`]} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              {actionLoading[`submit_payment_${selectedWoForPayment?.nomorWo}`] ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              ) : null}
+              Bayar
             </Button>
           </DialogFooter>
         </DialogContent>

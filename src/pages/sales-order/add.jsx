@@ -145,6 +145,7 @@ export default function AddSalesOrderPage() {
   const [priceIncludesPPN, setPriceIncludesPPN] = useState(false); // Harga per item sudah include PPN
   const [diskonSO, setDiskonSO] = useState("0"); // Diskon SO level (percentage or nominal)
   const [soDiscountType, setSoDiscountType] = useState("percent"); // percent or nominal
+  const [downPayment, setDownPayment] = useState("0"); // Down payment amount
 
   // Item Input Form - Dimension fields (dynamic based on tipe_barang)
   const [itemPanjang, setItemPanjang] = useState("");
@@ -873,6 +874,7 @@ export default function AddSalesOrderPage() {
         ppn_percent: includePPN ? 11.0 : 0,
         ppn_amount: ppn || 0,
         total_harga_so: totalHargaSO || 0,
+        down_payment: parseFloat(downPayment) || 0,
         items: items.map(item => ({
           panjang: parseFloat(item.panjang) || null,
           lebar: parseFloat(item.lebar) || null,
@@ -2153,7 +2155,7 @@ export default function AddSalesOrderPage() {
               </div>
             </div>
           </div>
-          <div className="grid grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
             <div>
               <Label className="text-sm text-gray-600">Subtotal</Label>
               <div className="text-lg font-semibold">{formatCurrency(subtotal)}</div>
@@ -2206,6 +2208,18 @@ export default function AddSalesOrderPage() {
                 )}
               </Label>
               <div className="text-lg font-semibold">{formatCurrency(ppn)}</div>
+            </div>
+            <div>
+              <Label className="text-sm text-gray-600">Down Payment (DP)</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={downPayment}
+                onChange={(e) => setDownPayment(e.target.value)}
+                className="w-full text-center"
+                placeholder="0"
+              />
             </div>
             <div>
               <Label className="text-sm text-gray-600">Total Harga SO</Label>
