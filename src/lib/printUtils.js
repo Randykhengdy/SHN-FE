@@ -629,6 +629,16 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
               <td class="summary-label">Grand Total:</td>
               <td class="summary-value">${formatCurrency(salesOrderData.grand_total || salesOrderData.total_amount)}</td>
             </tr>
+            ${salesOrderData.down_payment ? `
+            <tr>
+              <td class="summary-label">Down Payment (DP):</td>
+              <td class="summary-value">${formatCurrency(salesOrderData.down_payment)}</td>
+            </tr>
+            <tr style="border-top: 1px solid #ddd; font-weight: bold;">
+              <td class="summary-label">Sisa Pembayaran:</td>
+              <td class="summary-value">${formatCurrency((salesOrderData.grand_total || salesOrderData.total_amount) - salesOrderData.down_payment)}</td>
+            </tr>
+            ` : ''}
           </tbody>
         </table>
       </div>

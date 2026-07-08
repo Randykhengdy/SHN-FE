@@ -196,7 +196,7 @@ export default function FinanceInvoicePodPage() {
       showAlert("Error", "Jumlah pembayaran harus lebih dari 0", "error");
       return;
     }
-    
+
     if (jumlahPaymentVal > selectedWoForPayment.sisaBayar) {
       showAlert("Error", `Jumlah pembayaran melebihi sisa bayar (Rp ${new Intl.NumberFormat("id-ID").format(selectedWoForPayment.sisaBayar)})`, "error");
       return;
@@ -513,7 +513,7 @@ export default function FinanceInvoicePodPage() {
                                 variant="outline"
                                 onClick={() => openPaymentModal(wo.nomorWo)}
                                 disabled={actionLoading[`payment_${wo.nomorWo}`]}
-                                className="bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100"
+                                className=""
                               >
                                 {actionLoading[`payment_${wo.nomorWo}`] ? (
                                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600 mr-2"></div>
@@ -582,8 +582,8 @@ export default function FinanceInvoicePodPage() {
                         key={pageNum}
                         onClick={() => setCurrentPage(pageNum)}
                         className={`px-3 py-1 text-sm border rounded ${currentPage === pageNum
-                            ? 'bg-blue-500 text-white border-blue-500'
-                            : 'border-gray-300 hover:bg-gray-50'
+                          ? 'bg-blue-500 text-white border-blue-500'
+                          : 'border-gray-300 hover:bg-gray-50'
                           }`}
                       >
                         {pageNum}
@@ -729,7 +729,7 @@ export default function FinanceInvoicePodPage() {
           <DialogHeader>
             <DialogTitle>Bayar Uang Muka</DialogTitle>
             <DialogDescription>
-              Invoice: {selectedWoForPayment?.nomorInvoice}<br/>
+              Invoice: {selectedWoForPayment?.nomorInvoice}<br />
               Sisa Bayar: Rp {selectedWoForPayment ? new Intl.NumberFormat("id-ID").format(selectedWoForPayment.sisaBayar) : 0}
             </DialogDescription>
           </DialogHeader>

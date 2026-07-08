@@ -424,7 +424,8 @@ export default function ViewSalesOrderPage() {
         diskon_so_type: diskonSOType,
         diskon_so_amount: diskonSOAmount,
         ppn: ppnAmount,
-        grand_total: grandTotal
+        grand_total: grandTotal,
+        down_payment: salesOrder ? (parseFloat(salesOrder.down_payment) || 0) : 0
       };
 
       console.log('🖨️ Print data:', printData);
@@ -800,6 +801,18 @@ export default function ViewSalesOrderPage() {
                   <span className="text-lg font-semibold text-gray-800">Total:</span>
                   <span className="text-lg font-bold text-green-600">{formatCurrency(grandTotal)}</span>
                 </div>
+                {salesOrder?.down_payment && parseFloat(salesOrder.down_payment) > 0 ? (
+                  <>
+                    <div className="flex justify-between pt-2 border-t mt-2">
+                      <span className="text-gray-600">Down Payment (DP):</span>
+                      <span className="font-semibold text-gray-800">-{formatCurrency(salesOrder.down_payment)}</span>
+                    </div>
+                    <div className="flex justify-between pt-2 border-t">
+                      <span className="text-lg font-bold text-gray-800">Sisa Pembayaran:</span>
+                      <span className="text-lg font-bold text-blue-600">{formatCurrency(grandTotal - parseFloat(salesOrder.down_payment))}</span>
+                    </div>
+                  </>
+                ) : null}
               </div>
             </div>
 

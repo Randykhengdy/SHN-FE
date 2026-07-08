@@ -981,7 +981,8 @@ export default function AddSalesOrderPage() {
           price_includes_ppn: priceIncludesPPN,
           dpp: dpp,
           ppn: ppn,
-          grand_total: totalHargaSO
+          grand_total: totalHargaSO,
+          down_payment: parseFloat(downPayment) || 0
         };
         const html = generateSalesOrderPrintContent(printDataOnSave);
         openPrintDialog(html);
@@ -1089,7 +1090,8 @@ export default function AddSalesOrderPage() {
         price_includes_ppn: priceIncludesPPN,
         dpp: dpp,
         ppn: ppn,
-        grand_total: totalHargaSO
+        grand_total: totalHargaSO,
+        down_payment: parseFloat(downPayment) || 0
       };
 
       console.log('🖨️ Print data:', printData);
