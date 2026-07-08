@@ -185,7 +185,7 @@ export const printInvoicePenjualanTanggalReport = (data, dateFrom, dateTo) => {
             <th width="150">Gudang</th>
             <th>Pelanggan</th>
             <th width="90" class="text-right">Rp. Total</th>
-            <th width="150">Dimensi</th>
+            <th width="250">Deskripsi / Dimensi</th>
             <th width="80" class="text-right">Biaya Lain</th>
             <th width="90" class="text-right">Uang Muka</th>
             <th width="90" class="text-right">Jumlah Dibayar</th>
@@ -222,7 +222,7 @@ export const printInvoicePenjualanTanggalReport = (data, dateFrom, dateTo) => {
               <td rowspan="${rowCount}">${item.work_order_planning?.gudang?.nama_gudang || ''}</td>
               <td rowspan="${rowCount}">${item.sales_order?.pelanggan?.nama_pelanggan || ''}</td>
               <td class="text-right" rowspan="${rowCount}">${formatCurrency(item.total_harga_invoice)}</td>
-              <td>${podItem ? podItem.dimensi_potong : ''}</td>
+              <td>${podItem ? `${podItem.nama_item} (${podItem.dimensi_potong})` : ''}</td>
               <td class="text-right" rowspan="${rowCount}">${formatCurrency(item.biaya_lain)}</td>
               <td class="text-right" rowspan="${rowCount}">${formatCurrency(item.uang_muka)}</td>
               <td class="text-right" rowspan="${rowCount}">${formatCurrency(item.jumlah_dibayar)}</td>
@@ -232,7 +232,7 @@ export const printInvoicePenjualanTanggalReport = (data, dateFrom, dateTo) => {
         } else {
           html += `
             <tr class="${i === rowCount - 1 ? 'row-border-bottom' : ''}">
-              <td>${podItem ? podItem.dimensi_potong : ''}</td>
+              <td>${podItem ? `${podItem.nama_item} (${podItem.dimensi_potong})` : ''}</td>
             </tr>
           `;
         }
