@@ -533,6 +533,14 @@ export default function PenerimaanKasPage() {
                             {paymentFormErrors.jumlah_payment && <p className="text-xs text-red-500">{paymentFormErrors.jumlah_payment}</p>}
                         </div>
                         <div className="grid gap-2"><Label>Catatan</Label><Textarea value={paymentForm.catatan} onChange={(e) => setPaymentForm({ ...paymentForm, catatan: e.target.value })} /></div>
+                        {selectedInvoice && (
+                            <div className="grid gap-2 bg-gray-50 p-3 rounded-lg border border-gray-100 mt-2">
+                                <Label className="text-gray-500 text-xs">Sisa Pembayaran Invoice</Label>
+                                <span className="font-semibold text-lg text-gray-800">
+                                    Rp {selectedInvoice.sisaBayar.toLocaleString('id-ID')}
+                                </span>
+                            </div>
+                        )}
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={handleClosePaymentModal}>Batal</Button>
