@@ -17,7 +17,7 @@ const formatDate = (dateStr) => {
   return `${day}-${month}-${year}`;
 };
 
-export const printSalesOrderTanggalReport = (data, dateFrom, dateTo) => {
+export const printSalesOrderTanggalReport = (data, dateFrom, dateTo, tampilkanBarang = true) => {
   const groupedData = data.reduce((acc, item) => {
     const date = item.tanggal_so;
     if (!acc[date]) acc[date] = [];
@@ -183,7 +183,7 @@ export const printSalesOrderTanggalReport = (data, dateFrom, dateTo) => {
             <th width="150">Gudang</th>
             <th>Pelanggan</th>
             <th width="100" class="text-right">Rp. Total</th>
-            <th width="250">Deskripsi / Dimensi</th>
+            ${tampilkanBarang ? '<th width="250">Deskripsi / Dimensi</th>' : ''}
             <th width="80" class="text-right">Discount</th>
             <th width="80" class="text-right">Biaya Lain</th>
             <th width="100" class="text-right">Uang Muka</th>
@@ -207,7 +207,7 @@ export const printSalesOrderTanggalReport = (data, dateFrom, dateTo) => {
 
     items.forEach((item, index) => {
       const soItems = item.sales_order_items || [];
-      const rowCount = Math.max(1, soItems.length);
+      const rowCount = tampilkanBarang ? Math.max(1, soItems.length) : 1;
       
       for (let i = 0; i < rowCount; i++) {
         const soItem = soItems[i];
@@ -220,7 +220,7 @@ export const printSalesOrderTanggalReport = (data, dateFrom, dateTo) => {
               <td rowspan="${rowCount}">${item.gudang?.nama_gudang || ''}</td>
               <td rowspan="${rowCount}">${item.pelanggan?.nama_pelanggan || ''}</td>
               <td class="text-right" rowspan="${rowCount}">${formatCurrency(item.total_harga_so)}</td>
-              <td>${soItem ? `${soItem.deskripsi_barang} (${soItem.dimensi_potong})` : ''}</td>
+              ${tampilkanBarang ? `<td>${soItem ? `${soItem.deskripsi_barang} (${soItem.dimensi_potong})` : ''}</td>` : ''}
               <td class="text-right" rowspan="${rowCount}">${formatCurrency(item.total_diskon)}</td>
               <td class="text-right" rowspan="${rowCount}">${formatCurrency(item.biaya_lain)}</td>
               <td class="text-right" rowspan="${rowCount}">${formatCurrency(item.uang_muka)}</td>
@@ -231,7 +231,7 @@ export const printSalesOrderTanggalReport = (data, dateFrom, dateTo) => {
         } else {
           html += `
             <tr class="${i === rowCount - 1 ? 'row-border-bottom' : ''}">
-              <td>${soItem ? `${soItem.deskripsi_barang} (${soItem.dimensi_potong})` : ''}</td>
+              ${tampilkanBarang ? `<td>${soItem ? `${soItem.deskripsi_barang} (${soItem.dimensi_potong})` : ''}</td>` : ''}
             </tr>
           `;
         }
@@ -242,7 +242,7 @@ export const printSalesOrderTanggalReport = (data, dateFrom, dateTo) => {
       <tr class="subtotal-row">
         <td colspan="4" class="text-right">Sub Total ${formatDate(date)}</td>
         <td class="text-right">${formatCurrency(subTotals.total)}</td>
-        <td></td>
+        ${tampilkanBarang ? '<td></td>' : ''}
         <td class="text-right">${formatCurrency(subTotals.discount)}</td>
         <td class="text-right">${formatCurrency(subTotals.biayaLain)}</td>
         <td class="text-right">${formatCurrency(subTotals.uangMuka)}</td>
@@ -256,7 +256,7 @@ export const printSalesOrderTanggalReport = (data, dateFrom, dateTo) => {
       <tr class="grandtotal-row">
         <td colspan="4" class="text-right">Grand Total</td>
         <td class="text-right">${formatCurrency(grandTotals.total)}</td>
-        <td></td>
+        ${tampilkanBarang ? '<td></td>' : ''}
         <td class="text-right">${formatCurrency(grandTotals.discount)}</td>
         <td class="text-right">${formatCurrency(grandTotals.biayaLain)}</td>
         <td class="text-right">${formatCurrency(grandTotals.uangMuka)}</td>

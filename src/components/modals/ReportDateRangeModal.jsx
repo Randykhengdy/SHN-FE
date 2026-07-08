@@ -9,15 +9,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Calendar } from "lucide-react";
 
-const ReportDateRangeModal = ({ open, onOpenChange, title, onGenerate, loading }) => {
+const ReportDateRangeModal = ({ open, onOpenChange, title, onGenerate, loading, showToggleBarang = false }) => {
   const [dateFrom, setDateFrom] = useState(new Date().toISOString().split('T')[0]);
   const [dateTo, setDateTo] = useState(new Date().toISOString().split('T')[0]);
+  const [tampilkanBarang, setTampilkanBarang] = useState(true);
 
   const handleGenerate = () => {
     if (onGenerate) {
-      onGenerate(dateFrom, dateTo);
+      onGenerate(dateFrom, dateTo, tampilkanBarang);
     }
   };
 
@@ -56,6 +58,20 @@ const ReportDateRangeModal = ({ open, onOpenChange, title, onGenerate, loading }
               onChange={(e) => setDateTo(e.target.value)}
             />
           </div>
+          {showToggleBarang && (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="tampilkanBarang" className="text-right">
+                Tampilkan Barang
+              </Label>
+              <div className="col-span-3 flex items-center">
+                <Switch
+                  id="tampilkanBarang"
+                  checked={tampilkanBarang}
+                  onCheckedChange={setTampilkanBarang}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter>

@@ -415,7 +415,8 @@ function App() {
             onOpenChange={setIsReportSOTanggalOpen}
             title="Report Sales Order / Tanggal"
             loading={reportLoading}
-            onGenerate={async (from, to) => {
+            showToggleBarang={true}
+            onGenerate={async (from, to, tampilkanBarang) => {
               try {
                 setReportLoading(true);
                 const result = await salesOrderService.getReport({
@@ -426,7 +427,7 @@ function App() {
                 });
                 
                 if (result.success && result.data) {
-                  printSalesOrderTanggalReport(result.data, from, to);
+                  printSalesOrderTanggalReport(result.data, from, to, tampilkanBarang);
                   setIsReportSOTanggalOpen(false);
                 } else {
                   showAlert("Error", result.message || "Gagal mengambil data report", "error");
@@ -475,7 +476,8 @@ function App() {
             onOpenChange={setIsReportInvoicePenjualanTanggalOpen}
             title="Report Invoice Penjualan / Tanggal"
             loading={reportLoading}
-            onGenerate={async (from, to) => {
+            showToggleBarang={true}
+            onGenerate={async (from, to, tampilkanBarang) => {
               try {
                 setReportLoading(true);
                 const result = await financeInvoicePodService.getReportInvoicePenjualanTanggal({
@@ -486,7 +488,7 @@ function App() {
                 });
                 
                 if (result.success && result.data) {
-                  printInvoicePenjualanTanggalReport(result.data, from, to);
+                  printInvoicePenjualanTanggalReport(result.data, from, to, tampilkanBarang);
                   setIsReportInvoicePenjualanTanggalOpen(false);
                 } else {
                   showAlert("Error", result.message || "Gagal mengambil data report", "error");

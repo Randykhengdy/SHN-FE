@@ -17,7 +17,7 @@ const formatDate = (dateStr) => {
   return `${day}-${month}-${year}`;
 };
 
-export const printInvoicePenjualanTanggalReport = (data, dateFrom, dateTo) => {
+export const printInvoicePenjualanTanggalReport = (data, dateFrom, dateTo, tampilkanBarang = true) => {
   const groupedData = data.reduce((acc, item) => {
     // using tanggal_cetak_invoice or created_at
     const date = item.tanggal_cetak_invoice ? item.tanggal_cetak_invoice.substring(0, 10) : '';
@@ -58,9 +58,9 @@ export const printInvoicePenjualanTanggalReport = (data, dateFrom, dateTo) => {
           background-color: white;
           padding: 40px;
           box-shadow: 0 0 10px rgba(0,0,0,0.1);
-          min-height: 21cm; /* A4 landscape width */
+          min-height: 29.7cm; /* A4 height */
           margin: 0 auto;
-          width: 29.7cm; /* A4 landscape width */
+          width: 25.7cm; /* A4 landscape width minus margins */
         }
         .toolbar {
           position: fixed;
@@ -185,7 +185,7 @@ export const printInvoicePenjualanTanggalReport = (data, dateFrom, dateTo) => {
             <th width="150">Gudang</th>
             <th>Pelanggan</th>
             <th width="90" class="text-right">Rp. Total</th>
-            <th width="250">Deskripsi / Dimensi</th>
+            ${tampilkanBarang ? '<th width="250">Deskripsi / Dimensi</th>' : ''}
             <th width="80" class="text-right">Biaya Lain</th>
             <th width="90" class="text-right">Uang Muka</th>
             <th width="90" class="text-right">Jumlah Dibayar</th>
@@ -208,7 +208,7 @@ export const printInvoicePenjualanTanggalReport = (data, dateFrom, dateTo) => {
 
     items.forEach((item, index) => {
       const podItems = item.invoice_pod_items || [];
-      const rowCount = Math.max(1, podItems.length);
+      const rowCount = tampilkanBarang ? Math.max(1, podItems.length) : 1;
       const invoiceDate = item.tanggal_cetak_invoice ? item.tanggal_cetak_invoice.substring(0, 10) : '';
 
       for (let i = 0; i < rowCount; i++) {
@@ -222,7 +222,7 @@ export const printInvoicePenjualanTanggalReport = (data, dateFrom, dateTo) => {
               <td rowspan="${rowCount}">${item.work_order_planning?.gudang?.nama_gudang || ''}</td>
               <td rowspan="${rowCount}">${item.sales_order?.pelanggan?.nama_pelanggan || ''}</td>
               <td class="text-right" rowspan="${rowCount}">${formatCurrency(item.total_harga_invoice)}</td>
-              <td>${podItem ? `${podItem.nama_item} (${podItem.dimensi_potong})` : ''}</td>
+              ${tampilkanBarang ? `<td>${podItem ? `${podItem.nama_item} (${podItem.dimensi_potong})` : ''}</td>` : ''}
               <td class="text-right" rowspan="${rowCount}">${formatCurrency(item.biaya_lain)}</td>
               <td class="text-right" rowspan="${rowCount}">${formatCurrency(item.uang_muka)}</td>
               <td class="text-right" rowspan="${rowCount}">${formatCurrency(item.jumlah_dibayar)}</td>
@@ -232,7 +232,7 @@ export const printInvoicePenjualanTanggalReport = (data, dateFrom, dateTo) => {
         } else {
           html += `
             <tr class="${i === rowCount - 1 ? 'row-border-bottom' : ''}">
-              <td>${podItem ? `${podItem.nama_item} (${podItem.dimensi_potong})` : ''}</td>
+              ${tampilkanBarang ? `<td>${podItem ? `${podItem.nama_item} (${podItem.dimensi_potong})` : ''}</td>` : ''}
             </tr>
           `;
         }
@@ -243,7 +243,7 @@ export const printInvoicePenjualanTanggalReport = (data, dateFrom, dateTo) => {
       <tr class="subtotal-row">
         <td colspan="4" class="text-right">Sub Total ${formatDate(date)}</td>
         <td class="text-right">${formatCurrency(subTotals.total)}</td>
-        <td></td>
+        ${tampilkanBarang ? '<td></td>' : ''}
         <td class="text-right">${formatCurrency(subTotals.biayaLain)}</td>
         <td class="text-right">${formatCurrency(subTotals.uangMuka)}</td>
         <td class="text-right">${formatCurrency(subTotals.jumlahDibayar)}</td>
@@ -256,7 +256,7 @@ export const printInvoicePenjualanTanggalReport = (data, dateFrom, dateTo) => {
       <tr class="grandtotal-row">
         <td colspan="4" class="text-right">Grand Total</td>
         <td class="text-right">${formatCurrency(grandTotals.total)}</td>
-        <td></td>
+        ${tampilkanBarang ? '<td></td>' : ''}
         <td class="text-right">${formatCurrency(grandTotals.biayaLain)}</td>
         <td class="text-right">${formatCurrency(grandTotals.uangMuka)}</td>
         <td class="text-right">${formatCurrency(grandTotals.jumlahDibayar)}</td>
