@@ -1,10 +1,10 @@
 import React from "react";
 import MasterDataLayout from "@/components/MasterDataLayout";
-import { pelangganService, salesPersonService } from "@/services/master-data";
+import { salesPersonService } from "@/services/master-data";
 import { Download, Upload } from "lucide-react";
 import { useAlert } from "@/hooks/useAlert";
 
-export default function PelangganPage() {
+export default function SalesPersonPage() {
   const fileInputRef = React.useRef(null);
   const { showAlert, AlertComponent } = useAlert();
 
@@ -13,7 +13,7 @@ export default function PelangganPage() {
     if (!file) return;
 
     try {
-      const result = await pelangganService.importData(file);
+      const result = await salesPersonService.importData(file);
       showAlert("Import Berhasil", result.message, "success");
       window.location.reload();
     } catch (error) {
@@ -34,16 +34,16 @@ export default function PelangganPage() {
         onChange={handleImport}
       />
       <MasterDataLayout
-        title="Pelanggan"
+        title="Sales Person"
         subtitle="Master Data"
-        service={pelangganService}
+        service={salesPersonService}
         customHeaderButtons={[
           {
             label: "Download Template",
             icon: <Download className="h-4 w-4" />,
             onClick: async () => {
               try {
-                await pelangganService.downloadTemplate();
+                await salesPersonService.downloadTemplate();
               } catch (error) {
                 console.error("Download template failed:", error);
               }
@@ -58,27 +58,17 @@ export default function PelangganPage() {
           }
         ]}
         fields={[
-          { name: "kode", label: "Kode", maxLength: 8, disabledOnEdit: true },
-          { name: "nama_pelanggan", label: "Nama Pelanggan", maxLength: 64 },
-          { name: "kota", label: "Kota", maxLength: 32 },
-          { name: "telepon_hp", label: "Telepon/HP", maxLength: 16 },
-          { name: "contact_person", label: "Contact Person", maxLength: 64 },
-          { 
-            name: "sales_person_id", 
-            label: "Sales Person", 
-            type: "select", 
-            optionLabel: "nama_sales", 
-            optionsService: salesPersonService 
-          },
+          { name: "kode", label: "Kode", maxLength: 8, disabledOnEdit: true, required: true },
+          { name: "nama_sales", label: "Nama Sales", maxLength: 64, required: true },
+          { name: "no_telp", label: "No Telp", maxLength: 16 },
+          { name: "alamat", label: "Alamat" },
         ]}
         columns={[
           { key: "id", label: "ID", align: "center", width: "5rem", maxWidth: "5rem" },
           { key: "kode", label: "Kode", align: "center", width: "8rem", maxWidth: "8rem" },
-          { key: "nama_pelanggan", label: "Nama Pelanggan", align: "left", minWidth: "15rem", maxWidth: "20rem" },
-          { key: "kota", label: "Kota", align: "center", width: "10rem", maxWidth: "10rem" },
-          { key: "telepon_hp", label: "Telepon/HP", align: "center", width: "12rem", maxWidth: "12rem" },
-          { key: "contact_person", label: "Contact Person", align: "left", minWidth: "12rem", maxWidth: "15rem" },
-          { key: "sales_person.nama_sales", label: "Sales Person", align: "left", minWidth: "12rem", maxWidth: "15rem" },
+          { key: "nama_sales", label: "Nama Sales", align: "left", minWidth: "15rem", maxWidth: "20rem" },
+          { key: "no_telp", label: "No Telp", align: "center", width: "10rem", maxWidth: "10rem" },
+          { key: "alamat", label: "Alamat", align: "left", minWidth: "20rem" },
         ]}
       />
     </>

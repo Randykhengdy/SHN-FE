@@ -493,6 +493,7 @@ function createWindow() {
           { label: 'Pelaksana', accelerator: 'CmdOrCtrl+9', click: () => navigateTo('/masterdata/pelaksana', 'Pelaksana') },
           { label: 'Jenis Transaksi Kas', accelerator: 'CmdOrCtrl+0', click: () => navigateTo('/masterdata/jenis-transaksi-kas', 'Jenis Transaksi Kas') },
           { label: 'Jenis Biaya', click: () => navigateTo('/masterdata/jenis-biaya', 'Jenis Biaya') },
+          { label: 'Sales Person', click: () => navigateTo('/masterdata/sales-person', 'Sales Person') },
         ]
       }
     ] : []),

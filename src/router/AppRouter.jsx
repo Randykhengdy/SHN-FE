@@ -20,6 +20,7 @@ import RakPage from "@/pages/master-data/Rak";
 import RolePage from "@/pages/master-data/Role";
 import TermPage from "@/pages/master-data/Term";
 import UnitPage from "@/pages/master-data/Unit";
+import SalesPersonPage from "@/pages/master-data/SalesPerson";
 import UsersPage from "@/pages/Users";
 import WorkshopPage from "@/pages/Workshop";
 import SalesOrderPage from "@/pages/sales-order";
@@ -86,6 +87,7 @@ const AppRouter = () => {
       <Route path="/masterdata/role" element={<RolePage />} />
       <Route path="/masterdata/term" element={<TermPage />} />
       <Route path="/masterdata/unit" element={<UnitPage />} />
+      <Route path="/masterdata/sales-person" element={<SalesPersonPage />} />
       <Route path="/users" element={<UsersPage />} />
       <Route path="/workshop" element={<WorkshopPage />} />
       <Route path="/sales-order" element={<SalesOrderPage />} />
