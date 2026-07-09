@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import PageLayout from '@/components/PageLayout';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,13 @@ export default function ViewWOActualPage() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { showAlert, AlertComponent } = useAlert();
+  const blobUrlsRef = useRef([]);
+
+  const createTrackedObjectURL = (blob) => {
+    const url = URL.createObjectURL(blob);
+    blobUrlsRef.current.push(url);
+    return url;
+  };
 
   const [loading, setLoading] = useState(false);
   const [woActual, setWoActual] = useState(null);
@@ -45,6 +52,7 @@ export default function ViewWOActualPage() {
   const [includeImages, setIncludeImages] = useState(true);
   const [hideCustomer, setHideCustomer] = useState(false);
   const [itemSisaImagesMap, setItemSisaImagesMap] = useState({});
+  const [plateSisaImagesMap, setPlateSisaImagesMap] = useState({});
 
   // Helper to format date in Indonesian standard (DD/MM/YYYY)
   const formatDate = (dateString) => {
@@ -92,7 +100,6 @@ export default function ViewWOActualPage() {
   const getItemDetailsText = (planningItem) => {
     if (!planningItem) return '';
     let dimStr = planningItem.dimensi || '-';
-    // Gunakan tipe barang bila tersedia
     const tb = planningItem.bentuk_barang?.tipe_barang || planningItem.bentuk_barang?.tipeBarang;
     if (tb) {
       const formatInt = (val) => Math.round(parseFloat(val) || 0);
@@ -110,9 +117,18 @@ export default function ViewWOActualPage() {
         if (tb.lebar) dims.push(formatInt(planningItem.lebar));
         if (tb.panjang) dims.push(formatInt(planningItem.panjang));
       }
-      if (dims.length > 0) dimStr = dims.join('x');
+      const activeDims = dims.filter(d => d > 0);
+      if (activeDims.length > 0) {
+        dimStr = activeDims.join('x');
+      } else if (dims.length > 0) {
+        dimStr = dims.join('x');
+      }
     } else if (!planningItem.dimensi) {
-      dimStr = `${Math.round(parseFloat(planningItem.panjang) || 0)}x${Math.round(parseFloat(planningItem.lebar) || 0)}x${Math.round(parseFloat(planningItem.ketebalan || planningItem.tebal) || 0)}`;
+      const p = Math.round(parseFloat(planningItem.panjang) || 0);
+      const l = Math.round(parseFloat(planningItem.lebar) || 0);
+      const t = Math.round(parseFloat(planningItem.ketebalan || planningItem.tebal) || 0);
+      const dims = [p, l, t].filter(d => d > 0);
+      dimStr = dims.length > 0 ? dims.join('x') : '-';
     }
 
     let kodeBarang = '-';
@@ -126,11 +142,52 @@ export default function ViewWOActualPage() {
       kodeBarang = planningItem.kode_barang;
     }
 
-    const bentuk = planningItem.bentuk_barang?.nama || planningItem.bentuk_barang?.nama_bentuk_barang || '-';
-    const grade = planningItem.grade_barang?.nama || planningItem.grade_barang?.nama_grade_barang || '-';
     const potong = planningItem.jenis_potongan || '-';
 
-    return `Kode Barang: ${kodeBarang} | Bentuk: ${bentuk} | Grade: ${grade} | Dimensi: ${dimStr} | Potong: ${potong}`;
+    return `Kode Barang: ${kodeBarang} | Dimensi: ${dimStr} | Potong: ${potong}`;
+  };
+
+  const getPlateDetailsText = (plate, planningItem) => {
+    if (!plate) return '';
+    const item = plate.item_barang || {};
+    const plan = planningItem || {};
+    
+    let dimStr = plan.dimensi || '-';
+    const tb = plan.bentuk_barang?.tipe_barang || plan.bentuk_barang?.tipeBarang || item.bentuk_barang?.tipe_barang || item.bentuk_barang?.tipeBarang;
+    if (tb) {
+      const formatInt = (val) => Math.round(parseFloat(val) || 0);
+      const dims = [];
+      if (tb.diameter_luar && tb.diameter_dalam && tb.panjang) {
+        dims.push(formatInt(plan.diameter_luar || item.diameter_luar), formatInt(plan.diameter_dalam || item.diameter_dalam), formatInt(plan.panjang || item.panjang));
+      } else if (tb.sisi1 && tb.sisi2 && tb.tebal && tb.panjang) {
+        dims.push(formatInt(plan.sisi1 || item.sisi1), formatInt(plan.sisi2 || item.sisi2), formatInt(plan.tebal || item.tebal), formatInt(plan.panjang || item.panjang));
+      } else if (tb.tebal && tb.lebar && tb.panjang) {
+        dims.push(formatInt(plan.tebal || plan.ketebalan || item.tebal), formatInt(plan.lebar || item.lebar), formatInt(plan.panjang || item.panjang));
+      } else if (tb.diameter && tb.panjang) {
+        dims.push(formatInt(plan.diameter || item.diameter), formatInt(plan.panjang || item.panjang));
+      } else {
+        if (plan.tebal || plan.ketebalan || item.tebal) dims.push(formatInt(plan.tebal || plan.ketebalan || item.tebal));
+        if (plan.lebar || item.lebar) dims.push(formatInt(plan.lebar || item.lebar));
+        if (plan.panjang || item.panjang) dims.push(formatInt(plan.panjang || item.panjang));
+      }
+      const activeDims = dims.filter(d => d > 0);
+      if (activeDims.length > 0) {
+        dimStr = activeDims.join('x');
+      } else if (dims.length > 0) {
+        dimStr = dims.join('x');
+      }
+    } else if (!plan.dimensi) {
+      const p = Math.round(parseFloat(plan.panjang || item.panjang) || 0);
+      const l = Math.round(parseFloat(plan.lebar || item.lebar) || 0);
+      const t = Math.round(parseFloat(plan.ketebalan || plan.tebal || item.tebal) || 0);
+      const dims = [p, l, t].filter(d => d > 0);
+      dimStr = dims.length > 0 ? dims.join('x') : '-';
+    }
+
+    const kodeBarang = item.kode_barang || plan.kode_barang || '-';
+    const potong = plan.jenis_potongan || item.jenis_potongan || 'potongan';
+
+    return `Kode Barang: ${kodeBarang} | Dimensi: ${dimStr} | Potong: ${potong}`;
   };
 
   useEffect(() => {
@@ -185,12 +242,12 @@ export default function ViewWOActualPage() {
           if (Array.isArray(woActual.foto_bukti) && woActual.foto_bukti.length > 0) {
             const urls = await Promise.all(woActual.foto_bukti.map(async (_, idx) => {
               const blob = await woActualService.getWOActualHeaderImageBlob(id, idx);
-              return URL.createObjectURL(blob);
+              return createTrackedObjectURL(blob);
             }));
             setHeaderImageBase64(urls);
           } else if (woActual.foto_bukti && typeof woActual.foto_bukti === 'string') {
             const blob = await woActualService.getWOActualHeaderImageBlob(id, 0);
-            setHeaderImageBase64([URL.createObjectURL(blob)]);
+            setHeaderImageBase64([createTrackedObjectURL(blob)]);
           } else {
             setHeaderImageBase64([]);
           }
@@ -203,19 +260,6 @@ export default function ViewWOActualPage() {
       }
     };
     loadImages();
-    return () => {
-      try {
-        if (Array.isArray(headerImageBase64)) {
-          headerImageBase64.forEach(url => {
-            if (url && typeof url === 'string' && url.startsWith('blob:')) {
-              URL.revokeObjectURL(url);
-            }
-          });
-        } else if (headerImageBase64 && typeof headerImageBase64 === 'string' && headerImageBase64.startsWith('blob:')) {
-          URL.revokeObjectURL(headerImageBase64);
-        }
-      } catch (_) { }
-    };
   }, [id, woActual]);
 
   // Load item images separately when items change
@@ -232,7 +276,7 @@ export default function ViewWOActualPage() {
 
         try {
           const blob = await woActualService.getWOActualItemImageBlob(item.id);
-          const url = URL.createObjectURL(blob);
+          const url = createTrackedObjectURL(blob);
           updates[item.id] = url;
           hasUpdates = true;
         } catch (e) {
@@ -260,7 +304,7 @@ export default function ViewWOActualPage() {
 
         try {
           const blob = await woActualService.getWOActualItemSisaImageBlob(item.id);
-          const url = URL.createObjectURL(blob);
+          const url = createTrackedObjectURL(blob);
           updates[item.id] = url;
           hasUpdates = true;
         } catch (e) {
@@ -277,15 +321,52 @@ export default function ViewWOActualPage() {
   }, [items, itemSisaImagesMap]);
 
   useEffect(() => {
-    return () => {
-      Object.values(itemImagesMap).forEach(url => {
-        if (url && typeof url === 'string' && url.startsWith('blob:')) {
-          URL.revokeObjectURL(url);
-        }
+    const loadPlateSisaImages = async () => {
+      if (!items || items.length === 0) return;
+
+      const updates = {};
+      let hasUpdates = false;
+
+      const platesToLoad = [];
+      items.forEach((item) => {
+        const planningItem = item.work_order_planning_item || {};
+        const plates = planningItem.has_many_saran_plat_shaft_dasar || planningItem.hasManySaranPlatShaftDasar || [];
+        plates.forEach((plate) => {
+          if (plate.foto_sisa_barang && !plateSisaImagesMap[plate.id]) {
+            platesToLoad.push(plate);
+          }
+        });
       });
-      Object.values(itemSisaImagesMap).forEach(url => {
+
+      if (platesToLoad.length === 0) return;
+
+      await Promise.all(platesToLoad.map(async (plate) => {
+        try {
+          const blob = await woActualService.getWOActualSaranPlatSisaImageBlob(plate.id);
+          const url = createTrackedObjectURL(blob);
+          updates[plate.id] = url;
+          hasUpdates = true;
+        } catch (e) {
+          console.warn(`Gagal load image sisa plate ${plate.id}:`, e);
+        }
+      }));
+
+      if (hasUpdates) {
+        setPlateSisaImagesMap(prev => ({ ...prev, ...updates }));
+      }
+    };
+
+    loadPlateSisaImages();
+  }, [items, plateSisaImagesMap]);
+
+  // Cleanup all generated blob URLs on unmount
+  useEffect(() => {
+    return () => {
+      blobUrlsRef.current.forEach((url) => {
         if (url && typeof url === 'string' && url.startsWith('blob:')) {
-          URL.revokeObjectURL(url);
+          try {
+            URL.revokeObjectURL(url);
+          } catch (_) {}
         }
       });
     };
@@ -860,30 +941,61 @@ export default function ViewWOActualPage() {
                               {planningItem.jenis_potongan?.toLowerCase() === 'utuh' || actualItem.jenis_potongan?.toLowerCase() === 'utuh' ? (
                                 <span className="text-xs text-gray-400 font-medium">N/A (Utuh)</span>
                               ) : (
-                                (() => {
-                                  const cachedBlobSrc = resolveImageSrc(itemSisaImagesMap[actualItem.id]);
-                                  const rawPathSrc = resolveImageSrc(actualItem.foto_sisa_barang);
-                                  const displaySrc = cachedBlobSrc || rawPathSrc;
+                                <div className="flex flex-col gap-1.5 justify-center items-center">
+                                  {(() => {
+                                    const plates = planningItem.has_many_saran_plat_shaft_dasar || planningItem.hasManySaranPlatShaftDasar || [];
+                                    const platesWithSisa = plates.filter(p => p.foto_sisa_barang);
 
-                                  return displaySrc ? (
-                                    <div className="flex flex-col items-center gap-1">
-                                      <img
-                                        src={displaySrc}
-                                        alt="Foto Sisa Item"
-                                        className="w-10 h-10 object-cover rounded border cursor-pointer"
-                                        onClick={() => {
-                                          setPreviewImages([displaySrc]);
-                                          setCurrentPreviewIndex(0);
-                                          setPreviewTitle(`Foto Sisa Item: ${jenisNama}`);
-                                          setPreviewDetails(getItemDetailsText(planningItem));
-                                          setPreviewOpen(true);
-                                        }}
-                                      />
-                                    </div>
-                                  ) : (
-                                    <span className="text-xs text-gray-400">-</span>
-                                  );
-                                })()
+                                    if (platesWithSisa.length === 0) {
+                                      // Fallback to item-level sisa photo if exists
+                                      const cachedBlobSrc = resolveImageSrc(itemSisaImagesMap[actualItem.id]);
+                                      const rawPathSrc = resolveImageSrc(actualItem.foto_sisa_barang);
+                                      const displaySrc = cachedBlobSrc || rawPathSrc;
+
+                                      return displaySrc ? (
+                                        <img
+                                          src={displaySrc}
+                                          alt="Foto Sisa Item"
+                                          className="w-10 h-10 object-cover rounded border cursor-pointer"
+                                          onClick={() => {
+                                            setPreviewImages([displaySrc]);
+                                            setCurrentPreviewIndex(0);
+                                            setPreviewTitle(`Foto Sisa Item: ${jenisNama}`);
+                                            setPreviewDetails(getItemDetailsText(planningItem));
+                                            setPreviewOpen(true);
+                                          }}
+                                        />
+                                      ) : (
+                                        <span className="text-xs text-gray-400">-</span>
+                                      );
+                                    }
+
+                                    return platesWithSisa.map((plate, index) => {
+                                      const plateName = plate.item_barang?.nama_item_barang || plate.item_barang?.kode_barang || `Plat #${plate.id}`;
+                                      const displaySrc = plateSisaImagesMap[plate.id] || resolveImageSrc(plate.foto_sisa_barang);
+
+                                      if (!displaySrc) return null;
+
+                                      return (
+                                        <div key={plate.id} className="flex items-center gap-1 border p-1 rounded bg-gray-50 max-w-[150px]">
+                                          <img
+                                            src={displaySrc}
+                                            alt={`Sisa Plat ${plateName}`}
+                                            className="w-8 h-8 object-cover rounded border cursor-pointer shrink-0"
+                                            onClick={() => {
+                                              setPreviewImages([displaySrc]);
+                                              setCurrentPreviewIndex(0);
+                                              setPreviewTitle(`Foto Sisa Plat: ${plateName}`);
+                                              setPreviewDetails(getPlateDetailsText(plate, planningItem));
+                                              setPreviewOpen(true);
+                                            }}
+                                          />
+                                          <span className="text-[9px] text-gray-500 truncate max-w-[90px]" title={plateName}>{plateName}</span>
+                                        </div>
+                                      );
+                                    });
+                                  })()}
+                                </div>
                               )}
                             </TableCell>
                           </TableRow>

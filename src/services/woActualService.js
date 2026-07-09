@@ -162,6 +162,26 @@ export const woActualService = {
     return resp.blob();
   },
 
+  // Get WO Actual leftover saran plat image as Blob (binary stream)
+  getWOActualSaranPlatSisaImageBlob: async (saranId) => {
+    const url = `${apiConfig.baseUrl}${API_ENDPOINTS.workOrderActual}/saran-plat-dasar/${saranId}/sisa-image?ts=${Date.now()}`;
+    const resp = await fetch(url, {
+      headers: { ...getAuthHeader(), Accept: 'image/*' },
+      cache: 'no-store'
+    });
+    if (!resp.ok) {
+      let msg = `Failed to fetch plate sisa image (${resp.status})`;
+      try {
+        const errJson = await resp.json();
+        msg = errJson?.message || msg;
+      } catch (err) {
+        console.error(err);
+      }
+      throw new Error(msg);
+    }
+    return resp.blob();
+  },
+
   // Get all WO Actual item images under a WO Actual ID, supports search
   getWOActualItemImages: async (actualId, params = {}) => {
     const queryParams = new URLSearchParams();
