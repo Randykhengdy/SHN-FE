@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   cancelDownloadUpdate: () => ipcRenderer.invoke('cancel-download-update'),
   onUpdateEvent: (callback) => ipcRenderer.on('update-event', (_event, data) => callback(data)),
   onReportSOTanggal: (callback) => ipcRenderer.on('open-report-so-tanggal', callback),
+  onReportSOTanggalBergabungPelanggan: (callback) => ipcRenderer.on('open-report-so-tanggal-bergabung-pelanggan', callback),
   onReportRealisasiWOTanggal: (callback) => ipcRenderer.on('open-report-wo-actual-tanggal', callback),
   onReportInvoicePenjualanTanggal: (callback) => ipcRenderer.on('open-report-invoice-tanggal', callback),
   onReportPenjualanGudangTanggal: (callback) => ipcRenderer.on('open-report-penjualan-gudang-tanggal', callback),

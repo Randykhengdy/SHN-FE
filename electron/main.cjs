@@ -535,6 +535,7 @@ function createWindow() {
           label: 'Sales',
           submenu: [
             { label: 'SO / Tanggal', click: () => mainWindow.webContents.send('open-report-so-tanggal') },
+            { label: 'SO / Tanggal Bergabung Pelanggan', click: () => mainWindow.webContents.send('open-report-so-tanggal-bergabung-pelanggan') },
             { label: 'Realisasi WO / Tanggal', click: () => mainWindow.webContents.send('open-report-wo-actual-tanggal') },
             {
               label: 'Kegiatan Pelaksana / Tanggal',

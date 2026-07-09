@@ -10,6 +10,8 @@ import ReportDateRangeModal from "@/components/modals/ReportDateRangeModal";
 import { salesOrderService } from "@/services/salesOrderService";
 import { woActualService } from "@/services/woActualService";
 import { printSalesOrderTanggalReport } from "@/lib/soReportPrint";
+import { printSOTanggalBergabungPelangganReport } from "@/lib/soTanggalBergabungPelangganReportPrint";
+import { reportSalesService } from "@/services/reportSalesService";
 import { printRealisasiWOTanggalReport } from "@/lib/woActualReportPrint";
 import { financeInvoicePodService } from "@/services/financeInvoicePodService";
 import { printInvoicePenjualanTanggalReport } from "@/lib/invoiceReportPrint";
@@ -64,6 +66,7 @@ function App() {
   const { showAlert, AlertComponent } = useAlert();
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isReportSOTanggalOpen, setIsReportSOTanggalOpen] = useState(false);
+  const [isReportSOTanggalBergabungPelangganOpen, setIsReportSOTanggalBergabungPelangganOpen] = useState(false);
   const [isReportRealisasiWOTanggalOpen, setIsReportRealisasiWOTanggalOpen] = useState(false);
   const [isReportInvoicePenjualanTanggalOpen, setIsReportInvoicePenjualanTanggalOpen] = useState(false);
   const [isReportPenjualanGudangTanggalOpen, setIsReportPenjualanGudangTanggalOpen] = useState(false);
@@ -139,6 +142,13 @@ function App() {
     if (window.electronAPI.onReportSOTanggal) {
       window.electronAPI.onReportSOTanggal(() => {
         setIsReportSOTanggalOpen(true);
+      });
+    }
+
+    // Listen for SO / Tanggal Bergabung Pelanggan Report event
+    if (window.electronAPI.onReportSOTanggalBergabungPelanggan) {
+      window.electronAPI.onReportSOTanggalBergabungPelanggan(() => {
+        setIsReportSOTanggalBergabungPelangganOpen(true);
       });
     }
 
@@ -429,6 +439,36 @@ function App() {
                 if (result.success && result.data) {
                   printSalesOrderTanggalReport(result.data, from, to, tampilkanBarang);
                   setIsReportSOTanggalOpen(false);
+                } else {
+                  showAlert("Error", result.message || "Gagal mengambil data report", "error");
+                }
+              } catch (error) {
+                console.error("Error generating report:", error);
+                showAlert("Error", error.message || "Terjadi kesalahan saat generate report", "error");
+              } finally {
+                setReportLoading(false);
+              }
+            }}
+          />
+
+          <ReportDateRangeModal
+            open={isReportSOTanggalBergabungPelangganOpen}
+            onOpenChange={setIsReportSOTanggalBergabungPelangganOpen}
+            title="Report Sales Order / Tanggal Bergabung Pelanggan"
+            loading={reportLoading}
+            showSalesPerson={true}
+            onGenerate={async (from, to, _, salesPersonId) => {
+              try {
+                setReportLoading(true);
+                const result = await reportSalesService.getSOTanggalBergabungPelanggan({
+                  tanggal_gabung_start: from,
+                  tanggal_gabung_end: to,
+                  sales_person_id: salesPersonId
+                });
+                
+                if (result.success && result.data) {
+                  printSOTanggalBergabungPelangganReport(result.data, from, to);
+                  setIsReportSOTanggalBergabungPelangganOpen(false);
                 } else {
                   showAlert("Error", result.message || "Gagal mengambil data report", "error");
                 }

@@ -74,4 +74,15 @@ export const reportSalesService = {
     const qs = q.toString();
     return await request(`${BASE}/report-realisasi-wo${qs ? `?${qs}` : ""}`, { method: "GET" });
   },
+
+  // ── Report SO per Tanggal Bergabung Pelanggan ──────────────────────────────
+  // GET /api/report-sales-order/report-so-tanggal-bergabung-pelanggan
+  getSOTanggalBergabungPelanggan: async (params = {}) => {
+    const q = new URLSearchParams();
+    if (params.tanggal_gabung_start) q.append("tanggal_gabung_start", params.tanggal_gabung_start);
+    if (params.tanggal_gabung_end)   q.append("tanggal_gabung_end",   params.tanggal_gabung_end);
+    if (params.sales_person_id)      q.append("sales_person_id",      params.sales_person_id);
+    const qs = q.toString();
+    return await request(`${BASE}/report-so-tanggal-bergabung-pelanggan${qs ? `?${qs}` : ""}`, { method: "GET" });
+  },
 };
