@@ -513,6 +513,38 @@ export default function AddWOActualPage() {
     reader.readAsDataURL(file);
   };
 
+  // Upload foto sisa barang per plat (base64)
+  const handlePlateFotoSisaChange = (itemId, plateId, file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showAlert('File tidak valid', 'Silakan pilih file gambar', 'error');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showAlert('Ukuran file terlalu besar', 'Maksimal 5MB', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target.result;
+      setActualItems(prev => {
+        const itemData = prev[itemId] || {};
+        const sisaPlates = itemData.sisa_plates || {};
+        return {
+          ...prev,
+          [itemId]: {
+            ...itemData,
+            sisa_plates: {
+              ...sisaPlates,
+              [plateId]: base64
+            }
+          }
+        };
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Save WO Actual
   const handleSave = async () => {
     try {
@@ -600,6 +632,9 @@ export default function AddWOActualPage() {
         }
         if (item?.foto_sisa_barang && planningItem?.jenis_potongan?.toLowerCase() !== 'utuh') {
           value.foto_sisa_barang = item.foto_sisa_barang;
+        }
+        if (item?.sisa_plates && planningItem?.jenis_potongan?.toLowerCase() !== 'utuh') {
+          value.sisa_plates = item.sisa_plates;
         }
         return [id, value];
       }));
@@ -696,7 +731,17 @@ export default function AddWOActualPage() {
 
           // AFTER: gunakan foto bukti item yang baru diupload (data URL)
           const afterImages = actualItem.foto_bukti ? [{ src: actualItem.foto_bukti }] : [];
-          const sisaImages = (actualItem.foto_sisa_barang && planningItem.jenis_potongan?.toLowerCase() !== 'utuh') ? [{ src: actualItem.foto_sisa_barang }] : [];
+          
+          let sisaImages = [];
+          if (planningItem.jenis_potongan?.toLowerCase() !== 'utuh') {
+            if (actualItem.sisa_plates && typeof actualItem.sisa_plates === 'object') {
+              Object.values(actualItem.sisa_plates).forEach(imgB64 => {
+                if (imgB64) sisaImages.push({ src: imgB64 });
+              });
+            } else if (actualItem.foto_sisa_barang) {
+              sisaImages.push({ src: actualItem.foto_sisa_barang });
+            }
+          }
 
           return {
             no: idx + 1,
@@ -1215,39 +1260,57 @@ export default function AddWOActualPage() {
                               {planningItem.jenis_potongan?.toLowerCase() === 'utuh' ? (
                                 <span className="text-xs text-gray-400 font-medium">N/A (Utuh)</span>
                               ) : (
-                                <div className="flex items-center justify-center gap-2">
-                                  <input
-                                    id={`item-foto-sisa-${planningItem.id}`}
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={(e) => {
-                                      const file = e.target.files?.[0];
-                                      if (file) handleItemFotoSisaChange(planningItem.id, file);
-                                    }}
-                                    className="hidden"
-                                  />
-                                  <label
-                                    htmlFor={`item-foto-sisa-${planningItem.id}`}
-                                    className="inline-flex items-center rounded-md border px-3 py-1 text-xs font-medium hover:bg-gray-50 cursor-pointer"
-                                  >
-                                    Upload
-                                  </label>
-                                  {actualItem.foto_sisa_barang ? (
-                                    <img
-                                      src={actualItem.foto_sisa_barang}
-                                      alt={`Foto Sisa Item #${planningItem.id}`}
-                                      className="w-12 h-12 object-cover rounded border cursor-pointer"
-                                      onClick={() => {
-                                        setPreviewImages([actualItem.foto_sisa_barang]);
-                                        setCurrentPreviewIndex(0);
-                                        setPreviewTitle(`Foto Sisa Item: ${planningItem.jenis_barang?.nama || '-'}`);
-                                        setPreviewDetails(getItemDetailsText(planningItem));
-                                        setPreviewOpen(true);
-                                      }}
-                                    />
-                                  ) : (
-                                    <span className="text-xs text-gray-500">Belum ada</span>
-                                  )}
+                                <div className="flex flex-col gap-2 min-w-[200px] justify-center items-stretch">
+                                  {(() => {
+                                    const plates = planningCanvasImagesMap[String(planningItem.id)] || [];
+                                    if (plates.length === 0) {
+                                      return <span className="text-xs text-gray-400">Tidak ada plat</span>;
+                                    }
+                                    return plates.map((plate, index) => {
+                                      const plateId = plate.saran_id || `saran-${index}`;
+                                      const plateName = plate.item_barang_name || `Plat #${plateId}`;
+                                      const plateSisaImage = actualItem.sisa_plates?.[plateId] || null;
+                                      return (
+                                        <div key={plateId} className="flex items-center justify-between gap-2 border p-1 rounded bg-gray-50">
+                                          <span className="text-[10px] text-gray-600 truncate max-w-[120px] text-left" title={plateName}>{plateName}</span>
+                                          <div className="flex items-center gap-1 shrink-0">
+                                            <input
+                                              id={`item-foto-sisa-${planningItem.id}-${plateId}`}
+                                              type="file"
+                                              accept="image/*"
+                                              onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) handlePlateFotoSisaChange(planningItem.id, plateId, file);
+                                              }}
+                                              className="hidden"
+                                            />
+                                            <label
+                                              htmlFor={`item-foto-sisa-${planningItem.id}-${plateId}`}
+                                              className="inline-flex items-center rounded border px-2 py-0.5 text-[10px] font-medium hover:bg-gray-100 cursor-pointer bg-white"
+                                            >
+                                              Upload
+                                            </label>
+                                            {plateSisaImage ? (
+                                              <img
+                                                src={plateSisaImage}
+                                                alt={`Sisa Plat ${plateName}`}
+                                                className="w-7 h-7 object-cover rounded border cursor-pointer shrink-0"
+                                                onClick={() => {
+                                                  setPreviewImages([plateSisaImage]);
+                                                  setCurrentPreviewIndex(0);
+                                                  setPreviewTitle(`Foto Sisa Plat: ${plateName}`);
+                                                  setPreviewDetails(getItemDetailsText(planningItem));
+                                                  setPreviewOpen(true);
+                                                }}
+                                              />
+                                            ) : (
+                                              <span className="text-[9px] text-gray-400">Belum ada</span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    });
+                                  })()}
                                 </div>
                               )}
                             </TableCell>
