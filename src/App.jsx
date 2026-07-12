@@ -366,7 +366,7 @@ function App() {
       setReportLoading(true);
       const res = await reportKasService.getRincianKeuangan({ start_date: startDate, end_date: endDate });
       if (!res.success) throw new Error(res.message);
-      
+
       const { data } = res;
       printRincianKeuanganReport(data, startDate, endDate);
       setIsReportRincianKeuanganOpen(false);
@@ -388,7 +388,7 @@ function App() {
               <AlertDialogHeader className="p-6 pb-4">
                 <AlertDialogTitle className="text-xl font-bold flex items-center gap-2">
                   <div className="p-2 rounded-full bg-red-500/10 text-red-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
                   </div>
                   Konfirmasi Tutup Aplikasi
                 </AlertDialogTitle>
@@ -400,7 +400,7 @@ function App() {
                 <AlertDialogCancel className="w-full sm:w-auto h-10 px-6 font-medium bg-background hover:bg-muted transition-colors">
                   Batal
                 </AlertDialogCancel>
-                <AlertDialogAction 
+                <AlertDialogAction
                   onClick={() => {
                     if (window.electronAPI?.confirmClose) {
                       window.electronAPI.confirmClose();
@@ -415,9 +415,9 @@ function App() {
           </AlertDialog>
 
           {/* Global Change Password Modal */}
-          <ChangePasswordModal 
-            isOpen={isChangePasswordOpen} 
-            onClose={() => setIsChangePasswordOpen(false)} 
+          <ChangePasswordModal
+            isOpen={isChangePasswordOpen}
+            onClose={() => setIsChangePasswordOpen(false)}
           />
 
           <ReportDateRangeModal
@@ -435,7 +435,7 @@ function App() {
                   per_page: 9999,
                   sort: 'tanggal_so,asc;nomor_so,asc'
                 });
-                
+
                 if (result.success && result.data) {
                   printSalesOrderTanggalReport(result.data, from, to, tampilkanBarang);
                   setIsReportSOTanggalOpen(false);
@@ -457,15 +457,17 @@ function App() {
             title="Report Sales Order / Tanggal Bergabung Pelanggan"
             loading={reportLoading}
             showSalesPerson={true}
-            onGenerate={async (from, to, _, salesPersonId) => {
+            showCustomerType={true}
+            onGenerate={async (from, to, _, salesPersonId, customerType) => {
               try {
                 setReportLoading(true);
                 const result = await reportSalesService.getSOTanggalBergabungPelanggan({
                   tanggal_gabung_start: from,
                   tanggal_gabung_end: to,
-                  sales_person_id: salesPersonId
+                  sales_person_id: salesPersonId,
+                  customer_type: customerType
                 });
-                
+
                 if (result.success && result.data) {
                   printSOTanggalBergabungPelangganReport(result.data, from, to);
                   setIsReportSOTanggalBergabungPelangganOpen(false);
@@ -495,7 +497,7 @@ function App() {
                   per_page: 9999,
                   sort: 'tanggal_actual,asc;nomor_wo,asc'
                 });
-                
+
                 if (result.success && result.data) {
                   printRealisasiWOTanggalReport(result.data, from, to);
                   setIsReportRealisasiWOTanggalOpen(false);
@@ -526,7 +528,7 @@ function App() {
                   per_page: 9999,
                   sort: 'tanggal_cetak_invoice,asc;nomor_invoice,asc'
                 });
-                
+
                 if (result.success && result.data) {
                   printInvoicePenjualanTanggalReport(result.data, from, to, tampilkanBarang);
                   setIsReportInvoicePenjualanTanggalOpen(false);
@@ -554,7 +556,7 @@ function App() {
                   tanggal_invoice_start: from,
                   tanggal_invoice_end: to
                 });
-                
+
                 if (result.success && result.data) {
                   printSalesGudangTanggalReport(result.data, result.data_rongsok, from, to);
                   setIsReportPenjualanGudangTanggalOpen(false);
@@ -582,7 +584,7 @@ function App() {
                   tanggal_invoice_start: from,
                   tanggal_invoice_end: to
                 });
-                
+
                 if (result.success && result.data) {
                   printSalesGudangBarangReport(result.data, result.data_rongsok, from, to);
                   setIsReportPenjualanGudangBarangOpen(false);
@@ -610,7 +612,7 @@ function App() {
                   tanggal_invoice_start: from,
                   tanggal_invoice_end: to
                 });
-                
+
                 if (result.success && result.data) {
                   printSalesBarangGlobalReport(result.data, result.data_rongsok, from, to);
                   setIsReportPenjualanBarangGlobalOpen(false);
@@ -638,7 +640,7 @@ function App() {
                   tanggal_invoice_start: from,
                   tanggal_invoice_end: to
                 });
-                
+
                 if (result.success && result.data) {
                   printSalesPelangganBarangReport(result.data, from, to);
                   setIsReportPenjualanPelangganBarangOpen(false);
@@ -666,7 +668,7 @@ function App() {
                   tanggal_invoice_start: from,
                   tanggal_invoice_end: to
                 });
-                
+
                 if (result.success && result.data) {
                   printSalesPelangganTanggalReport(result.data, from, to);
                   setIsReportPenjualanPelangganTanggalOpen(false);
@@ -694,7 +696,7 @@ function App() {
                   tanggal_invoice_start: from,
                   tanggal_invoice_end: to
                 });
-                
+
                 if (result.success && result.data) {
                   printInvoicePiutangPelangganReport(result.data);
                   setIsReportInvoicePiutangPelangganOpen(false);
@@ -722,7 +724,7 @@ function App() {
                   tanggal_invoice_start: from,
                   tanggal_invoice_end: to
                 });
-                
+
                 if (result.success && result.data) {
                   printPembayaranUMPiutangReport(result.data, from, to);
                   setIsReportPembayaranUMPiutangOpen(false);
@@ -750,7 +752,7 @@ function App() {
                   tanggal_invoice_start: from,
                   tanggal_invoice_end: to
                 });
-                
+
                 if (result.success && result.data) {
                   printFakturPembelianTanggalReport(result.data, from, to);
                   setIsReportFakturPembelianTanggalOpen(false);
@@ -778,7 +780,7 @@ function App() {
                   tanggal_invoice_start: from,
                   tanggal_invoice_end: to
                 });
-                
+
                 if (result.success && result.data) {
                   printPembelianGudangTanggalReport(result.data, from, to);
                   setIsReportPembelianGudangTanggalOpen(false);
@@ -806,7 +808,7 @@ function App() {
                   tanggal_invoice_start: from,
                   tanggal_invoice_end: to
                 });
-                
+
                 if (result.success && result.data) {
                   printPembelianGudangBarangReport(result.data, from, to);
                   setIsReportPembelianGudangBarangOpen(false);
@@ -834,7 +836,7 @@ function App() {
                   tanggal_invoice_start: from,
                   tanggal_invoice_end: to
                 });
-                
+
                 if (result.success && result.data) {
                   printPembelianBarangGlobalReport(result.data, from, to);
                   setIsReportPembelianBarangGlobalOpen(false);
@@ -862,7 +864,7 @@ function App() {
                   tanggal_invoice_start: from,
                   tanggal_invoice_end: to
                 });
-                
+
                 if (result.success && result.data) {
                   printInvoiceHutangSupplierReport(result.data);
                   setIsReportInvoiceHutangSupplierOpen(false);
@@ -890,7 +892,7 @@ function App() {
                   tanggal_invoice_start: from,
                   tanggal_invoice_end: to
                 });
-                
+
                 if (result.success && result.data) {
                   printPemakaianKasJenisBiayaReport(result.data, from, to);
                   setIsReportPemakaianKasJenisBiayaOpen(false);
@@ -1054,7 +1056,7 @@ function App() {
                   start_date: from,
                   end_date: to,
                 });
-                
+
                 if (result.success && result.data) {
                   printRubahStatusBarangReport(result.data, from, to);
                   setIsReportRubahStatusBarangOpen(false);
@@ -1079,9 +1081,9 @@ function App() {
               try {
                 setReportLoading(true);
                 const params = { start_date: from, end_date: to };
-                
+
                 const result = await reportMutasiService.getReportBarangRongsok(params);
-                
+
                 if (result.success && result.data) {
                   printBarangRongsokReport(result.data, from, to);
                   setIsReportBarangRongsokOpen(false);
@@ -1106,9 +1108,9 @@ function App() {
               try {
                 setReportLoading(true);
                 const params = { start_date: from, end_date: to };
-                
+
                 const result = await reportMutasiService.getReportBarangHabis(params);
-                
+
                 if (result.success && result.data) {
                   printBarangHabisReport(result.data, from, to);
                   setIsReportBarangHabisOpen(false);
@@ -1133,9 +1135,9 @@ function App() {
               try {
                 setReportLoading(true);
                 const params = { start_date: from, end_date: to };
-                
+
                 const result = await reportMutasiService.getReportSplitBarang(params);
-                
+
                 if (result.success && result.data) {
                   printSplitBarangReport(result.data, from, to);
                   setIsReportSplitBarangOpen(false);

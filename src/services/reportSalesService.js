@@ -82,6 +82,7 @@ export const reportSalesService = {
     if (params.tanggal_gabung_start) q.append("tanggal_gabung_start", params.tanggal_gabung_start);
     if (params.tanggal_gabung_end)   q.append("tanggal_gabung_end",   params.tanggal_gabung_end);
     if (params.sales_person_id)      q.append("sales_person_id",      params.sales_person_id);
+    if (params.customer_type)        q.append("customer_type",        params.customer_type);
     const qs = q.toString();
     return await request(`${BASE}/report-so-tanggal-bergabung-pelanggan${qs ? `?${qs}` : ""}`, { method: "GET" });
   },

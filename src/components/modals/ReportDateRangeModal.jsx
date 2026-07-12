@@ -13,12 +13,13 @@ import { Switch } from "@/components/ui/switch";
 import { Calendar } from "lucide-react";
 import { salesPersonService } from "@/services/master-data/salesPersonService";
 
-const ReportDateRangeModal = ({ open, onOpenChange, title, onGenerate, loading, showToggleBarang = false, showSalesPerson = false }) => {
+const ReportDateRangeModal = ({ open, onOpenChange, title, onGenerate, loading, showToggleBarang = false, showSalesPerson = false, showCustomerType = false }) => {
   const [dateFrom, setDateFrom] = useState(new Date().toISOString().split('T')[0]);
   const [dateTo, setDateTo] = useState(new Date().toISOString().split('T')[0]);
   const [tampilkanBarang, setTampilkanBarang] = useState(true);
   const [salesPersons, setSalesPersons] = useState([]);
   const [selectedSalesPersonId, setSelectedSalesPersonId] = useState("");
+  const [selectedCustomerType, setSelectedCustomerType] = useState("");
 
   useEffect(() => {
     if (open && showSalesPerson) {
@@ -40,7 +41,7 @@ const ReportDateRangeModal = ({ open, onOpenChange, title, onGenerate, loading, 
 
   const handleGenerate = () => {
     if (onGenerate) {
-      onGenerate(dateFrom, dateTo, tampilkanBarang, selectedSalesPersonId);
+      onGenerate(dateFrom, dateTo, tampilkanBarang, selectedSalesPersonId, selectedCustomerType);
     }
   };
 
@@ -96,6 +97,23 @@ const ReportDateRangeModal = ({ open, onOpenChange, title, onGenerate, loading, 
                     {sp.nama_sales}
                   </option>
                 ))}
+              </select>
+            </div>
+          )}
+          {showCustomerType && (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="customerType" className="text-right">
+                Tipe Customer
+              </Label>
+              <select
+                id="customerType"
+                className="col-span-3 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={selectedCustomerType}
+                onChange={(e) => setSelectedCustomerType(e.target.value)}
+              >
+                <option value="">Semua Tipe Customer</option>
+                <option value="BARU">Customer Baru</option>
+                <option value="LAMA">Customer Lama</option>
               </select>
             </div>
           )}

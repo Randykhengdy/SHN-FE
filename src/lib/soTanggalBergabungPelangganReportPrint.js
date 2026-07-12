@@ -199,7 +199,7 @@ export const printSOTanggalBergabungPelangganReport = (data, dateFrom, dateTo) =
             <td class="text-center">${soIdx === 0 ? index++ : ''}</td>
             <td>${soIdx === 0 ? pelangganInfo : ''}</td>
             <td class="text-center">${soIdx === 0 ? dateJoined : ''}</td>
-            <td>${so.nomor_so}</td>
+            <td>${so.nomor_so} (${so.status_pelanggan || 'BARU'})</td>
             <td class="text-center">${formatDate(so.tanggal_so)}</td>
             <td class="text-right">${formatCurrency(so.total_harga)}</td>
             <td class="text-right">${formatCurrency(so.down_payment)}</td>
