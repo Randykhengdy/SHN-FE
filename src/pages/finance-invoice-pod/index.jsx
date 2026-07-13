@@ -95,7 +95,8 @@ export default function FinanceInvoicePodPage() {
         namaCustomer: wo.nama_customer,
         isGenerated: wo.is_generated,
         hasGeneratedInvoice: wo.has_generated_invoice,
-        hasGeneratedPod: wo.has_generated_pod
+        hasGeneratedPod: wo.has_generated_pod,
+        downPayment: wo.down_payment ?? 0
       }));
 
       // Apply search filter
@@ -131,7 +132,11 @@ export default function FinanceInvoicePodPage() {
   // Handle generate invoice POD modal
   const openGenerateModal = (nomorWo) => {
     setSelectedWoForGenerate(nomorWo);
-    setGenerateForm({ uang_muka: '', metode_pembayaran: '' });
+    const wo = workOrders.find(w => w.nomorWo === nomorWo);
+    setGenerateForm({ 
+      uang_muka: wo && wo.downPayment ? String(Math.round(wo.downPayment)) : '', 
+      metode_pembayaran: '' 
+    });
     setIsGenerateModalOpen(true);
   };
 
