@@ -10,9 +10,10 @@ export const konversiBarangService = {
             params
         });
     },
-    changeStatusToPotongan: async (id) => {
+    changeStatusToPotongan: async (id, salesOrderId) => {
         return await request(`${API_ENDPOINTS.konversiBarang}/${id}`, {
             method: 'PATCH',
+            body: JSON.stringify({ sales_order_id: salesOrderId })
         })
     },
 }

@@ -11,6 +11,8 @@ import { Download, RefreshCw, TableColumnsSplit } from "lucide-react";
 import CustomAlert from "@/components/modals/CustomAlert";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { salesOrderService } from "@/services/salesOrderService";
 
 const statusOptions = [
     { value: "all", label: "Semua Status" },
@@ -43,6 +45,15 @@ export default function KonversiBarangPage() {
     const [selectedItem, setSelectedItem] = useState(null);
     const [isConverting, setConverting] = useState(false);
 
+    // Sales Order selection states
+    const [showSoModal, setShowSoModal] = useState(false);
+    const [salesOrders, setSalesOrders] = useState([]);
+    const [selectedSo, setSelectedSo] = useState(null);
+    const [soSearch, setSoSearch] = useState("");
+    const [soLoading, setSoLoading] = useState(false);
+    const [soPage, setSoPage] = useState(1);
+    const [soTotal, setSoTotal] = useState(0);
+
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
         const date = new Date(dateString);
@@ -61,6 +72,32 @@ export default function KonversiBarangPage() {
         }
     };
 
+    const loadSalesOrders = useCallback(async () => {
+        try {
+            setSoLoading(true);
+            const response = await salesOrderService.getAll({
+                page: soPage,
+                per_page: 5,
+                search: soSearch,
+                process_status: ["submit", "partial_wo"]
+            });
+            if (response && response.data) {
+                setSalesOrders(response.data);
+                setSoTotal(response.pagination?.total || 0);
+            }
+        } catch (error) {
+            console.error("Error loading Sales Orders:", error);
+        } finally {
+            setSoLoading(false);
+        }
+    }, [soPage, soSearch]);
+
+    useEffect(() => {
+        if (showSoModal) {
+            loadSalesOrders();
+        }
+    }, [showSoModal, loadSalesOrders]);
+
     const loadItemBarang = useCallback(async () => {
         try {
             setLoading(true);
@@ -73,6 +110,7 @@ export default function KonversiBarangPage() {
                 item_barang: kb.nama_item_barang,
                 quantity: kb.quantity,
                 status: kb.jenis_potongan || "N/A",
+                nomor_so: kb.sales_order?.nomor_so || "-",
             }));
 
             setItemBarang(transformedData);
@@ -90,7 +128,23 @@ export default function KonversiBarangPage() {
     }, [loadItemBarang]);
 
     const handleConvertBarang = (item) => {
-        setSelectedItem(item)
+        setSelectedItem(item);
+        setSelectedSo(null);
+        setSoSearch("");
+        setSoPage(1);
+        setShowSoModal(true);
+    }
+
+    const handleSelectSo = (so) => {
+        setSelectedSo(so);
+    }
+
+    const handleConfirmSoSelection = () => {
+        if (!selectedSo) {
+            showAlert("Error", "Silakan pilih Sales Order terlebih dahulu", "error");
+            return;
+        }
+        setShowSoModal(false);
         setShowConfirmationModal(true);
     }
 
@@ -103,7 +157,7 @@ export default function KonversiBarangPage() {
         try {
             setConverting(true);
 
-            const response = await konversiBarangService.changeStatusToPotongan(selectedItem.id);
+            const response = await konversiBarangService.changeStatusToPotongan(selectedItem.id, selectedSo.id);
 
             console.log('✅ Stock barang converted:', response);
 
@@ -117,7 +171,7 @@ export default function KonversiBarangPage() {
 
         } catch (error) {
             console.error('❌ Error memotong barang:', error);
-            showAlert("Error", "Gagal memotong barang", "error");
+            showAlert("Error", error.message || "Gagal memotong barang", "error");
         } finally {
             setConverting(false);
         }
@@ -211,6 +265,7 @@ export default function KonversiBarangPage() {
                                 <TableHead className="font-semibold">Waktu Konversi</TableHead>
                                 <TableHead className="font-semibold">Item</TableHead>
                                 <TableHead className="font-semibold">Status</TableHead>
+                                <TableHead className="font-semibold">Sales Order</TableHead>
                                 <TableHead className="font-semibold">Quantity</TableHead>
                                 <TableHead className="font-semibold">Total KG</TableHead>
                                 <TableHead className="font-semibold text-center">Aksi</TableHead>
@@ -242,6 +297,7 @@ export default function KonversiBarangPage() {
                                                 {ib.status}
                                             </Badge>
                                         </TableCell>
+                                        <TableCell className="font-semibold text-blue-600">{ib.nomor_so}</TableCell>
                                         <TableCell>{ib.quantity}</TableCell>
                                         <TableCell>{ib.totalKG}</TableCell>
                                         <TableCell>
@@ -340,13 +396,130 @@ export default function KonversiBarangPage() {
             open={showConfirmationModal}
             onOpenChange={setShowConfirmationModal}
             title="Konfirmasi Konversi Barang"
-            message={`Apakah yakin untuk ubah status "${selectedItem?.item_barang}" menjadi lempengan siap potong?`}
+            message={`Apakah yakin untuk ubah status "${selectedItem?.item_barang}" menjadi lempengan siap potong untuk Sales Order ${selectedSo?.nomor_so}?`}
             type="warning"
             showCancel={true}
             confirmText={isConverting ? "Memotong..." : "Ya, Ubah"}
             cancelText="Tidak"
             onConfirm={handleConvertBarangConfirm}
         />
+
+        {/* Sales Order Selection Modal */}
+        <Dialog open={showSoModal} onOpenChange={setShowSoModal}>
+            <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col p-0">
+                <DialogHeader className="p-6 pb-2">
+                    <DialogTitle className="text-xl font-bold">Pilih Sales Order</DialogTitle>
+                </DialogHeader>
+                
+                <div className="p-6 pt-0 flex-1 overflow-y-auto space-y-4">
+                    <div className="flex gap-2">
+                        <Input
+                            placeholder="Cari nomor SO..."
+                            value={soSearch}
+                            onChange={(e) => {
+                                setSoSearch(e.target.value);
+                                setSoPage(1);
+                            }}
+                            className="flex-1"
+                        />
+                    </div>
+
+                    <div className="border rounded-md overflow-hidden">
+                        <Table>
+                            <TableHeader className="bg-gray-50">
+                                <TableRow>
+                                    <TableHead className="w-[80px] text-center">Pilih</TableHead>
+                                    <TableHead>Nomor SO</TableHead>
+                                    <TableHead>Tanggal SO</TableHead>
+                                    <TableHead>Pelanggan</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {soLoading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="text-center py-6">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                                                <span>Memuat Sales Order...</span>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ) : salesOrders.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="text-center py-6 text-gray-500">
+                                            Tidak ada Sales Order aktif ditemukan
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    salesOrders.map((so) => (
+                                        <TableRow 
+                                            key={so.id} 
+                                            className={`cursor-pointer hover:bg-gray-50 ${selectedSo?.id === so.id ? 'bg-blue-50/50' : ''}`}
+                                            onClick={() => handleSelectSo(so)}
+                                        >
+                                            <TableCell className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                                                <input
+                                                    type="radio"
+                                                    name="selected_so"
+                                                    checked={selectedSo?.id === so.id}
+                                                    onChange={() => handleSelectSo(so)}
+                                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                />
+                                            </TableCell>
+                                            <TableCell className="font-semibold">{so.nomor_so}</TableCell>
+                                            <TableCell>
+                                                {so.tanggal_so ? new Date(so.tanggal_so).toLocaleDateString('id-ID', { dateStyle: 'medium' }) : '-'}
+                                            </TableCell>
+                                            <TableCell>{so.pelanggan?.nama_pelanggan || '-'}</TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+
+                    {/* Pagination for SO */}
+                    {salesOrders.length > 0 && (
+                        <div className="flex items-center justify-between pt-2">
+                            <span className="text-sm text-gray-600">Total: {soTotal} data</span>
+                            <div className="flex gap-2">
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={soPage === 1}
+                                    onClick={() => setSoPage(prev => Math.max(1, prev - 1))}
+                                >
+                                    Sebelumnya
+                                </Button>
+                                <span className="text-sm self-center">Hal {soPage} dari {Math.ceil(soTotal / 5)}</span>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={soPage >= Math.ceil(soTotal / 5)}
+                                    onClick={() => setSoPage(prev => prev + 1)}
+                                >
+                                    Selanjutnya
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                <DialogFooter className="p-6 border-t bg-gray-50 flex gap-2 justify-end">
+                    <Button variant="outline" onClick={() => setShowSoModal(false)}>
+                        Batal
+                    </Button>
+                    <Button 
+                        disabled={!selectedSo} 
+                        onClick={handleConfirmSoSelection}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                        Lanjutkan
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
         {/* Alert Modal Component */}
         <AlertComponent />
     </PageLayout>
