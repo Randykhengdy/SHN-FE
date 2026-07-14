@@ -494,7 +494,7 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
         .document-title { font-size: 18px; font-weight: bold; margin-bottom: 20px; line-height: 1.2; }
         .info-section { margin-bottom: 20px; }
         .info-row { display: flex; margin-bottom: 5px; }
-        .info-label { font-weight: bold; min-width: 200px; }
+        .info-label { font-weight: bold; min-width: 160px; }
         .info-value { margin-left: 1px; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 12px; }
@@ -523,50 +523,54 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
         </div>
       </div>
       
-      <div class="info-section">
-        <div class="info-row">
-          <span class="info-label">Nomor SO</span>
-          <span class="info-value">${salesOrderData.nomor_so || salesOrderData.so_number || 'N/A'}</span>
+      <div style="display: flex; justify-content: space-between; gap: 16px; margin-bottom: 20px;">
+        <div class="info-section" style="width: 48%; margin-bottom: 0;">
+          <div class="info-row">
+            <span class="info-label">Nomor SO</span>
+            <span class="info-value">${salesOrderData.nomor_so || salesOrderData.so_number || 'N/A'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Tanggal SO</span>
+            <span class="info-value">${formatDate(salesOrderData.tanggal_so || salesOrderData.so_date)}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Tanggal Pengiriman</span>
+            <span class="info-value">${formatDate(salesOrderData.tanggal_pengiriman || salesOrderData.delivery_date)}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Term of Payment</span>
+            <span class="info-value">${salesOrderData.term_of_payment || 'N/A'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Gudang Asal</span>
+            <span class="info-value">${salesOrderData.gudang_asal || salesOrderData.origin_warehouse || 'N/A'}</span>
+          </div>
         </div>
-        <div class="info-row">
-          <span class="info-label">Tanggal SO</span>
-          <span class="info-value">${formatDate(salesOrderData.tanggal_so || salesOrderData.so_date)}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Tanggal Pengiriman</span>
-          <span class="info-value">${formatDate(salesOrderData.tanggal_pengiriman || salesOrderData.delivery_date)}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Term of Payment</span>
-          <span class="info-value">${salesOrderData.term_of_payment || 'N/A'}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Gudang Asal</span>
-          <span class="info-value">${salesOrderData.gudang_asal || salesOrderData.origin_warehouse || 'N/A'}</span>
-        </div>
-      </div>
 
-      ${salesOrderData.customer ? `
-      <div class="customer-section">
-        <div class="customer-title">Informasi Customer</div>
-        <div class="info-row">
-          <span class="info-label">Nama Customer</span>
-          <span class="info-value">${salesOrderData.customer.nama_customer || salesOrderData.customer.nama_pelanggan || salesOrderData.customer.nama || salesOrderData.customer.name || 'N/A'}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Alamat</span>
-          <span class="info-value">${salesOrderData.customer.alamat || salesOrderData.customer.address || salesOrderData.customer.kota || 'N/A'}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Telepon</span>
-          <span class="info-value">${salesOrderData.customer.telepon || salesOrderData.customer.telepon_hp || salesOrderData.customer.phone || 'N/A'}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Contact Person</span>
-          <span class="info-value">${salesOrderData.customer.contact_person || salesOrderData.customer.contactPerson || salesOrderData.customer.pic || salesOrderData.customer.cp || 'N/A'}</span>
+        <div style="width: 48%;">
+          ${salesOrderData.customer ? `
+          <div class="customer-section" style="margin-bottom: 0; padding: 10px 15px; height: 100%; box-sizing: border-box;">
+            <div class="customer-title" style="margin-bottom: 6px;">Informasi Customer</div>
+            <div class="info-row">
+              <span class="info-label">Nama Customer</span>
+              <span class="info-value">${salesOrderData.customer.nama_customer || salesOrderData.customer.nama_pelanggan || salesOrderData.customer.nama || salesOrderData.customer.name || 'N/A'}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Alamat</span>
+              <span class="info-value">${salesOrderData.customer.alamat || salesOrderData.customer.address || salesOrderData.customer.kota || 'N/A'}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Telepon</span>
+              <span class="info-value">${salesOrderData.customer.telepon || salesOrderData.customer.telepon_hp || salesOrderData.customer.phone || 'N/A'}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Contact Person</span>
+              <span class="info-value">${salesOrderData.customer.contact_person || salesOrderData.customer.contactPerson || salesOrderData.customer.pic || salesOrderData.customer.cp || 'N/A'}</span>
+            </div>
+          </div>
+          ` : ''}
         </div>
       </div>
-      ` : ''}
       
       <table>
         <thead>
