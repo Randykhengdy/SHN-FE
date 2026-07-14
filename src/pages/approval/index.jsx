@@ -126,13 +126,24 @@ export default function ApprovalPage() {
   const handleApproveConfirm = async () => {
     try {
       setApprovingId(selectedRequest?.id || null);
-      const response = await itemBarangRequestService.approve(selectedRequest.id, { approval_notes: approveNotes || "" });
-      console.log('✅ Item request approved:', response);
-      setShowApproveModal(false);
-      setApproveNotes("");
-      showAlert("Sukses", "Request item barang disetujui!", "success", () => {
-        loadItemRequests(false);
-      });
+      let response;
+      if (selectedRequest.status === 'approved_kirim') {
+        response = await itemBarangRequestService.approve(selectedRequest.id, { approval_notes: approveNotes || "" });
+        console.log('✅ Item request approved receipt:', response);
+        setShowApproveModal(false);
+        setApproveNotes("");
+        showAlert("Sukses", "Penerimaan request item barang disetujui!", "success", () => {
+          loadItemRequests(false);
+        });
+      } else {
+        response = await itemBarangRequestService.approveKirim(selectedRequest.id, { approval_notes: approveNotes || "" });
+        console.log('✅ Item request approved shipping:', response);
+        setShowApproveModal(false);
+        setApproveNotes("");
+        showAlert("Sukses", "Pengiriman request item barang disetujui!", "success", () => {
+          loadItemRequests(false);
+        });
+      }
     } catch (error) {
       console.error('❌ Error approving request:', error);
       showAlert("Error", "Gagal menyetujui request", "error");
@@ -245,6 +256,8 @@ export default function ApprovalPage() {
         return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
       case 'reviewed':
         return <Badge className="bg-blue-100 text-blue-800"><Clock className="w-3 h-3 mr-1" />Reviewed</Badge>;
+      case 'approved_kirim':
+        return <Badge className="bg-orange-100 text-orange-800"><Clock className="w-3 h-3 mr-1" />Disetujui Kirim</Badge>;
       case 'approved':
         return <Badge className="bg-green-100 text-green-800"><Check className="w-3 h-3 mr-1" />Disetujui</Badge>;
       case 'rejected':
@@ -343,20 +356,22 @@ export default function ApprovalPage() {
                                     >
                                       <Eye className="w-4 h-4" />
                                     </Button>
-                                    {request.status === 'pending' && (
+                                    {['pending', 'reviewed', 'approved_kirim'].includes(request.status) && (
                                       <>
-                                        <Button
-                                          size="sm"
-                                          className="bg-green-600 hover:bg-green-700"
-                                          onClick={() => handleApprove(request)}
-                                          title="Setujui"
-                                        >
-                                          {approvingId === request.id ? (
-                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                          ) : (
-                                            <Check className="w-4 h-4" />
-                                          )}
-                                        </Button>
+                                        {request.status !== 'pending' && (
+                                          <Button
+                                            size="sm"
+                                            className="bg-green-600 hover:bg-green-700"
+                                            onClick={() => handleApprove(request)}
+                                            title={request.status === 'approved_kirim' ? "Setujui Penerimaan" : "Setujui Kirim"}
+                                          >
+                                            {approvingId === request.id ? (
+                                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                            ) : (
+                                              <Check className="w-4 h-4" />
+                                            )}
+                                          </Button>
+                                        )}
                                         <Button
                                           size="sm"
                                           variant="destructive"

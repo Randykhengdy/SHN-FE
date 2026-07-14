@@ -1349,15 +1349,20 @@ export const generateItemRequestPrintContent = (req, title = "BUKTI KONVERSI") =
   const isSuratJalan = title.toUpperCase().includes("SURAT JALAN");
   const signatureHtml = isSuratJalan ? `
     <div style="margin-top: 40px; display: flex; justify-content: space-between; page-break-inside: avoid;">
-      <div style="text-align: center; width: 40%;">
-        <p style="margin-bottom: 5px; margin-top: 0; font-size: 13px;">Diserahkan,</p>
-        <p style="margin-bottom: 60px; font-weight: bold; margin-top: 0;">Kepala Gudang</p>
-        <p>( _______________________ )</p>
+      <div style="text-align: center; width: 30%;">
+        <p style="margin-bottom: 5px; margin-top: 0; font-size: 13px;">Diterima oleh,</p>
+        <p style="margin-bottom: 60px; font-weight: bold; margin-top: 0; visibility: hidden;">&nbsp;</p>
+        <p>( _________________ )</p>
       </div>
-      <div style="text-align: center; width: 40%;">
+      <div style="text-align: center; width: 30%;">
         <p style="margin-bottom: 5px; margin-top: 0; font-size: 13px;">Dibawa oleh,</p>
         <p style="margin-bottom: 60px; font-weight: bold; margin-top: 0;">Driver</p>
-        <p>( _______________________ )</p>
+        <p>( _________________ )</p>
+      </div>
+      <div style="text-align: center; width: 30%;">
+        <p style="margin-bottom: 5px; margin-top: 0; font-size: 13px;">Diserahkan,</p>
+        <p style="margin-bottom: 60px; font-weight: bold; margin-top: 0;">Kepala Gudang</p>
+        <p>( _________________ )</p>
       </div>
     </div>
   ` : '';
@@ -1377,7 +1382,7 @@ export const generateItemRequestPrintContent = (req, title = "BUKTI KONVERSI") =
         .document-title { font-size: 16px; font-weight: bold; margin-top: 6px; }
         .info { margin-top: 16px; }
         .row { display: flex; gap: 8px; margin: 4px 0; }
-        .label { min-width: 160px; font-weight: bold; }
+        .label { min-width: 120px; font-weight: bold; }
         table { width: 100%; border-collapse: collapse; margin-top: 16px; }
         th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 8px; text-align: left; }
         td { border: 1px solid #ddd; padding: 8px; }
@@ -1393,12 +1398,16 @@ export const generateItemRequestPrintContent = (req, title = "BUKTI KONVERSI") =
           <div class="document-title">${title}</div>
         </div>
       </div>
-      <div class="info">
-        <div class="row"><div class="label">Nomor Request</div><div>${safe(req.nomor_request)}</div></div>
-        <div class="row"><div class="label">Tanggal Request</div><div>${req.requested_at ? new Date(req.requested_at).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</div></div>
-        <div class="row"><div class="label">Requestor</div><div>${safe(req.requested_by?.name || req.requestor)}</div></div>
-        <div class="row"><div class="label">Gudang Asal</div><div>${safe(req.asal_gudang?.nama_gudang || req.gudang_asal_nama)}</div></div>
-        <div class="row"><div class="label">Gudang Tujuan</div><div>${safe(req.tujuan_gudang?.nama_gudang || req.gudang_tujuan_nama)}</div></div>
+      <div class="info" style="display: flex; justify-content: space-between;">
+        <div style="width: 48%;">
+          <div class="row"><div class="label">Nomor Request</div><div>${safe(req.nomor_request)}</div></div>
+          <div class="row"><div class="label">Tanggal Request</div><div>${req.requested_at ? new Date(req.requested_at).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</div></div>
+          <div class="row"><div class="label">Requestor</div><div>${safe(req.requested_by?.name || req.requestor)}</div></div>
+        </div>
+        <div style="width: 48%;">
+          <div class="row"><div class="label">Gudang Asal</div><div>${safe(req.asal_gudang?.nama_gudang || req.gudang_asal_nama)}</div></div>
+          <div class="row"><div class="label">Gudang Tujuan</div><div>${safe(req.tujuan_gudang?.nama_gudang || req.gudang_tujuan_nama)}</div></div>
+        </div>
       </div>
       <table>
         <thead>

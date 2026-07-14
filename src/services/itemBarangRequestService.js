@@ -45,6 +45,14 @@ export const itemBarangRequestService = {
         });
     },
 
+    // Approve kirim item barang request (admin only)
+    approveKirim: async (id, data = {}) => {
+        return await request(`${API_ENDPOINTS.itemBarangRequest}/${id}/approve-kirim`, {
+            method: 'PATCH',
+            body: JSON.stringify(data)
+        });
+    },
+
     // Approve item barang request (admin only)
     approve: async (id, data = {}) => {
         return await request(`${API_ENDPOINTS.itemBarangRequest}/${id}/approve`, {

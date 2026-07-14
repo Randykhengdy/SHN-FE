@@ -88,6 +88,7 @@ export default function ViewItemBarangRequestPage() {
         const statusConfig = {
             pending: { variant: "secondary", label: "Pending" },
             reviewed: { variant: "outline", label: "Reviewed" },
+            approved_kirim: { variant: "warning", label: "Disetujui Kirim" },
             approved: { variant: "default", label: "Approved" },
             rejected: { variant: "destructive", label: "Rejected" },
         };
@@ -195,6 +196,30 @@ export default function ViewItemBarangRequestPage() {
         }
     };
 
+    const handleApproveKirim = async () => {
+        const unassigned = request.details.some(d => !d.assigned_items || d.assigned_items.length === 0);
+        if (unassigned) {
+            showAlert("error", "Semua item harus di-assign terlebih dahulu sebelum approve");
+            return;
+        }
+
+        try {
+            setSubmitting(true);
+            const response = await itemBarangRequestService.approveKirim(id);
+            if (response.success) {
+                showAlert("success", "Pengiriman request berhasil disetujui");
+                loadRequest();
+            } else {
+                showAlert("error", response.message || "Gagal menyetujui pengiriman request");
+            }
+        } catch (error) {
+            console.error("Error approving kirim:", error);
+            showAlert("error", "Terjadi kesalahan");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
     const handleApprove = async () => {
         const unassigned = request.details.some(d => !d.assigned_items || d.assigned_items.length === 0);
         if (unassigned) {
@@ -206,10 +231,10 @@ export default function ViewItemBarangRequestPage() {
             setSubmitting(true);
             const response = await itemBarangRequestService.approve(id);
             if (response.success) {
-                showAlert("success", "Request berhasil disetujui");
+                showAlert("success", "Penerimaan request berhasil disetujui");
                 loadRequest();
             } else {
-                showAlert("error", response.message || "Gagal menyetujui request");
+                showAlert("error", response.message || "Gagal menyetujui penerimaan request");
             }
         } catch (error) {
             console.error("Error approving:", error);
@@ -421,7 +446,7 @@ export default function ViewItemBarangRequestPage() {
                         )}
 
                         {/* Admin Action Bar */}
-                        {isAdminUser && (request.status === 'pending' || request.status === 'reviewed') && (
+                        {isAdminUser && ['pending', 'reviewed', 'approved_kirim'].includes(request.status) && (
                             <div className="flex flex-col md:flex-row gap-4 justify-end pt-8 border-t">
                                 <Button
                                     variant="outline"
@@ -432,14 +457,16 @@ export default function ViewItemBarangRequestPage() {
                                     <X className="h-4 w-4 mr-2" />
                                     Tolak Request
                                 </Button>
-                                <Button
-                                    onClick={handleApprove}
-                                    disabled={submitting || request.status !== 'reviewed'}
-                                    className="bg-green-600 hover:bg-green-700"
-                                >
-                                    <Check className="h-4 w-4 mr-2" />
-                                    Approve Request
-                                </Button>
+                                {request.status !== 'pending' && (
+                                    <Button
+                                        onClick={request.status === 'approved_kirim' ? handleApprove : handleApproveKirim}
+                                        disabled={submitting}
+                                        className="bg-green-600 hover:bg-green-700"
+                                    >
+                                        <Check className="h-4 w-4 mr-2" />
+                                        {request.status === 'approved_kirim' ? "Approve Penerimaan" : "Approve Pengiriman"}
+                                    </Button>
+                                )}
                             </div>
                         )}
                     </CardContent>
