@@ -111,6 +111,7 @@ export default function KonversiBarangPage() {
                 quantity: kb.quantity,
                 status: kb.jenis_potongan || "N/A",
                 nomor_so: kb.sales_order?.nomor_so || "-",
+                totalKG: kb.berat != null ? `${parseFloat(kb.berat)} kg` : "-",
             }));
 
             setItemBarang(transformedData);
