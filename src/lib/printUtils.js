@@ -28,7 +28,7 @@ export const generatePodPrintContent = (podData) => {
         .document-title { font-size: 18px; font-weight: bold; margin-bottom: 20px; line-height: 1.2; }
         .info-section { margin-bottom: 20px; }
         .info-row { display: flex; margin-bottom: 5px; }
-        .info-label { font-weight: bold; min-width: 200px; }
+        .info-label { font-weight: bold; min-width: 160px; }
         .info-value { margin-left: 1px; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 10px; text-align: left; }
@@ -49,36 +49,40 @@ export const generatePodPrintContent = (podData) => {
         </div>
       </div>
       
-      <div class="info-section">
-        <div class="info-row">
-          <span class="info-label">Nomor Surat Jalan</span>
-          <span class="info-value">${podData.nomor_pod}</span>
+      <div class="info-section" style="display: flex; justify-content: space-between;">
+        <div style="width: 48%;">
+          <div class="info-row">
+            <span class="info-label">Nomor Surat Jalan</span>
+            <span class="info-value">${podData.nomor_pod}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Nomor WO</span>
+            <span class="info-value">${podData.nomor_wo}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Nomor SO</span>
+            <span class="info-value">${podData.nomor_so}</span>
+          </div>
         </div>
-        <div class="info-row">
-          <span class="info-label">Nomor WO</span>
-          <span class="info-value">${podData.nomor_wo}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Nomor SO</span>
-          <span class="info-value">${podData.nomor_so}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Nama Customer</span>
-          <span class="info-value">${podData.nama_customer}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Tanggal Cetak Pertama</span>
-          <span class="info-value">${new Date(podData.tanggal_cetak_pod).toLocaleDateString('id-ID', {
+        <div style="width: 48%;">
+          <div class="info-row">
+            <span class="info-label">Nama Customer</span>
+            <span class="info-value">${podData.nama_customer}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Cetak Pertama</span>
+            <span class="info-value">${new Date(podData.tanggal_cetak_pod).toLocaleDateString('id-ID', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
   })}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Metode Handover</span>
-          <span class="info-value">${podData.handover_method}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Metode Handover</span>
+            <span class="info-value">${podData.handover_method}</span>
+          </div>
         </div>
       </div>
       
@@ -328,7 +332,7 @@ export const generateInvoicePrintContent = (invoiceData) => {
         .document-title { font-size: 18px; font-weight: bold; margin-bottom: 20px; line-height: 1.2; }
         .info-section { margin-bottom: 20px; }
         .info-row { display: flex; margin-bottom: 5px; }
-        .info-label { font-weight: bold; min-width: 200px; }
+        .info-label { font-weight: bold; min-width: 140px; }
         .info-value { margin-left: 1px; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 10px; text-align: left; }
@@ -355,36 +359,40 @@ export const generateInvoicePrintContent = (invoiceData) => {
         </div>
       </div>
       
-      <div class="info-section">
-        <div class="info-row">
-          <span class="info-label">Nomor Invoice</span>
-          <span class="info-value">${invoiceData.nomor_invoice}</span>
+      <div class="info-section" style="display: flex; justify-content: space-between;">
+        <div style="width: 48%;">
+          <div class="info-row">
+            <span class="info-label">Nomor Invoice</span>
+            <span class="info-value">${invoiceData.nomor_invoice}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Nomor WO</span>
+            <span class="info-value">${invoiceData.nomor_wo}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Nomor SO</span>
+            <span class="info-value">${invoiceData.nomor_so}</span>
+          </div>
         </div>
-        <div class="info-row">
-          <span class="info-label">Nomor WO</span>
-          <span class="info-value">${invoiceData.nomor_wo}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Nomor SO</span>
-          <span class="info-value">${invoiceData.nomor_so}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Nama Customer</span>
-          <span class="info-value">${invoiceData.nama_customer}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Tanggal Cetak</span>
-          <span class="info-value">${new Date(invoiceData.tanggal_cetak_invoice).toLocaleDateString('id-ID', {
+        <div style="width: 48%;">
+          <div class="info-row">
+            <span class="info-label">Nama Customer</span>
+            <span class="info-value">${invoiceData.nama_customer}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Tanggal Cetak</span>
+            <span class="info-value">${new Date(invoiceData.tanggal_cetak_invoice).toLocaleDateString('id-ID', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
   })}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Metode Handover</span>
-          <span class="info-value">${invoiceData.handover_method}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Metode Handover</span>
+            <span class="info-value">${invoiceData.handover_method}</span>
+          </div>
         </div>
       </div>
       
