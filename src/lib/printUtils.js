@@ -1344,14 +1344,30 @@ export const openPrintDialog = (printContent) => {
   }, 500);
 };
 
-export const generateItemRequestPrintContent = (req) => {
+export const generateItemRequestPrintContent = (req, title = "BUKTI KONVERSI") => {
   const safe = (v) => (v ?? "-");
+  const isSuratJalan = title.toUpperCase().includes("SURAT JALAN");
+  const signatureHtml = isSuratJalan ? `
+    <div style="margin-top: 40px; display: flex; justify-content: space-between; page-break-inside: avoid;">
+      <div style="text-align: center; width: 40%;">
+        <p style="margin-bottom: 5px; margin-top: 0; font-size: 13px;">Diserahkan,</p>
+        <p style="margin-bottom: 60px; font-weight: bold; margin-top: 0;">Kepala Gudang</p>
+        <p>( _______________________ )</p>
+      </div>
+      <div style="text-align: center; width: 40%;">
+        <p style="margin-bottom: 5px; margin-top: 0; font-size: 13px;">Dibawa oleh,</p>
+        <p style="margin-bottom: 60px; font-weight: bold; margin-top: 0;">Driver</p>
+        <p>( _______________________ )</p>
+      </div>
+    </div>
+  ` : '';
+
   return `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8" />
-      <title>BUKTI KONVERSI - ${safe(req.nomor_request)}</title>
+      <title>${title} - ${safe(req.nomor_request)}</title>
       <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         .header { display: flex; align-items: flex-start; margin-bottom: 24px; position: relative; min-height: 80px; }
@@ -1374,7 +1390,7 @@ export const generateItemRequestPrintContent = (req) => {
         <img src="${LOGO_BASE64}" alt="PT. SHN Logo" class="logo" />
         <div class="header-content">
           <div class="company-name">PT. SURYA HARSA NAGARA</div>
-          <div class="document-title">BUKTI KONVERSI</div>
+          <div class="document-title">${title}</div>
         </div>
       </div>
       <div class="info">
@@ -1412,6 +1428,7 @@ export const generateItemRequestPrintContent = (req) => {
           `).join('')}
         </tbody>
       </table>
+      ${signatureHtml}
       <div class="footer">Dokumen ini dicetak pada: ${new Date().toLocaleString('id-ID')}</div>
     </body>
     </html>

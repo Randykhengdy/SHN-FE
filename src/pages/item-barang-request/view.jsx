@@ -61,7 +61,7 @@ export default function ViewItemBarangRequestPage() {
         if (id) loadRequest();
     }, [id]);
 
-    const handlePrint = () => {
+    const handlePrint = (title) => {
         if (!request) return;
         const printData = {
             nomor_request: request.nomor_request || request.document_number,
@@ -80,7 +80,7 @@ export default function ViewItemBarangRequestPage() {
             })) || [],
             keterangan: request.keterangan || request.notes,
         };
-        const html = generateItemRequestPrintContent(printData);
+        const html = generateItemRequestPrintContent(printData, title);
         openPrintDialog(html);
     };
 
@@ -291,11 +291,19 @@ export default function ViewItemBarangRequestPage() {
                             <div className="flex gap-2">
                                 <Button
                                     size="sm"
-                                    onClick={handlePrint}
+                                    onClick={() => handlePrint("BUKTI KONVERSI")}
                                     className="bg-blue-600 hover:bg-blue-700 text-white"
                                 >
                                     <Printer className="h-4 w-4 mr-2" />
-                                    Cetak
+                                    Cetak Bukti Konversi
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    onClick={() => handlePrint("SURAT JALAN")}
+                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                >
+                                    <Printer className="h-4 w-4 mr-2" />
+                                    Cetak Surat Jalan
                                 </Button>
                             </div>
                         </div>

@@ -112,9 +112,10 @@ export const itemBarangService = {
     }
     const url = `${base}/item-barang/download-template`;
 
-    const response = await fetch(url, {
+    const response = await fetch(`${url}?t=${Date.now()}`, {
       method: "GET",
       headers: { ...getAuthHeader() },
+      cache: "no-store",
     });
 
     if (!response.ok) {
