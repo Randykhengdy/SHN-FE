@@ -167,23 +167,23 @@ export default function ItemBarangGroupPage() {
             setIsGenerating(true);
             const response = await itemBarangGroupService.generateGroup();
 
-            if (response?.status) {
-                showAlert({
-                    title: "Berhasil",
-                    message: response.message || "Group berhasil di-generate",
-                    type: "success"
-                });
+            if (response?.success) {
+                showAlert(
+                    "Berhasil",
+                    response.message || "Group berhasil di-generate",
+                    "success"
+                );
                 // Trigger refresh of the table
                 setRefreshTrigger(prev => prev + 1);
             } else {
                 throw new Error(response?.message || "Gagal generate group");
             }
         } catch (error) {
-            showAlert({
-                title: "Error",
-                message: error.message || "Terjadi kesalahan saat generate group",
-                type: "error"
-            });
+            showAlert(
+                "Error",
+                error.message || "Terjadi kesalahan saat generate group",
+                "error"
+            );
         } finally {
             setIsGenerating(false);
         }
