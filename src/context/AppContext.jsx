@@ -6,8 +6,13 @@ import { getCurrentRoleId } from '@/lib/utils';
 const AppContext = createContext({
   user: null,
   rolePermissionsData: null,
-  setUser: () => {},
-  setRolePermissionsData: () => {},
+  setUser: () => { },
+  setRolePermissionsData: () => { },
+  tabs: [],
+  activeTabId: null,
+  addTab: () => {},
+  closeTab: () => {},
+  switchTab: () => {},
 });
 
 export function AppProvider({ children }) {
@@ -51,7 +56,7 @@ export function AppProvider({ children }) {
       try {
         const grouped = await roleService.getRoleMenuPermissionsData(roleId);
         if (!cancelled) setRolePermissionsData(grouped);
-      } catch (_) {}
+      } catch (_) { }
     })();
     return () => { cancelled = true; };
   }, [rolePermissionsData]);
@@ -100,19 +105,8 @@ export function AppProvider({ children }) {
       return;
     }
 
-    // Check limit
-    if (tabs.length >= 5) {
-      // Trigger a global alert
-      const event = new CustomEvent('showAlert', {
-        detail: {
-          title: 'Batas Tab Tercapai',
-          message: 'Anda hanya dapat membuka maksimal 5 tab. Silakan tutup tab yang tidak digunakan.',
-          type: 'warning'
-        }
-      });
-      window.dispatchEvent(event);
-      return;
-    }
+    // Limit check removed.
+
 
     // Add new tab
     const newTab = {
@@ -120,7 +114,7 @@ export function AppProvider({ children }) {
       path,
       label: label || path.split('/').pop()?.replace(/-/g, ' ') || 'New Tab'
     };
-    
+
     setTabs(prev => [...prev, newTab]);
     setActiveTabId(newTab.id);
   };
@@ -128,14 +122,14 @@ export function AppProvider({ children }) {
   const closeTab = (id) => {
     setTabs(prev => {
       const newTabs = prev.filter(t => t.id !== id);
-      
+
       // If closing active tab, switch to another one
       if (id === activeTabId && newTabs.length > 0) {
         setActiveTabId(newTabs[newTabs.length - 1].id);
       } else if (newTabs.length === 0) {
         setActiveTabId(null);
       }
-      
+
       return newTabs;
     });
   };
@@ -148,13 +142,13 @@ export function AppProvider({ children }) {
   };
 
   return (
-    <AppContext.Provider value={{ 
-      user, 
-      rolePermissionsData, 
-      setUser, 
-      setRolePermissionsData, 
-      hasPermission, 
-      getPermissionsByMenuCode, 
+    <AppContext.Provider value={{
+      user,
+      rolePermissionsData,
+      setUser,
+      setRolePermissionsData,
+      hasPermission,
+      getPermissionsByMenuCode,
       hasAnyPermission,
       tabs,
       activeTabId,

@@ -9,7 +9,7 @@ export const itemBarangService = {
     return request(`/item-barang?${queryString}`, { method: "GET" });
   },
 
-  async getPaginated(page = 1, perPage = 10, search = "", sortBy = "", sortDir = "asc") {
+  async getPaginated(page = 1, perPage = 10, search = "", sortBy = "", sortDir = "asc", filters = {}) {
     const params = new URLSearchParams({
       search: search || "",
       page: page.toString(),
@@ -19,6 +19,12 @@ export const itemBarangService = {
     if (sortBy && sortDir) {
       params.append('sort', `${sortBy},${sortDir}`);
     }
+
+    Object.keys(filters).forEach(key => {
+      if (filters[key] !== null && filters[key] !== undefined && filters[key] !== '') {
+        params.append(key, filters[key]);
+      }
+    });
 
     return request(`/item-barang?${params}`, { method: "GET" });
   },

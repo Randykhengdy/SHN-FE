@@ -9,7 +9,7 @@ import { useAlert } from '@/hooks/useAlert';
 
 // Komponen wrapper yang mendeteksi auth page dan mengelola IPC
 const TabLayoutInner = () => {
-  const { tabs, activeTabId, closeTab, switchTab, addTab } = useAppContext();
+  const { tabs = [], activeTabId, closeTab, switchTab, addTab } = useAppContext() || {};
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -65,7 +65,7 @@ const TabLayoutInner = () => {
 
 // Komponen tab bar + content area
 const TabLayout = () => {
-  const { tabs, activeTabId, closeTab, switchTab } = useAppContext();
+  const { tabs = [], activeTabId, closeTab, switchTab } = useAppContext() || {};
   const { AlertComponent } = useAlert();
 
   const handleTabClick = (tab) => {

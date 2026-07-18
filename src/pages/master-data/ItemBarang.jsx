@@ -85,6 +85,176 @@ export default function ItemBarangPage() {
     fileInputRef.current.click();
   };
 
+  // Filter States
+  const [filterJenisBarang, setFilterJenisBarang] = useState("");
+  const [filterBentukBarang, setFilterBentukBarang] = useState("");
+  const [filterGradeBarang, setFilterGradeBarang] = useState("");
+  const [filterKodeBarang, setFilterKodeBarang] = useState("");
+  const [filterJenisPotongan, setFilterJenisPotongan] = useState("");
+  const [filterGudang, setFilterGudang] = useState("");
+  const [filterRak, setFilterRak] = useState("");
+
+  // Options States
+  const [optJenisBarang, setOptJenisBarang] = useState([]);
+  const [optBentukBarang, setOptBentukBarang] = useState([]);
+  const [optGradeBarang, setOptGradeBarang] = useState([]);
+  const [optGudang, setOptGudang] = useState([]);
+  const [optRak, setOptRak] = useState([]);
+
+  // Fetch options on mount
+  React.useEffect(() => {
+    jenisBarangService.getAll().then(res => {
+      setOptJenisBarang(res?.data || []);
+    }).catch(e => console.error("Error fetching jenis barang:", e));
+
+    bentukBarangService.getAll().then(res => {
+      setOptBentukBarang(res?.data || []);
+    }).catch(e => console.error("Error fetching bentuk barang:", e));
+
+    gradeBarangService.getAll().then(res => {
+      setOptGradeBarang(res?.data || []);
+    }).catch(e => console.error("Error fetching grade barang:", e));
+
+    gudangService.getAll().then(res => {
+      setOptGudang(res?.data || []);
+    }).catch(e => console.error("Error fetching gudang:", e));
+  }, []);
+
+  // Fetch Rak when filterGudang changes (if empty, fetch all Rak)
+  React.useEffect(() => {
+    const params = filterGudang ? { gudang_id: filterGudang } : {};
+    rakService.getAll(params).then(res => {
+      setOptRak(res?.data || []);
+    }).catch(e => console.error("Error fetching rak:", e));
+    setFilterRak("");
+  }, [filterGudang]);
+
+  const extraFilters = {
+    jenis_barang_id: filterJenisBarang || undefined,
+    bentuk_barang_id: filterBentukBarang || undefined,
+    grade_barang_id: filterGradeBarang || undefined,
+    kode_barang: filterKodeBarang || undefined,
+    jenis_potongan: filterJenisPotongan || undefined,
+    gudang_id: filterGudang || undefined,
+    id_rak: filterRak || undefined,
+  };
+
+  const customFilterSection = (
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+      <div className="flex flex-col gap-1.5">
+        <label className="font-semibold text-gray-700">Kode Barang</label>
+        <input
+          type="text"
+          placeholder="Cari Kode Barang..."
+          value={filterKodeBarang}
+          onChange={(e) => setFilterKodeBarang(e.target.value)}
+          className="border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full bg-white shadow-sm"
+        />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="font-semibold text-gray-700">Jenis Barang</label>
+        <select
+          value={filterJenisBarang}
+          onChange={(e) => setFilterJenisBarang(e.target.value)}
+          className="border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white shadow-sm cursor-pointer"
+        >
+          <option value="">Semua Jenis</option>
+          {optJenisBarang.map(it => (
+            <option key={it.id} value={it.id}>{it.nama_jenis || it.nama}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="font-semibold text-gray-700">Bentuk Barang</label>
+        <select
+          value={filterBentukBarang}
+          onChange={(e) => setFilterBentukBarang(e.target.value)}
+          className="border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white shadow-sm cursor-pointer"
+        >
+          <option value="">Semua Bentuk</option>
+          {optBentukBarang.map(it => (
+            <option key={it.id} value={it.id}>{it.nama_bentuk || it.nama}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="font-semibold text-gray-700">Grade Barang</label>
+        <select
+          value={filterGradeBarang}
+          onChange={(e) => setFilterGradeBarang(e.target.value)}
+          className="border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white shadow-sm cursor-pointer"
+        >
+          <option value="">Semua Grade</option>
+          {optGradeBarang.map(it => (
+            <option key={it.id} value={it.id}>{it.nama || it.kode}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="font-semibold text-gray-700">Jenis Potongan</label>
+        <select
+          value={filterJenisPotongan}
+          onChange={(e) => setFilterJenisPotongan(e.target.value)}
+          className="border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white shadow-sm cursor-pointer"
+        >
+          <option value="">Semua Jenis Potongan</option>
+          <option value="utuh">Utuh</option>
+          <option value="potongan">Potongan</option>
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="font-semibold text-gray-700">Gudang</label>
+        <select
+          value={filterGudang}
+          onChange={(e) => setFilterGudang(e.target.value)}
+          className="border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white shadow-sm cursor-pointer"
+        >
+          <option value="">Semua Gudang</option>
+          {optGudang.map(it => (
+            <option key={it.id} value={it.id}>{it.nama_gudang || it.nama}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="font-semibold text-gray-700">Rak</label>
+        <select
+          value={filterRak}
+          onChange={(e) => setFilterRak(e.target.value)}
+          className="border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white shadow-sm cursor-pointer"
+        >
+          <option value="">Semua Rak</option>
+          {optRak.map(it => (
+            <option key={it.id} value={it.id}>{it.kode_rak || it.nama_rak || it.nama}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex items-end justify-end">
+        <button
+          type="button"
+          onClick={() => {
+            setFilterJenisBarang("");
+            setFilterBentukBarang("");
+            setFilterGradeBarang("");
+            setFilterKodeBarang("");
+            setFilterJenisPotongan("");
+            setFilterGudang("");
+            setFilterRak("");
+          }}
+          className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-1.5 rounded-md text-sm font-medium transition-all shadow-sm border border-gray-350"
+        >
+          Reset Filter
+        </button>
+      </div>
+    </div>
+  );
+
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -334,6 +504,8 @@ export default function ItemBarangPage() {
         subtitle="Master Data"
         service={itemBarangService}
         canDelete={canDelete}
+        extraFilters={extraFilters}
+        customFilterSection={customFilterSection}
         customHeaderContent={
           <div className="flex items-center gap-2">
             <input

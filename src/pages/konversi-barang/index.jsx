@@ -14,6 +14,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { salesOrderService } from "@/services/salesOrderService";
 import { getGudangOptions } from "@/services/masterDataService";
+import {
+    jenisBarangService,
+    bentukBarangService,
+    gradeBarangService,
+    rakService
+} from "@/services/master-data";
 
 const statusOptions = [
     { value: "all", label: "Semua Status" },
@@ -33,6 +39,17 @@ export default function KonversiBarangPage() {
     const [statusFilter, setStatusFilter] = useState("all");
     const [gudangFilter, setGudangFilter] = useState("all");
     const [gudangOptions, setGudangOptions] = useState([]);
+
+    const [filterKodeBarang, setFilterKodeBarang] = useState("");
+    const [filterJenisBarang, setFilterJenisBarang] = useState("");
+    const [filterBentukBarang, setFilterBentukBarang] = useState("");
+    const [filterGradeBarang, setFilterGradeBarang] = useState("");
+    const [filterRak, setFilterRak] = useState("");
+
+    const [optJenisBarang, setOptJenisBarang] = useState([]);
+    const [optBentukBarang, setOptBentukBarang] = useState([]);
+    const [optGradeBarang, setOptGradeBarang] = useState([]);
+    const [optRak, setOptRak] = useState([]);
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
@@ -111,7 +128,27 @@ export default function KonversiBarangPage() {
             }
         };
         loadGudangs();
+
+        jenisBarangService.getAll().then(res => {
+            setOptJenisBarang(res?.data || []);
+        }).catch(e => console.error(e));
+
+        bentukBarangService.getAll().then(res => {
+            setOptBentukBarang(res?.data || []);
+        }).catch(e => console.error(e));
+
+        gradeBarangService.getAll().then(res => {
+            setOptGradeBarang(res?.data || []);
+        }).catch(e => console.error(e));
     }, []);
+
+    useEffect(() => {
+        const params = gudangFilter && gudangFilter !== "all" ? { gudang_id: gudangFilter } : {};
+        rakService.getAll(params).then(res => {
+            setOptRak(res?.data || []);
+        }).catch(e => console.error(e));
+        setFilterRak("");
+    }, [gudangFilter]);
 
     const loadItemBarang = useCallback(async () => {
         try {
@@ -121,7 +158,12 @@ export default function KonversiBarangPage() {
                 per_page: itemsPerPage,
                 search: search,
                 status: statusFilter,
-                gudang_id: gudangFilter !== "all" ? gudangFilter : undefined
+                gudang_id: gudangFilter !== "all" ? gudangFilter : undefined,
+                kode_barang: filterKodeBarang || undefined,
+                jenis_barang_id: filterJenisBarang || undefined,
+                bentuk_barang_id: filterBentukBarang || undefined,
+                grade_barang_id: filterGradeBarang || undefined,
+                rak_id: filterRak !== "all" && filterRak ? filterRak : undefined
             });
 
             // Transform API data to match our UI structure
@@ -145,7 +187,7 @@ export default function KonversiBarangPage() {
         } finally {
             setLoading(false);
         }
-    }, [currentPage, itemsPerPage, statusFilter, search, gudangFilter]);
+    }, [currentPage, itemsPerPage, statusFilter, search, gudangFilter, filterKodeBarang, filterJenisBarang, filterBentukBarang, filterGradeBarang, filterRak]);
 
     useEffect(() => {
         loadItemBarang();
@@ -206,6 +248,11 @@ export default function KonversiBarangPage() {
         setSearch("");
         setStatusFilter("all");
         setGudangFilter("all");
+        setFilterKodeBarang("");
+        setFilterJenisBarang("");
+        setFilterBentukBarang("");
+        setFilterGradeBarang("");
+        setFilterRak("");
         setCurrentPage(1);
     };
 
@@ -225,20 +272,35 @@ export default function KonversiBarangPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Cari:
+                            Cari (Nama Barang):
                         </label>
                         <Input
-                            placeholder="Cari"
+                            placeholder="Cari..."
                             value={search}
                             onChange={e => {
-                                setSearch(e.target.value);
-                                setCurrentPage(1);
-                            }} className="w-full box-border pr-8 relative"
+                                      setSearch(e.target.value);
+                                      setCurrentPage(1);
+                                  }}
+                            className="w-full"
                         />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Status:
+                            Kode Barang:
+                        </label>
+                        <Input
+                            placeholder="Kode Barang..."
+                            value={filterKodeBarang}
+                            onChange={e => {
+                                setFilterKodeBarang(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                            className="w-full"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Status (Jenis Potongan):
                         </label>
                         <Select value={statusFilter} onValueChange={(value) => {
                             setStatusFilter(value);
@@ -278,19 +340,100 @@ export default function KonversiBarangPage() {
                         </Select>
                     </div>
 
-                    <div className="flex flex-col gap-2">
-                        <Button
-                            variant="outline"
-                            onClick={loadItemBarang}
-                            disabled={loading}
-                            className="w-full"
-                        >
-                            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                            Refresh
-                        </Button>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Jenis Barang:
+                        </label>
+                        <Select value={filterJenisBarang || "all"} onValueChange={(value) => {
+                            setFilterJenisBarang(value === "all" ? "" : value);
+                            setCurrentPage(1);
+                        }}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Pilih Jenis Barang" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Semua Jenis</SelectItem>
+                                {optJenisBarang.map((option) => (
+                                    <SelectItem key={option.id} value={option.id.toString()}>
+                                        {option.nama_jenis || option.nama}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Bentuk Barang:
+                        </label>
+                        <Select value={filterBentukBarang || "all"} onValueChange={(value) => {
+                            setFilterBentukBarang(value === "all" ? "" : value);
+                            setCurrentPage(1);
+                        }}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Pilih Bentuk Barang" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Semua Bentuk</SelectItem>
+                                {optBentukBarang.map((option) => (
+                                    <SelectItem key={option.id} value={option.id.toString()}>
+                                        {option.nama_bentuk || option.nama}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Grade Barang:
+                        </label>
+                        <Select value={filterGradeBarang || "all"} onValueChange={(value) => {
+                            setFilterGradeBarang(value === "all" ? "" : value);
+                            setCurrentPage(1);
+                        }}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Pilih Grade Barang" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Semua Grade</SelectItem>
+                                {optGradeBarang.map((option) => (
+                                    <SelectItem key={option.id} value={option.id.toString()}>
+                                        {option.nama || option.kode}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Rak:
+                        </label>
+                        <Select value={filterRak || "all"} onValueChange={(value) => {
+                            setFilterRak(value === "all" ? "" : value);
+                            setCurrentPage(1);
+                        }}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Pilih Rak" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Semua Rak</SelectItem>
+                                {optRak.map((option) => (
+                                    <SelectItem key={option.id} value={option.id.toString()}>
+                                        {option.kode_rak || option.nama_rak || option.nama}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={loadItemBarang}
+                        disabled={loading}
+                    >
+                        <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                        Refresh Data
+                    </Button>
                     <Button variant="outline" onClick={handleClearFilter}>
                         Clear Filter
                     </Button>

@@ -28,6 +28,8 @@ export default function MasterDataLayout({
   menuCode = 'MASTER_DATA',
   canDelete: customCanDelete,
   canUpdate: customCanUpdate,
+  extraFilters = {},
+  customFilterSection = null,
 }) {
   const { showConfirm, showAlert, AlertComponent } = useAlert();
   const { hasPermission } = useAppContext();
@@ -74,10 +76,12 @@ export default function MasterDataLayout({
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
+  const extraFiltersStr = JSON.stringify(extraFilters);
+
   const fetchData = React.useCallback(async () => {
     setLoading(true);
     try {
-      const filters = {};
+      const filters = extraFilters ? JSON.parse(extraFiltersStr) : {};
       if (filterConfig && filterValue && String(filterValue).toLowerCase() !== 'semua') {
         filters[filterConfig.param || 'tipe_gudang'] = filterValue;
       }
@@ -98,7 +102,7 @@ export default function MasterDataLayout({
       console.error("Fetch error:", error.message);
     }
     setLoading(false);
-  }, [showTrashed, currentPage, itemsPerPage, debouncedSearchTerm, sortState.col, sortState.dir, service, filterValue]);
+  }, [showTrashed, currentPage, itemsPerPage, debouncedSearchTerm, sortState.col, sortState.dir, service, filterValue, extraFiltersStr]);
 
   useEffect(() => {
     fetchData();
@@ -470,6 +474,12 @@ export default function MasterDataLayout({
                 </div>
               </div>
             </div>
+
+            {customFilterSection && (
+              <div className="bg-white rounded-lg border border-gray-200/80 shadow-sm p-4 mb-4">
+                {customFilterSection}
+              </div>
+            )}
 
             {/* Table */}
             <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
