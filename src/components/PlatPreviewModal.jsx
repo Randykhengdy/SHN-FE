@@ -47,6 +47,7 @@ const PlatPreviewModal = ({
           diameter: parseFloat(currentItemData.diameter) || 0,
           sisi1: parseFloat(currentItemData.sisi1) || 0,
           sisi2: parseFloat(currentItemData.sisi2) || 0,
+          jenis_potongan: 'potongan',
           search: searchVal || null
         })
       });

@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { salesOrderService } from "@/services/salesOrderService";
+import { getGudangOptions } from "@/services/masterDataService";
 
 const statusOptions = [
     { value: "all", label: "Semua Status" },
@@ -30,6 +31,8 @@ export default function KonversiBarangPage() {
 
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
+    const [gudangFilter, setGudangFilter] = useState("all");
+    const [gudangOptions, setGudangOptions] = useState([]);
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
@@ -98,20 +101,40 @@ export default function KonversiBarangPage() {
         }
     }, [showSoModal, loadSalesOrders]);
 
+    useEffect(() => {
+        const loadGudangs = async () => {
+            try {
+                const options = await getGudangOptions();
+                setGudangOptions(options || []);
+            } catch (error) {
+                console.error("Error loading Gudang options:", error);
+            }
+        };
+        loadGudangs();
+    }, []);
+
     const loadItemBarang = useCallback(async () => {
         try {
             setLoading(true);
-            const result = await konversiBarangService.getAll({ page: currentPage, per_page: itemsPerPage, search: search, status: statusFilter });
+            const result = await konversiBarangService.getAll({
+                page: currentPage,
+                per_page: itemsPerPage,
+                search: search,
+                status: statusFilter,
+                gudang_id: gudangFilter !== "all" ? gudangFilter : undefined
+            });
 
             // Transform API data to match our UI structure
             const transformedData = result.data.map(kb => ({
                 id: kb.id,
                 convertDate: formatDate(kb.convert_date),
+                kode_barang: kb.kode_barang || "-",
                 item_barang: kb.nama_item_barang,
                 quantity: kb.quantity,
                 status: kb.jenis_potongan || "N/A",
                 nomor_so: kb.sales_order?.nomor_so || "-",
                 totalKG: kb.berat != null ? `${parseFloat(kb.berat)} kg` : "-",
+                gudang: kb.gudang?.nama_gudang || "-",
             }));
 
             setItemBarang(transformedData);
@@ -122,7 +145,7 @@ export default function KonversiBarangPage() {
         } finally {
             setLoading(false);
         }
-    }, [currentPage, itemsPerPage, statusFilter, search]);
+    }, [currentPage, itemsPerPage, statusFilter, search, gudangFilter]);
 
     useEffect(() => {
         loadItemBarang();
@@ -182,6 +205,7 @@ export default function KonversiBarangPage() {
     const handleClearFilter = () => {
         setSearch("");
         setStatusFilter("all");
+        setGudangFilter("all");
         setCurrentPage(1);
     };
 
@@ -232,6 +256,27 @@ export default function KonversiBarangPage() {
                             </SelectContent>
                         </Select>
                     </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Gudang:
+                        </label>
+                        <Select value={gudangFilter} onValueChange={(value) => {
+                            setGudangFilter(value);
+                            setCurrentPage(1);
+                        }}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Pilih Gudang" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Semua Gudang</SelectItem>
+                                {gudangOptions.map((option) => (
+                                    <SelectItem key={option.value} value={option.value.toString()}>
+                                        {option.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
 
                     <div className="flex flex-col gap-2">
                         <Button
@@ -265,6 +310,7 @@ export default function KonversiBarangPage() {
                             <TableRow className="bg-gray-50">
                                 <TableHead className="font-semibold">Waktu Konversi</TableHead>
                                 <TableHead className="font-semibold">Item</TableHead>
+                                <TableHead className="font-semibold">Gudang</TableHead>
                                 <TableHead className="font-semibold">Status</TableHead>
                                 <TableHead className="font-semibold">Sales Order</TableHead>
                                 <TableHead className="font-semibold">Quantity</TableHead>
@@ -292,7 +338,11 @@ export default function KonversiBarangPage() {
                                 itemBarang.map((ib) => (
                                     <TableRow key={ib.id} className="hover:bg-gray-50">
                                         <TableCell className="font-medium">{ib.convertDate}</TableCell>
-                                        <TableCell>{ib.item_barang}</TableCell>
+                                        <TableCell>
+                                            <div className="font-medium text-gray-900">{ib.item_barang}</div>
+                                            <div className="text-xs text-gray-500">{ib.kode_barang}</div>
+                                        </TableCell>
+                                        <TableCell>{ib.gudang}</TableCell>
                                         <TableCell>
                                             <Badge className={`${getStatusColor(ib.status)} capitalize`}>
                                                 {ib.status}

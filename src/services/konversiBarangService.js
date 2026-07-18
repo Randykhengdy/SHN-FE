@@ -4,10 +4,16 @@ import { API_ENDPOINTS } from "@/config/api";
 export const konversiBarangService = {
     // Get all stock mutations
     getAll: async (params = {}) => {
-        const queryString = new URLSearchParams(params).toString();
+        const cleanParams = {};
+        Object.keys(params).forEach(key => {
+            if (params[key] !== undefined && params[key] !== null) {
+                cleanParams[key] = params[key];
+            }
+        });
+        const queryString = new URLSearchParams(cleanParams).toString();
         return await request(`${API_ENDPOINTS.konversiBarang}?${queryString}`, {
             method: 'GET',
-            params
+            params: cleanParams
         });
     },
     changeStatusToPotongan: async (id, salesOrderId) => {

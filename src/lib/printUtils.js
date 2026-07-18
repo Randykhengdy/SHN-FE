@@ -307,7 +307,7 @@ export const generateInvoicePrintContent = (invoiceData) => {
       <td style="border: 1px solid #ddd; padding: 8px;">${item.unit?.toLowerCase() === 'dimensi' ? 'Dimensi (dalam pcs)' : (item.unit || '-')}</td>
       <td style="border: 1px solid #ddd; padding: 8px;">${item.dimensi_potong}</td>
       <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.qty}</td>
-      <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${item.total_kg} kg</td>
+      <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${(item.unit?.toLowerCase() === 'kg' || item.unit?.toLowerCase() === 'kilogram') ? `${item.total_kg} kg` : '-'}</td>
       <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">Rp ${parseFloat(item.harga_per_unit).toLocaleString('id-ID')}</td>
       <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">Rp ${parseFloat(item.total_harga).toLocaleString('id-ID')}</td>
     </tr>
@@ -820,7 +820,7 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
         .document-title { font-size: 16px; font-weight: bold; margin-bottom: 14px; line-height: 1.2; }
         .section { margin-bottom: 16px; }
         .info-row { display: flex; margin-bottom: 4px; }
-        .info-label { font-weight: bold; min-width: 180px; }
+        .info-label { font-weight: bold; min-width: 140px; }
         .info-value { margin-left: 1px; }
         table { width: 100%; border-collapse: collapse; margin-top: 14px; }
         th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
@@ -838,12 +838,16 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
         </div>
       </div>
 
-      <div class="section">
-        <div class="info-row"><span class="info-label">Nomor WO</span><span class="info-value">${woActualData.workOrderPlanning?.nomor_wo || 'N/A'}</span></div>
-        <div class="info-row"><span class="info-label">Tanggal WO</span><span class="info-value">${formatDate(woActualData.workOrderPlanning?.tanggal_wo)}</span></div>
-        <div class="info-row"><span class="info-label">Prioritas</span><span class="info-value">${woActualData.workOrderPlanning?.prioritas || 'N/A'}</span></div>
-        <div class="info-row"><span class="info-label">Status WO</span><span class="info-value">${woActualData.workOrderPlanning?.status || 'N/A'}</span></div>
-        <div class="info-row"><span class="info-label">Tanggal Actual</span><span class="info-value">${formatDate(woActualData.woActual?.tanggal_actual || woActualData.woActual?.created_at || new Date().toISOString())}</span></div>
+      <div class="section" style="display: flex; justify-content: space-between;">
+        <div style="width: 48%;">
+          <div class="info-row"><span class="info-label">Nomor WO</span><span class="info-value">${woActualData.workOrderPlanning?.nomor_wo || 'N/A'}</span></div>
+          <div class="info-row"><span class="info-label">Tanggal WO</span><span class="info-value">${formatDate(woActualData.workOrderPlanning?.tanggal_wo)}</span></div>
+          <div class="info-row"><span class="info-label">Tanggal Actual</span><span class="info-value">${formatDate(woActualData.woActual?.tanggal_actual || woActualData.woActual?.created_at || new Date().toISOString())}</span></div>
+        </div>
+        <div style="width: 48%;">
+          <div class="info-row"><span class="info-label">Prioritas</span><span class="info-value">${woActualData.workOrderPlanning?.prioritas || 'N/A'}</span></div>
+          <div class="info-row"><span class="info-label">Status WO</span><span class="info-value">${woActualData.workOrderPlanning?.status || 'N/A'}</span></div>
+        </div>
       </div>
 
       ${((woActualData.customer && !hideCustomer) || woActualData.warehouse) ? `
@@ -1048,7 +1052,7 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
         .document-title { font-size: 16px; font-weight: bold; margin-bottom: 14px; line-height: 1.2; }
         .section { margin-bottom: 16px; }
         .info-row { display: flex; margin-bottom: 4px; }
-        .info-label { font-weight: bold; min-width: 180px; }
+        .info-label { font-weight: bold; min-width: 140px; }
         .info-value { margin-left: 1px; }
         table { width: 100%; border-collapse: collapse; margin-top: 14px; }
         th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
@@ -1066,13 +1070,17 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
         </div>
       </div>
 
-      <div class="section">
-        <div class="info-row"><span class="info-label">Nomor WO</span><span class="info-value">${woPlanningData.nomor_wo || 'N/A'}</span></div>
-        <div class="info-row"><span class="info-label">Tanggal WO</span><span class="info-value">${formatDate(woPlanningData.tanggal_wo)}</span></div>
-        <div class="info-row"><span class="info-label">Tanggal Target</span><span class="info-value">${formatDate(woPlanningData.due_date || woPlanningData.tanggal_target)}</span></div>
-        <div class="info-row"><span class="info-label">Prioritas</span><span class="info-value">${woPlanningData.priority || woPlanningData.prioritas || 'N/A'}</span></div>
-        <div class="info-row"><span class="info-label">Status</span><span class="info-value">${woPlanningData.status || 'N/A'}</span></div>
-        <div class="info-row"><span class="info-label">Metode Handover</span><span class="info-value">${woPlanningData.assigned_to || woPlanningData.handover_method || 'N/A'}</span></div>
+      <div class="section" style="display: flex; justify-content: space-between;">
+        <div style="width: 48%;">
+          <div class="info-row"><span class="info-label">Nomor WO</span><span class="info-value">${woPlanningData.nomor_wo || 'N/A'}</span></div>
+          <div class="info-row"><span class="info-label">Tanggal WO</span><span class="info-value">${formatDate(woPlanningData.tanggal_wo)}</span></div>
+          <div class="info-row"><span class="info-label">Tanggal Target</span><span class="info-value">${formatDate(woPlanningData.due_date || woPlanningData.tanggal_target)}</span></div>
+        </div>
+        <div style="width: 48%;">
+          <div class="info-row"><span class="info-label">Prioritas</span><span class="info-value">${woPlanningData.priority || woPlanningData.prioritas || 'N/A'}</span></div>
+          <div class="info-row"><span class="info-label">Status</span><span class="info-value">${woPlanningData.status || 'N/A'}</span></div>
+          <div class="info-row"><span class="info-label">Metode Handover</span><span class="info-value">${woPlanningData.assigned_to || woPlanningData.handover_method || 'N/A'}</span></div>
+        </div>
       </div>
 
       ${((woPlanningData.customer && !options.hideCustomerName) || woPlanningData.warehouse) ? `

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { useAppContext } from "@/context/AppContext";
 import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { format } from "date-fns";
@@ -9,6 +10,7 @@ import { workshopDashboardService } from "@/services/dashboards/workshopDashboar
 registerLocale("id", id);
 
 const DashboardWorkshopPage = () => {
+  const { addTab } = useAppContext();
   const [workOrders, setWorkOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -430,13 +432,20 @@ const DashboardWorkshopPage = () => {
                         lineHeight: "1.2"
                       }}>{wo.nama_customer || "-"}</td>
                     )}
-                    <td style={{ 
-                      border: "1px solid #4a4a4a", 
-                      padding: "4px 6px",
-                      color: textColor,
-                      fontSize: `${fontSize}px`,
-                      lineHeight: "1.2"
-                    }}>{wo.nomor_so || "-"}</td>
+                      <td 
+                       onClick={() => wo.sales_order_id && addTab(`/sales-order/view/${wo.sales_order_id}`, `SO: ${wo.nomor_so}`)}
+                       style={{ 
+                         border: "1px solid #4a4a4a", 
+                         padding: "4px 6px",
+                         color: textColor,
+                         fontSize: `${fontSize}px`,
+                         lineHeight: "1.2",
+                         cursor: wo.sales_order_id ? "pointer" : "default",
+                         textDecoration: wo.sales_order_id ? "underline" : "none"
+                       }}
+                      >
+                        {wo.nomor_so || "-"}
+                      </td>
                     <td style={{ 
                       border: "1px solid #4a4a4a", 
                       padding: "4px 6px",
@@ -451,13 +460,20 @@ const DashboardWorkshopPage = () => {
                       hour: "2-digit", 
                       minute: "2-digit" 
                     }) : "-"}</td>
-                    <td style={{ 
-                      border: "1px solid #4a4a4a", 
-                      padding: "4px 6px",
-                      color: textColor,
-                      fontSize: `${fontSize}px`,
-                      lineHeight: "1.2"
-                    }}>{wo.nomor_wo || "-"}</td>
+                      <td 
+                       onClick={() => wo.work_order_planning_id && addTab(`/work-order/view/${wo.work_order_planning_id}`, `WO: ${wo.nomor_wo}`)}
+                       style={{ 
+                         border: "1px solid #4a4a4a", 
+                         padding: "4px 6px",
+                         color: textColor,
+                         fontSize: `${fontSize}px`,
+                         lineHeight: "1.2",
+                         cursor: wo.work_order_planning_id ? "pointer" : "default",
+                         textDecoration: wo.work_order_planning_id ? "underline" : "none"
+                       }}
+                      >
+                        {wo.nomor_wo || "-"}
+                      </td>
                     <td style={{ 
                       border: "1px solid #4a4a4a", 
                       padding: "4px 6px",
