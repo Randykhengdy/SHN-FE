@@ -44,6 +44,20 @@ export default function AddWorkOrderPage() {
   const { showAlert, showConfirm, AlertComponent } = useAlert();
   const SARAN_PER_PAGE = 6;
 
+  // Function to get initial estimate done time (UTC+7, +30 minutes)
+  const getInitialEstimateDone = () => {
+    const now = new Date();
+    const utc7Time = new Date(now.getTime() + (7 * 60 * 60000) + (30 * 60000));
+    
+    const pad = (n) => n.toString().padStart(2, '0');
+    const yyyy = utc7Time.getUTCFullYear();
+    const MM = pad(utc7Time.getUTCMonth() + 1);
+    const dd = pad(utc7Time.getUTCDate());
+    const hh = pad(utc7Time.getUTCHours());
+    const mm = pad(utc7Time.getUTCMinutes());
+    return `${yyyy}-${MM}-${dd}T${hh}:${mm}`;
+  };
+
   // Work Order Planning State
   const [workOrderData, setWorkOrderData] = useState({
     nomor_wo: '',
@@ -52,7 +66,7 @@ export default function AddWorkOrderPage() {
     gudang_id: '',
     pelanggan_id: '',
     sales_order_id: '',
-    estimate_done: new Date().toISOString().slice(0, 16), // Default to today with current time
+    estimate_done: getInitialEstimateDone(),
     catatan: '',
     status: 'Pending',
     prioritas: 'MEDIUM',
