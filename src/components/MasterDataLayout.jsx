@@ -498,7 +498,7 @@ export default function MasterDataLayout({
                       {displayedColumns.map((col) => (
                         <th
                           key={col.key}
-                          className={`px-4 py-3 text-sm font-semibold group ${col.key === 'actions' ? 'cursor-default' : 'cursor-pointer hover:bg-gray-100/80 hover:text-blue-600 transition-colors duration-200'
+                          className={`px-4 py-3 text-sm font-semibold group whitespace-nowrap ${col.key === 'actions' ? 'cursor-default' : 'cursor-pointer hover:bg-gray-100/80 hover:text-blue-600 transition-colors duration-200'
                             }`}
                           style={{
                             textAlign: col.align || 'left',
@@ -514,7 +514,7 @@ export default function MasterDataLayout({
                           </div>
                         </th>
                       ))}
-                      <th className="px-4 py-3 text-sm font-semibold text-left min-w-[120px] hover:text-blue-600 transition-colors duration-200">
+                      <th className="px-4 py-3 text-sm font-semibold text-left min-w-[120px] whitespace-nowrap hover:text-blue-600 transition-colors duration-200">
                         <span className="inline-flex items-center gap-1 justify-start">
                           Aksi
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
