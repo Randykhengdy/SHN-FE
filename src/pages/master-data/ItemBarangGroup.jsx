@@ -17,6 +17,125 @@ export default function ItemBarangGroupPage() {
     const { showAlert, AlertComponent } = useAlert();
     const fileInputRef = useRef(null);
 
+    // Filter States
+    const [filterNamaBarang, setFilterNamaBarang] = useState("");
+    const [filterDimensi, setFilterDimensi] = useState("");
+    const [filterJenisBarang, setFilterJenisBarang] = useState("");
+    const [filterBentukBarang, setFilterBentukBarang] = useState("");
+    const [filterGradeBarang, setFilterGradeBarang] = useState("");
+
+    // Options States
+    const [optJenisBarang, setOptJenisBarang] = useState([]);
+    const [optBentukBarang, setOptBentukBarang] = useState([]);
+    const [optGradeBarang, setOptGradeBarang] = useState([]);
+
+    // Fetch options on mount
+    React.useEffect(() => {
+        jenisBarangService.getAll().then(res => {
+            setOptJenisBarang(res?.data || []);
+        }).catch(e => console.error("Error fetching jenis barang:", e));
+
+        bentukBarangService.getAll().then(res => {
+            setOptBentukBarang(res?.data || []);
+        }).catch(e => console.error("Error fetching bentuk barang:", e));
+
+        gradeBarangService.getAll().then(res => {
+            setOptGradeBarang(res?.data || []);
+        }).catch(e => console.error("Error fetching grade barang:", e));
+    }, []);
+
+    const extraFilters = {
+        nama_barang: filterNamaBarang || undefined,
+        dimensi: filterDimensi || undefined,
+        jenis_barang_id: filterJenisBarang || undefined,
+        bentuk_barang_id: filterBentukBarang || undefined,
+        grade_barang_id: filterGradeBarang || undefined,
+    };
+
+    const customFilterSection = (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+            <div className="flex flex-col gap-1.5">
+                <label className="font-semibold text-gray-700">Nama Barang</label>
+                <input
+                    type="text"
+                    placeholder="Cari nama barang..."
+                    value={filterNamaBarang}
+                    onChange={(e) => setFilterNamaBarang(e.target.value)}
+                    className="border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full bg-white shadow-sm"
+                />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+                <label className="font-semibold text-gray-700">Dimensi</label>
+                <input
+                    type="text"
+                    placeholder="Cari dimensi..."
+                    value={filterDimensi}
+                    onChange={(e) => setFilterDimensi(e.target.value)}
+                    className="border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full bg-white shadow-sm"
+                />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+                <label className="font-semibold text-gray-700">Jenis Barang</label>
+                <select
+                    value={filterJenisBarang}
+                    onChange={(e) => setFilterJenisBarang(e.target.value)}
+                    className="border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white shadow-sm cursor-pointer"
+                >
+                    <option value="">Semua Jenis</option>
+                    {optJenisBarang.map(it => (
+                        <option key={it.id} value={it.id}>{it.nama_jenis || it.nama}</option>
+                    ))}
+                </select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+                <label className="font-semibold text-gray-700">Bentuk Barang</label>
+                <select
+                    value={filterBentukBarang}
+                    onChange={(e) => setFilterBentukBarang(e.target.value)}
+                    className="border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white shadow-sm cursor-pointer"
+                >
+                    <option value="">Semua Bentuk</option>
+                    {optBentukBarang.map(it => (
+                        <option key={it.id} value={it.id}>{it.nama_bentuk || it.nama}</option>
+                    ))}
+                </select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+                <label className="font-semibold text-gray-700">Grade Barang</label>
+                <select
+                    value={filterGradeBarang}
+                    onChange={(e) => setFilterGradeBarang(e.target.value)}
+                    className="border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white shadow-sm cursor-pointer"
+                >
+                    <option value="">Semua Grade</option>
+                    {optGradeBarang.map(it => (
+                        <option key={it.id} value={it.id}>{it.nama || it.kode}</option>
+                    ))}
+                </select>
+            </div>
+
+            <div className="md:col-span-5 flex justify-end mt-2">
+                <button
+                    type="button"
+                    onClick={() => {
+                        setFilterNamaBarang("");
+                        setFilterDimensi("");
+                        setFilterJenisBarang("");
+                        setFilterBentukBarang("");
+                        setFilterGradeBarang("");
+                    }}
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-1.5 rounded-md text-sm font-medium transition-all shadow-sm border border-gray-300"
+                >
+                    Reset Filter
+                </button>
+            </div>
+        </div>
+    );
+
     const handleImport = async (event) => {
         const file = event.target.files[0];
         if (!file) return;
@@ -78,6 +197,8 @@ export default function ItemBarangGroupPage() {
                 subtitle="Master Data"
                 service={itemBarangGroupService}
                 refreshTrigger={refreshTrigger}
+                extraFilters={extraFilters}
+                customFilterSection={customFilterSection}
                 customHeaderContent={
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2">
