@@ -947,17 +947,17 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
 
   const itemsHtml = (woPlanningData.items || []).map((item, idx) => `
     <tr>
-      <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${idx + 1}</td>
-      <td style="border: 1px solid #ddd; padding: 6px;">${item.jenisBarang?.nama_jenis_barang || item.jenisBarang?.nama || '-'}</td>
-      <td style="border: 1px solid #ddd; padding: 6px;">${item.bentukBarang?.nama_bentuk_barang || item.bentukBarang?.nama_bentuk || item.bentukBarang?.nama || '-'}</td>
-      <td style="border: 1px solid #ddd; padding: 6px;">${item.gradeBarang?.nama_grade_barang || item.gradeBarang?.nama_grade || item.gradeBarang?.nama || '-'}</td>
-      <td style="border: 1px solid #ddd; padding: 6px;">${item.groupBarangName || item.item_barang_group_name || item.item_barang_group?.nama_group_barang || '-'}</td>
-      <td style="border: 1px solid #ddd; padding: 6px;">${item.bentukBarang?.dimensi || item.dimensi || `${Math.round(parseFloat(item.panjang) || 0)}x${Math.round(parseFloat(item.lebar) || 0)}x${Math.round(parseFloat(item.ketebalan || item.tebal) || 0)}`}</td>
-      <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">${item.qtyPlanning ?? item.qty ?? 0}</td>
-      <td style="border: 1px solid #ddd; padding: 6px;">${item.jenisPotongan || item.jenis_potongan || '-'}</td>
-      <td style="border: 1px solid #ddd; padding: 6px;">${item.keterangan || item.catatan || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 4px; text-align: center;">${idx + 1}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${item.jenisBarang?.nama_jenis_barang || item.jenisBarang?.nama || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${item.bentukBarang?.nama_bentuk_barang || item.bentukBarang?.nama_bentuk || item.bentukBarang?.nama || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${item.gradeBarang?.nama_grade_barang || item.gradeBarang?.nama_grade || item.gradeBarang?.nama || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${item.groupBarangName || item.item_barang_group_name || item.item_barang_group?.nama_group_barang || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${item.bentukBarang?.dimensi || item.dimensi || `${Math.round(parseFloat(item.panjang) || 0)}x${Math.round(parseFloat(item.lebar) || 0)}x${Math.round(parseFloat(item.ketebalan || item.tebal) || 0)}`}</td>
+      <td style="border: 1px solid #ddd; padding: 4px; text-align: right;">${item.qtyPlanning ?? item.qty ?? 0}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${item.jenisPotongan || item.jenis_potongan || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${item.keterangan || item.catatan || '-'}</td>
     </tr>
-  `).join('') || '<tr><td colspan="9" style="text-align: center; padding: 12px;">Tidak ada item</td></tr>';
+  `).join('') || '<tr><td colspan="9" style="text-align: center; padding: 20px;">Tidak ada item</td></tr>';
 
   // Render canvas images with robust item-based grouping and naming
   const canvasImagesHtml = includeImages && (woPlanningData.canvasImages || []).length > 0
@@ -1035,7 +1035,7 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
             const src = image.canvas_image_base64 || image.image_base64 || image.image_url || image.src || '';
             return `
                 <div style="page-break-inside: avoid;">
-                  <div style="font-weight: bold; margin-bottom: 6px; font-size: 12px; color: #555;">WO Item ${group.itemNumber} - Image ${imageIndex + 1}</div>
+                  <div style="font-weight: bold; margin-bottom: 6px; font-size: 11px; color: #555;">WO Item ${group.itemNumber} - Image ${imageIndex + 1}</div>
                   <div style="text-align: center; border: 1px solid #ddd; background-color: #f9f9f9; overflow: hidden; ${group.is1D ? 'height: 100px; display: flex; align-items: flex-start;' : 'padding: 8px;'}">
                     ${src ? `
                       <img src="${src}" alt="WO Item ${group.itemNumber} - Image ${imageIndex + 1}" style="${group.is1D ? 'width: 100%; height: auto; object-fit: cover; object-position: top;' : 'max-width: 100%; max-height: 260px; object-fit: contain;'}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
@@ -1079,23 +1079,35 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
     <head>
       <title>WO Planning - ${woPlanningData.nomor_wo || 'N/A'}</title>
       <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .header { display: flex; align-items: flex-start; margin-bottom: 20px; position: relative; min-height: 80px; padding-top: 10px; }
-        .logo { width: 70px; height: auto; margin-right: 16px; object-fit: contain; }
-        .header-content { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; top: 10px; }
-        .company-name { font-size: 22px; font-weight: bold; margin-bottom: 6px; line-height: 1.2; }
-        .document-title { font-size: 16px; font-weight: bold; margin-bottom: 14px; line-height: 1.2; }
-        .section { margin-bottom: 16px; }
-        .info-row { display: flex; margin-bottom: 4px; }
+        body { font-family: Arial, sans-serif; margin: 10px; font-size: 11px; }
+        .header { display: flex; align-items: center; margin-bottom: 10px; position: relative; min-height: 40px; }
+        .logo { width: 45px; height: auto; margin-right: 15px; object-fit: contain; }
+        .header-content { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; }
+        .company-name { font-size: 16px; font-weight: bold; margin-bottom: 2px; line-height: 1.2; }
+        .document-title { font-size: 13px; font-weight: bold; margin-bottom: 0; line-height: 1.2; }
+        .section { margin-bottom: 8px; }
+        .info-row { display: flex; margin-bottom: 2px; }
         .info-label { font-weight: bold; min-width: 140px; }
         .info-value { margin-left: 1px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 14px; }
-        th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
-        td { border: 1px solid #ddd; padding: 6px; font-size: 12px; }
-        .footer { margin-top: 20px; text-align: center; font-size: 12px; color: #666; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 5px; text-align: left; font-size: 10px; }
+        td { border: 1px solid #ddd; padding: 4px; font-size: 10px; }
+        .footer { margin-top: 10px; text-align: center; font-size: 10px; color: #666; }
         @page {
           size: A5 landscape;
-          margin: 10mm;
+          margin: 10mm 5mm 5mm 5mm;
+          @top-left {
+            content: "Dokumen ini dicetak pada: ${new Date().toLocaleString('id-ID')} | Work Order Planning - PT. Surya Harsa Nagara";
+            font-size: 8px;
+            font-family: Arial, sans-serif;
+            color: #666;
+          }
+          @top-right {
+            content: counter(page) " dari " counter(pages);
+            font-size: 8px;
+            font-family: Arial, sans-serif;
+            color: #666;
+          }
         }
         @media print { body { margin: 0; } .no-print { display: none; } }
       </style>
@@ -1154,10 +1166,6 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
 
       ${canvasImagesHtml}
 
-      <div class="footer">
-        <p>Dokumen ini dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
-        <p>Work Order Planning - PT. Surya Harsa Nagara</p>
-      </div>
     </body>
     </html>
   `;
