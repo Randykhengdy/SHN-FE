@@ -477,7 +477,7 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
       <td style="border: 1px solid #ddd; padding: 4px;">${item.grade_barang || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 4px;">${item.master_item || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 4px;">${item.dimensi_potong || '-'}</td>
-      <td style="border: 1px solid #ddd; padding: 4px;">${item.jenis_potongan?.toLowerCase() === 'utuh' ? 'Utuh' : (item.jenis_potongan?.toLowerCase() === 'potongan' ? 'Pot' : (item.jenis_potongan || '-'))}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${item.jenis_potongan?.toLowerCase() === 'utuh' ? 'Utuh' : (item.jenis_potongan?.toLowerCase() === 'potongan' ? 'Potong' : (item.jenis_potongan || '-'))}</td>
       <td style="border: 1px solid #ddd; padding: 4px;">${item.unit?.toLowerCase() === 'dimensi' || item.unit?.toLowerCase() === 'pcs' ? 'Pcs' : (item.unit?.toLowerCase() === 'kilogram' || item.unit?.toLowerCase() === 'kg' ? 'Kg' : (item.unit || '-'))}</td>
       <td style="border: 1px solid #ddd; padding: 4px; text-align: center;">${item.qty || 0}</td>
       <td style="border: 1px solid #ddd; padding: 4px; text-align: right;">${(item.unit?.toLowerCase() === 'kg' || item.unit?.toLowerCase() === 'kilogram') ? `${item.total_kg || 0} kg` : '-'}</td>
@@ -619,8 +619,19 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
         </tbody>
       </table>
       
-      <div class="summary-section">
-        <table class="summary-table">
+      <div class="summary-section" style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 8px; page-break-inside: avoid;">
+        <div style="display: flex; justify-content: space-between; width: 45%; margin-top: 5px;">
+          <div style="width: 48%; text-align: center;">
+            <p style="margin-bottom: 40px; margin-top: 0;">Tanda Tangan Customer,</p>
+            <p>( _______________________ )</p>
+          </div>
+          <div style="width: 48%; text-align: center;">
+            <p style="margin-bottom: 40px; margin-top: 0;">Hormat Kami,</p>
+            <p>( _______________________ )</p>
+          </div>
+        </div>
+
+        <table class="summary-table" style="width: 50%; margin-left: auto; margin-top: 0;">
           <tbody>
             <tr>
               <td class="summary-label">Total Harga:</td>
@@ -672,20 +683,9 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
           </tbody>
         </table>
       </div>
-      <div style="margin-top: 25px; display: flex; justify-content: space-between; page-break-inside: avoid;">
-        <div style="width: 40%; text-align: center;">
-          <p style="margin-bottom: 45px; margin-top: 0;">Tanda Tangan Customer,</p>
-          <p>( _______________________ )</p>
-        </div>
-        <div style="width: 40%; text-align: center;">
-          <p style="margin-bottom: 45px; margin-top: 0;">Hormat Kami,</p>
-          <p>( _______________________ )</p>
-        </div>
-      </div>
       
       <div class="footer">
-        <p>Dokumen ini dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
-        <p>Sales Order - PT. Surya Harsa Nagara</p>
+        <p>Dokumen ini dicetak pada: ${new Date().toLocaleString('id-ID')} | Sales Order - PT. Surya Harsa Nagara</p>
       </div>
     </body>
     </html>
