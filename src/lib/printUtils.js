@@ -478,7 +478,7 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
       <td style="border: 1px solid #ddd; padding: 4px;">${item.master_item || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 4px;">${item.dimensi_potong || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 4px;">${item.jenis_potongan || '-'}</td>
-      <td style="border: 1px solid #ddd; padding: 4px;">${item.unit?.toLowerCase() === 'dimensi' ? 'Dimensi (dalam pcs)' : (item.unit || '-')}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${item.unit?.toLowerCase() === 'dimensi' || item.unit?.toLowerCase() === 'pcs' ? 'Pcs' : (item.unit?.toLowerCase() === 'kilogram' || item.unit?.toLowerCase() === 'kg' ? 'Kg' : (item.unit || '-'))}</td>
       <td style="border: 1px solid #ddd; padding: 4px; text-align: center;">${item.qty || 0}</td>
       <td style="border: 1px solid #ddd; padding: 4px; text-align: right;">${(item.unit?.toLowerCase() === 'kg' || item.unit?.toLowerCase() === 'kilogram') ? `${item.total_kg || 0} kg` : '-'}</td>
       <td style="border: 1px solid #ddd; padding: 4px; text-align: right;">${(item.unit?.toLowerCase() === 'kg' || item.unit?.toLowerCase() === 'kilogram') ? `${((item.qty || 0) * (item.total_kg || 0)).toFixed(2)} kg` : '-'}</td>
@@ -605,7 +605,7 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
             <th>Grade</th>
             <th>Master Item Barang (Utuh)</th>
             <th>Dimensi Potong</th>
-            <th>Jenis Potongan</th>
+            <th>Status</th>
             <th>Unit</th>
             <th>Qty</th>
             <th>Berat Satuan</th>
@@ -894,7 +894,7 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
             <th>Qty Planning</th>
             <th>Qty Actual</th>
             <th>Berat Actual</th>
-            <th>Jenis Potongan</th>
+            <th>Status</th>
             <th>Pelaksana</th>
           </tr>
         </thead>
@@ -1130,7 +1130,7 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
             <th>Group Barang</th>
             <th>Dimensi</th>
             <th>Qty Planning</th>
-            <th>Jenis Potongan</th>
+            <th>Status</th>
             <th>Keterangan</th>
           </tr>
         </thead>
