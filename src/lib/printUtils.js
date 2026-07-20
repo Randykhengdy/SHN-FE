@@ -308,8 +308,9 @@ export const generatePurchaseOrderPrintContent = (purchaseOrderData) => {
 };
 
 export const generateInvoicePrintContent = (invoiceData) => {
-  const itemsHtml = invoiceData.invoice_pod_items.map(item => `
+  const itemsHtml = invoiceData.invoice_pod_items.map((item, index) => `
     <tr>
+      <td style="border: 1px solid #ddd; padding: 4px; text-align: center;">${index + 1}</td>
       <td style="border: 1px solid #ddd; padding: 4px;">${item.nama_item}</td>
       <td style="border: 1px solid #ddd; padding: 4px;">${item.item_barang_group || '-'}</td>
       <td style="border: 1px solid #ddd; padding: 4px;">${item.unit?.toLowerCase() === 'dimensi' ? 'Dimensi (dalam pcs)' : (item.unit || '-')}</td>
@@ -423,6 +424,7 @@ export const generateInvoicePrintContent = (invoiceData) => {
       <table>
         <thead>
           <tr>
+            <th style="width: 30px; text-align: center;">No.</th>
             <th>Nama Item</th>
             <th>Master Barang</th>
             <th>Unit</th>
