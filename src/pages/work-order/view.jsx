@@ -124,6 +124,9 @@ export default function ViewWorkOrderPage() {
           jenisBarang: item.jenisBarang,
           bentukBarang: item.bentukBarang,
           gradeBarang: item.gradeBarang,
+          kode_barang: item.kode_barang || item.item_barang?.kode_barang || item.itemBarang?.kode_barang || item.kode || '',
+          item_barang: item.item_barang || item.itemBarang || null,
+          kode: item.kode || '',
           groupBarangName: item.item_barang_group_name || item.item_barang_group?.nama_group_barang || item.groupBarangName || '-',
           dimensi: (() => {
             const tb = item.bentukBarang?.tipe_barang || item.bentukBarang?.tipeBarang;
@@ -379,6 +382,9 @@ export default function ViewWorkOrderPage() {
               catatan: item.catatan || item.note || item.notes || "",
               total: item.total || item.subtotal || total || 0,
               jenis_potongan: item.jenis_potongan || 'potongan',
+              kode_barang: item.kode_barang || item.item_barang?.kode_barang || item.itemBarang?.kode_barang || item.kode || "",
+              item_barang: item.item_barang || item.itemBarang || null,
+              kode: item.kode || "",
               item_barang_group: item.item_barang_group || item.itemBarangGroup || null,
               item_barang_group_name: (item.item_barang_group && (item.item_barang_group.nama_group_barang || item.item_barang_group.nama))
                 || (item.itemBarangGroup && (item.itemBarangGroup.nama_group_barang || item.itemBarangGroup.nama))

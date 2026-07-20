@@ -1046,11 +1046,11 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
                       <div style="padding: 16px; color: #666; font-style: italic;">Canvas image tidak tersedia</div>
                     `}
                   </div>
-                  ${image.quantity || image.dimensi || image.wo_item_id ? `
+                  ${image.quantity || image.dimensi || image.item_barang || image.itemBarang || image.kode_barang || image.kode ? `
                   <div style="margin-top: 6px; font-size: 11px; color: #666;">
-                    ${image.quantity ? `Quantity: ${image.quantity}` : ''}
+                    ${(image.item_barang?.kode_barang || image.itemBarang?.kode_barang || image.kode_barang || image.item_barang_kode || image.kode) ? `Kode Barang: ${image.item_barang?.kode_barang || image.itemBarang?.kode_barang || image.kode_barang || image.item_barang_kode || image.kode}` : ''}
+                    ${image.quantity ? ` | Quantity: ${image.quantity}` : ''}
                     ${image.dimensi ? ` | Dimensi: ${image.dimensi}` : ''}
-                    ${image.wo_item_id ? ` | WO Item ID: ${image.wo_item_id}` : ''}
                   </div>
                   ` : ''}
                 </div>
