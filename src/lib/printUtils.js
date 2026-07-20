@@ -1035,9 +1035,14 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
         .map(group => {
           const items = group.images.map((image, imageIndex) => {
             const src = image.canvas_image_base64 || image.image_base64 || image.image_url || image.src || '';
+            const kode = image.item_barang?.kode_barang || image.itemBarang?.kode_barang || image.kode_barang || image.item_barang_kode || image.kode || '';
+            const formattedQty = image.quantity ? `${parseFloat(image.quantity)}pcs` : '';
+            const infoParts = [kode, formattedQty].filter(Boolean);
+            const suffix = infoParts.length > 0 ? ` (${infoParts.join(' - ')})` : '';
+
             return `
                 <div style="page-break-inside: avoid;">
-                  <div style="font-weight: bold; margin-bottom: 6px; font-size: 11px; color: #555;">WO Item ${group.itemNumber} ${group.itemKode ? `(${group.itemKode})` : ''} - Image ${imageIndex + 1}</div>
+                  <div style="font-weight: bold; margin-bottom: 6px; font-size: 11px; color: #555;">WO Item ${group.itemNumber} - Image ${imageIndex + 1}${suffix}</div>
                   <div style="text-align: center; border: 1px solid #ddd; background-color: #f9f9f9; overflow: hidden; ${group.is1D ? 'height: 100px; display: flex; align-items: flex-start;' : 'padding: 8px;'}">
                     ${src ? `
                       <img src="${src}" alt="WO Item ${group.itemNumber} - Image ${imageIndex + 1}" style="${group.is1D ? 'width: 100%; height: auto; object-fit: cover; object-position: top;' : 'max-width: 100%; max-height: 260px; object-fit: contain;'}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
@@ -1046,11 +1051,9 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
                       <div style="padding: 16px; color: #666; font-style: italic;">Canvas image tidak tersedia</div>
                     `}
                   </div>
-                  ${image.quantity || image.dimensi || image.item_barang || image.itemBarang || image.kode_barang || image.kode ? `
+                  ${image.dimensi ? `
                   <div style="margin-top: 6px; font-size: 11px; color: #666;">
-                    ${(image.item_barang?.kode_barang || image.itemBarang?.kode_barang || image.kode_barang || image.item_barang_kode || image.kode) ? `Kode Barang: ${image.item_barang?.kode_barang || image.itemBarang?.kode_barang || image.kode_barang || image.item_barang_kode || image.kode}` : ''}
-                    ${image.quantity ? ` | Quantity: ${image.quantity}` : ''}
-                    ${image.dimensi ? ` | Dimensi: ${image.dimensi}` : ''}
+                    Dimensi: ${image.dimensi}
                   </div>
                   ` : ''}
                 </div>
