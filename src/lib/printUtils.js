@@ -967,6 +967,7 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
       const itemMap = new Map();
       itemsArr.forEach((item, index) => {
         const name = item.nama_item || item.jenisBarang?.nama_jenis_barang || item.jenisBarang?.nama || `Item ${index + 1}`;
+        const kode = item.kode_barang || item.item_barang?.kode_barang || item.itemBarang?.kode_barang || item.kode || '';
         const idCandidates = [
           item.wo_item_unique_id,
           item.id,
@@ -983,7 +984,7 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
 
         uniqueIds.forEach(id => {
           if (!itemMap.has(id)) {
-            itemMap.set(id, { index: index + 1, name, is1D });
+            itemMap.set(id, { index: index + 1, name, is1D, kode });
           }
         });
       });
@@ -1012,7 +1013,7 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
 
         if (!key) {
           key = `unknown_${unknownCounter}`;
-          info = { index: unknownStartIndex + unknownCounter - 1, name: `Item ${unknownStartIndex + unknownCounter - 1}` };
+          info = { index: unknownStartIndex + unknownCounter - 1, name: `Item ${unknownStartIndex + unknownCounter - 1}`, kode: '' };
           unknownCounter++;
         }
 
@@ -1020,6 +1021,7 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
           groupedMap.set(key, {
             itemNumber: info.index,
             itemName: info.name,
+            itemKode: info.kode,
             is1D: info.is1D,
             images: []
           });
@@ -1035,7 +1037,7 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
             const src = image.canvas_image_base64 || image.image_base64 || image.image_url || image.src || '';
             return `
                 <div style="page-break-inside: avoid;">
-                  <div style="font-weight: bold; margin-bottom: 6px; font-size: 11px; color: #555;">WO Item ${group.itemNumber} - Image ${imageIndex + 1}</div>
+                  <div style="font-weight: bold; margin-bottom: 6px; font-size: 11px; color: #555;">WO Item ${group.itemNumber} ${group.itemKode ? `(${group.itemKode})` : ''} - Image ${imageIndex + 1}</div>
                   <div style="text-align: center; border: 1px solid #ddd; background-color: #f9f9f9; overflow: hidden; ${group.is1D ? 'height: 100px; display: flex; align-items: flex-start;' : 'padding: 8px;'}">
                     ${src ? `
                       <img src="${src}" alt="WO Item ${group.itemNumber} - Image ${imageIndex + 1}" style="${group.is1D ? 'width: 100%; height: auto; object-fit: cover; object-position: top;' : 'max-width: 100%; max-height: 260px; object-fit: contain;'}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
@@ -1057,7 +1059,7 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
 
           return `
               <div style="margin-bottom: 20px;">
-                <div style="font-weight: bold; margin-bottom: 8px;">Canvas Layout - Item ${group.itemNumber}</div>
+                <div style="font-weight: bold; margin-bottom: 8px;">Canvas Layout - Item ${group.itemNumber} ${group.itemName} ${group.itemKode ? `(${group.itemKode})` : ''}</div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                   ${items}
                 </div>
