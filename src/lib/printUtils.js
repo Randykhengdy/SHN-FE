@@ -355,6 +355,18 @@ export const generateInvoicePrintContent = (invoiceData) => {
         @page {
           size: A5 landscape;
           margin: 10mm 5mm 5mm 5mm;
+          @top-left {
+            content: "Dokumen ini dicetak pada: ${new Date().toLocaleString('id-ID')} | Invoice - PT. Surya Harsa Nagara";
+            font-size: 8px;
+            font-family: Arial, sans-serif;
+            color: #666;
+          }
+          @top-right {
+            content: counter(page) " dari " counter(pages);
+            font-size: 8px;
+            font-family: Arial, sans-serif;
+            color: #666;
+          }
         }
         @media print {
           body { margin: 0; }
@@ -461,9 +473,6 @@ export const generateInvoicePrintContent = (invoiceData) => {
         </table>
       </div>
       
-      <div class="footer">
-        <p>Dokumen ini dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
-      </div>
     </body>
     </html>
   `;
