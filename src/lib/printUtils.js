@@ -310,14 +310,14 @@ export const generatePurchaseOrderPrintContent = (purchaseOrderData) => {
 export const generateInvoicePrintContent = (invoiceData) => {
   const itemsHtml = invoiceData.invoice_pod_items.map(item => `
     <tr>
-      <td style="border: 1px solid #ddd; padding: 8px;">${item.nama_item}</td>
-      <td style="border: 1px solid #ddd; padding: 8px;">${item.item_barang_group || '-'}</td>
-      <td style="border: 1px solid #ddd; padding: 8px;">${item.unit?.toLowerCase() === 'dimensi' ? 'Dimensi (dalam pcs)' : (item.unit || '-')}</td>
-      <td style="border: 1px solid #ddd; padding: 8px;">${item.dimensi_potong}</td>
-      <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.qty}</td>
-      <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${(item.unit?.toLowerCase() === 'kg' || item.unit?.toLowerCase() === 'kilogram') ? `${item.total_kg} kg` : '-'}</td>
-      <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">Rp ${parseFloat(item.harga_per_unit).toLocaleString('id-ID')}</td>
-      <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">Rp ${parseFloat(item.total_harga).toLocaleString('id-ID')}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${item.nama_item}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${item.item_barang_group || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${item.unit?.toLowerCase() === 'dimensi' ? 'Dimensi (dalam pcs)' : (item.unit || '-')}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${item.dimensi_potong}</td>
+      <td style="border: 1px solid #ddd; padding: 4px; text-align: center;">${item.qty}</td>
+      <td style="border: 1px solid #ddd; padding: 4px; text-align: right;">${(item.unit?.toLowerCase() === 'kg' || item.unit?.toLowerCase() === 'kilogram') ? `${item.total_kg} kg` : '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 4px; text-align: right;">Rp ${parseFloat(item.harga_per_unit).toLocaleString('id-ID')}</td>
+      <td style="border: 1px solid #ddd; padding: 4px; text-align: right;">Rp ${parseFloat(item.total_harga).toLocaleString('id-ID')}</td>
     </tr>
   `).join('');
 
@@ -332,29 +332,29 @@ export const generateInvoicePrintContent = (invoiceData) => {
     <head>
       <title>Invoice - ${invoiceData.nomor_invoice}</title>
       <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .header { display: flex; align-items: flex-start; margin-bottom: 30px; position: relative; min-height: 100px; padding-top: 10px; }
-        .logo { width: 80px; height: auto; margin-right: 20px; object-fit: contain; }
-        .header-content { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; top: 10px; }
-        .company-name { font-size: 24px; font-weight: bold; margin-bottom: 10px; line-height: 1.2; }
-        .document-title { font-size: 18px; font-weight: bold; margin-bottom: 20px; line-height: 1.2; }
-        .info-section { margin-bottom: 20px; }
-        .info-row { display: flex; margin-bottom: 5px; }
+        body { font-family: Arial, sans-serif; margin: 10px; font-size: 11px; }
+        .header { display: flex; align-items: center; margin-bottom: 10px; position: relative; min-height: 40px; }
+        .logo { width: 45px; height: auto; margin-right: 15px; object-fit: contain; }
+        .header-content { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; }
+        .company-name { font-size: 16px; font-weight: bold; margin-bottom: 2px; line-height: 1.2; }
+        .document-title { font-size: 13px; font-weight: bold; margin-bottom: 0; line-height: 1.2; }
+        .info-section { margin-bottom: 8px; }
+        .info-row { display: flex; margin-bottom: 2px; }
         .info-label { font-weight: bold; min-width: 140px; }
         .info-value { margin-left: 1px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 10px; text-align: left; }
-        td { border: 1px solid #ddd; padding: 8px; }
-        .summary-section { margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 5px; text-align: left; font-size: 10px; }
+        td { border: 1px solid #ddd; padding: 4px; font-size: 10px; }
+        .summary-section { margin-top: 8px; }
         .summary-table { width: 50%; margin-left: auto; }
-        .summary-row { display: flex; justify-content: space-between; padding: 5px 0; }
+        .summary-row { display: flex; justify-content: space-between; padding: 3px 0; }
         .summary-label { font-weight: bold; }
         .summary-value { text-align: right; }
-        .grand-total { border-top: 2px solid #333; font-weight: bold; font-size: 16px; }
-        .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
+        .grand-total { border-top: 2px solid #333; font-weight: bold; font-size: 12px; }
+        .footer { margin-top: 10px; text-align: center; font-size: 10px; color: #666; }
         @page {
           size: A5 landscape;
-          margin: 10mm;
+          margin: 10mm 5mm 5mm 5mm;
         }
         @media print {
           body { margin: 0; }
