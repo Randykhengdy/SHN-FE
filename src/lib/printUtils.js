@@ -1061,7 +1061,7 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
           }).join('');
 
           return `
-              <div style="margin-bottom: 20px;">
+              <div style="margin-bottom: 20px; page-break-inside: avoid;">
                 <div style="font-weight: bold; margin-bottom: 8px;">Canvas Layout - Item ${group.itemNumber} ${group.itemName} ${group.itemKode ? `(${group.itemKode})` : ''}</div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                   ${items}
