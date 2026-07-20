@@ -532,11 +532,17 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
         @page {
           size: A5 landscape;
           margin: 10mm 5mm 5mm 5mm;
+          @top-left {
+            content: "Dokumen ini dicetak pada: ${new Date().toLocaleString('id-ID')} | Sales Order - PT. Surya Harsa Nagara";
+            font-size: 8px;
+            font-family: Arial, sans-serif;
+            color: #666;
+          }
           @top-right {
             content: counter(page) " dari " counter(pages);
-            font-size: 9px;
+            font-size: 8px;
             font-family: Arial, sans-serif;
-            color: #333;
+            color: #666;
           }
         }
         @media print {
@@ -690,9 +696,6 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
         </table>
       </div>
       
-      <div class="footer">
-        <p>Dokumen ini dicetak pada: ${new Date().toLocaleString('id-ID')} | Sales Order - PT. Surya Harsa Nagara</p>
-      </div>
     </body>
     </html>
   `;
