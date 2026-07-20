@@ -278,6 +278,7 @@ export default function ViewSalesOrderPage() {
               satuan: item.satuan || 'N/A',
               satuan_nama: item.satuan_barang?.nama || item.unit?.nama || "",
               masterItemName: item.item_barang_group?.nama_group_barang || item.master_item_nama || '-',
+              jenis_potongan: item.jenis_potongan || item.jenisPotongan || '-',
               catatan: item.catatan || item.note || item.notes || "",
               total: item.total || item.subtotal || total || 0
             };
@@ -411,6 +412,7 @@ export default function ViewSalesOrderPage() {
             grade_barang: item.gradeBarang || item.grade_barang,
             master_item: item.masterItemName || item.master_item_nama || '-',
             dimensi_potong: dimensi_potong,
+            jenis_potongan: item.jenis_potongan || '-',
             unit: item.satuan_nama || unitOptions.find(opt => opt.value === item.satuan?.toString())?.label || item.satuan || '-',
             qty: item.qty || item.quantity || 0,
             total_kg: total_kg,

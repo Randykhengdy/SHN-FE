@@ -472,19 +472,20 @@ export const generateInvoicePrintContent = (invoiceData) => {
 export const generateSalesOrderPrintContent = (salesOrderData) => {
   const itemsHtml = salesOrderData.items?.map(item => `
     <tr>
-      <td style="border: 1px solid #ddd; padding: 8px;">${item.nama_item || item.jenis_barang || '-'}</td>
-      <td style="border: 1px solid #ddd; padding: 8px;">${item.bentuk_barang || '-'}</td>
-      <td style="border: 1px solid #ddd; padding: 8px;">${item.grade_barang || '-'}</td>
-      <td style="border: 1px solid #ddd; padding: 8px;">${item.master_item || '-'}</td>
-      <td style="border: 1px solid #ddd; padding: 8px;">${item.dimensi_potong || '-'}</td>
-      <td style="border: 1px solid #ddd; padding: 8px;">${item.unit?.toLowerCase() === 'dimensi' ? 'Dimensi (dalam pcs)' : (item.unit || '-')}</td>
-      <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.qty || 0}</td>
-      <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${(item.unit?.toLowerCase() === 'kg' || item.unit?.toLowerCase() === 'kilogram') ? `${item.total_kg || 0} kg` : '-'}</td>
-      <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${(item.unit?.toLowerCase() === 'kg' || item.unit?.toLowerCase() === 'kilogram') ? `${((item.qty || 0) * (item.total_kg || 0)).toFixed(2)} kg` : '-'}</td>
-      <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">Rp ${parseFloat(item.harga_per_unit || 0).toLocaleString('id-ID')}</td>
-      <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">Rp ${parseFloat(item.total_harga || 0).toLocaleString('id-ID')}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${item.nama_item || item.jenis_barang || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${item.bentuk_barang || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${item.grade_barang || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${item.master_item || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${item.dimensi_potong || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${item.jenis_potongan || '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${item.unit?.toLowerCase() === 'dimensi' ? 'Dimensi (dalam pcs)' : (item.unit || '-')}</td>
+      <td style="border: 1px solid #ddd; padding: 4px; text-align: center;">${item.qty || 0}</td>
+      <td style="border: 1px solid #ddd; padding: 4px; text-align: right;">${(item.unit?.toLowerCase() === 'kg' || item.unit?.toLowerCase() === 'kilogram') ? `${item.total_kg || 0} kg` : '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 4px; text-align: right;">${(item.unit?.toLowerCase() === 'kg' || item.unit?.toLowerCase() === 'kilogram') ? `${((item.qty || 0) * (item.total_kg || 0)).toFixed(2)} kg` : '-'}</td>
+      <td style="border: 1px solid #ddd; padding: 4px; text-align: right;">Rp ${parseFloat(item.harga_per_unit || 0).toLocaleString('id-ID')}</td>
+      <td style="border: 1px solid #ddd; padding: 4px; text-align: right;">Rp ${parseFloat(item.total_harga || 0).toLocaleString('id-ID')}</td>
     </tr>
-  `).join('') || '<tr><td colspan="11" style="text-align: center; padding: 20px;">Tidak ada item</td></tr>';
+  `).join('') || '<tr><td colspan="12" style="text-align: center; padding: 20px;">Tidak ada item</td></tr>';
 
   const formatCurrency = (amount) => {
     const num = parseFloat(amount || 0).toFixed(2);
@@ -602,8 +603,9 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
             <th>Jenis Barang</th>
             <th>Bentuk</th>
             <th>Grade</th>
-            <th>Master Item Barang</th>
+            <th>Master Item Barang (Utuh)</th>
             <th>Dimensi Potong</th>
+            <th>Jenis Potongan</th>
             <th>Unit</th>
             <th>Qty</th>
             <th>Berat Satuan</th>
