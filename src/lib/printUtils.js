@@ -574,6 +574,13 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
             <span class="info-label">Tanggal Pengiriman</span>
             <span class="info-value">${formatDate(salesOrderData.tanggal_pengiriman || salesOrderData.delivery_date)}</span>
           </div>
+        </div>
+
+        <div style="width: 48%;">
+          <div class="info-row">
+            <span class="info-label">Nama Customer</span>
+            <span class="info-value">${salesOrderData.customer ? (salesOrderData.customer.nama_customer || salesOrderData.customer.nama_pelanggan || salesOrderData.customer.nama || salesOrderData.customer.name || 'N/A') : 'N/A'}</span>
+          </div>
           <div class="info-row">
             <span class="info-label">Term of Payment</span>
             <span class="info-value">${salesOrderData.term_of_payment || 'N/A'}</span>
@@ -582,30 +589,6 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
             <span class="info-label">Gudang Asal</span>
             <span class="info-value">${salesOrderData.gudang_asal || salesOrderData.origin_warehouse || 'N/A'}</span>
           </div>
-        </div>
-
-        <div style="width: 48%;">
-          ${salesOrderData.customer ? `
-          <div class="customer-section" style="margin-bottom: 0; padding: 10px 15px; height: 100%; box-sizing: border-box;">
-            <div class="customer-title" style="margin-bottom: 6px;">Informasi Customer</div>
-            <div class="info-row">
-              <span class="info-label">Nama Customer</span>
-              <span class="info-value">${salesOrderData.customer.nama_customer || salesOrderData.customer.nama_pelanggan || salesOrderData.customer.nama || salesOrderData.customer.name || 'N/A'}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Alamat</span>
-              <span class="info-value">${salesOrderData.customer.alamat || salesOrderData.customer.address || salesOrderData.customer.kota || 'N/A'}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Telepon</span>
-              <span class="info-value">${salesOrderData.customer.telepon || salesOrderData.customer.telepon_hp || salesOrderData.customer.phone || 'N/A'}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Contact Person</span>
-              <span class="info-value">${salesOrderData.customer.contact_person || salesOrderData.customer.contactPerson || salesOrderData.customer.pic || salesOrderData.customer.cp || 'N/A'}</span>
-            </div>
-          </div>
-          ` : ''}
         </div>
       </div>
       
