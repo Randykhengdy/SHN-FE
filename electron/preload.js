@@ -54,5 +54,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onCloseRequest: (callback) => ipcRenderer.on('close-request', callback),
   confirmClose: () => ipcRenderer.send('confirm-close'),
   getVersion: () => ipcRenderer.invoke('get-app-version'),
-  getName: () => ipcRenderer.invoke('get-app-name')
+  getName: () => ipcRenderer.invoke('get-app-name'),
+  print: (options) => ipcRenderer.invoke('print-document', options)
 });

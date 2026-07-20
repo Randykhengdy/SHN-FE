@@ -34,6 +34,10 @@ export const generatePodPrintContent = (podData) => {
         th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 10px; text-align: left; }
         td { border: 1px solid #ddd; padding: 8px; }
         .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
+        @page {
+          size: A5 landscape;
+          margin: 10mm;
+        }
         @media print {
           body { margin: 0; }
           .no-print { display: none; }
@@ -176,6 +180,10 @@ export const generatePurchaseOrderPrintContent = (purchaseOrderData) => {
         th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 11px; }
         td { border: 1px solid #ddd; padding: 6px; font-size: 11px; vertical-align: top; }
         .footer { margin-top: 20px; text-align: right; font-size: 11px; color: #666; }
+        @page {
+          size: A5 landscape;
+          margin: 10mm;
+        }
         @media print {
           body { margin: 0; }
           .no-print { display: none; }
@@ -344,6 +352,10 @@ export const generateInvoicePrintContent = (invoiceData) => {
         .summary-value { text-align: right; }
         .grand-total { border-top: 2px solid #333; font-weight: bold; font-size: 16px; }
         .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
+        @page {
+          size: A5 landscape;
+          margin: 10mm;
+        }
         @media print {
           body { margin: 0; }
           .no-print { display: none; }
@@ -494,28 +506,32 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
     <head>
       <title>Sales Order - ${salesOrderData.nomor_so || salesOrderData.so_number || 'N/A'}</title>
       <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .header { display: flex; align-items: flex-start; margin-bottom: 30px; position: relative; min-height: 100px; padding-top: 10px; }
-        .logo { width: 80px; height: auto; margin-right: 20px; object-fit: contain; }
-        .header-content { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; top: 10px; }
-        .company-name { font-size: 24px; font-weight: bold; margin-bottom: 10px; line-height: 1.2; }
-        .document-title { font-size: 18px; font-weight: bold; margin-bottom: 20px; line-height: 1.2; }
-        .info-section { margin-bottom: 20px; }
-        .info-row { display: flex; margin-bottom: 5px; }
-        .info-label { font-weight: bold; min-width: 160px; }
+        body { font-family: Arial, sans-serif; margin: 10px; font-size: 11px; }
+        .header { display: flex; align-items: center; margin-bottom: 10px; position: relative; min-height: 40px; }
+        .logo { width: 45px; height: auto; margin-right: 15px; object-fit: contain; }
+        .header-content { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; }
+        .company-name { font-size: 16px; font-weight: bold; margin-bottom: 2px; line-height: 1.2; }
+        .document-title { font-size: 13px; font-weight: bold; margin-bottom: 0; line-height: 1.2; }
+        .info-section { margin-bottom: 8px; }
+        .info-row { display: flex; margin-bottom: 2px; }
+        .info-label { font-weight: bold; min-width: 120px; }
         .info-value { margin-left: 1px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 12px; }
-        td { border: 1px solid #ddd; padding: 8px; font-size: 12px; }
-        .summary-section { margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 5px; text-align: left; font-size: 10px; }
+        td { border: 1px solid #ddd; padding: 4px; font-size: 10px; }
+        .summary-section { margin-top: 8px; }
         .summary-table { width: 50%; margin-left: auto; }
-        .summary-row { display: flex; justify-content: space-between; padding: 5px 0; }
+        .summary-row { display: flex; justify-content: space-between; padding: 3px 0; }
         .summary-label { font-weight: bold; }
         .summary-value { text-align: right; }
-        .grand-total { border-top: 2px solid #333; font-weight: bold; font-size: 16px; }
-        .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
-        .customer-section { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; background-color: #f9f9f9; }
-        .customer-title { font-weight: bold; margin-bottom: 10px; font-size: 14px; }
+        .grand-total { border-top: 2px solid #333; font-weight: bold; font-size: 12px; }
+        .footer { margin-top: 10px; text-align: center; font-size: 10px; color: #666; }
+        .customer-section { margin-bottom: 0; padding: 8px; border: 1px solid #ddd; background-color: #f9f9f9; }
+        .customer-title { font-weight: bold; margin-bottom: 5px; font-size: 11px; }
+        @page {
+          size: A5 landscape;
+          margin: 5mm;
+        }
         @media print {
           body { margin: 0; }
           .no-print { display: none; }
@@ -826,6 +842,10 @@ export const generateWOActualPrintContent = (woActualData, options = {}) => {
         th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
         td { border: 1px solid #ddd; padding: 6px; font-size: 12px; }
         .footer { margin-top: 20px; text-align: center; font-size: 12px; color: #666; }
+        @page {
+          size: A5 landscape;
+          margin: 10mm;
+        }
         @media print { body { margin: 0; } .no-print { display: none; } }
       </style>
     </head>
@@ -1058,6 +1078,10 @@ export const generateWOPlanningPrintContent = (woPlanningData, options = {}) => 
         th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
         td { border: 1px solid #ddd; padding: 6px; font-size: 12px; }
         .footer { margin-top: 20px; text-align: center; font-size: 12px; color: #666; }
+        @page {
+          size: A5 landscape;
+          margin: 10mm;
+        }
         @media print { body { margin: 0; } .no-print { display: none; } }
       </style>
     </head>
@@ -1239,6 +1263,10 @@ export const generatePaymentReceiptPrintContent = (receiptData) => {
         .signature-section { margin-top: 40px; display: flex; justify-content: space-between; }
         .signature-box { width: 45%; text-align: center; }
         .signature-line { border-top: 1px solid #333; margin-top: 60px; padding-top: 5px; }
+        @page {
+          size: A5 landscape;
+          margin: 10mm;
+        }
         @media print {
           body { margin: 0; }
           .no-print { display: none; }
@@ -1352,6 +1380,19 @@ export const generatePaymentReceiptPrintContent = (receiptData) => {
 
 // Utility function to open print dialog
 export const openPrintDialog = (printContent) => {
+  if (window.electronAPI && window.electronAPI.print) {
+    const isQR = printContent.includes('Sticker QR') || printContent.includes('create-qr-code');
+    const docTitleMatch = printContent.match(/<title>(.*?)<\/title>/);
+    const title = docTitleMatch ? docTitleMatch[1] : 'document';
+    window.electronAPI.print({
+      html: printContent,
+      landscape: !isQR,
+      pageSize: isQR ? { width: 100000, height: 100000 } : 'A5',
+      title: title
+    });
+    return;
+  }
+
   const printWindow = window.open('', '_blank');
   printWindow.document.write(printContent);
   printWindow.document.close();
@@ -1407,6 +1448,10 @@ export const generateItemRequestPrintContent = (req, title = "BUKTI KONVERSI") =
         th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 8px; text-align: left; }
         td { border: 1px solid #ddd; padding: 8px; }
         .footer { margin-top: 24px; text-align: center; font-size: 12px; color: #666; }
+        @page {
+          size: A5 landscape;
+          margin: 10mm;
+        }
         @media print { body { margin: 0; } }
       </style>
     </head>
@@ -1580,6 +1625,10 @@ export const generateStockMutationPrintContent = (mutationData) => {
         th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 11px; }
         td { border: 1px solid #ddd; padding: 6px; font-size: 11px; vertical-align: top; }
         .footer { margin-top: 20px; text-align: right; font-size: 11px; color: #666; }
+        @page {
+          size: A5 landscape;
+          margin: 10mm;
+        }
         @media print {
           body { margin: 0; }
           .no-print { display: none; }

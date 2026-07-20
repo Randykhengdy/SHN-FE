@@ -1,4 +1,5 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog, shell } = require('electron');
+app.commandLine.appendSwitch('enable-print-preview');
 const axios = require('axios');
 const path = require('path');
 const fs = require('fs');
@@ -1140,5 +1141,56 @@ ipcMain.handle('cancel-download-update', async () => {
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e?.message || String(e) };
+  }
+});
+
+ipcMain.handle('print-document', async (event, { html, landscape = true, pageSize = 'A5', title = 'Document' }) => {
+  try {
+    const printWindow = new BrowserWindow({
+      show: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true
+      }
+    });
+
+    // Clean up filename to prevent issues
+    const safeTitle = String(title).replace(/[/\\?%*:|"<>\s]+/g, '_');
+
+    printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+
+    return new Promise((resolve) => {
+      printWindow.webContents.on('did-finish-load', async () => {
+        try {
+          // Generate PDF with exact target dimensions
+          const pdfBuffer = await printWindow.webContents.printToPDF({
+            landscape: landscape,
+            pageSize: pageSize,
+            printBackground: true
+          });
+          printWindow.destroy();
+
+          // Show save dialog to save the A5 PDF file
+          const { filePath } = await dialog.showSaveDialog(mainWindow, {
+            title: 'Simpan Dokumen PDF (A5)',
+            defaultPath: path.join(app.getPath('downloads'), `${safeTitle}.pdf`),
+            filters: [{ name: 'PDF Files', extensions: ['pdf'] }]
+          });
+
+          if (filePath) {
+            fs.writeFileSync(filePath, pdfBuffer);
+            resolve({ success: true, filePath });
+          } else {
+            resolve({ success: false, error: 'Cancelled' });
+          }
+        } catch (err) {
+          printWindow.destroy();
+          resolve({ success: false, error: err.message });
+        }
+      });
+    });
+  } catch (error) {
+    console.error('Error printing document:', error);
+    return { success: false, error: error.message };
   }
 });
