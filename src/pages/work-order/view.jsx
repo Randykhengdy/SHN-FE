@@ -133,14 +133,14 @@ export default function ViewWorkOrderPage() {
               if (tb.diameter_luar && tb.diameter_dalam && tb.panjang) {
                 dims.push(formatInt(item.diameter_luar), formatInt(item.diameter_dalam), formatInt(item.panjang));
               } else if (tb.sisi1 && tb.sisi2 && tb.tebal && tb.panjang) {
-                dims.push(formatInt(item.sisi1), formatInt(item.sisi2), formatInt(item.tebal), formatInt(item.panjang));
+                dims.push(formatInt(item.sisi1), formatInt(item.sisi2), formatInt(item.tebal || item.ketebalan), formatInt(item.panjang));
               } else if (tb.tebal && tb.lebar && tb.panjang) {
-                dims.push(formatInt(item.tebal), formatInt(item.lebar), formatInt(item.panjang));
+                dims.push(formatInt(item.tebal || item.ketebalan), formatInt(item.lebar), formatInt(item.panjang));
               } else if (tb.diameter && tb.panjang) {
                 dims.push(formatInt(item.diameter), formatInt(item.panjang));
               } else {
                 // Fallback using available standard properties
-                if (tb.tebal) dims.push(formatInt(item.tebal));
+                if (tb.tebal) dims.push(formatInt(item.tebal || item.ketebalan));
                 if (tb.lebar) dims.push(formatInt(item.lebar));
                 if (tb.panjang) dims.push(formatInt(item.panjang));
               }
@@ -368,7 +368,8 @@ export default function ViewWorkOrderPage() {
               panjang: item.panjang || item.length || 0,
               lebar: item.lebar || item.width || 0,
               diameter: item.diameter || 0,
-              ketebalan: item.ketebalan || item.thickness || 0,
+              ketebalan: item.ketebalan || item.thickness || item.tebal || 0,
+              tebal: item.tebal || item.ketebalan || item.thickness || 0,
               berat: item.berat || item.weight || 0,
               qty: qty,
               qty_planning: item.qty_planning,
