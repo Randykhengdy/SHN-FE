@@ -531,7 +531,13 @@ export const generateSalesOrderPrintContent = (salesOrderData) => {
         .customer-title { font-weight: bold; margin-bottom: 5px; font-size: 11px; }
         @page {
           size: A5 landscape;
-          margin: 5mm;
+          margin: 10mm 5mm 5mm 5mm;
+          @top-right {
+            content: counter(page) " dari " counter(pages);
+            font-size: 9px;
+            font-family: Arial, sans-serif;
+            color: #333;
+          }
         }
         @media print {
           body { margin: 0; }
