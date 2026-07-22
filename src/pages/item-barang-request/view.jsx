@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { itemBarangRequestService } from "@/services/itemBarangRequestService";
 import { itemBarangService } from "@/services/master-data/itemBarangService";
+import { rakService } from "@/services/master-data/rakService";
 import SearchSelect from "@/components/ui/search-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -37,6 +38,13 @@ export default function ViewItemBarangRequestPage() {
     const [selectedItemAssignments, setSelectedItemAssignments] = useState([]); // [{id_item_barang, kode_barang, quantity}]
     const [itemOptions, setItemOptions] = useState([]);
     const [loadingItems, setLoadingItems] = useState(false);
+
+    // Approve Penerimaan Rak State
+    const [showApprovePenerimaanModal, setShowApprovePenerimaanModal] = useState(false);
+    const [rakOptions, setRakOptions] = useState([]);
+    const [loadingRaks, setLoadingRaks] = useState(false);
+    const [itemRakAssignments, setItemRakAssignments] = useState({}); // { [assignedItemId]: rakId }
+    const [approveNotes, setApproveNotes] = useState("");
 
     const loadRequest = async () => {
         try {
@@ -220,25 +228,86 @@ export default function ViewItemBarangRequestPage() {
         }
     };
 
-    const handleApprove = async () => {
+    const handleOpenApproveModal = async () => {
         const unassigned = request.details.some(d => !d.assigned_items || d.assigned_items.length === 0);
         if (unassigned) {
             showAlert("error", "Semua item harus di-assign terlebih dahulu sebelum approve");
             return;
         }
 
+        setApproveNotes("");
+        setItemRakAssignments({});
+        setShowApprovePenerimaanModal(true);
+
+        try {
+            setLoadingRaks(true);
+            const gudangTujuanId = request.gudang_tujuan_id;
+            const res = await rakService.getAll({ gudang_id: gudangTujuanId, per_page: 1000 });
+            const rows = Array.isArray(res?.data) ? res.data : (Array.isArray(res?.data?.data) ? res.data.data : []);
+
+            const options = rows.map(r => ({
+                value: r.id?.toString(),
+                label: `${r.nama_rak || r.kode} (${r.kode})`,
+                searchKey: `${r.nama_rak} ${r.kode}`
+            }));
+            setRakOptions(options);
+
+            // Auto select if only 1 rak option
+            if (options.length === 1) {
+                const initialMap = {};
+                request.details?.forEach(detail => {
+                    detail.assigned_items?.forEach(item => {
+                        initialMap[item.id] = options[0].value;
+                    });
+                });
+                setItemRakAssignments(initialMap);
+            }
+        } catch (error) {
+            console.error("Error loading raks:", error);
+            showAlert("error", "Gagal memuat daftar rak di gudang tujuan");
+        } finally {
+            setLoadingRaks(false);
+        }
+    };
+
+    const handleConfirmApprovePenerimaan = async () => {
+        // Collect all assigned items
+        const allAssignedItems = [];
+        request.details?.forEach(detail => {
+            detail.assigned_items?.forEach(item => {
+                allAssignedItems.push(item);
+            });
+        });
+
+        // Validate rak selection for each item
+        const unassignedRak = allAssignedItems.some(item => !itemRakAssignments[item.id]);
+        if (unassignedRak) {
+            showAlert("error", "Harap pilih Rak Tujuan untuk semua item fisik!");
+            return;
+        }
+
+        const payloadAssignments = allAssignedItems.map(item => ({
+            id_item_barang: item.id,
+            id_rak: parseInt(itemRakAssignments[item.id])
+        }));
+
         try {
             setSubmitting(true);
-            const response = await itemBarangRequestService.approve(id);
+            const response = await itemBarangRequestService.approve(id, {
+                approval_notes: approveNotes,
+                item_rak_assignments: payloadAssignments
+            });
+
             if (response.success) {
                 showAlert("success", "Penerimaan request berhasil disetujui");
+                setShowApprovePenerimaanModal(false);
                 loadRequest();
             } else {
                 showAlert("error", response.message || "Gagal menyetujui penerimaan request");
             }
         } catch (error) {
             console.error("Error approving:", error);
-            showAlert("error", "Terjadi kesalahan");
+            showAlert("error", "Terjadi kesalahan saat approve penerimaan");
         } finally {
             setSubmitting(false);
         }
@@ -459,7 +528,7 @@ export default function ViewItemBarangRequestPage() {
                                 </Button>
                                 {request.status !== 'pending' && (
                                     <Button
-                                        onClick={request.status === 'approved_kirim' ? handleApprove : handleApproveKirim}
+                                        onClick={request.status === 'approved_kirim' ? handleOpenApproveModal : handleApproveKirim}
                                         disabled={submitting}
                                         className="bg-green-600 hover:bg-green-700"
                                     >
@@ -576,6 +645,85 @@ export default function ViewItemBarangRequestPage() {
                             className="bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-200 min-w-[150px]"
                         >
                             {submitting ? "Processing..." : "Simpan Assignment"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Approve Penerimaan Modal */}
+            <Dialog open={showApprovePenerimaanModal} onOpenChange={setShowApprovePenerimaanModal}>
+                <DialogContent className="sm:max-w-[650px] max-h-[90vh] flex flex-col p-0">
+                    <DialogHeader className="p-6 pb-2">
+                        <DialogTitle className="text-xl font-bold flex items-center gap-2 text-gray-900">
+                            <Check className="h-5 w-5 text-green-600" />
+                            Approve Penerimaan Barang
+                        </DialogTitle>
+                        <p className="text-xs text-gray-500 mt-1">
+                            Pilih rak lokasi penyimpanan di <strong className="text-gray-800">{request?.tujuan_gudang?.nama_gudang || 'Gudang Tujuan'}</strong> untuk setiap item barang yang diterima.
+                        </p>
+                    </DialogHeader>
+
+                    <div className="flex-1 overflow-y-auto px-6 py-3 space-y-4">
+                        <div className="bg-green-50/70 border border-green-200 rounded-lg p-3 text-xs text-green-800 flex items-center justify-between">
+                            <span>Gudang Tujuan Penerimaan:</span>
+                            <span className="font-bold text-sm text-green-950">{request?.tujuan_gudang?.nama_gudang || '-'}</span>
+                        </div>
+
+                        <div className="space-y-3">
+                            <Label className="text-xs font-bold text-gray-700 block">
+                                Penentuan Rak per Item Fisik:
+                            </Label>
+                            <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
+                                {request?.details?.flatMap(detail => detail.assigned_items || []).map((item, idx) => (
+                                    <div key={item.id || idx} className="p-3 bg-white rounded-lg border border-gray-200 shadow-sm space-y-2">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <div className="font-bold text-sm text-gray-900">{item.nama_item_barang || item.kode_barang}</div>
+                                                <div className="text-xs text-gray-500 font-mono">{item.kode_barang}</div>
+                                            </div>
+                                            <Badge variant="outline" className="text-[10px] bg-gray-50">
+                                                Qty: {item.pivot?.quantity || 1}
+                                            </Badge>
+                                        </div>
+                                        <div>
+                                            <Label className="text-[11px] font-semibold text-gray-600 mb-1 block">
+                                                Rak Tujuan ({request?.tujuan_gudang?.nama_gudang}) <span className="text-red-500">*</span>
+                                            </Label>
+                                            <SearchSelect
+                                                placeholder={loadingRaks ? "Memuat rak..." : "Pilih Rak Tujuan..."}
+                                                value={itemRakAssignments[item.id] || ""}
+                                                onValueChange={(val) => setItemRakAssignments(prev => ({ ...prev, [item.id]: val }))}
+                                                options={rakOptions}
+                                                loading={loadingRaks}
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="space-y-2 pt-2">
+                            <Label className="text-xs font-semibold text-gray-700">Catatan Approval (Opsional)</Label>
+                            <textarea
+                                className="w-full border rounded-md p-2 text-xs focus:ring-1 focus:ring-green-500 focus:outline-none"
+                                placeholder="Masukkan catatan approval penerimaan..."
+                                value={approveNotes}
+                                onChange={(e) => setApproveNotes(e.target.value)}
+                                rows={2}
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter className="p-4 bg-gray-50 border-t gap-2 sm:gap-0">
+                        <Button variant="ghost" onClick={() => setShowApprovePenerimaanModal(false)} disabled={submitting} className="font-semibold text-gray-600">
+                            Batal
+                        </Button>
+                        <Button
+                            onClick={handleConfirmApprovePenerimaan}
+                            disabled={submitting || loadingRaks}
+                            className="bg-green-600 hover:bg-green-700 text-white font-bold min-w-[160px]"
+                        >
+                            {submitting ? "Memproses..." : "Approve Penerimaan"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
