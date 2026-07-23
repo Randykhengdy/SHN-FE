@@ -178,5 +178,15 @@ export const itemBarangService = {
         gudang_tujuan_id: gudangTujuanId,
       }),
     });
+  },
+  async sellRongsok(gudangId, actualWeight, actualPrice) {
+    return request("/item-barang/sell-rongsok", {
+      method: "POST",
+      body: JSON.stringify({
+        gudang_id: gudangId,
+        actual_weight: actualWeight,
+        actual_price: actualPrice,
+      }),
+    });
   }
 };

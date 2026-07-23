@@ -16,6 +16,7 @@ import {
   CornerDownLeft,
   BarChart2,
   Shuffle,
+  Scale,
 } from "lucide-react";
 
 export default function NavigationMenu() {
@@ -63,6 +64,12 @@ export default function NavigationMenu() {
       label: "Pindah Rongsok",
       path: "/pindah-rongsok",
       icon: Shuffle,
+      category: "transaksi"
+    },
+    {
+      label: "Jual Rongsok",
+      path: "/jual-rongsok",
+      icon: Scale,
       category: "transaksi"
     },
     {

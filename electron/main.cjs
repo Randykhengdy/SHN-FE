@@ -522,6 +522,7 @@ function createWindow() {
         { label: 'Item Barang Request', accelerator: 'CmdOrCtrl+I', click: () => navigateTo('/item-barang-request', 'Item Barang Request') },
         { label: 'Kembalikan ke Rak', click: () => navigateTo('/return-to-rack', 'Kembalikan ke Rak') },
         { label: 'Pindah Rongsok', click: () => navigateTo('/pindah-rongsok', 'Pindah Rongsok') },
+        { label: 'Jual Rongsok', click: () => navigateTo('/jual-rongsok', 'Jual Rongsok') },
         { label: 'Approval', accelerator: 'CmdOrCtrl+Shift+A', click: () => navigateTo('/approval', 'Approval') },
         { label: 'Input Harga Barang Datang', click: () => navigateTo('/input-harga-barang-datang', 'Input Harga Barang Datang') },
         { type: 'separator' },
