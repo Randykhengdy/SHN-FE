@@ -483,8 +483,8 @@ export default function MasterDataLayout({
 
             {/* Table */}
             <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
-              <div className="overflow-x-auto">
-                <table className="w-full border-separate border-spacing-0 rounded-lg overflow-hidden">
+              <div className="overflow-auto min-h-[250px]">
+                <table className="w-full border-separate border-spacing-0 rounded-lg">
                   <thead className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur-sm">
                     <tr className="border-b border-gray-200 shadow-sm">
                       {selection ? (
