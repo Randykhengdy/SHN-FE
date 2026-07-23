@@ -69,15 +69,15 @@ export default function RongsokInvoiceModal({ open, onClose, sale }) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[550px] bg-white border border-slate-200 shadow-xl rounded-xl">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[550px] max-h-[85vh] flex flex-col overflow-hidden bg-white border border-slate-200 shadow-xl rounded-xl">
+        <DialogHeader className="pb-2 border-b border-slate-100">
           <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <FileText className="w-5 h-5 text-amber-500" />
             Generate Invoice Penjualan Rongsok
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-3">
+        <div className="space-y-4 py-3 flex-1 overflow-y-auto px-1">
           
           {/* Weight Source Option */}
           <div className="flex flex-col gap-2">
@@ -242,7 +242,7 @@ export default function RongsokInvoiceModal({ open, onClose, sale }) {
 
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="gap-2 sm:gap-0 pt-3 border-t border-slate-100">
           <Button variant="outline" onClick={onClose} className="border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-xs">
             Tutup
           </Button>
