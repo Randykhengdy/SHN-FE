@@ -511,7 +511,14 @@ export const generateInvoicePrintContent = (invoiceData) => {
 };
 
 export const generateRongsokInvoicePrintContent = (saleData, options = {}) => {
-  const { taxType = 'tanpa_ppn', customerName = '', customerAddress = '', customerPhone = '' } = options;
+  const {
+    taxType = 'tanpa_ppn',
+    customerName = '',
+    customerAddress = '',
+    customerPhone = '',
+    showTotalBerat = false,
+    showHargaUnit = false
+  } = options;
 
   const actualPrice = parseFloat(saleData.actual_price) || 0;
   const actualWeight = parseFloat(saleData.actual_weight) || 0;
@@ -596,7 +603,7 @@ export const generateRongsokInvoicePrintContent = (saleData, options = {}) => {
         <img src="${LOGO_BASE64}" alt="PT. SHN Logo" class="logo" />
         <div class="header-content">
           <div class="company-name">PT. SURYA HARSA NAGARA</div>
-          <div class="document-title">INVOICE RONGSOK</div>
+          <div class="document-title">INVOICE</div>
         </div>
       </div>
 
@@ -636,8 +643,8 @@ export const generateRongsokInvoicePrintContent = (saleData, options = {}) => {
           <tr>
             <th style="width: 30px; text-align: center;">No.</th>
             <th>Nama Item</th>
-            <th style="text-align: right; width: 120px;">Total Berat</th>
-            <th style="text-align: right; width: 140px;">Harga per Unit</th>
+            ${showTotalBerat ? '<th style="text-align: right; width: 120px;">Total Berat</th>' : ''}
+            ${showHargaUnit ? '<th style="text-align: right; width: 140px;">Harga per Unit</th>' : ''}
             <th style="text-align: right; width: 160px;">Total Harga (DPP)</th>
           </tr>
         </thead>
@@ -645,8 +652,8 @@ export const generateRongsokInvoicePrintContent = (saleData, options = {}) => {
           <tr>
             <td style="text-align: center;">1</td>
             <td><strong>ALUMINIUM RONGSOK</strong></td>
-            <td style="text-align: right;">${actualWeight.toFixed(2)} kg</td>
-            <td style="text-align: right;">${formatCurrency(pricePerKg)} / kg</td>
+            ${showTotalBerat ? `<td style="text-align: right;">${actualWeight.toFixed(2)} kg</td>` : ''}
+            ${showHargaUnit ? `<td style="text-align: right;">${formatCurrency(pricePerKg)} / kg</td>` : ''}
             <td style="text-align: right; font-weight: bold;">${formatCurrency(dpp)}</td>
           </tr>
         </tbody>

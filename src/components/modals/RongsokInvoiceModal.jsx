@@ -10,6 +10,8 @@ export default function RongsokInvoiceModal({ open, onClose, sale }) {
   const [customerName, setCustomerName] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [showTotalBerat, setShowTotalBerat] = useState(false);
+  const [showHargaUnit, setShowHargaUnit] = useState(false);
 
   if (!sale) return null;
 
@@ -51,6 +53,8 @@ export default function RongsokInvoiceModal({ open, onClose, sale }) {
       customerName,
       customerAddress,
       customerPhone,
+      showTotalBerat,
+      showHargaUnit,
     });
 
     const printWin = window.open('', '_blank');
@@ -146,6 +150,31 @@ export default function RongsokInvoiceModal({ open, onClose, sale }) {
                   className="text-xs mt-1"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Optional Columns Toggles */}
+          <div className="flex flex-col gap-2 bg-slate-50/70 p-3 rounded-lg border border-slate-200/60">
+            <label className="text-xs font-bold text-slate-700">Tampilkan Kolom di Printout Invoice (Default: Hide)</label>
+            <div className="flex items-center gap-6">
+              <label className="flex items-center gap-2 text-xs text-slate-700 font-medium cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showTotalBerat}
+                  onChange={(e) => setShowTotalBerat(e.target.checked)}
+                  className="rounded border-slate-300 text-amber-500 focus:ring-amber-500 w-4 h-4"
+                />
+                Tampilkan Kolom Total Berat
+              </label>
+              <label className="flex items-center gap-2 text-xs text-slate-700 font-medium cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showHargaUnit}
+                  onChange={(e) => setShowHargaUnit(e.target.checked)}
+                  className="rounded border-slate-300 text-amber-500 focus:ring-amber-500 w-4 h-4"
+                />
+                Tampilkan Kolom Harga / kg
+              </label>
             </div>
           </div>
 
