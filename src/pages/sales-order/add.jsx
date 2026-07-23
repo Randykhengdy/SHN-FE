@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, ArrowLeft, Calendar, Trash2, Printer, Package, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, ArrowLeft, Calendar, Trash2, Printer, Package, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Edit, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -394,6 +394,7 @@ export default function AddSalesOrderPage() {
 
   // Item List
   const [items, setItems] = useState([]);
+  const [editingItemId, setEditingItemId] = useState(null);
 
   // Function to calculate price based on satuan
   const calculatePriceBySatuan = (satuan, panjang, lebar, tebal, qty, pricePerUnit, berat = 0, selectedShape = null) => {
@@ -768,7 +769,7 @@ export default function AddSalesOrderPage() {
       const finalTotal = totalBeforeDiscount - discountAmount;
 
       const newItem = {
-        id: Date.now(),
+        id: editingItemId || Date.now(),
         jenisBarang: itemTypeLabel || itemTypeOptions.find(opt => opt.value === itemType)?.label || itemType,
         bentuk: selectedShape.nama,
         grade: itemGradeLabel || itemGrade,
@@ -802,7 +803,12 @@ export default function AddSalesOrderPage() {
         catatan: itemNotes
       };
 
-      setItems([...items, newItem]);
+      if (editingItemId) {
+        setItems(items.map(item => item.id === editingItemId ? newItem : item));
+        setEditingItemId(null);
+      } else {
+        setItems([...items, newItem]);
+      }
 
       // Reset all form fields including new dimension fields
       setItemPanjang("");
@@ -833,6 +839,69 @@ export default function AddSalesOrderPage() {
 
   const handleRemoveItem = (id) => {
     setItems(items.filter(item => item.id !== id));
+    if (editingItemId === id) {
+      setEditingItemId(null);
+    }
+  };
+
+  const handleEditItem = (item) => {
+    const shape = itemShapeOptions.find(s => s.id?.toString() === item.bentukBarangId?.toString() || s.value === item.bentukBarangId?.toString());
+    if (shape) {
+      setSelectedShape(shape);
+    } else {
+      setSelectedShape({
+        id: item.bentukBarangId,
+        nama: item.bentuk,
+        dimensi: item.panjang && item.lebar ? "2D" : "1D"
+      });
+    }
+
+    setItemType(item.jenisBarangId?.toString() || "");
+    setItemTypeLabel(item.jenisBarang || "");
+    setItemGrade(item.gradeBarangId?.toString() || "");
+    setItemGradeLabel(item.grade || "");
+
+    setItemPanjang(item.panjang != null ? item.panjang.toString() : "");
+    setItemLebar(item.lebar != null ? item.lebar.toString() : "");
+    setItemTebal(item.tebal != null ? item.tebal.toString() : "");
+    setItemDiameterLuar(item.diameter_luar != null ? item.diameter_luar.toString() : "");
+    setItemDiameterDalam(item.diameter_dalam != null ? item.diameter_dalam.toString() : "");
+    setItemDiameter(item.diameter != null ? item.diameter.toString() : "");
+    setItemSisi1(item.sisi1 != null ? item.sisi1.toString() : "");
+    setItemSisi2(item.sisi2 != null ? item.sisi2.toString() : "");
+
+    setItemQty(item.qty?.toString() || "1");
+    setItemPrice(item.harga?.toString() || "");
+    setItemUnit(item.satuan || "");
+    setItemCutType(item.jenis_potongan || "potongan");
+    setItemDiscount(item.diskonAmount?.toString() || "0");
+    setItemDiscountType(item.diskon_type || "percent");
+    setItemNotes(item.catatan || "");
+    setItemWeight(item.berat != null ? item.berat.toString() : "");
+
+    if (item.masterItemId) {
+      setSelectedItemBarangGroup({
+        id: item.masterItemId,
+        nama_group_barang: item.masterItemName,
+        panjang: item.panjang,
+        lebar: item.lebar,
+        tebal: item.tebal,
+        diameter_luar: item.diameter_luar,
+        diameter_dalam: item.diameter_dalam,
+        diameter: item.diameter,
+        sisi1: item.sisi1,
+        sisi2: item.sisi2
+      });
+    } else {
+      setSelectedItemBarangGroup(null);
+    }
+
+    setEditingItemId(item.id);
+
+    const element = document.getElementById("itemQty");
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   const handleTestSimpanSO = async () => {
@@ -2055,10 +2124,51 @@ export default function AddSalesOrderPage() {
             />
           </div>
 
-          <div className="flex justify-end mt-6">
+          <div className="flex justify-end gap-2 mt-6">
+            {editingItemId && (
+              <Button 
+                type="button"
+                variant="outline" 
+                onClick={() => {
+                  setItemPanjang("");
+                  setItemLebar("");
+                  setItemTebal("");
+                  setItemDiameterLuar("");
+                  setItemDiameterDalam("");
+                  setItemDiameter("");
+                  setItemSisi1("");
+                  setItemSisi2("");
+                  setItemQty("1");
+                  setItemType("");
+                  setItemTypeLabel("");
+                  setItemShape("");
+                  setSelectedShape(null);
+                  setItemGrade("");
+                  setItemGradeLabel("");
+                  setItemDiscount("0");
+                  setItemNotes("");
+                  setItemWeight("");
+                  setItemCutType("potongan");
+                  setSelectedItemBarangGroup(null);
+                  setEditingItemId(null);
+                }} 
+                className="btn-secondary"
+              >
+                Batal Edit
+              </Button>
+            )}
             <Button onClick={handleAddItem} className="btn-primary">
-              <Plus className="w-4 h-4 mr-2" />
-              Tambah Item
+              {editingItemId ? (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Simpan Perubahan
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Tambah Item
+                </>
+              )}
             </Button>
           </div>
         </CardContent>
@@ -2108,14 +2218,26 @@ export default function AddSalesOrderPage() {
                   <TableCell className="table-cell-standard">{item.diskon}</TableCell>
                   <TableCell className="table-cell-standard">{item.total}</TableCell>
                   <TableCell className="table-cell-standard">
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleRemoveItem(item.id)}
-                      className="btn-danger"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditItem(item)}
+                        className="btn-secondary"
+                        title="Edit Item"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleRemoveItem(item.id)}
+                        className="btn-danger"
+                        title="Hapus Item"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
