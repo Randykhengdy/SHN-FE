@@ -1160,29 +1160,21 @@ ipcMain.handle('print-document', async (event, { html, landscape = true, pageSiz
     printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
 
     return new Promise((resolve) => {
-      printWindow.webContents.on('did-finish-load', async () => {
+      printWindow.webContents.on('did-finish-load', () => {
         try {
-          // Generate PDF with exact target dimensions
-          const pdfBuffer = await printWindow.webContents.printToPDF({
+          printWindow.webContents.print({
+            silent: false,
+            printBackground: true,
             landscape: landscape,
-            pageSize: pageSize,
-            printBackground: true
+            pageSize: pageSize
+          }, (success, failureReason) => {
+            printWindow.destroy();
+            if (success) {
+              resolve({ success: true });
+            } else {
+              resolve({ success: false, error: failureReason || 'Cancelled' });
+            }
           });
-          printWindow.destroy();
-
-          // Show save dialog to save the A5 PDF file
-          const { filePath } = await dialog.showSaveDialog(mainWindow, {
-            title: 'Simpan Dokumen PDF (A5)',
-            defaultPath: path.join(app.getPath('downloads'), `${safeTitle}.pdf`),
-            filters: [{ name: 'PDF Files', extensions: ['pdf'] }]
-          });
-
-          if (filePath) {
-            fs.writeFileSync(filePath, pdfBuffer);
-            resolve({ success: true, filePath });
-          } else {
-            resolve({ success: false, error: 'Cancelled' });
-          }
         } catch (err) {
           printWindow.destroy();
           resolve({ success: false, error: err.message });
