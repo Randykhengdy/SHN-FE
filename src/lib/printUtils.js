@@ -516,12 +516,16 @@ export const generateRongsokInvoicePrintContent = (saleData, options = {}) => {
     customerName = '',
     customerAddress = '',
     customerPhone = '',
-    showTotalBerat = false,
-    showHargaUnit = false
+    showTotalBerat = true,
+    showHargaUnit = true,
+    weightSource = 'computer'
   } = options;
 
   const actualPrice = parseFloat(saleData.actual_price) || 0;
   const actualWeight = parseFloat(saleData.actual_weight) || 0;
+  const computerWeight = parseFloat(saleData.computer_weight) || 0;
+
+  const selectedWeight = weightSource === 'actual' ? actualWeight : computerWeight;
 
   let dpp = 0;
   let ppn = 0;
@@ -541,7 +545,7 @@ export const generateRongsokInvoicePrintContent = (saleData, options = {}) => {
     ppn = totalInvoice - dpp;
   }
 
-  const pricePerKg = actualWeight > 0 ? dpp / actualWeight : 0;
+  const pricePerKg = selectedWeight > 0 ? dpp / selectedWeight : 0;
 
   const formatCurrency = (amount) => {
     const num = parseFloat(amount).toFixed(2);
@@ -652,7 +656,7 @@ export const generateRongsokInvoicePrintContent = (saleData, options = {}) => {
           <tr>
             <td style="text-align: center;">1</td>
             <td><strong>ALUMINIUM RONGSOK</strong></td>
-            ${showTotalBerat ? `<td style="text-align: right;">${actualWeight.toFixed(2)} kg</td>` : ''}
+            ${showTotalBerat ? `<td style="text-align: right;">${selectedWeight.toFixed(2)} kg</td>` : ''}
             ${showHargaUnit ? `<td style="text-align: right;">${formatCurrency(pricePerKg)} / kg</td>` : ''}
             <td style="text-align: right; font-weight: bold;">${formatCurrency(dpp)}</td>
           </tr>

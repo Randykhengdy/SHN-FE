@@ -10,8 +10,9 @@ export default function RongsokInvoiceModal({ open, onClose, sale }) {
   const [customerName, setCustomerName] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
-  const [showTotalBerat, setShowTotalBerat] = useState(false);
-  const [showHargaUnit, setShowHargaUnit] = useState(false);
+  const [showTotalBerat, setShowTotalBerat] = useState(true);
+  const [showHargaUnit, setShowHargaUnit] = useState(true);
+  const [weightSource, setWeightSource] = useState("computer"); // 'computer' or 'actual'
 
   if (!sale) return null;
 
@@ -55,6 +56,7 @@ export default function RongsokInvoiceModal({ open, onClose, sale }) {
       customerPhone,
       showTotalBerat,
       showHargaUnit,
+      weightSource,
     });
 
     const printWin = window.open('', '_blank');
@@ -77,6 +79,38 @@ export default function RongsokInvoiceModal({ open, onClose, sale }) {
 
         <div className="space-y-4 py-3">
           
+          {/* Weight Source Option */}
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+              <Building2 className="w-4 h-4 text-amber-500" />
+              Acuan Berat Invoice (Default: Berat Komputer)
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setWeightSource("computer")}
+                className={`py-2 px-3 text-xs font-bold rounded-lg border transition-all flex items-center justify-center gap-1.5 ${
+                  weightSource === "computer"
+                    ? "bg-slate-800 text-white border-slate-800 shadow-sm"
+                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                }`}
+              >
+                Berat Komputer ({computerWeight.toFixed(2)} kg)
+              </button>
+              <button
+                type="button"
+                onClick={() => setWeightSource("actual")}
+                className={`py-2 px-3 text-xs font-bold rounded-lg border transition-all flex items-center justify-center gap-1.5 ${
+                  weightSource === "actual"
+                    ? "bg-slate-800 text-white border-slate-800 shadow-sm"
+                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                }`}
+              >
+                Berat Aktual ({actualWeight.toFixed(2)} kg)
+              </button>
+            </div>
+          </div>
+
           {/* Tax Options */}
           <div className="flex flex-col gap-2">
             <label className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
@@ -155,7 +189,7 @@ export default function RongsokInvoiceModal({ open, onClose, sale }) {
 
           {/* Optional Columns Toggles */}
           <div className="flex flex-col gap-2 bg-slate-50/70 p-3 rounded-lg border border-slate-200/60">
-            <label className="text-xs font-bold text-slate-700">Tampilkan Kolom di Printout Invoice (Default: Hide)</label>
+            <label className="text-xs font-bold text-slate-700">Tampilkan Kolom di Printout Invoice (Default: Tampil / ON)</label>
             <div className="flex items-center gap-6">
               <label className="flex items-center gap-2 text-xs text-slate-700 font-medium cursor-pointer">
                 <input
