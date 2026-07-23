@@ -117,5 +117,7 @@ export const userService = {
     return response;
   },
 
-
+  async getProfile() {
+    return request("/user", { method: "GET" });
+  }
 };

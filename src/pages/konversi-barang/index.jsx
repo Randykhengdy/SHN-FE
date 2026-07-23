@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAlert } from "@/hooks/useAlert";
 import { useCallback, useEffect, useState } from "react";
 import { konversiBarangService } from "@/services/konversiBarangService";
+import { userService } from "@/services/userService";
 import { Badge } from "@/components/ui/badge";
 import { isAdmin } from "@/lib/utils";
 import { Download, RefreshCw, TableColumnsSplit } from "lucide-react";
@@ -121,8 +122,12 @@ export default function KonversiBarangPage() {
     useEffect(() => {
         const loadGudangs = async () => {
             try {
+                const profile = await userService.getProfile();
+                const userGudangIds = (profile?.gudangs || []).map(g => Number(g.id));
                 const options = await getGudangOptions();
-                setGudangOptions(options || []);
+                
+                const filtered = (options || []).filter(opt => userGudangIds.includes(Number(opt.value || opt.id)));
+                setGudangOptions(filtered);
             } catch (error) {
                 console.error("Error loading Gudang options:", error);
             }
