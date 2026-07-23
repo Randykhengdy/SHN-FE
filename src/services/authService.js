@@ -1,8 +1,8 @@
 import apiConfig from "@/config/api";
-import { 
-  setToken, 
-  removeToken, 
-  setRefreshToken, 
+import {
+  setToken,
+  removeToken,
+  setRefreshToken,
   removeRefreshToken,
   setTokenType,
   setIsLoggedIn,
@@ -21,9 +21,9 @@ export const authService = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(credentials),
     });
-    
+
     const result = await response.json();
-    
+
     // If login successful, store tokens
     if (result.success) {
       setToken(result.token);
@@ -35,35 +35,36 @@ export const authService = {
           ...result.user,
           role_id: result.role_id ?? result.user.role_id,
           role_name: result.role_name ?? result.user.role_name,
+          is_can_delete_item_barang: result.is_can_delete_item_barang,
         };
         setUser(enhancedUser);
         try {
           try {
             const grouped = await roleService.getRoleMenuPermissionsData(enhancedUser.role_id);
             setRolePermissionsData(grouped);
-          } catch (_) {}
-        } catch (_) {}
+          } catch (_) { }
+        } catch (_) { }
       } else {
         // store minimal user info with role if provided
         if (result.role_id || result.role_name) {
-          setUser({ 
-            role_id: result.role_id, 
+          setUser({
+            role_id: result.role_id,
             role_name: result.role_name,
-            is_can_delete_item_barang: result.is_can_delete_item_barang 
+            is_can_delete_item_barang: result.is_can_delete_item_barang
           });
           try {
             try {
               const grouped = await roleService.getRoleMenuPermissionsData(result.role_id);
               setRolePermissionsData(grouped);
-            } catch (_) {}
-          } catch (_) {}
+            } catch (_) { }
+          } catch (_) { }
         }
       }
     }
-    
+
     return result;
   },
-  
+
   async register(userData) {
     const response = await fetch(`${apiConfig.baseUrl}${apiConfig.endpoints.register}`, {
       method: "POST",
@@ -84,7 +85,7 @@ export const authService = {
 
   async logout() {
     const refreshToken = getRefreshToken();
-    
+
     // Hit API logout untuk invalidate refresh token di backend
     if (refreshToken) {
       try {
@@ -98,7 +99,7 @@ export const authService = {
         console.log("⚠️ Logout API call failed, but continuing with local cleanup");
       }
     }
-    
+
     // Clear all tokens using new storage utility
     clearAllTokens();
     console.log("✅ Logout successful - all tokens cleared");

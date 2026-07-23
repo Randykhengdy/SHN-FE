@@ -15,6 +15,7 @@ import {
   Activity,
   CornerDownLeft,
   BarChart2,
+  Shuffle,
 } from "lucide-react";
 
 export default function NavigationMenu() {
@@ -56,6 +57,12 @@ export default function NavigationMenu() {
       label: "Kembalikan Barang",
       path: "/return-to-rack",
       icon: CornerDownLeft,
+      category: "transaksi"
+    },
+    {
+      label: "Pindah Rongsok",
+      path: "/pindah-rongsok",
+      icon: Shuffle,
       category: "transaksi"
     },
     {

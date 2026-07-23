@@ -62,6 +62,7 @@ import NotificationsPage from "@/pages/notifications";
 import InputHargaBarangDatangPage from "@/pages/input-harga-barang-datang";
 import ReturnToRackPage from "@/pages/return-to-rack";
 import ReportPiutangPelangganPage from "@/pages/reports/piutang-pelanggan";
+import PindahRongsokPage from "@/pages/pindah-rongsok";
 
 const AppRouter = () => {
   return (
@@ -130,6 +131,7 @@ const AppRouter = () => {
       <Route path="/wo-actual/detail/:id" element={<WOActualDetailPage />} />
       <Route path="/wo-actual/view/:id" element={<ViewWOActualPage />} />
       <Route path="/return-to-rack" element={<ReturnToRackPage />} />
+      <Route path="/pindah-rongsok" element={<PindahRongsokPage />} />
       <Route path="/reports/piutang-pelanggan" element={<ReportPiutangPelangganPage />} />
     </Routes>
   );
