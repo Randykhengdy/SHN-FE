@@ -106,6 +106,25 @@ export const generatePodPrintContent = (podData) => {
         </tbody>
       </table>
       
+      <div style="margin-top: 30px; display: flex; justify-content: space-between; page-break-inside: avoid;">
+        <div style="text-align: center; width: 22%;">
+          <p style="margin-bottom: 50px; margin-top: 0; font-size: 12px; font-weight: bold; color: #333;">Penerima</p>
+          <p style="margin-bottom: 0; margin-top: 0; font-size: 12px; color: #333;">( _________________ )</p>
+        </div>
+        <div style="text-align: center; width: 22%;">
+          <p style="margin-bottom: 50px; margin-top: 0; font-size: 12px; font-weight: bold; color: #333;">Driver</p>
+          <p style="margin-bottom: 0; margin-top: 0; font-size: 12px; color: #333;">( _________________ )</p>
+        </div>
+        <div style="text-align: center; width: 22%;">
+          <p style="margin-bottom: 50px; margin-top: 0; font-size: 12px; font-weight: bold; color: #333;">Diperiksa Oleh</p>
+          <p style="margin-bottom: 0; margin-top: 0; font-size: 12px; color: #333;">( _________________ )</p>
+        </div>
+        <div style="text-align: center; width: 22%;">
+          <p style="margin-bottom: 50px; margin-top: 0; font-size: 12px; font-weight: bold; color: #333;">Hormat Kami</p>
+          <p style="margin-bottom: 0; margin-top: 0; font-size: 12px; color: #333;">( _________________ )</p>
+        </div>
+      </div>
+      
       <div class="footer">
         <p>Dokumen ini dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
       </div>
@@ -440,8 +459,19 @@ export const generateInvoicePrintContent = (invoiceData) => {
         </tbody>
       </table>
       
-      <div class="summary-section">
-        <table class="summary-table">
+      <div class="summary-section" style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 15px; page-break-inside: avoid;">
+        <div style="width: 45%; display: flex; justify-content: space-between; margin-top: 10px;">
+          <div style="text-align: center; width: 45%;">
+            <p style="margin-bottom: 50px; margin-top: 0; font-size: 11px; font-weight: bold; color: #333;">Penerima</p>
+            <p style="margin-bottom: 0; margin-top: 0; font-size: 11px; color: #333;">( _________________ )</p>
+          </div>
+          <div style="text-align: center; width: 45%;">
+            <p style="margin-bottom: 50px; margin-top: 0; font-size: 11px; font-weight: bold; color: #333;">Hormat Kami</p>
+            <p style="margin-bottom: 0; margin-top: 0; font-size: 11px; color: #333;">( _________________ )</p>
+          </div>
+        </div>
+        
+        <table class="summary-table" style="width: 50%; margin-left: auto;">
           <tbody>
             <tr>
               <td class="summary-label">Total Harga Invoice:</td>
