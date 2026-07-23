@@ -188,5 +188,9 @@ export const itemBarangService = {
         actual_price: actualPrice,
       }),
     });
+  },
+  async getRongsokSales(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return request(`/item-barang/rongsok-sales?${queryString}`, { method: "GET" });
   }
 };
