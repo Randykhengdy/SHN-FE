@@ -75,6 +75,13 @@ export default function ItemBarangPage() {
   const [rongsokLoading, setRongsokLoading] = useState(false);
   const [rongsokRefetch, setRongsokRefetch] = useState(null);
 
+  // Move Rongsok Dialog State
+  const [moveRongsokDialogOpen, setMoveRongsokDialogOpen] = useState(false);
+  const [moveAsalGudang, setMoveAsalGudang] = useState("");
+  const [moveTujuanGudang, setMoveTujuanGudang] = useState("");
+  const [moveRongsokLoading, setMoveRongsokLoading] = useState(false);
+  const [listRefetch, setListRefetch] = useState(null);
+
   const [previewItem, setPreviewItem] = useState(null);
 
   // Custom canDelete logic for ItemBarang based on user attribute or fallback to standard role permission
@@ -383,6 +390,45 @@ export default function ItemBarangPage() {
     }
   };
 
+  const handleOpenMoveRongsok = (fetchData) => {
+    setMoveAsalGudang("");
+    setMoveTujuanGudang("");
+    setListRefetch(() => fetchData);
+    setMoveRongsokDialogOpen(true);
+  };
+
+  const handleMoveRongsokSubmit = async () => {
+    if (!moveAsalGudang || !moveTujuanGudang) return;
+    if (moveAsalGudang === moveTujuanGudang) {
+      showAlert("Gagal", "Gudang asal dan tujuan tidak boleh sama.", "error");
+      return;
+    }
+    
+    setMoveRongsokLoading(true);
+    try {
+      const response = await itemBarangService.moveRongsok(moveAsalGudang, moveTujuanGudang);
+      setMoveRongsokDialogOpen(false);
+      setMoveAsalGudang("");
+      setMoveTujuanGudang("");
+      
+      const count = response?.data?.count ?? 0;
+      showAlert(
+        "Berhasil",
+        `Berhasil memindahkan ${count} barang rongsok ke gudang tujuan.`,
+        "success"
+      );
+      
+      if (typeof listRefetch === "function") {
+        listRefetch();
+      }
+    } catch (error) {
+      console.error("Error moving rongsok:", error);
+      showAlert("Error", error.message || "Gagal memindahkan barang rongsok.", "error");
+    } finally {
+      setMoveRongsokLoading(false);
+    }
+  };
+
   return (
     <>
       <AlertComponent />
@@ -499,6 +545,80 @@ export default function ItemBarangPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Move Rongsok Dialog */}
+      <Dialog open={moveRongsokDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setMoveRongsokDialogOpen(false);
+          setMoveAsalGudang("");
+          setMoveTujuanGudang("");
+        }
+      }}>
+        <DialogContent className="sm:max-w-[425px] bg-white text-gray-900 border border-gray-100 shadow-xl rounded-lg">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              Pindahkan Barang Rongsok
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="flex flex-col gap-2">
+              <label htmlFor="asal-gudang" className="text-sm font-semibold text-gray-700">
+                Gudang Asal
+              </label>
+              <select
+                id="asal-gudang"
+                value={moveAsalGudang}
+                onChange={(e) => setMoveAsalGudang(e.target.value)}
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
+              >
+                <option value="">Pilih Gudang Asal...</option>
+                {optGudang.map(g => (
+                  <option key={g.id} value={g.id}>{g.nama_gudang}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <label htmlFor="tujuan-gudang" className="text-sm font-semibold text-gray-700">
+                Gudang Tujuan
+              </label>
+              <select
+                id="tujuan-gudang"
+                value={moveTujuanGudang}
+                onChange={(e) => setMoveTujuanGudang(e.target.value)}
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
+              >
+                <option value="">Pilih Gudang Tujuan...</option>
+                {optGudang.map(g => (
+                  <option key={g.id} value={g.id}>{g.nama_gudang}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setMoveRongsokDialogOpen(false);
+                setMoveAsalGudang("");
+                setMoveTujuanGudang("");
+              }}
+              className="border-gray-300 text-gray-700 hover:bg-gray-50 font-medium"
+            >
+              Batal
+            </Button>
+            <Button
+              type="button"
+              disabled={moveRongsokLoading || !moveAsalGudang || !moveTujuanGudang}
+              onClick={handleMoveRongsokSubmit}
+              className="bg-amber-600 hover:bg-amber-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
+            >
+              {moveRongsokLoading ? "Memindahkan..." : "Pindahkan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <MasterDataLayout
         title="Item Barang"
         subtitle="Master Data"
@@ -540,6 +660,12 @@ export default function ItemBarangPage() {
             disabled: importLoading,
             icon: <Upload size={16} />,
             className: "bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
+          },
+          {
+            label: "Pindahkan Rongsok",
+            icon: <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22" /><path d="m18 2 4 4-4 4" /><path d="M2 6h1.9c1.2 0 2.3.6 3 1.7l1.1 1.6" /><path d="m15.4 12.8 1.2 1.7c.8 1.1 2 1.7 3.2 1.7H22" /><path d="m18 14 4 4-4 4" /></svg>,
+            onClick: (e, fetchData) => handleOpenMoveRongsok(fetchData),
+            className: "bg-amber-600 hover:bg-amber-700 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200"
           }
         ]}
         customActions={[

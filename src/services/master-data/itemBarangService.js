@@ -169,5 +169,14 @@ export const itemBarangService = {
       method: "PATCH",
       body: JSON.stringify({ rejection_reason: rejectionReason }),
     });
+  },
+  async moveRongsok(gudangAsalId, gudangTujuanId) {
+    return request("/item-barang/move-rongsok", {
+      method: "POST",
+      body: JSON.stringify({
+        gudang_asal_id: gudangAsalId,
+        gudang_tujuan_id: gudangTujuanId,
+      }),
+    });
   }
 };
