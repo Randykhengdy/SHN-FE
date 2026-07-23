@@ -4,10 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { X, Package, Eye, Loader2 } from 'lucide-react';
+import { X, Package, Eye, Loader2, TableColumnsSplit } from 'lucide-react';
 import { getCanvasPreviewByItemId } from '@/lib/canvasUtils';
 import { request } from '@/lib/request';
 import PlatShaftCanvas from '@/components/PlatShaftCanvas';
+import { konversiBarangService } from '@/services/konversiBarangService';
+import { salesOrderService } from '@/services/salesOrderService';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useAlert } from '@/hooks/useAlert';
 
 const PlatPreviewModal = ({
   isOpen,
@@ -25,6 +30,101 @@ const PlatPreviewModal = ({
   const [previewItems, setPreviewItems] = useState([]);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const { showAlert, AlertComponent } = useAlert();
+
+  // Konversi Barang states
+  const [showKonversiModal, setShowKonversiModal] = useState(false);
+  const [utuhItems, setUtuhItems] = useState([]);
+  const [loadingUtuh, setLoadingUtuh] = useState(false);
+  const [selectedUtuhItem, setSelectedUtuhItem] = useState(null);
+
+  // Sales Order selection states
+  const [showSoModal, setShowSoModal] = useState(false);
+  const [salesOrders, setSalesOrders] = useState([]);
+  const [selectedSo, setSelectedSo] = useState(null);
+  const [soSearch, setSoSearch] = useState("");
+  const [soLoading, setSoLoading] = useState(false);
+  const [soPage, setSoPage] = useState(1);
+  const [soTotal, setSoTotal] = useState(0);
+  const [isConverting, setIsConverting] = useState(false);
+
+  const handleOpenKonversiModal = async () => {
+    if (!currentItemData) return;
+    setLoadingUtuh(true);
+    setSelectedUtuhItem(null);
+    setShowKonversiModal(true);
+    try {
+      const response = await konversiBarangService.getAll({
+        status: 'utuh',
+        jenis_barang_id: currentItemData.jenis_barang_id,
+        bentuk_barang_id: currentItemData.bentuk_barang_id,
+        grade_barang_id: currentItemData.grade_barang_id,
+        tebal: currentItemData.tebal || undefined,
+        per_page: 50
+      });
+      setUtuhItems(response.data || []);
+    } catch (error) {
+      console.error('Error fetching utuh items:', error);
+      setUtuhItems([]);
+    } finally {
+      setLoadingUtuh(false);
+    }
+  };
+
+  const handleStartKonversi = (item) => {
+    setSelectedUtuhItem(item);
+    setSelectedSo(null);
+    setSoSearch("");
+    setSoPage(1);
+    setShowSoModal(true);
+  };
+
+  const loadSalesOrders = async () => {
+    try {
+      setSoLoading(true);
+      const response = await salesOrderService.getAll({
+        page: soPage,
+        per_page: 5,
+        search: soSearch,
+        process_status: ["submit", "partial_wo"]
+      });
+      if (response && response.data) {
+        setSalesOrders(response.data);
+        setSoTotal(response.pagination?.total || 0);
+      }
+    } catch (error) {
+      console.error("Error loading Sales Orders:", error);
+    } finally {
+      setSoLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showSoModal) {
+      loadSalesOrders();
+    }
+  }, [showSoModal, soPage, soSearch]);
+
+  const handleConfirmKonversi = async () => {
+    if (!selectedSo || !selectedUtuhItem) return;
+    try {
+      setIsConverting(true);
+      const response = await konversiBarangService.changeStatusToPotongan(selectedUtuhItem.id, selectedSo.id);
+      if (response.success || response) {
+        setShowSoModal(false);
+        setShowKonversiModal(false);
+        showAlert("Sukses", "Stock Barang berhasil dikonversi!", "success", () => {
+          fetchPreviewItems('');
+        });
+      }
+    } catch (error) {
+      console.error('Error converting item:', error);
+      showAlert("Error", error.message || "Gagal memotong barang", "error");
+    } finally {
+      setIsConverting(false);
+    }
+  };
 
   const fetchPreviewItems = async (searchVal = '') => {
     if (!currentItemData) return;
@@ -206,9 +306,19 @@ const PlatPreviewModal = ({
               </div>
             </div>
           ) : previewItems.length === 0 ? (
-            <div className="text-center py-12">
-              <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">Tidak ada data plat dasar yang tersedia</p>
+            <div className="text-center py-12 flex flex-col items-center justify-center gap-4">
+              <Package className="w-12 h-12 text-gray-400" />
+              <div>
+                <p className="text-gray-600 font-medium">Tidak ada data plat dasar yang tersedia</p>
+                <p className="text-sm text-gray-500 mt-1">Anda dapat melakukan konversi barang utuh menjadi potongan terlebih dahulu.</p>
+              </div>
+              <Button
+                onClick={handleOpenKonversiModal}
+                className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 mt-2"
+              >
+                <TableColumnsSplit className="w-4 h-4" />
+                Konversi Barang Utuh
+              </Button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -323,6 +433,186 @@ const PlatPreviewModal = ({
         </div>
       </div>
 
+      {/* Konversi Modal */}
+      <Dialog open={showKonversiModal} onOpenChange={setShowKonversiModal}>
+        <DialogContent className="sm:max-w-4xl max-h-[85vh] flex flex-col p-0 bg-white">
+          <DialogHeader className="p-6 pb-2 border-b">
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <TableColumnsSplit className="w-5 h-5 text-blue-600" />
+              Pilih Barang Utuh untuk Dikonversi
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="p-6 flex-1 overflow-y-auto min-h-0">
+            {loadingUtuh ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+              </div>
+            ) : utuhItems.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                Tidak ada data barang utuh yang sesuai dengan spesifikasi
+              </div>
+            ) : (
+              <div className="border rounded-md overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-gray-50">
+                    <TableRow>
+                      <TableHead className="font-semibold">Nama Item / Kode</TableHead>
+                      <TableHead className="font-semibold">Ukuran</TableHead>
+                      <TableHead className="font-semibold">Qty</TableHead>
+                      <TableHead className="font-semibold">Gudang</TableHead>
+                      <TableHead className="font-semibold text-center">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {utuhItems.map((item) => (
+                      <TableRow key={item.id} className="hover:bg-gray-50">
+                        <TableCell>
+                          <div className="font-medium text-gray-900">{item.nama_item_barang || item.item_barang}</div>
+                          <div className="text-xs text-gray-500">{item.kode_barang}</div>
+                        </TableCell>
+                        <TableCell>{item.ukuran || `${item.panjang}x${item.lebar}x${item.tebal}mm`}</TableCell>
+                        <TableCell>{item.quantity || 0}</TableCell>
+                        <TableCell>{item.gudang?.nama_gudang || item.gudang || "-"}</TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            size="sm"
+                            onClick={() => handleStartKonversi(item)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                          >
+                            Pilih & Konversi
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="p-6 border-t bg-gray-50">
+            <Button variant="outline" onClick={() => setShowKonversiModal(false)}>
+              Tutup
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sales Order Selection Modal */}
+      <Dialog open={showSoModal} onOpenChange={setShowSoModal}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col p-0 bg-white">
+          <DialogHeader className="p-6 pb-2 border-b">
+            <DialogTitle className="text-xl font-bold">Pilih Sales Order untuk Konversi</DialogTitle>
+          </DialogHeader>
+
+          <div className="p-6 flex-1 overflow-y-auto space-y-4 min-h-0">
+            <Input
+              placeholder="Cari nomor SO..."
+              value={soSearch}
+              onChange={(e) => {
+                setSoSearch(e.target.value);
+                setSoPage(1);
+              }}
+              className="w-full"
+            />
+
+            <div className="border rounded-md overflow-hidden">
+              <Table>
+                <TableHeader className="bg-gray-50">
+                  <TableRow>
+                    <TableHead className="w-[80px] text-center">Pilih</TableHead>
+                    <TableHead>Nomor SO</TableHead>
+                    <TableHead>Tanggal SO</TableHead>
+                    <TableHead>Pelanggan</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {soLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-6">
+                        <div className="flex items-center justify-center gap-2">
+                          <Loader2 className="animate-spin h-5 w-5 text-blue-600" />
+                          <span>Memuat Sales Order...</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : salesOrders.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-6 text-gray-500">
+                        Tidak ada Sales Order aktif ditemukan
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    salesOrders.map((so) => (
+                      <TableRow
+                        key={so.id}
+                        className={`cursor-pointer hover:bg-gray-50 ${selectedSo?.id === so.id ? 'bg-blue-50/50' : ''}`}
+                        onClick={() => setSelectedSo(so)}
+                      >
+                        <TableCell className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="radio"
+                            name="selected_so_modal"
+                            checked={selectedSo?.id === so.id}
+                            onChange={() => setSelectedSo(so)}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                          />
+                        </TableCell>
+                        <TableCell className="font-semibold">{so.nomor_so}</TableCell>
+                        <TableCell>
+                          {so.tanggal_so ? new Date(so.tanggal_so).toLocaleDateString('id-ID', { dateStyle: 'medium' }) : '-'}
+                        </TableCell>
+                        <TableCell>{so.pelanggan?.nama_pelanggan || '-'}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Pagination for SO */}
+            {salesOrders.length > 0 && (
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-sm text-gray-600">Total: {soTotal} data</span>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={soPage === 1}
+                    onClick={() => setSoPage(prev => Math.max(1, prev - 1))}
+                  >
+                    Sebelumnya
+                  </Button>
+                  <span className="text-sm self-center">Hal {soPage} dari {Math.ceil(soTotal / 5)}</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={soPage >= Math.ceil(soTotal / 5)}
+                    onClick={() => setSoPage(prev => prev + 1)}
+                  >
+                    Selanjutnya
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="p-6 border-t bg-gray-50 flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setShowSoModal(false)}>
+              Batal
+            </Button>
+            <Button
+              disabled={!selectedSo || isConverting}
+              onClick={handleConfirmKonversi}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {isConverting ? "Mengonversi..." : "Konversi Sekarang"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Canvas Modal */}
       {showCanvas && selectedCanvasItem && (
         <PlatShaftCanvas
@@ -332,12 +622,10 @@ const PlatPreviewModal = ({
           workOrderItem={currentItemData}
           workOrderId={currentItemData?.id}
           onCanvasSaved={(savedItem) => {
-            // Handle canvas save - refresh preview for the specific item that was saved
             console.log('Canvas saved, refreshing preview for item:', savedItem);
             if (savedItem && savedItem.id) {
               refreshPreviewForItem(savedItem.id);
             } else {
-              // Fallback: refresh all previews if no specific item info
               console.log('No specific item info, refreshing all previews...');
               setPreviewImages({});
               setGeneratingPreviews({});
@@ -348,6 +636,8 @@ const PlatPreviewModal = ({
           }}
         />
       )}
+
+      <AlertComponent />
     </div>
   );
 };
