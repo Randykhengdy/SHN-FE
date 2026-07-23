@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import MasterDataLayout from "@/components/MasterDataLayout";
 import { userService } from "@/services/userService";
 import { roleService } from "@/services/master-data/roleService";
+import { gudangService } from "@/services/master-data/gudangService";
 import { useAppContext } from "@/context/AppContext";
 import PageLayout from "@/components/PageLayout";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -19,6 +20,29 @@ export default function UsersPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [gudangOptions, setGudangOptions] = useState([]);
+
+  React.useEffect(() => {
+    gudangService.getAll()
+      .then((res) => {
+        setGudangOptions(res.data || []);
+      })
+      .catch((err) => console.error("Error loading gudang list:", err));
+  }, []);
+
+  const preprocessData = (formData) => {
+    const data = { ...formData };
+    if (data.gudang_ids === "INITIAL_ALL") {
+      data.gudang_ids = gudangOptions.map(g => g.id);
+    } else if (typeof data.gudang_ids === 'string') {
+      data.gudang_ids = data.gudang_ids.split(',').filter(Boolean).map(Number);
+    } else if (Array.isArray(data.gudang_ids)) {
+      data.gudang_ids = data.gudang_ids.map(Number);
+    } else {
+      data.gudang_ids = [];
+    }
+    return data;
+  };
 
   const canRead = hasPermission && hasPermission('USER_MANAGEMENT', 'Read');
   const canUpdate = hasPermission && hasPermission('USER_MANAGEMENT', 'Update');
@@ -68,6 +92,7 @@ export default function UsersPage() {
         subtitle="User Management"
         service={userService}
         menuCode="USER_MANAGEMENT"
+        preprocess={preprocessData}
         fields={[
           { name: "name", label: "Nama", maxLength: 100 },
           { name: "username", label: "Username", maxLength: 100 },
@@ -78,6 +103,54 @@ export default function UsersPage() {
             type: "select",
             optionsService: roleService,
             optionLabel: "name"
+          },
+          {
+            name: "gudang_ids",
+            label: "Akses Gudang",
+            type: "custom",
+            defaultValue: "INITIAL_ALL",
+            mapFromEdit: (data) => {
+              if (data.gudangs) {
+                return data.gudangs.map(g => String(g.id)).join(",");
+              }
+              return "";
+            },
+            render: ({ form, handleSelectChange }) => {
+              const selectedIds = form.gudang_ids === "INITIAL_ALL"
+                ? gudangOptions.map(g => String(g.id))
+                : typeof form.gudang_ids === 'string'
+                  ? form.gudang_ids.split(',').filter(Boolean)
+                  : Array.isArray(form.gudang_ids)
+                    ? form.gudang_ids.map(String)
+                    : [];
+
+              const toggleGudang = (id) => {
+                const nextIds = selectedIds.includes(String(id))
+                  ? selectedIds.filter(x => x !== String(id))
+                  : [...selectedIds, String(id)];
+                handleSelectChange('gudang_ids', nextIds.join(','));
+              };
+
+              return (
+                <div className="border border-gray-300 rounded-md p-3 bg-white max-h-48 overflow-y-auto space-y-2 mt-1">
+                  {gudangOptions.length === 0 ? (
+                    <div className="text-gray-500 text-sm">Tidak ada gudang tersedia</div>
+                  ) : (
+                    gudangOptions.map((g) => (
+                      <label key={g.id} className="flex items-center space-x-2 text-sm text-gray-700 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(String(g.id))}
+                          onChange={() => toggleGudang(g.id)}
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        />
+                        <span>{g.nama_gudang} ({g.kode})</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              );
+            }
           },
           { name: "password", label: "Password", type: "password", maxLength: 100, required: false, hideOnEdit: true },
           { 
@@ -119,6 +192,19 @@ export default function UsersPage() {
           { key: "username", label: "Username", align: "left", minWidth: "12rem", maxWidth: "20rem" },
           { key: "email", label: "Email", align: "left", minWidth: "20rem", maxWidth: "30rem" },
           { key: "role", label: "Role", align: "left", minWidth: "12rem", maxWidth: "20rem" },
+          { 
+            key: "gudangs", 
+            label: "Gudang", 
+            align: "left", 
+            minWidth: "15rem", 
+            maxWidth: "25rem",
+            render: (value, item) => {
+              if (item.gudangs && item.gudangs.length > 0) {
+                return item.gudangs.map(g => g.nama_gudang).join(", ");
+              }
+              return "-";
+            }
+          },
         ]}
         customActions={canUpdate ? [
           {
