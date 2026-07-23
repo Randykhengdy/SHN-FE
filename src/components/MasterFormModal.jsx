@@ -255,7 +255,7 @@ export default function MasterFormModal({
       if (field && typeof field.onChangeForm === 'function') {
         try {
           const mutated = field.onChangeForm(next, value);
-          if (mutated && typeof mutated === 'object') return mutated;
+          if (mutated && typeof mutated === 'object' && typeof mutated.then !== 'function') return mutated;
         } catch (_) { }
       }
       return next;

@@ -434,21 +434,22 @@ export default function BeratJenisPage() {
 
               return filteredOptions;
             },
-            onChangeForm: async (form, val) => {
+            onChangeForm: (form, val) => {
               // Fetch dimensi dari API jika belum ada di map
               let dimensi = bentukBarangMap[val];
               if (!dimensi && val) {
-                try {
-                  const response = await bentukBarangService.getById(val);
-                  dimensi = response.data?.dimensi || null;
-                  if (dimensi) {
-                    setBentukBarangMap(prev => ({ ...prev, [val]: dimensi }));
+                bentukBarangService.getById(val).then(response => {
+                  const fetchedDimensi = response.data?.dimensi || null;
+                  if (fetchedDimensi) {
+                    setBentukBarangMap(prev => ({ ...prev, [val]: fetchedDimensi }));
+                    setCurrentDimensi(fetchedDimensi);
                   }
-                } catch (error) {
+                }).catch(error => {
                   console.error('Error fetching bentuk barang:', error);
-                }
+                });
+              } else {
+                setCurrentDimensi(dimensi || null);
               }
-              setCurrentDimensi(dimensi || null);
 
               // Reset berat fields saat bentuk barang berubah (hanya saat create, bukan edit)
               if (!form.id) {
