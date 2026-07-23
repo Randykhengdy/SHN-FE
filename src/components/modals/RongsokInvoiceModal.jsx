@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Printer, FileText, Calculator, Building2 } from "lucide-react";
-import { LOGO_BASE64 } from "@/lib/logoConstants";
+import { generateRongsokInvoicePrintContent } from "@/lib/printUtils";
 
 export default function RongsokInvoiceModal({ open, onClose, sale }) {
   const [taxType, setTaxType] = useState("tanpa_ppn"); // 'tanpa_ppn', 'dengan_ppn', 'include_ppn'
@@ -46,138 +46,12 @@ export default function RongsokInvoiceModal({ open, onClose, sale }) {
   };
 
   const handlePrint = () => {
-    const invNo = `INV-RONGSOK/${sale.id}/${new Date(sale.created_at || Date.now()).getFullYear()}`;
-    const dateStr = new Date(sale.created_at || Date.now()).toLocaleDateString("id-ID", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric"
+    const printHtml = generateRongsokInvoicePrintContent(sale, {
+      taxType,
+      customerName,
+      customerAddress,
+      customerPhone,
     });
-
-    const pricePerKg = actualWeight > 0 ? dpp / actualWeight : 0;
-
-    const printHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Invoice Penjualan Rongsok - ${invNo}</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
-          .header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; border-b: 2px solid #333; padding-bottom: 10px; }
-          .logo-container { display: flex; align-items: center; gap: 15px; }
-          .logo { width: 70px; height: auto; }
-          .company-title { font-size: 20px; font-weight: bold; }
-          .doc-title { font-size: 18px; font-weight: bold; text-align: right; color: #b45309; }
-          .info-table { width: 100%; margin-bottom: 20px; font-size: 13px; }
-          .info-table td { padding: 4px 8px; vertical-align: top; }
-          table.data { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
-          table.data th { background: #f8fafc; border: 1px solid #cbd5e1; padding: 8px; text-align: left; }
-          table.data td { border: 1px solid #cbd5e1; padding: 6px 8px; }
-          .summary-table { width: 40%; margin-left: auto; margin-top: 15px; font-size: 13px; border-collapse: collapse; }
-          .summary-table td { padding: 6px; }
-          .summary-table td.label { font-weight: bold; text-align: right; }
-          .summary-table td.val { text-align: right; }
-          .signatures { display: flex; justify-content: space-between; margin-top: 50px; text-align: center; }
-          .sig-box { width: 200px; }
-          .sig-space { height: 60px; }
-          @media print {
-            body { margin: 0; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div class="logo-container">
-            <img src="${LOGO_BASE64}" alt="PT. SHN Logo" class="logo" />
-            <div>
-              <div class="company-title">PT. SURYA HARSA NAGARA</div>
-              <div style="font-size: 11px; color: #64748b;">Perdagangan & Distribusi Besi Plat / Metal</div>
-            </div>
-          </div>
-          <div>
-            <div class="doc-title">INVOICE RONGSOK</div>
-            <div style="font-size: 12px; font-weight: bold; text-align: right;">${invNo}</div>
-          </div>
-        </div>
-
-        <table class="info-table">
-          <tr>
-            <td style="width: 50%;">
-              <strong>Kepada (Pembeli):</strong><br/>
-              ${customerName || "Pembeli Rongsok"}<br/>
-              ${customerAddress || "-"}<br/>
-              ${customerPhone || ""}
-            </td>
-            <td style="width: 50%; text-align: right;">
-              <strong>Tanggal:</strong> ${dateStr}<br/>
-              <strong>Gudang Asal:</strong> ${sale.gudang?.nama_gudang || '-'}<br/>
-              <strong>Skema Pajak:</strong> ${taxType === 'tanpa_ppn' ? 'Tanpa PPN' : taxType === 'dengan_ppn' ? 'Dengan PPN (11%)' : 'Include PPN (11%)'}
-            </td>
-          </tr>
-        </table>
-
-        <table class="data">
-          <thead>
-            <tr>
-              <th style="width: 40px; text-align: center;">No</th>
-              <th>Deskripsi Item</th>
-              <th style="width: 120px; text-align: right;">Total Berat</th>
-              <th style="width: 140px; text-align: right;">Harga / kg</th>
-              <th style="width: 160px; text-align: right;">Harga Total (DPP)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style="border: 1px solid #cbd5e1; padding: 10px; text-align: center;">1</td>
-              <td style="border: 1px solid #cbd5e1; padding: 10px; font-weight: bold;">ALUMINIUM RONGSOK</td>
-              <td style="border: 1px solid #cbd5e1; padding: 10px; text-align: right;">${actualWeight.toFixed(2)} kg</td>
-              <td style="border: 1px solid #cbd5e1; padding: 10px; text-align: right;">${formatIDR(pricePerKg)} / kg</td>
-              <td style="border: 1px solid #cbd5e1; padding: 10px; text-align: right; font-weight: bold;">${formatIDR(dpp)}</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div style="margin-top: 15px; font-size: 12px; background: #f8fafc; padding: 10px; border-radius: 4px; border: 1px solid #e2e8f0;">
-          <strong>Catatan Timbangan:</strong> Berat Komputer: <b>${computerWeight.toFixed(2)} kg</b> | Timbangan Aktual: <b>${actualWeight.toFixed(2)} kg</b> (Selisih: <b>${(actualWeight - computerWeight).toFixed(2)} kg</b>)
-        </div>
-
-        <table class="summary-table">
-          <tr>
-            <td class="label">DPP:</td>
-            <td class="val">${formatIDR(dpp)}</td>
-          </tr>
-          ${taxType !== 'tanpa_ppn' ? `
-          <tr>
-            <td class="label">PPN 11%:</td>
-            <td class="val">${formatIDR(ppn)}</td>
-          </tr>
-          ` : ''}
-          <tr style="border-top: 2px solid #333; font-size: 14px;">
-            <td class="label">Total Invoice:</td>
-            <td class="val" style="font-weight: bold; color: #b45309;">${formatIDR(totalInvoice)}</td>
-          </tr>
-        </table>
-
-        <div class="signatures">
-          <div class="sig-box">
-            <div>Penerima / Pembeli</div>
-            <div class="sig-space"></div>
-            <div>( ${customerName || '....................'} )</div>
-          </div>
-          <div class="sig-box">
-            <div>Hormat Kami</div>
-            <div class="sig-space"></div>
-            <div>( PT. SURYA HARSA NAGARA )</div>
-          </div>
-        </div>
-
-        <script>
-          window.onload = function() {
-            window.print();
-          };
-        </script>
-      </body>
-      </html>
-    `;
 
     const printWin = window.open('', '_blank');
     if (printWin) {

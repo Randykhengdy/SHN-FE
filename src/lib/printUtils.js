@@ -510,6 +510,185 @@ export const generateInvoicePrintContent = (invoiceData) => {
   `;
 };
 
+export const generateRongsokInvoicePrintContent = (saleData, options = {}) => {
+  const { taxType = 'tanpa_ppn', customerName = '', customerAddress = '', customerPhone = '' } = options;
+
+  const actualPrice = parseFloat(saleData.actual_price) || 0;
+  const actualWeight = parseFloat(saleData.actual_weight) || 0;
+
+  let dpp = 0;
+  let ppn = 0;
+  let totalInvoice = 0;
+
+  if (taxType === 'tanpa_ppn') {
+    dpp = actualPrice;
+    ppn = 0;
+    totalInvoice = actualPrice;
+  } else if (taxType === 'dengan_ppn') {
+    dpp = actualPrice;
+    ppn = actualPrice * 0.11;
+    totalInvoice = dpp + ppn;
+  } else if (taxType === 'include_ppn') {
+    totalInvoice = actualPrice;
+    dpp = actualPrice / 1.11;
+    ppn = totalInvoice - dpp;
+  }
+
+  const pricePerKg = actualWeight > 0 ? dpp / actualWeight : 0;
+
+  const formatCurrency = (amount) => {
+    const num = parseFloat(amount).toFixed(2);
+    return `Rp ${num.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
+  };
+
+  const invNo = `INV-RONGSOK/${saleData.id}/${new Date(saleData.created_at || Date.now()).getFullYear()}`;
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Invoice Rongsok - ${invNo}</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 10px; font-size: 11px; }
+        .header { display: flex; align-items: center; margin-bottom: 10px; position: relative; min-height: 40px; }
+        .logo { width: 45px; height: auto; margin-right: 15px; object-fit: contain; }
+        .header-content { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; }
+        .company-name { font-size: 16px; font-weight: bold; margin-bottom: 2px; line-height: 1.2; }
+        .document-title { font-size: 13px; font-weight: bold; margin-bottom: 0; line-height: 1.2; }
+        .info-section { margin-bottom: 8px; }
+        .info-row { display: flex; margin-bottom: 2px; }
+        .info-label { font-weight: bold; min-width: 140px; }
+        .info-value { margin-left: 1px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 5px; text-align: left; font-size: 10px; }
+        td { border: 1px solid #ddd; padding: 4px; font-size: 10px; }
+        .summary-section { margin-top: 8px; }
+        .summary-table { width: 50%; margin-left: auto; }
+        .summary-row { display: flex; justify-content: space-between; padding: 3px 0; }
+        .summary-label { font-weight: bold; }
+        .summary-value { text-align: right; }
+        .grand-total { border-top: 2px solid #333; font-weight: bold; font-size: 12px; }
+        .footer { margin-top: 10px; text-align: center; font-size: 10px; color: #666; }
+        @page {
+          size: A5 landscape;
+          margin: 10mm 5mm 5mm 5mm;
+          @top-left {
+            content: "Dokumen ini dicetak pada: ${new Date().toLocaleString('id-ID')} | Invoice Rongsok - PT. Surya Harsa Nagara";
+            font-size: 8px;
+            font-family: Arial, sans-serif;
+            color: #666;
+          }
+          @top-right {
+            content: counter(page) " dari " counter(pages);
+            font-size: 8px;
+            font-family: Arial, sans-serif;
+            color: #666;
+          }
+        }
+        @media print {
+          body { margin: 0; }
+          .no-print { display: none; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <img src="${LOGO_BASE64}" alt="PT. SHN Logo" class="logo" />
+        <div class="header-content">
+          <div class="company-name">PT. SURYA HARSA NAGARA</div>
+          <div class="document-title">INVOICE RONGSOK</div>
+        </div>
+      </div>
+
+      <div class="info-section" style="display: flex; justify-content: space-between;">
+        <div style="width: 48%;">
+          <div class="info-row">
+            <span class="info-label">Nomor Invoice</span>
+            <span class="info-value">${invNo}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Tanggal Cetak</span>
+            <span class="info-value">${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Gudang Asal</span>
+            <span class="info-value">${saleData.gudang?.nama_gudang || '-'}</span>
+          </div>
+        </div>
+        <div style="width: 48%;">
+          <div class="info-row">
+            <span class="info-label">Nama Pembeli</span>
+            <span class="info-value">${customerName || 'Pembeli Rongsok'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Alamat & Telp</span>
+            <span class="info-value">${customerAddress || '-'} ${customerPhone ? `(${customerPhone})` : ''}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Skema Pajak</span>
+            <span class="info-value">${taxType === 'tanpa_ppn' ? 'Tanpa PPN' : taxType === 'dengan_ppn' ? 'Dengan PPN (11%)' : 'Include PPN (11%)'}</span>
+          </div>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 30px; text-align: center;">No.</th>
+            <th>Nama Item</th>
+            <th style="text-align: right; width: 120px;">Total Berat</th>
+            <th style="text-align: right; width: 140px;">Harga per Unit</th>
+            <th style="text-align: right; width: 160px;">Total Harga (DPP)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="text-align: center;">1</td>
+            <td><strong>ALUMINIUM RONGSOK</strong></td>
+            <td style="text-align: right;">${actualWeight.toFixed(2)} kg</td>
+            <td style="text-align: right;">${formatCurrency(pricePerKg)} / kg</td>
+            <td style="text-align: right; font-weight: bold;">${formatCurrency(dpp)}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="summary-section" style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 15px; page-break-inside: avoid;">
+        <div style="width: 45%; display: flex; justify-content: space-between; margin-top: 10px;">
+          <div style="text-align: center; width: 45%;">
+            <p style="margin-bottom: 50px; margin-top: 0; font-size: 11px; font-weight: bold; color: #333;">Penerima</p>
+            <p style="margin-bottom: 0; margin-top: 0; font-size: 11px; color: #333;">( ${customerName || '_________________'} )</p>
+          </div>
+          <div style="text-align: center; width: 45%;">
+            <p style="margin-bottom: 50px; margin-top: 0; font-size: 11px; font-weight: bold; color: #333;">Hormat Kami</p>
+            <p style="margin-bottom: 0; margin-top: 0; font-size: 11px; color: #333;">( _________________ )</p>
+          </div>
+        </div>
+
+        <table class="summary-table" style="width: 50%; margin-left: auto;">
+          <tbody>
+            <tr>
+              <td class="summary-label">Total Harga Invoice (DPP):</td>
+              <td class="summary-value">${formatCurrency(dpp)}</td>
+            </tr>
+            ${taxType !== 'tanpa_ppn' ? `
+            <tr>
+              <td class="summary-label">PPN (11%):</td>
+              <td class="summary-value">${formatCurrency(ppn)}</td>
+            </tr>
+            ` : ''}
+            <tr class="grand-total">
+              <td class="summary-label">Grand Total:</td>
+              <td class="summary-value">${formatCurrency(totalInvoice)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </body>
+    </html>
+  `;
+};
+
 export const generateSalesOrderPrintContent = (salesOrderData) => {
   const itemsHtml = salesOrderData.items?.map((item, index) => `
     <tr>
