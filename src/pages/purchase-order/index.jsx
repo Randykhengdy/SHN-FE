@@ -16,6 +16,7 @@ import { isAdmin } from "@/lib/utils";
 import CustomAlert from "@/components/modals/CustomAlert";
 import PageLayout from "@/components/PageLayout";
 import { useAppContext } from "@/context/AppContext";
+import { generatePurchaseOrderPrintContent, openPrintDialog } from "@/lib/printUtils";
 
 const statusOptions = [
   { value: "all", label: "Semua Status" },
@@ -194,6 +195,50 @@ export default function PurchaseOrderPage() {
       currency: 'IDR',
       minimumFractionDigits: 0
     }).format(amount);
+  };
+
+  const handlePrintPO = async (poId) => {
+    try {
+      const res = await purchaseOrderService.getById(poId);
+      const purchaseOrder = res.data;
+      if (!purchaseOrder) return;
+
+      const rawItems = purchaseOrder.purchase_order_items || purchaseOrder.purchaseOrderItems || purchaseOrder.items || [];
+      const items = rawItems.map(item => ({
+        bentuk_barang: item.bentuk_barang?.nama_bentuk || item.bentukBarang?.nama_bentuk || item.bentuk || "",
+        jenis_barang: item.jenis_barang?.nama_jenis || item.jenisBarang?.nama_jenis || item.jenisBarang || "",
+        grade_barang: item.grade_barang?.nama || item.gradeBarang?.nama || item.grade || "",
+        dimensi: item.dimensi || "-",
+        qty: item.qty || 0,
+        satuan: item.satuan || "-",
+        berat: item.berat || 0,
+        harga_display: formatCurrency(parseFloat(item.harga || 0)),
+        diskon_display: `${item.diskon || 0}%`,
+        total_display: formatCurrency(parseFloat(item.subtotal || 0))
+      }));
+
+      const sup = purchaseOrder.supplier || {};
+
+      const data = {
+        nomor_po: purchaseOrder.nomor_po || purchaseOrder.noPo || "",
+        tanggal_po: purchaseOrder.tanggal_po || purchaseOrder.tanggalPo || "",
+        status: purchaseOrder.status || "",
+        supplier_name: sup.nama_supplier || sup.nama || purchaseOrder.supplier_name || "",
+        supplier_phone: sup.telepon_hp || sup.telepon || sup.phone || "",
+        supplier_address: sup.alamat || sup.kota || "",
+        items,
+        subtotal: parseFloat(purchaseOrder.total_amount || purchaseOrder.subtotal || 0),
+        total_discount: parseFloat(purchaseOrder.total_discount || 0),
+        ppn: parseFloat(purchaseOrder.ppn_amount || purchaseOrder.ppn || 0),
+        grand_total: parseFloat(purchaseOrder.grand_total || purchaseOrder.total_amount || 0)
+      };
+
+      const html = generatePurchaseOrderPrintContent(data);
+      openPrintDialog(html);
+    } catch (e) {
+      console.error("Error printing PO:", e);
+      showAlert("Error", "Gagal mencetak Purchase Order: " + e.message, "error");
+    }
   };
 
   // Handle delete PO
@@ -605,8 +650,11 @@ export default function PurchaseOrderPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col sm:flex-row gap-2 justify-center">
-                          <Button size="sm" variant="outline" onClick={() => handleView(po.id)}>
+                          <Button size="sm" variant="outline" onClick={() => handleView(po.id)} title="Lihat Detail PO">
                             <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => handlePrintPO(po.id)} title="Cetak Purchase Order">
+                            <FileText className="w-4 h-4" />
                           </Button>
                           {isAdmin() && (
                             <Button

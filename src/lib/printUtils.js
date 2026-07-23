@@ -309,15 +309,17 @@ export const generatePurchaseOrderPrintContent = (purchaseOrderData) => {
         // Generate QR code when page loads
         window.addEventListener('load', function() {
           const poNumber = '${purchaseOrderData.nomor_po || 'N/A'}';
-          if (poNumber && poNumber !== 'N/A') {
-            new QRCode(document.getElementById('qrcode'), {
-              text: poNumber,
-              width: 75,
-              height: 75,
-              colorDark: '#000000',
-              colorLight: '#ffffff',
-              correctLevel: QRCode.CorrectLevel.H
-            });
+          if (poNumber && poNumber !== 'N/A' && typeof QRCode !== 'undefined') {
+            try {
+              new QRCode(document.getElementById('qrcode'), {
+                text: poNumber,
+                width: 75,
+                height: 75,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+              });
+            } catch (e) {}
           }
         });
       </script>
@@ -518,34 +520,53 @@ export const generateRongsokInvoicePrintContent = (saleData, options = {}) => {
     customerPhone = '',
     showTotalBerat = true,
     showHargaUnit = true,
-    weightSource = 'computer'
+    weightSource = 'computer' // 'computer', 'actual', or 'variance'
   } = options;
 
   const actualPrice = parseFloat(saleData.actual_price) || 0;
   const actualWeight = parseFloat(saleData.actual_weight) || 0;
   const computerWeight = parseFloat(saleData.computer_weight) || 0;
+  const computerPrice = parseFloat(saleData.computer_price) || 0;
 
-  const selectedWeight = weightSource === 'actual' ? actualWeight : computerWeight;
+  const rawVariance = computerWeight - actualWeight;
+  const varianceWeight = rawVariance > 0 ? rawVariance : 0;
+  const hppPerKg = computerWeight > 0 ? (computerPrice / computerWeight) : 0;
+
+  let selectedWeight = computerWeight;
+  let basePrice = actualPrice;
+
+  if (weightSource === 'actual') {
+    selectedWeight = actualWeight;
+    basePrice = actualPrice;
+  } else if (weightSource === 'variance') {
+    selectedWeight = varianceWeight;
+    basePrice = varianceWeight * hppPerKg;
+  } else {
+    // computer
+    selectedWeight = computerWeight;
+    basePrice = actualPrice;
+  }
 
   let dpp = 0;
   let ppn = 0;
   let totalInvoice = 0;
 
   if (taxType === 'tanpa_ppn') {
-    dpp = actualPrice;
+    dpp = basePrice;
     ppn = 0;
-    totalInvoice = actualPrice;
+    totalInvoice = basePrice;
   } else if (taxType === 'dengan_ppn') {
-    dpp = actualPrice;
-    ppn = actualPrice * 0.11;
+    dpp = basePrice;
+    ppn = basePrice * 0.11;
     totalInvoice = dpp + ppn;
   } else if (taxType === 'include_ppn') {
-    totalInvoice = actualPrice;
-    dpp = actualPrice / 1.11;
+    totalInvoice = basePrice;
+    dpp = basePrice / 1.11;
     ppn = totalInvoice - dpp;
   }
 
   const pricePerKg = selectedWeight > 0 ? dpp / selectedWeight : 0;
+  const itemTitle = weightSource === 'variance' ? 'ALUMINIUM RONGSOK (SELISIH BERAT)' : 'ALUMINIUM RONGSOK';
 
   const formatCurrency = (amount) => {
     const num = parseFloat(amount).toFixed(2);
@@ -655,7 +676,7 @@ export const generateRongsokInvoicePrintContent = (saleData, options = {}) => {
         <tbody>
           <tr>
             <td style="text-align: center;">1</td>
-            <td><strong>ALUMINIUM RONGSOK</strong></td>
+            <td><strong>${itemTitle}</strong></td>
             ${showTotalBerat ? `<td style="text-align: right;">${selectedWeight.toFixed(2)} kg</td>` : ''}
             ${showHargaUnit ? `<td style="text-align: right;">${formatCurrency(pricePerKg)} / kg</td>` : ''}
             <td style="text-align: right; font-weight: bold;">${formatCurrency(dpp)}</td>

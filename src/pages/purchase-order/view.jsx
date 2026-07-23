@@ -107,10 +107,12 @@ export default function ViewPurchaseOrderPage() {
     if (!purchaseOrder) return;
 
     try {
-      const items = (purchaseOrder.purchase_order_items || []).map(item => ({
-        bentuk_barang: item.bentuk_barang?.nama_bentuk || "",
-        jenis_barang: item.jenis_barang?.nama_jenis || "",
-        grade_barang: item.grade_barang?.nama || "",
+      const rawItems = purchaseOrder.purchase_order_items || purchaseOrder.purchaseOrderItems || purchaseOrder.items || [];
+
+      const items = rawItems.map(item => ({
+        bentuk_barang: item.bentuk_barang?.nama_bentuk || item.bentukBarang?.nama_bentuk || item.bentuk || "",
+        jenis_barang: item.jenis_barang?.nama_jenis || item.jenisBarang?.nama_jenis || item.jenisBarang || "",
+        grade_barang: item.grade_barang?.nama || item.gradeBarang?.nama || item.grade || "",
         dimensi: getDimensiString(item),
         qty: item.qty || 0,
         satuan: getSatuanName(item.satuan),
@@ -123,16 +125,16 @@ export default function ViewPurchaseOrderPage() {
       const sup = purchaseOrder.supplier || {};
 
       const data = {
-        nomor_po: purchaseOrder.nomor_po,
-        tanggal_po: purchaseOrder.tanggal_po,
-        status: purchaseOrder.status,
-        supplier_name: sup.nama_supplier || sup.nama || "",
-        supplier_phone: sup.telepon || "",
-        supplier_address: sup.alamat || "",
+        nomor_po: purchaseOrder.nomor_po || purchaseOrder.noPo || "",
+        tanggal_po: purchaseOrder.tanggal_po || purchaseOrder.tanggalPo || "",
+        status: purchaseOrder.status || "",
+        supplier_name: sup.nama_supplier || sup.nama || purchaseOrder.supplier_name || "",
+        supplier_phone: sup.telepon_hp || sup.telepon || sup.phone || "",
+        supplier_address: sup.alamat || sup.kota || "",
         items,
-        subtotal: parseFloat(purchaseOrder.total_amount || 0),
-        total_discount: 0,
-        ppn: parseFloat(purchaseOrder.ppn_amount || 0),
+        subtotal: parseFloat(purchaseOrder.total_amount || purchaseOrder.subtotal || 0),
+        total_discount: parseFloat(purchaseOrder.total_discount || 0),
+        ppn: parseFloat(purchaseOrder.ppn_amount || purchaseOrder.ppn || 0),
         grand_total: parseFloat(purchaseOrder.grand_total || purchaseOrder.total_amount || 0)
       };
 
@@ -140,7 +142,7 @@ export default function ViewPurchaseOrderPage() {
       openPrintDialog(html);
     } catch (e) {
       console.error("Error printing Purchase Order:", e);
-      showAlert("Error", "Gagal mencetak Purchase Order", "error");
+      showAlert("Error", "Gagal mencetak Purchase Order: " + e.message, "error");
     }
   };
 

@@ -78,35 +78,43 @@ export default function RongsokInvoiceModal({ open, onClose, sale }) {
         </DialogHeader>
 
         <div className="space-y-4 py-3 flex-1 overflow-y-auto px-1">
-          
+
           {/* Weight Source Option */}
           <div className="flex flex-col gap-2">
             <label className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
               <Building2 className="w-4 h-4 text-amber-500" />
               Acuan Berat Invoice (Default: Berat Komputer)
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => setWeightSource("computer")}
-                className={`py-2 px-3 text-xs font-bold rounded-lg border transition-all flex items-center justify-center gap-1.5 ${
-                  weightSource === "computer"
+                className={`py-2 px-2 text-xs font-bold rounded-lg border transition-all flex items-center justify-center text-center ${weightSource === "computer"
                     ? "bg-slate-800 text-white border-slate-800 shadow-sm"
                     : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-                }`}
+                  }`}
               >
-                Berat Komputer ({computerWeight.toFixed(2)} kg)
+                Komputer ({computerWeight.toFixed(2)} kg)
               </button>
               <button
                 type="button"
                 onClick={() => setWeightSource("actual")}
-                className={`py-2 px-3 text-xs font-bold rounded-lg border transition-all flex items-center justify-center gap-1.5 ${
-                  weightSource === "actual"
+                className={`py-2 px-2 text-xs font-bold rounded-lg border transition-all flex items-center justify-center text-center ${weightSource === "actual"
                     ? "bg-slate-800 text-white border-slate-800 shadow-sm"
                     : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-                }`}
+                  }`}
               >
-                Berat Aktual ({actualWeight.toFixed(2)} kg)
+                Aktual ({actualWeight.toFixed(2)} kg)
+              </button>
+              <button
+                type="button"
+                onClick={() => setWeightSource("variance")}
+                className={`py-2 px-2 text-xs font-bold rounded-lg border transition-all flex items-center justify-center text-center ${weightSource === "variance"
+                    ? "bg-amber-600 text-white border-amber-600 shadow-sm"
+                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                  }`}
+              >
+                Selisih ({Math.max(0, computerWeight - actualWeight).toFixed(2)} kg)
               </button>
             </div>
           </div>
@@ -121,33 +129,30 @@ export default function RongsokInvoiceModal({ open, onClose, sale }) {
               <button
                 type="button"
                 onClick={() => setTaxType("tanpa_ppn")}
-                className={`py-2 px-3 text-xs font-bold rounded-lg border transition-all ${
-                  taxType === "tanpa_ppn"
+                className={`py-2 px-3 text-xs font-bold rounded-lg border transition-all ${taxType === "tanpa_ppn"
                     ? "bg-amber-500 text-white border-amber-500 shadow-sm"
                     : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-                }`}
+                  }`}
               >
                 Tanpa PPN
               </button>
               <button
                 type="button"
                 onClick={() => setTaxType("dengan_ppn")}
-                className={`py-2 px-3 text-xs font-bold rounded-lg border transition-all ${
-                  taxType === "dengan_ppn"
+                className={`py-2 px-3 text-xs font-bold rounded-lg border transition-all ${taxType === "dengan_ppn"
                     ? "bg-amber-500 text-white border-amber-500 shadow-sm"
                     : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-                }`}
+                  }`}
               >
                 Dengan PPN (+11%)
               </button>
               <button
                 type="button"
                 onClick={() => setTaxType("include_ppn")}
-                className={`py-2 px-3 text-xs font-bold rounded-lg border transition-all ${
-                  taxType === "include_ppn"
+                className={`py-2 px-3 text-xs font-bold rounded-lg border transition-all ${taxType === "include_ppn"
                     ? "bg-amber-500 text-white border-amber-500 shadow-sm"
                     : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-                }`}
+                  }`}
               >
                 Include PPN (11%)
               </button>
@@ -189,7 +194,7 @@ export default function RongsokInvoiceModal({ open, onClose, sale }) {
 
           {/* Optional Columns Toggles */}
           <div className="flex flex-col gap-2 bg-slate-50/70 p-3 rounded-lg border border-slate-200/60">
-            <label className="text-xs font-bold text-slate-700">Tampilkan Kolom di Printout Invoice (Default: Tampil / ON)</label>
+            <label className="text-xs font-bold text-slate-700">Tampilkan Kolom di Printout Invoice</label>
             <div className="flex items-center gap-6">
               <label className="flex items-center gap-2 text-xs text-slate-700 font-medium cursor-pointer">
                 <input
